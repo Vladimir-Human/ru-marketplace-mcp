@@ -86,7 +86,7 @@
   это непродаваемая позиция, и назвать её доступной значило бы вывести мёртвый
   товар в самые дешёвые.
 - Тесты `mcp_core.process` переехали из набора Ozon в `mcp-core`.
-- Тестов стало 375 вместо 221.
+- Тестов стало 406 вместо 221.
 
 ### Не сделано намеренно
 
@@ -157,7 +157,7 @@ release only adds.
 - The WB product-to-card mapping, previously copy-pasted three times, is one
   `_card_item_dict`.
 - `mcp_core.process` tests moved out of the Ozon suite into `mcp-core`.
-- 375 tests, up from 221.
+- 406 tests, up from 221.
 
 ### Deliberately not shipped
 

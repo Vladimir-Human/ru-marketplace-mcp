@@ -36,7 +36,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 375 офлайн-тестов, сеть не нужна
+uv run pytest -q            # 406 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -263,7 +263,7 @@ compare_prices("кроссовки мужские")
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 375 офлайн-тестов
+uv run pytest -q                              # 406 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -340,7 +340,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 375 offline tests, no network needed
+uv run pytest -q            # 406 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -481,7 +481,7 @@ that browser's configuration, not ours.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 375 offline tests
+uv run pytest -q                              # 406 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .

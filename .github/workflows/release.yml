@@ -38,11 +38,18 @@ jobs:
         run: uv build --all-packages --out-dir dist
 
       - name: List built artifacts
-        run: ls -l dist
+        run: ls -la dist
 
       - name: Attach artifacts to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          # Two explicit globs, not dist/*: uv writes a one-byte ".gitignore"
+          # into its output directory, and a bare wildcard uploads it as a
+          # release asset called "default.gitignore" (v1.1.0 shipped with one).
+          # Matching only the distribution extensions keeps the asset list to
+          # the twelve files a user would actually download.
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
           fail_on_unmatched_files: true
           generate_release_notes: true
