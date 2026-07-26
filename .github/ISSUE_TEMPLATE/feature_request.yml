@@ -1,0 +1,52 @@
+name: Feature request
+description: A new tool, a new marketplace, or a change to an existing one.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tools here exist to answer a real shopping question — who actually ships this, is the
+        4.8 rating earned, where is it cheapest. Start from the question, not the endpoint.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What question about a marketplace would this answer?
+      description: The concrete thing a person (or their agent) is trying to find out and cannot today.
+      placeholder: "Is this Ozon seller the official brand store or a reseller?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What tool or change would answer it?
+      description: Sketch the tool, its inputs, and what it returns. If it changes an existing tool, note which one.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connector
+    attributes:
+      label: Connector
+      description: Which server would this touch? Pick "New marketplace" if it is a source we do not ship yet.
+      options:
+        - Wildberries
+        - Ozon
+        - Yandex Market
+        - Detsky Mir
+        - Compare
+        - New marketplace
+        - Not sure
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **Adding a marketplace?** Probe it live first and bring the findings before writing code —
+        roughly a third of candidates turn out infeasible. See
+        [docs/ADDING_A_SOURCE.md](https://github.com/Vladimir-Human/ru-marketplace-mcp/blob/main/docs/ADDING_A_SOURCE.md)
+        and the rejected-source write-ups in
+        [docs/ANTI_BOT.md](https://github.com/Vladimir-Human/ru-marketplace-mcp/blob/main/docs/ANTI_BOT.md).

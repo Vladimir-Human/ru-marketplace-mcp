@@ -355,3 +355,115 @@ def test_retry_statuses_include_302_but_not_429():
     """302 is a transient hiccup here; retrying a 429 would deepen the limit."""
     assert 302 in server._RETRY_STATUSES
     assert 429 not in server._RETRY_STATUSES
+
+
+# ------------------------------------------------------- pagination dedupe ----
+
+
+def _stub_parsed_items(monkeypatch, raw_items):
+    """Feed yandex_search a known item list, bypassing HTML and the SSR parser."""
+    stub_html(monkeypatch, {"/search": "<html></html>"})
+
+    def fake_parse_search(_html):
+        return {
+            "status": server.ssr.ParseStatus.OK,
+            "items": raw_items,
+            "query": "проверка",
+            "page": 1,
+            "page_count": 30,
+            "total": 500,
+            "has_next_page": True,
+        }
+
+    monkeypatch.setattr(server.ssr, "parse_search", fake_parse_search)
+
+
+async def test_search_drops_repeated_product_ids(monkeypatch):
+    """One product occupying several snippets must be reported once."""
+    _stub_parsed_items(
+        monkeypatch,
+        [
+            {"product_id": "111", "title": "первый"},
+            {"product_id": "222", "title": "второй"},
+            {"product_id": "111", "title": "первый снова"},
+            {"product_id": "333", "title": "третий"},
+        ],
+    )
+
+    result = await server.yandex_search(query="проверка")
+
+    ids = [item.product_id for item in result.items]
+    assert ids == ["111", "222", "333"]
+    assert result.returned == 3
+
+
+async def test_dedupe_runs_before_the_limit_is_applied(monkeypatch):
+    """A duplicate must not eat part of the caller's budget.
+
+    Slicing first would return two distinct products for limit=3 while claiming
+    the page was full, with nothing to explain the shortfall.
+    """
+    _stub_parsed_items(
+        monkeypatch,
+        [
+            {"product_id": "111", "title": "a"},
+            {"product_id": "111", "title": "a duplicate"},
+            {"product_id": "222", "title": "b"},
+            {"product_id": "333", "title": "c"},
+        ],
+    )
+
+    result = await server.yandex_search(query="проверка", limit=3)
+
+    assert [item.product_id for item in result.items] == ["111", "222", "333"]
+    assert result.returned == 3
+
+
+async def test_dedupe_preserves_upstream_ranking_order(monkeypatch):
+    """Yandex's ordering is the result of the search and must survive."""
+    _stub_parsed_items(
+        monkeypatch,
+        [
+            {"product_id": "999", "title": "ranked first"},
+            {"product_id": "111", "title": "ranked second"},
+            {"product_id": "999", "title": "repeat of first"},
+            {"product_id": "555", "title": "ranked third"},
+        ],
+    )
+
+    result = await server.yandex_search(query="проверка")
+
+    assert [item.product_id for item in result.items] == ["999", "111", "555"]
+
+
+async def test_products_without_an_id_are_never_collapsed(monkeypatch):
+    """A blank id means "unknown", not "the same product"."""
+    _stub_parsed_items(
+        monkeypatch,
+        [
+            {"product_id": "", "title": "unidentified one"},
+            {"product_id": "", "title": "unidentified two"},
+            {"product_id": "111", "title": "identified"},
+        ],
+    )
+
+    result = await server.yandex_search(query="проверка")
+
+    assert result.returned == 3
+    assert [item.title for item in result.items] == [
+        "unidentified one",
+        "unidentified two",
+        "identified",
+    ]
+
+
+async def test_limit_still_caps_a_page_without_duplicates(monkeypatch):
+    _stub_parsed_items(
+        monkeypatch,
+        [{"product_id": str(i), "title": f"item {i}"} for i in range(10)],
+    )
+
+    result = await server.yandex_search(query="проверка", limit=4)
+
+    assert result.returned == 4
+    assert [item.product_id for item in result.items] == ["0", "1", "2", "3"]

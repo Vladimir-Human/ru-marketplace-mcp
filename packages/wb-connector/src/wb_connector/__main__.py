@@ -5,8 +5,12 @@ server without knowing where the package lives on disk:
 
     {"command": "uvx", "args": ["--from", "wb-connector", "wb-mcp"]}
 
-stdio is the default transport because that is what MCP clients speak. Nothing
-here may write to stdout — the JSON-RPC stream owns it.
+stdio is the default transport because that is what MCP clients speak, so the
+config above keeps working untouched. Set ``MCP_TRANSPORT=http`` (with optional
+``MCP_HTTP_HOST``/``MCP_HTTP_PORT``/``MCP_HTTP_PATH``) to run it over HTTP for
+remote deployment instead — see docs/DEPLOYMENT.md. Transport selection lives in
+``mcp_core.runtime`` and writes any diagnostics to stderr; nothing here may write
+to stdout, which the JSON-RPC stream owns.
 """
 
 from __future__ import annotations
@@ -15,17 +19,12 @@ import sys
 
 
 def main() -> int:
-    """Run the server on stdio until the client disconnects."""
+    """Run the server on the transport selected by the environment (stdio default)."""
+    from mcp_core.runtime import run_server
+
     from wb_connector.server import mcp
 
-    try:
-        mcp.run(transport="stdio")
-    except KeyboardInterrupt:
-        return 130
-    except BrokenPipeError:
-        # The client went away mid-write; that is a normal shutdown for stdio.
-        return 0
-    return 0
+    return run_server(mcp, server_name="wb")
 
 
 if __name__ == "__main__":

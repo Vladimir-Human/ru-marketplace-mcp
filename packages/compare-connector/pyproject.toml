@@ -1,6 +1,6 @@
 [project]
 name = "compare-connector"
-version = "1.0.0"
+version = "1.1.0"
 description = "Cross-marketplace price comparison MCP server — queries every configured Russian marketplace at once"
 requires-python = ">=3.12"
 license = { text = "MIT" }

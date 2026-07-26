@@ -11,13 +11,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from pydantic import BaseModel, Field
 
 
-class MetaOut(BaseModel):
-    source: str = Field(default="", description="Tool name that produced this response.")
-    healthy: bool = Field(default=True, description="Whether the response passed structural validation.")
-    warnings: list[str] = Field(default_factory=list, description="Connector-level warnings (schema drift, etc.).")
+class MetaOut(MetaOutBase):
+    """WB carries the shared envelope unchanged."""
 
 
 class WbCardItem(BaseModel):
@@ -74,6 +73,33 @@ class WbReviewsResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
 
 
+class WbQuestionItem(BaseModel):
+    """One buyer question, with the seller's answer when there is one."""
+
+    question_id: str = Field(default="", description="WB question id.")
+    text: str = Field(default="", description="The buyer's question (mojibake-decoded, max 1500 chars).")
+    date: str | None = Field(default=None, description="When the question was asked (UTC ISO-8601).")
+    user: str = Field(default="", description="Asker's display name (mojibake-decoded, max 60 chars).")
+    answered: bool = Field(default=False, description="Whether a non-empty seller answer is present.")
+    answer_text: str = Field(default="", description="Seller's answer (mojibake-decoded, max 1500 chars).")
+    answer_date: str | None = Field(default=None, description="When the seller answered (UTC ISO-8601).")
+    nm_id: int | None = Field(
+        default=None,
+        description="The specific variant this question was asked on — the pool spans every variant of the imt_id.",
+    )
+
+
+class WbQuestionsResponse(BaseModel):
+    imt_id: int = Field(default=0, description="Root product id (imt_id) the questions belong to.")
+    total_available: int = Field(default=0, description="Total questions upstream reports for this product.")
+    returned: int = Field(default=0, description="Number of questions in this response.")
+    skip: int = Field(default=0, description="Offset this page starts at.")
+    answered_count: int = Field(default=0, description="How many of the returned questions have a seller answer.")
+    has_more: bool = Field(default=False, description="Whether more questions exist past this page.")
+    questions: list[WbQuestionItem] = Field(default_factory=list, description="Question items.")
+    meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
+
+
 class WbSearchResponse(BaseModel):
     query: str = Field(default="", description="Search query text.")
     page: int = Field(default=1, description="Search page number.")
@@ -84,6 +110,27 @@ class WbSearchResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
 
 
+class WbCategoryProductsResponse(BaseModel):
+    """A page of products from one catalog category.
+
+    ``items`` uses the same shape as ``wb_search`` and ``wb_card`` so a category
+    walk and a text search can be compared without translating between formats.
+    """
+
+    shard: str = Field(default="", description="WB catalog shard used.")
+    query: str = Field(default="", description="WB catalog selector used (cat=/subject=).")
+    page: int = Field(default=1, description="Page number this response covers.")
+    sort: str = Field(default="popular", description="Upstream ordering applied.")
+    dest: str = Field(default="", description="WB region id the prices and stock apply to.")
+    count: int = Field(default=0, description="Number of products on this page.")
+    has_more: bool = Field(
+        default=False,
+        description="Whether another page likely follows. Inferred from a full page — WB reports no total here.",
+    )
+    items: list[WbCardItem] = Field(default_factory=list, description="Products in this category page.")
+    meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
+
+
 class WbNoResultsResponse(BaseModel):
     status: str = Field(default="no_results", description="Response status: no_results (not an error).")
     query: str = Field(default="", description="Search query text.")
@@ -91,25 +138,18 @@ class WbNoResultsResponse(BaseModel):
     total_ids: int | None = Field(default=None, description="Total ids from search-goods if applicable.")
 
 
-class WbSelfCheckEntry(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    state: str = Field(default="", description="Sub-check verdict: healthy, drift, or inconclusive.")
+class WbSelfCheckEntry(SelfCheckEntryBase):
+    """WB sub-check entry: adds the baseline-comparison fields WB reports."""
+
     ok: bool | None = Field(default=None, description="Boolean health summary if applicable.")
     baseline: str = Field(default="", description="Baseline identifier used for comparison.")
     reason: str | None = Field(default=None, description="Reason code for non-healthy verdicts.")
-    notes: list[str] = Field(default_factory=list, description="Diagnostic notes.")
 
 
-class WbSelfCheckResponse(BaseModel):
-    status: str = Field(default="", description="Overall selfcheck status: success, drift_detected, or inconclusive.")
+class WbSelfCheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
     connector: str = Field(default="wb", description="Connector name: wb.")
     checks: dict[str, WbSelfCheckEntry] = Field(default_factory=dict, description="Per-subcheck results.")
-    server_version: str = Field(default="", description="Connector server version.")
-    server_started_at: str = Field(default="", description="Server start timestamp (UTC ISO-8601).")
-    process_id: int = Field(default=0, description="OS process id.")
-    config_loaded: bool = Field(default=False, description="Whether settings loaded successfully from env/defaults.")
-    tool_count: int = Field(default=0, description="Number of MCP tools registered on the server.")
 
 
 class WbSellerResponse(BaseModel):

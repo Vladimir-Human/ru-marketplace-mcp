@@ -30,6 +30,7 @@ import asyncio
 import datetime
 import json
 import os
+import re
 import string
 import time
 from typing import Annotated, Any
@@ -40,6 +41,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
+from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
     NotFoundError,
@@ -50,6 +52,7 @@ from mcp_core.errors import (
 )
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.transport import get_text_budgeted, proxy_from_env
 from pydantic import Field
 
 from wb_connector.models_output import (
@@ -58,7 +61,10 @@ from wb_connector.models_output import (
     WbCardResponse,
     WbCategoriesResponse,
     WbCategoryNode,
+    WbCategoryProductsResponse,
     WbNoResultsResponse,
+    WbQuestionItem,
+    WbQuestionsResponse,
     WbReviewItem,
     WbReviewsResponse,
     WbRootInfoResponse,
@@ -70,7 +76,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -96,6 +102,36 @@ MAX_BODY_BYTES = _settings.max_body_bytes  # 50 MB hard cap (CDN compromise / MI
 _SELFCHECK_NM = 5535522  # DEFENDER filter — golden-fixture baseline SKU
 _SELFCHECK_IMT = 1002173489  # its imt_id (review pool baseline)
 WB_REVIEW_HOSTS = ("feedbacks2.wb.ru", "feedbacks1.wb.ru")
+# Buyer questions live on their own host with NO mirrors — verified Jul 2026:
+# questions1/questions2.wildberries.ru and questions*.wb.ru all answer 502, so the
+# feedbacks-style host fallback above deliberately has no counterpart here.
+#
+# Trap worth knowing: feedbacks{1,2}.wb.ru answer ANY questions-shaped path with an
+# identical 277-byte empty-feedbacks stub. It looks like a valid "no questions"
+# response, which is exactly why questions must never be requested from there.
+WB_QUESTIONS_HOST = "questions.wildberries.ru"
+# take is hard-capped upstream: take=31 returns HTTP 400 (verified Jul 2026).
+# Both take and skip are MANDATORY — omitting either yields
+# {"questions": null, "count": 0} for every product, which reads as "no questions"
+# but is really a malformed request. That silent-empty failure is the single
+# easiest way to build a confidently-wrong tool on this endpoint.
+WB_QUESTIONS_PAGE_SIZE = 30
+# Category feeds live at catalog.wb.ru with the shard in the PATH. Verified live
+# Jul 2026: only the v4 shard-path form answers 200 — v2, v8, v9 and the
+# shard-less /catalog/v4/catalog variant all 404.
+WB_CATEGORY_PAGE_SIZE = 100
+# WB's own marker for a category that has no listable feed. Several of its largest
+# sections carry it (smartphones cat=9455, laptops cat=9491, TV/audio cat=9834):
+# they exist as navigation only. Confirmed live — the first probe answered 429,
+# which looked like throttling, but four further probes spaced 8s apart all
+# returned a clean empty 404. Treated as a refusal, never as an empty category.
+WB_UNLISTABLE_SHARD = "blackhole"
+# Upstream ordering values accepted by the catalog feed.
+WB_CATEGORY_SORTS = frozenset({"popular", "priceup", "pricedown", "newly", "rate", "benefit"})
+_WB_SHARD_RE = re.compile(r"^[a-z0-9_-]{2,60}$", re.IGNORECASE)
+# The selector is appended to the URL verbatim, so it is constrained to the two
+# real forms rather than trusted: this string reaches an outbound request.
+_WB_CATEGORY_QUERY_RE = re.compile(r"^(?:cat|subject|kind|brand|xsubject)=[0-9;,]{1,80}$", re.IGNORECASE)
 # Static CDN mirrors serving seller registration records and the catalog menu.
 # Verified live Jul 2026: vol0/data/supplier-by-id/{id}.json and
 # vol0/data/main-menu-ru-ru-v3.json. Several mirrors exist; they are tried in
@@ -135,65 +171,84 @@ _rate_lock = asyncio.Lock()
 _NET_RETRIES = _settings.net_retries  # retries after the first try (so up to 3 attempts)
 _NET_BACKOFF_S = _settings.net_backoff_s
 
+# Cache the (status, text, err) triple keyed by URL. An agent conversation walks
+# the same SKU repeatedly — price, then reviews, then a cross-marketplace
+# comparison — and each of those is a fresh HTTP call without this. Caching the
+# whole triple rather than just successes is deliberate: a rate-limit or block is
+# also worth remembering for a moment, since retrying it immediately is exactly
+# what provoked it. WB_CACHE_TTL=0 disables.
+_cache: TTLCache[tuple[int, str | None, str | None]] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
+
+
+def _proxy() -> str | None:
+    """Resolve WB's proxy: explicit ``WB_PROXY`` first, then the standard vars."""
+    return (_settings.proxy or "").strip() or proxy_from_env("WB_PROXY")
+
+
+def _wb_client() -> httpx.AsyncClient:
+    """Build WB's HTTP client.
+
+    Kept as a helper so proxy resolution happens in exactly one place. Redirects
+    stay off, matching the previous inline construction: WB answers some
+    datacenter requests with a self-referential 307 and following it burns the
+    retry budget instead of surfacing the block.
+    """
+    return httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS, proxy=_proxy())
+
+
+class _PoliteGate:
+    """Adapter exposing WB's module-level polite gate as a ``RateLimiter``.
+
+    Core's ``get_text_budgeted`` re-enters a limiter between retries. WB's gate
+    is module state (``_min_gap``, ``_last_request_ts``) that tests monkeypatch
+    directly, and ``_polite_wait`` is itself patched in several tests. Reading
+    both through the live module attribute keeps every one of those seams working
+    while still handing core a limiter to call.
+    """
+
+    async def wait(self) -> None:
+        await _polite_wait()
+
 
 async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
-    """GET with 50 MB body cap streaming + bounded transient-network retry.
+    """GET with body cap, wall-clock budget, and bounded transient-network retry.
 
-    Returns (status, text, err). Retries ONLY on httpx.HTTPError (transport-level
-    timeout / connection fault), with small backoff. HTTP statuses (incl. 429)
-    are returned as-is on the first try — never retried here, so rate-limit
-    handling stays the caller's explicit decision.
+    Thin delegation to ``mcp_core.transport.get_text_budgeted``. That function is
+    WB's own logic promoted into the shared runtime, so behaviour is unchanged:
+    ``(status, text, err)`` with the same ``timeout:`` / ``network:`` /
+    ``http_status:`` classification, retries only on transport faults (never on an
+    HTTP status, so rate-limit handling stays the caller's explicit decision), the
+    whole operation bounded by ``WB_WALL_TIMEOUT``, and the polite gate re-entered
+    before each retry.
+
+    The module-level knobs are read at call time, not captured at import, because
+    tests patch them per scenario.
+
+    **Only successful reads are cached.** A 200 with a body is idempotent catalog
+    data and safe to replay for the TTL. A failure is not: caching a transient
+    ConnectTimeout would keep failing the tool for the whole TTL window even
+    though the very next attempt would have succeeded, turning a blip into an
+    outage. Statuses like 429 and 5xx stay uncached for the same reason — the
+    caller's error path should see live upstream state, not a stale verdict.
     """
-    last_exc: Exception | None = None
-    deadline = time.monotonic() + WB_WALL_TIMEOUT
-    for attempt in range(_NET_RETRIES + 1):  # 1 initial + _NET_RETRIES retries
-        try:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                return 0, None, f"timeout: global {WB_WALL_TIMEOUT}s budget exhausted"
+    cached = _cache.get(url)
+    if cached is not None:
+        return cached
 
-            async def _once() -> tuple[int, str | None, str | None]:
-                async with client.stream("GET", url) as r:
-                    chunks: list[bytes] = []
-                    total = 0
-                    async for chunk in r.aiter_bytes(chunk_size=64 * 1024):
-                        total += len(chunk)
-                        if total > MAX_BODY_BYTES:
-                            return r.status_code, None, f"body exceeds {MAX_BODY_BYTES} bytes"
-                        chunks.append(chunk)
-                    data = b"".join(chunks)
-                    try:
-                        text = data.decode(r.encoding or "utf-8", errors="replace")
-                    except (LookupError, TypeError):
-                        text = data.decode("utf-8", errors="replace")
-                    return r.status_code, text, None
+    result = await get_text_budgeted(
+        client,
+        url,
+        max_bytes=MAX_BODY_BYTES,
+        wall_timeout_s=WB_WALL_TIMEOUT,
+        retries=_NET_RETRIES,
+        backoff_s=_NET_BACKOFF_S,
+        limiter=_PoliteGate(),
+    )
 
-            return await asyncio.wait_for(_once(), timeout=remaining)
-        except httpx.HTTPStatusError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", 0) or 0
-            return status_code, None, f"http_status: {exc.__class__.__name__}: {exc}"
-        except (TimeoutError, httpx.TransportError) as exc:
-            last_exc = exc
-            if isinstance(exc, asyncio.TimeoutError):
-                return 0, None, (f"timeout: {exc.__class__.__name__}: {exc} (after {attempt + 1} attempt)")
-            if attempt < _NET_RETRIES:
-                delay = _NET_BACKOFF_S * (attempt + 1)
-                remaining = deadline - time.monotonic()
-                if remaining <= delay:
-                    return 0, None, f"timeout: global {WB_WALL_TIMEOUT}s budget exhausted"
-                await asyncio.sleep(delay)
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    return 0, None, f"timeout: global {WB_WALL_TIMEOUT}s budget exhausted"
-                try:
-                    await asyncio.wait_for(_polite_wait(), timeout=remaining)
-                except TimeoutError:
-                    return 0, None, f"timeout: global {WB_WALL_TIMEOUT}s budget exhausted"
-                continue
-            kind = "timeout" if isinstance(exc, (asyncio.TimeoutError, httpx.TimeoutException)) else "network"
-            return 0, None, f"{kind}: {exc.__class__.__name__}: {exc} (after {attempt + 1} attempts)"
-    # unreachable, but keeps type-checkers happy
-    return 0, None, f"network: {last_exc}"
+    status, text, err = result
+    if err is None and status == 200 and text is not None:
+        _cache.set(url, result)
+    return result
 
 
 async def _polite_wait():
@@ -262,6 +317,47 @@ def _decode_mojibake(s: object) -> str:
         return fixed if cyr_fixed > cyr_orig else s
     except (UnicodeDecodeError, UnicodeEncodeError):
         return s
+
+
+def _card_item_dict(p: dict[str, Any]) -> dict[str, Any]:
+    """Flatten one WB product object into the shared card-item shape.
+
+    Used by wb_card, wb_search and wb_category_products so a product looks the
+    same however it was found — a category walk and a text search stay directly
+    comparable. Price extraction and the in_stock rule live in one place here,
+    which matters because "in stock" means *both* a positive quantity and a real
+    price: a quantity with no price is an unsellable listing, and calling it
+    available would rank a dead item as the cheapest option.
+    """
+    cur_rub, orig_rub = _extract_price_rub(p)
+    qty = R.coerce_int(p.get("totalQuantity"))
+    return {
+        "nm_id": p.get("id"),
+        "name": _decode_mojibake(p.get("name", "")),
+        "brand": _decode_mojibake(p.get("brand", "")),
+        "supplier": _decode_mojibake(p.get("supplier", "")),
+        "supplier_id": p.get("supplierId"),
+        "supplier_rating": p.get("supplierRating"),
+        "review_rating": p.get("reviewRating"),
+        "feedbacks": p.get("feedbacks"),
+        "total_quantity": qty,
+        "in_stock": qty is not None and qty > 0 and cur_rub is not None,
+        "price_rub": cur_rub,
+        "price_original_rub": orig_rub,
+    }
+
+
+def _normalise_ws(value: object) -> str:
+    """Collapse runs of whitespace into single spaces.
+
+    Seller answers to buyer questions arrive with literal newlines and tabs in
+    them (verified live Jul 2026). Left alone, a multi-line answer breaks any
+    single-line rendering an agent produces, and a naive slice can end mid-escape.
+    Accepts any type and always returns a str, matching ``_decode_mojibake``.
+    """
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.split())
 
 
 def _extract_price_rub(p: dict) -> tuple[float | None, float | None]:
@@ -443,7 +539,7 @@ async def wb_card(
 
     try:
         try:
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, url)
             if err:
                 log_event("wb_card.network_error", error=_redact(err))
@@ -482,24 +578,7 @@ async def wb_card(
         for p in products:
             if not isinstance(p, dict):
                 continue  # non-object product entry must not crash (audit wave-2)
-            cur_rub, orig_rub = _extract_price_rub(p)
-            qty = R.coerce_int(p.get("totalQuantity"))
-            item_dicts.append(
-                {
-                    "nm_id": p.get("id"),
-                    "name": _decode_mojibake(p.get("name", "")),
-                    "brand": _decode_mojibake(p.get("brand", "")),
-                    "supplier": _decode_mojibake(p.get("supplier", "")),
-                    "supplier_id": p.get("supplierId"),
-                    "supplier_rating": p.get("supplierRating"),
-                    "review_rating": p.get("reviewRating"),
-                    "feedbacks": p.get("feedbacks"),
-                    "total_quantity": qty,
-                    "in_stock": qty is not None and qty > 0 and cur_rub is not None,
-                    "price_rub": cur_rub,
-                    "price_original_rub": orig_rub,
-                }
-            )
+            item_dicts.append(_card_item_dict(p))
         warnings = _aggregate_offer_warnings(item_dicts)
         log_event("wb_card.done", nm_count=len(nm_ids), items=len(item_dicts))
         return WbCardResponse(
@@ -558,7 +637,7 @@ async def wb_root_info(
 
     try:
         try:
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, url)
             if err:
                 log_event("wb_root_info.network_error", error=_redact(err))
@@ -740,7 +819,7 @@ async def wb_reviews(
         for host in WB_REVIEW_HOSTS:
             url = f"https://{host}/feedbacks/v2/{imt_id}"
             try:
-                async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+                async with _wb_client() as client:
                     status_code, text, err = await _safe_get_text(client, url)
                 if err:
                     attempts.append({"host": host, "status": status_code, "error": err})
@@ -833,6 +912,215 @@ async def wb_reviews(
         raise
     except Exception as exc:
         log_event("wb_reviews.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
+        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+
+
+@mcp.tool(
+    name="wb_questions",
+    annotations=ToolAnnotations(
+        title="WB Buyer Questions by imt_id",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def wb_questions(
+    imt_id: Annotated[
+        int,
+        Field(
+            gt=0,
+            description="Root ID (imt_id) from wb_root_info. Questions are pooled per imt_id across every variant, NOT by nmId.",
+        ),
+    ],
+    limit: Annotated[
+        int,
+        Field(
+            default=30,
+            ge=1,
+            le=100,
+            description="Max questions to return (1..100). Fetched in pages of 30, which is the upstream cap.",
+        ),
+    ] = 30,
+    skip: Annotated[
+        int,
+        Field(
+            default=0,
+            ge=0,
+            description="Offset into the question pool, for walking past the first page.",
+        ),
+    ] = 0,
+    answered_only: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="Return only questions the seller has answered. Unanswered questions carry no product information.",
+        ),
+    ] = False,
+    ctx: Context | None = None,
+) -> WbQuestionsResponse:
+    """Fetch buyer questions and seller answers by imt_id (root_id from wb_root_info).
+
+    Answers this tool exists for: buyers ask what a listing omits — "does it fit
+    a 60cm opening", "is the cable included", "is this the 10A or the 16A model" —
+    and the seller's reply is often the only public statement of that fact.
+    Reviews describe the experience of owning the product; questions clarify what
+    it actually is.
+
+    Keyed by imt_id, exactly like ``wb_reviews``: every colour and size variant
+    shares one question pool. Passing an nmId returns an empty pool with no error,
+    so resolve the root id via ``wb_root_info`` first.
+
+    Args:
+        imt_id: Root ID from wb_root_info.
+        limit: Max questions to return (1..100).
+        skip: Offset into the pool, for pagination.
+        answered_only: Keep only questions that have a seller answer.
+        ctx: MCP context, when called as a tool.
+
+    ## Error Format
+
+    On validation or transport/parse failure, raises ToolError with a JSON
+    message describing the error code and whether it is retryable.
+    """
+    log_event("wb_questions.start", imt_id=imt_id, limit=limit, skip=skip, answered_only=answered_only)
+    if ctx is not None:
+        await ctx.info(f"wb_questions: imt_id={imt_id} limit={limit} skip={skip}")
+
+    if limit < 1 or limit > 100:
+        log_event("wb_questions.validation_failed", reason="bad_limit", limit=limit)
+        raise_tool_error(BadRequestError("limit 1..100"))
+    if skip < 0:
+        log_event("wb_questions.validation_failed", reason="bad_skip", skip=skip)
+        raise_tool_error(BadRequestError("skip must be >= 0"))
+
+    try:
+        collected: list[dict[str, Any]] = []
+        total_available = 0
+        offset = skip
+        # Pages of 30 (the upstream cap), so a limit above 30 needs several passes.
+        # answered_only filters after fetching, so the loop keeps going until the
+        # caller's limit is met or the pool runs out — otherwise asking for 20
+        # answered questions could return 3 simply because page 1 was mostly
+        # unanswered.
+        while len(collected) < limit:
+            params = httpx.QueryParams(
+                {
+                    "imtId": str(imt_id),
+                    "take": str(WB_QUESTIONS_PAGE_SIZE),
+                    "skip": str(offset),
+                }
+            )
+            url = f"https://{WB_QUESTIONS_HOST}/api/v1/questions?{params}"
+
+            await _polite_wait()
+            async with _wb_client() as client:
+                status_code, text, err = await _safe_get_text(client, url)
+
+            if err:
+                log_event("wb_questions.network_error", error=_redact(err), skip=offset)
+                raise_tool_error(TransportDownError(f"wb_questions: {err}", provider="wb"))
+            if status_code == 429:
+                log_event("wb_questions.rate_limited")
+                raise_tool_error(RateLimitedError("wb", retry_after_s=30.0))
+            if status_code != 200:
+                log_event("wb_questions.http_error", status=status_code, skip=offset)
+                raise_tool_error(
+                    TransportDownError(f"wb_questions HTTP {status_code}", provider="wb", status_code=status_code)
+                )
+
+            try:
+                data = json.loads(text or "")
+            except json.JSONDecodeError as exc:
+                log_event("wb_questions.parse_error", error=str(exc))
+                raise_tool_error(ParserDriftError(f"wb_questions: invalid JSON ({exc})", provider="wb"))
+            data, shape_error = _expect_json_object(data, "wb_questions response")
+            data = _require_object(data, "wb_questions response")
+            if shape_error:
+                log_event("wb_questions.shape_error", reason=shape_error["message"])
+                raise_tool_error(ParserDriftError(f"wb_questions: {shape_error['message']}", provider="wb"))
+
+            # "count" is the contract's presence marker. Its absence means the
+            # response shape changed, which must be loud — unlike a zero count,
+            # which is a legitimate "nobody has asked anything yet".
+            if "count" not in data:
+                log_event("wb_questions.shape_error", reason="count_missing")
+                raise_tool_error(ParserDriftError("wb_questions: count missing from 200 response", provider="wb"))
+
+            total_available = R.coerce_int(data.get("count")) or 0
+
+            raw_questions = data.get("questions")
+            # A product with no questions returns questions: null, not [].
+            if raw_questions is None:
+                break
+            if not isinstance(raw_questions, list):
+                log_event("wb_questions.shape_error", reason="questions_not_list")
+                raise_tool_error(
+                    ParserDriftError(
+                        f"wb_questions: questions expected list or null, got {type(raw_questions).__name__}",
+                        provider="wb",
+                    )
+                )
+
+            page = [q for q in raw_questions if isinstance(q, dict)]
+            if not page:
+                break
+
+            for raw in page:
+                if len(collected) >= limit:
+                    break
+                answer = raw.get("answer")
+                answer = answer if isinstance(answer, dict) else {}
+                answer_text = _normalise_ws(_decode_mojibake(answer.get("text")))
+                if answered_only and not answer_text:
+                    continue
+                user_details = raw.get("wbUserDetails")
+                user_name = user_details.get("name", "") if isinstance(user_details, dict) else ""
+                collected.append(
+                    {
+                        "question_id": str(raw.get("id") or ""),
+                        "text": _normalise_ws(_decode_mojibake(raw.get("text")))[:1500],
+                        "date": raw.get("createdDate"),
+                        "user": _decode_mojibake(user_name)[:60],
+                        "answered": bool(answer_text),
+                        "answer_text": answer_text[:1500],
+                        "answer_date": answer.get("createDate"),
+                        "nm_id": R.coerce_int(raw.get("nmId")),
+                    }
+                )
+
+            offset += len(page)
+            # A short page means the pool is exhausted; so does reaching the
+            # reported total. Either way, stop rather than requesting past the end.
+            if len(page) < WB_QUESTIONS_PAGE_SIZE or offset >= total_available:
+                break
+
+        answered_count = sum(1 for q in collected if q["answered"])
+        warnings: list[str] = []
+        if answered_only and not collected and total_available:
+            warnings.append(f"none of the {total_available} question(s) on this product have a seller answer yet")
+
+        log_event(
+            "wb_questions.done",
+            imt_id=imt_id,
+            returned=len(collected),
+            answered=answered_count,
+            total=total_available,
+        )
+        return WbQuestionsResponse(
+            imt_id=imt_id,
+            total_available=total_available,
+            returned=len(collected),
+            skip=skip,
+            answered_count=answered_count,
+            has_more=offset < total_available,
+            questions=[WbQuestionItem(**q) for q in collected],
+            meta=MetaOut(source="wb_questions", healthy=not warnings, warnings=warnings),
+        )
+    except ToolError:
+        raise
+    except Exception as exc:
+        log_event("wb_questions.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
         raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
 
 
@@ -930,7 +1218,7 @@ async def wb_search(
         v9_error: str | None = None
 
         try:
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, v9_url)
             if err:
                 v9_error = err
@@ -988,24 +1276,7 @@ async def wb_search(
         for p in products:
             if not isinstance(p, dict):
                 continue  # a non-object entry must never crash the tool
-            cur_rub, orig_rub = _extract_price_rub(p)
-            qty = R.coerce_int(p.get("totalQuantity"))
-            item_dicts.append(
-                {
-                    "nm_id": p.get("id"),
-                    "name": _decode_mojibake(p.get("name", "")),
-                    "brand": _decode_mojibake(p.get("brand", "")),
-                    "supplier": _decode_mojibake(p.get("supplier", "")),
-                    "supplier_id": p.get("supplierId"),
-                    "supplier_rating": p.get("supplierRating"),
-                    "review_rating": p.get("reviewRating"),
-                    "feedbacks": p.get("feedbacks"),
-                    "total_quantity": qty,
-                    "in_stock": qty is not None and qty > 0 and cur_rub is not None,
-                    "price_rub": cur_rub,
-                    "price_original_rub": orig_rub,
-                }
-            )
+            item_dicts.append(_card_item_dict(p))
 
         warnings = _aggregate_offer_warnings(item_dicts)
         if fallback_used:
@@ -1107,7 +1378,7 @@ async def _fetch_first_json(urls: list[str], label: str, ctx: Context | None) ->
     distinguish "all mirrors down" from "this id does not exist".
     """
     last_error = ""
-    async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+    async with _wb_client() as client:
         for url in urls:
             await _polite_wait()
             if ctx:
@@ -1155,7 +1426,7 @@ async def _search_via_search_goods(
     await _polite_wait()
 
     try:
-        async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+        async with _wb_client() as client:
             status_code, text, err = await _safe_get_text(client, sg_url)
         if err or status_code != 200 or not text:
             log_event("wb_search.fallback_failed", status=status_code, error=_redact(err or ""))
@@ -1188,7 +1459,7 @@ async def _search_via_search_goods(
     await _polite_wait()
 
     try:
-        async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+        async with _wb_client() as client:
             status_code, text, err = await _safe_get_text(client, card_url)
         if err or status_code != 200 or not text:
             log_event("wb_search.fallback_enrich_failed", status=status_code, error=_redact(err or ""))
@@ -1449,6 +1720,218 @@ async def wb_categories(
 
 
 @mcp.tool(
+    name="wb_category_products",
+    annotations=ToolAnnotations(
+        title="WB Category Product Listing",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def wb_category_products(
+    shard: Annotated[
+        str,
+        Field(
+            max_length=120,
+            description="WB catalog shard from wb_categories, e.g. 'electronic58'. The literal 'blackhole' means the category has no listable feed.",
+        ),
+    ],
+    query: Annotated[
+        str,
+        Field(
+            max_length=200,
+            description="WB catalog selector from wb_categories, e.g. 'cat=9845' or 'subject=1234'.",
+        ),
+    ],
+    page: Annotated[
+        int,
+        Field(
+            default=1,
+            ge=1,
+            le=100,
+            description="Page number. Each page carries up to 100 products.",
+        ),
+    ] = 1,
+    sort: Annotated[
+        str,
+        Field(
+            default="popular",
+            description="Upstream ordering: popular, priceup, pricedown, newly, rate, or benefit.",
+        ),
+    ] = "popular",
+    dest: Annotated[
+        str,
+        Field(
+            default="",
+            description="WB region id. Defaults to WB_DEFAULT_DEST (Moscow). Prices and stock are region-specific.",
+        ),
+    ] = "",
+    ctx: Context | None = None,
+) -> WbCategoryProductsResponse:
+    """List the products in a catalog category, using the shard and query from wb_categories.
+
+    This closes the loop `wb_categories` opens. That tool hands back WB's own
+    `shard` and `query` selectors — the address of a category feed — and this is
+    the tool that fetches it. Browsing "what humidifiers exist" no longer requires
+    inventing a search phrase and hoping WB's relevance ranking agrees with you.
+
+    Items come back in the same shape `wb_search` and `wb_card` return, so a
+    category walk and a text search are directly comparable.
+
+    **Not every category has a feed.** WB marks those with the shard
+    `blackhole`, and several of its largest sections (smartphones, laptops, TV and
+    audio) are among them: they exist as navigation, not as a listable endpoint.
+    Asking for one raises a clear error naming the alternative rather than
+    returning an empty list, because an empty list here would read as "this
+    category has no products", which is false.
+
+    Args:
+        shard: Catalog shard from wb_categories.
+        query: Catalog selector from wb_categories (`cat=` or `subject=`).
+        page: Page number, up to 100 products each.
+        sort: Upstream ordering.
+        dest: WB region id; defaults to WB_DEFAULT_DEST.
+        ctx: MCP context, when called as a tool.
+
+    ## Error Format
+
+    On validation or transport/parse failure, raises ToolError with a JSON
+    message describing the error code and whether it is retryable.
+    """
+    shard_norm = (shard or "").strip()
+    query_norm = (query or "").strip().lstrip("?&")
+    sort_norm = (sort or "popular").strip().lower()
+    dest_used = (dest or "").strip() or WB_DEFAULT_DEST
+
+    log_event("wb_category_products.start", shard=shard_norm, query=query_norm, page=page, sort=sort_norm)
+    if ctx is not None:
+        await ctx.info(f"wb_category_products: shard={shard_norm} {query_norm} page={page}")
+
+    if not shard_norm:
+        log_event("wb_category_products.validation_failed", reason="empty_shard")
+        raise_tool_error(BadRequestError("shard is required — take it from wb_categories"))
+    if not query_norm:
+        log_event("wb_category_products.validation_failed", reason="empty_query")
+        raise_tool_error(BadRequestError("query is required — take it from wb_categories, e.g. 'cat=9845'"))
+    if sort_norm not in WB_CATEGORY_SORTS:
+        log_event("wb_category_products.validation_failed", reason="bad_sort", sort=sort)
+        raise_tool_error(BadRequestError(f"sort must be one of {sorted(WB_CATEGORY_SORTS)} — got {sort!r}"))
+    if not _WB_SHARD_RE.match(shard_norm):
+        log_event("wb_category_products.validation_failed", reason="bad_shard", shard=shard_norm)
+        raise_tool_error(BadRequestError("shard must look like a WB shard name, e.g. 'electronic58'"))
+    if not _WB_CATEGORY_QUERY_RE.match(query_norm):
+        log_event("wb_category_products.validation_failed", reason="bad_query", query=query_norm)
+        raise_tool_error(BadRequestError("query must be a WB catalog selector such as 'cat=9845' or 'subject=1234'"))
+
+    # Refused before spending a request: 'blackhole' is WB's marker for a category
+    # with no feed of its own, confirmed live (a clean 404 on every retry). Saying
+    # so is the honest answer; an empty item list would claim the category is
+    # empty, which is a different and false statement.
+    if shard_norm == WB_UNLISTABLE_SHARD:
+        log_event("wb_category_products.unlistable", query=query_norm)
+        raise_tool_error(
+            BadRequestError(
+                f"this category is not directly listable: wb_categories reported shard "
+                f"'{WB_UNLISTABLE_SHARD}', which WB uses for sections that exist only as "
+                f"navigation. Expand it with wb_categories(root=...) and list a subcategory, "
+                f"or use wb_search for a text query."
+            )
+        )
+
+    params = httpx.QueryParams(
+        {
+            "appType": "1",
+            "curr": "rub",
+            "dest": dest_used,
+            "locale": "ru",
+            "page": str(page),
+            "sort": sort_norm,
+            "spp": "30",
+        }
+    )
+    # query already carries its own key=value (cat=/subject=), so it is appended
+    # verbatim after validation rather than re-encoded.
+    url = f"https://catalog.wb.ru/catalog/{shard_norm}/v4/catalog?{params}&{query_norm}"
+
+    await _polite_wait()
+    try:
+        async with _wb_client() as client:
+            status_code, text, err = await _safe_get_text(client, url)
+
+        if err:
+            log_event("wb_category_products.network_error", error=_redact(err))
+            raise_tool_error(TransportDownError(f"wb_category_products: {err}", provider="wb"))
+        if status_code == 429:
+            log_event("wb_category_products.rate_limited")
+            raise_tool_error(RateLimitedError("wb", retry_after_s=30.0))
+        if status_code == 404:
+            # A real shard answering 404 means this shard/query pair is not a
+            # category feed — usually a stale selector from a cached menu.
+            log_event("wb_category_products.not_found", shard=shard_norm, query=query_norm)
+            raise_tool_error(
+                NotFoundError(
+                    f"no category feed at shard {shard_norm!r} for {query_norm!r} — "
+                    "re-read the selectors from wb_categories, they change with the menu",
+                    provider="wb",
+                )
+            )
+        if text and "<html" in text[:200].lower():
+            log_event("wb_category_products.blocked", reason="cloudflare_html")
+            raise_tool_error(TransportDownError("Cloudflare HTML page (likely missing dest param)", provider="wb"))
+        if status_code != 200:
+            log_event("wb_category_products.http_error", status=status_code)
+            raise_tool_error(
+                TransportDownError(f"wb_category_products HTTP {status_code}", provider="wb", status_code=status_code)
+            )
+
+        try:
+            data = json.loads(text or "")
+        except json.JSONDecodeError as exc:
+            log_event("wb_category_products.parse_error", error=_redact(str(exc)))
+            raise_tool_error(ParserDriftError(f"wb_category_products: invalid JSON ({exc})", provider="wb"))
+
+        data, shape_error = _expect_json_object(data, "wb_category_products response")
+        data = _require_object(data, "wb_category_products response")
+        if shape_error:
+            log_event("wb_category_products.shape_error", error=_redact(shape_error.get("message", "")))
+            raise_tool_error(ParserDriftError(shape_error.get("message", ""), provider="wb"))
+
+        products, products_error = _card_products_checked(data)
+        if products_error:
+            log_event("wb_category_products.shape_error", error=products_error)
+            raise_tool_error(ParserDriftError(f"wb_category_products response {products_error}", provider="wb"))
+
+        item_dicts = [_card_item_dict(p) for p in products if isinstance(p, dict)]
+        warnings = _aggregate_offer_warnings(item_dicts)
+
+        log_event(
+            "wb_category_products.done",
+            shard=shard_norm,
+            query=query_norm,
+            page=page,
+            count=len(item_dicts),
+        )
+        return WbCategoryProductsResponse(
+            shard=shard_norm,
+            query=query_norm,
+            page=page,
+            sort=sort_norm,
+            dest=dest_used,
+            count=len(item_dicts),
+            # A full page implies more may follow; WB reports no total here.
+            has_more=len(item_dicts) >= WB_CATEGORY_PAGE_SIZE,
+            items=[WbCardItem(**d) for d in item_dicts],
+            meta=MetaOut(source="wb_category_products", healthy=not warnings, warnings=warnings),
+        )
+    except ToolError:
+        raise
+    except Exception as exc:
+        log_event("wb_category_products.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
+        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+
+
+@mcp.tool(
     name="wb_selfcheck",
     annotations=ToolAnnotations(
         title="WB Self-check (drift canary)",
@@ -1486,7 +1969,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     await _polite_wait()
     try:
         async with asyncio.timeout(45):  # whole-subcheck wall-clock (audit CRASH_HANG)
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, card_url)
             if err or status_code != 200:
                 checks["card"] = R.selfcheck_entry(
@@ -1606,7 +2089,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
             attempts: list[dict[str, Any]] = []
             review_payload: Any = None
             used_host = ""
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 for host in WB_REVIEW_HOSTS:
                     status_code, text, err = await _safe_get_text(
                         client, f"https://{host}/feedbacks/v2/{_SELFCHECK_IMT}"
@@ -1727,7 +2210,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     await _polite_wait()
     try:
         async with asyncio.timeout(45):
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, sg_url)
             if err or status_code == 429:
                 checks["search_goods"] = R.selfcheck_entry(
@@ -1809,7 +2292,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
             vol = nm // 100000
             part = nm // 1000
             basket_url = f"https://{host}/vol{vol}/part{part}/{nm}/info/ru/card.json"
-            async with httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS) as client:
+            async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, basket_url)
             if err or status_code == 404 or status_code != 200:
                 checks["root_basket"] = R.selfcheck_entry(

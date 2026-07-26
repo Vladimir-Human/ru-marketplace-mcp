@@ -8,15 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
 from pydantic import BaseModel, Field
 
 
-class MetaOut(BaseModel):
-    source: str = Field(default="", description="Tool name that produced this response.")
-    healthy: bool = Field(default=True, description="Whether the response passed structural validation.")
-    warnings: list[str] = Field(
-        default_factory=list, description="Connector-level warnings (schema drift, partial data)."
-    )
+class MetaOut(MetaOutBase):
+    """Detsky Mir flags cache hits so a caller can tell fresh data from a replay."""
+
     cached: bool = Field(default=False, description="Whether this response was served from the in-process TTL cache.")
 
 
@@ -93,19 +91,11 @@ class DetmirCategoriesResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
 
 
-class DetmirSelfcheckEntry(BaseModel):
-    state: str = Field(default="", description="Sub-check verdict: healthy, drift, or inconclusive.")
+class DetmirSelfcheckEntry(SelfCheckEntryBase):
     detail: str = Field(default="", description="What was observed.")
-    notes: list[str] = Field(default_factory=list, description="Diagnostic notes.")
 
 
-class DetmirSelfcheckResponse(BaseModel):
-    status: str = Field(default="", description="Overall verdict: success, drift_detected, or inconclusive.")
+class DetmirSelfcheckResponse(SelfCheckResponseBase):
     connector: str = Field(default="detmir", description="Connector name.")
     checks: dict[str, DetmirSelfcheckEntry] = Field(default_factory=dict, description="Per-endpoint-family results.")
-    server_version: str = Field(default="", description="Connector version.")
-    server_started_at: str = Field(default="", description="Server start timestamp (UTC ISO-8601).")
-    process_id: int = Field(default=0, description="OS process id.")
-    config_loaded: bool = Field(default=False, description="Whether settings loaded successfully.")
-    tool_count: int = Field(default=0, description="Number of registered MCP tools.")
     cache_stats: dict[str, Any] = Field(default_factory=dict, description="TTL cache counters for this process.")

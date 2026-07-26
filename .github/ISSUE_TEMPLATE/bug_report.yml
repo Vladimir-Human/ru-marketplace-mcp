@@ -1,0 +1,73 @@
+name: Bug report
+description: A bug that is not an upstream endpoint break — install, MCP client wiring, typing, crashes.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a marketplace endpoint that changed shape or a tool failing against live data, use the
+        **Broken endpoint** template instead — it collects the selfcheck output that report needs.
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What went wrong, and what you expected instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Install / uv sync
+        - MCP client wiring (Claude Desktop, Claude Code, Cursor, other)
+        - Types / mypy
+        - Crash or traceback
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: mcp_client
+    attributes:
+      label: MCP client
+      description: If this is a wiring issue, which client and how you launch the server.
+      placeholder: "Claude Desktop; uv run --directory /path/to/repo wb-mcp"
+    validations:
+      required: false
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps. Include the command line and any relevant config.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or traceback
+      description: >
+        Diagnostics go to stderr, not stdout. Paste the stderr output or the client's error log.
+        Redact anything personal.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version (3.12+ required), and uv version (`uv --version`).
+      placeholder: |
+        OS: Windows 11
+        Python: 3.12.4
+        uv: 0.5.1
+    validations:
+      required: true

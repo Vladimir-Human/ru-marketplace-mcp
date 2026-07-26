@@ -83,6 +83,37 @@ jobs:
         # logged-in browser, so including them would produce noise, not signal.
         run: uv run pytest -q -m "not live and not cdp"
 
+  coverage:
+    name: Coverage (ubuntu, py3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Enforce coverage threshold
+        # A single job owns the coverage gate so the threshold is not evaluated
+        # redundantly across the OS/Python matrix. It runs on the primary target
+        # (ubuntu + lowest supported Python); the matrix legs keep running the
+        # suite without coverage. Deselects live/cdp so the measured percentage
+        # matches the offline suite the floor was derived from.
+        #
+        # Measured branch-coverage total on the offline suite was 72.03%; the
+        # 70% floor sits a couple of points below so unrelated churn does not
+        # break the build while the number still ratchets up. --cov reads its
+        # source/omit (and branch=true) from [tool.coverage.run] in pyproject.toml.
+        run: uv run pytest -q -m "not live and not cdp" --cov --cov-report=term-missing --cov-fail-under=70
+
   smoke:
     name: Server smoke test
     runs-on: ubuntu-latest

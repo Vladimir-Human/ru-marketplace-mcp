@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Vladimir-Human/ru-marketplace-mcp",
+  "description": "Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews, seller identity",
+  "title": "ru-marketplace-mcp",
+  "version": "1.1.0",
+  "websiteUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
+  "repository": {
+    "url": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
+    "source": "github"
+  },
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "note": "One repository shipping five stdio MCP servers as console scripts on a shared mcp-core runtime. Not published to a package registry; install from source with uv and launch a script per server. See README for client configuration.",
+      "install": "uv run --directory /path/to/ru-marketplace-mcp <script>",
+      "servers": [
+        {
+          "id": "wildberries",
+          "script": "wb-mcp",
+          "package": "wb-connector",
+          "subfolder": "packages/wb-connector",
+          "transport": "stdio",
+          "toolPrefix": "wb_"
+        },
+        {
+          "id": "ozon",
+          "script": "ozon-mcp",
+          "package": "ozon-connector",
+          "subfolder": "packages/ozon-connector",
+          "transport": "stdio",
+          "toolPrefix": "ozon_"
+        },
+        {
+          "id": "yandex-market",
+          "script": "yandex-mcp",
+          "package": "yandex-connector",
+          "subfolder": "packages/yandex-connector",
+          "transport": "stdio",
+          "toolPrefix": "yandex_"
+        },
+        {
+          "id": "detsky-mir",
+          "script": "detmir-mcp",
+          "package": "detmir-connector",
+          "subfolder": "packages/detmir-connector",
+          "transport": "stdio",
+          "toolPrefix": "detmir_"
+        },
+        {
+          "id": "compare",
+          "script": "compare-mcp",
+          "package": "compare-connector",
+          "subfolder": "packages/compare-connector",
+          "transport": "stdio",
+          "toolPrefix": "compare_"
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.0.0"
+version = "1.1.0"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -48,6 +48,8 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
+    "truststore>=0.10.4",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.ruff]
@@ -78,6 +80,13 @@ check_untyped_defs = false
 disable_error_code = ["import-untyped"]
 exclude = ['\.venv']
 
+# mcp-core is the shared runtime every connector builds on, so it carries the
+# strictest bar: type-check the bodies of untyped defs here even though the
+# global default leaves that off for the connector packages (for now).
+[[tool.mypy.overrides]]
+module = "mcp_core.*"
+check_untyped_defs = true
+
 [tool.pytest.ini_options]
 testpaths = [
     "packages/mcp-core/tests",
@@ -94,3 +103,31 @@ markers = [
     "cdp: requires a running Chrome with remote debugging on port 9222",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+# Measure the six workspace packages' source, not their tests. This is what the
+# `--cov` invocation in the CI coverage job reports against; the enforcing
+# --cov-fail-under floor is passed on that job's command line, not baked in here,
+# so the rest of the test matrix runs exactly as before.
+branch = true
+source = [
+    "packages/mcp-core/src/mcp_core",
+    "packages/wb-connector/src/wb_connector",
+    "packages/ozon-connector/src/ozon_connector",
+    "packages/detmir-connector/src/detmir_connector",
+    "packages/yandex-connector/src/yandex_connector",
+    "packages/compare-connector/src/compare_connector",
+]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+# Measured branch-coverage total on the offline suite (-m "not live and not
+# cdp") was 72.03%. The CI floor (--cov-fail-under=70) sits a couple of points
+# below so unrelated churn does not break the build; it ratchets up as coverage
+# improves. The threshold is passed on the CI command line rather than fixed
+# here, keeping the number visible in the workflow.
+precision = 2

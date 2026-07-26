@@ -70,7 +70,7 @@ from yandex_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://market.yandex.ru"
@@ -241,7 +241,35 @@ async def yandex_search(
     parsed = ssr.parse_search(html)
     _guard_parse_status(parsed["status"], "yandex_search")
 
-    items = [_to_product(raw) for raw in parsed["items"][:limit]]
+    # Dedupe by product_id BEFORE applying the limit. Yandex's SSR payload can
+    # carry the same product more than once on a page — the parser keys on
+    # snippet (an on-screen position), and one product legitimately occupies
+    # several of those as different offers. Verified live: a 3-page walk of
+    # "ноутбук" returned 1 repeat between pages 1-2 and 3 between pages 2-3.
+    #
+    # Slicing first would let a duplicate consume part of the caller's budget, so
+    # limit=40 could yield 37 distinct products with no indication why. Deduping
+    # first means the limit always describes distinct products.
+    #
+    # Order is preserved: Yandex's ranking is the product of the search, and
+    # re-sorting it would discard information the caller asked for.
+    items: list[YandexProduct] = []
+    duplicates_dropped = 0
+    seen_product_ids: set[str] = set()
+    for raw in parsed["items"]:
+        if len(items) >= limit:
+            break
+        product = _to_product(raw)
+        # A blank product_id means the parser could not resolve one. Those cannot
+        # be compared for identity, so they pass through rather than collapsing
+        # into a single "" bucket that would drop unrelated products.
+        if product.product_id:
+            if product.product_id in seen_product_ids:
+                duplicates_dropped += 1
+                continue
+            seen_product_ids.add(product.product_id)
+        items.append(product)
+
     warnings: list[str] = []
     extraction = "ssr"
 
@@ -262,6 +290,7 @@ async def yandex_search(
         returned=len(items),
         total=parsed.get("total"),
         status=parsed["status"],
+        duplicates_dropped=duplicates_dropped,
     )
     return YandexSearchResponse(
         query=parsed.get("query") or text,
