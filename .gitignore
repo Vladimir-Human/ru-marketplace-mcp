@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+# uv.lock IS committed — it pins the exact dependency set for reproducible installs.
+
+# Testing / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Environment / secrets
+# No secrets are needed by this project, but a stray .env must never be committed.
+.env
+.env.*
+!.env.example
+
+# Chrome scraping profile (created at runtime, contains the operator's session)
+Chrome-Scraping/
+chrome-scraping/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local scratch
+/tmp/
+scratch/
+*.log

@@ -1,0 +1,23 @@
+[project]
+name = "mcp-core"
+version = "1.0.0"
+description = "Shared runtime for ru-marketplace-mcp connectors — error taxonomy, transports, tolerant-reader helpers"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "fastmcp>=3.4.0",
+]
+
+[project.optional-dependencies]
+cdp = ["websockets>=12.0"]
+impersonate = ["curl-cffi>=0.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_core"]

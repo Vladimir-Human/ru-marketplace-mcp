@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep CI hermetic: no test may reach a marketplace, and none should try.
+  UV_FROZEN: "0"
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Ruff (format check)
+        run: uv run ruff format --check .
+
+      - name: mypy (host platform)
+        run: uv run mypy packages/*/src
+
+      - name: mypy (cross-platform)
+        # The lint job runs on Linux, where mypy resolves os.killpg/getpgid and
+        # signal.SIGKILL as present — so a Windows-only type error stays invisible
+        # until someone runs the checks on Windows. These flags catch it here.
+        run: |
+          uv run mypy --platform win32 packages/*/src
+          uv run mypy --platform darwin packages/*/src
+
+  test:
+    name: Tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The connectors ship to operator laptops, so all three desktop OSes are
+        # first-class. The Windows process-management paths are unit-tested
+        # everywhere via PLATFORM_OVERRIDE, but running the suite natively on
+        # Windows is what proves the real branches import and behave.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Sync workspace
+        run: uv sync --all-packages --python ${{ matrix.python }}
+
+      - name: Run offline test suite
+        # Live and CDP tests are excluded: CI has no Russian-friendly IP and no
+        # logged-in browser, so including them would produce noise, not signal.
+        run: uv run pytest -q -m "not live and not cdp"
+
+  smoke:
+    name: Server smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Every server imports and registers its tools
+        # A server that imports but registers nothing is broken in a way the unit
+        # tests would not catch, so the tool inventory is asserted explicitly.
+        run: |
+          uv run python - <<'PY'
+          import asyncio
+
+          EXPECTED = {
+              "wb": 7,
+              "ozon": 4,
+              "detmir": 4,
+              "yandex": 3,
+              "compare": 2,
+          }
+
+          async def main() -> None:
+              from detmir_connector.server import mcp as detmir_mcp
+              from ozon_connector.server import mcp as ozon_mcp
+              from wb_connector.server import mcp as wb_mcp
+              from compare_connector.server import mcp as compare_mcp
+              from yandex_connector.server import mcp as yandex_mcp
+
+              servers = {
+                  "wb": wb_mcp,
+                  "ozon": ozon_mcp,
+                  "detmir": detmir_mcp,
+                  "yandex": yandex_mcp,
+                  "compare": compare_mcp,
+              }
+              failures = []
+              for name, server in servers.items():
+                  tools = sorted(t.name for t in await server.list_tools())
+                  print(f"{name}: {len(tools)} tools -> {tools}")
+                  if len(tools) != EXPECTED[name]:
+                      failures.append(f"{name}: expected {EXPECTED[name]} tools, got {len(tools)}")
+              if failures:
+                  raise SystemExit("\n".join(failures))
+              print("all servers registered their expected tools")
+
+          asyncio.run(main())
+          PY
+
+      - name: Console scripts are installed
+        run: |
+          uv run which wb-mcp
+          uv run which ozon-mcp
+          uv run which detmir-mcp
+          uv run which yandex-mcp
+          uv run which compare-mcp

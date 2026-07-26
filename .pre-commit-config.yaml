@@ -1,0 +1,39 @@
+# Pre-commit hooks for ru-marketplace-mcp.
+#
+# Install once:  uv run pre-commit install
+# Run manually:  uv run pre-commit run --all-files
+#
+# These mirror the CI lint job, so a clean commit means a green CI lint stage.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: no-print-in-servers
+        # A print() in a stdio MCP server writes to stdout and corrupts the
+        # JSON-RPC stream — the single most damaging mistake in this codebase.
+        name: no stdout writes in connector code
+        entry: python scripts/check_no_print.py
+        language: system
+        files: ^packages/.*/src/.*\.py$
+        pass_filenames: true
