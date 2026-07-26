@@ -41,7 +41,7 @@ jobs:
         run: ls -la dist
 
       - name: Attach artifacts to the GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # Two explicit globs, not dist/*: uv writes a one-byte ".gitignore"
           # into its output directory, and a bare wildcard uploads it as a
