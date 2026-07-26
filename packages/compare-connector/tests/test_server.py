@@ -317,3 +317,217 @@ async def test_compare_sources_reports_installed_and_missing(monkeypatch):
     assert "ozon" in report["not_installed"]
     assert report["server_version"] == server.SERVER_VERSION
     assert "source_timeout_s" in report
+
+
+# --------------------------------------------------------- typed adapters ----
+
+
+class _FakeOzonItem:
+    """Mirrors OzonSearchItemOut: every value arrives as display text."""
+
+    def __init__(self, **kw):
+        self.sku = kw.get("sku")
+        self.url = kw.get("url")
+        self.canonical_path = kw.get("canonical_path")
+        self.card_input = kw.get("card_input")
+        self.title = kw.get("title")
+        self.price = kw.get("price")
+        self.price_original = kw.get("price_original")
+        self.rating = kw.get("rating")
+        self.rating_count = kw.get("rating_count")
+        self.stock = kw.get("stock")
+
+
+class _FakeResponse:
+    def __init__(self, items):
+        self.items = items
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("1 234 ₽", 1234.0),
+        ("1 234 ₽", 1234.0),  # non-breaking space
+        ("1 234,50 ₽", 1234.5),  # narrow no-break space, comma decimal
+        ("999 ₽", 999.0),
+        (1500, 1500.0),
+        (1500.5, 1500.5),
+        ("0 ₽", None),  # a zero price is not a bargain, it is no offer
+        (0, None),
+        ("", None),
+        (None, None),
+        ("нет цены", None),
+        (True, None),  # a bool is not a price
+    ],
+)
+def test_price_coercion_handles_ozon_display_strings(raw, expected):
+    """Ozon reports prices as text; MarketOffer.price_rub is a float.
+
+    Passing the raw string through raised a pydantic ValidationError, which would
+    have taken down the entire Ozon source rather than one offer.
+    """
+    assert server._as_price(raw) == expected
+
+
+def test_price_coercion_never_substitutes_zero():
+    """A 0.0 would rank a dead listing as the cheapest option."""
+    assert server._as_price("0 ₽") is None
+    assert server._as_price(0) is None
+    assert server._as_price(0.0) is None
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("24 086 отзывов", 24086),
+        ("(15 374)", 15374),
+        ("5", 5),
+        (42, 42),
+        (None, None),
+        ("нет", None),
+    ],
+)
+def test_count_coercion_handles_russian_review_labels(raw, expected):
+    assert server._as_count(raw) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("осталось 3 шт", True),
+        ("осталось 0 шт", False),
+        ("много шт", True),
+        (5, True),
+        (0, False),
+        (None, None),  # unknown is not the same as out of stock
+        ("", None),
+    ],
+)
+def test_stock_label_coercion(raw, expected):
+    assert server._stock_from_label(raw) is expected
+
+
+async def test_ozon_adapter_reads_the_real_model_fields(monkeypatch):
+    """The old adapter guessed keys OzonSearchItemOut does not declare.
+
+    It read price_rub, reviews_count, feedbacks, name, id and brand — none exist,
+    so each silently became None. This pins the real field names.
+    """
+    item = _FakeOzonItem(
+        sku=123456,
+        title="товар",
+        price="1 999 ₽",
+        rating="4,8",
+        rating_count="24 086 отзывов",
+        stock="осталось 3 шт",
+        url="https://www.ozon.ru/product/123456/",
+    )
+
+    class FakeOzonServer:
+        async def ozon_search(self, query):
+            return _FakeResponse([item])
+
+    monkeypatch.setitem(server.SOURCES, "ozon", FakeOzonServer())
+
+    offers = await server._search_ozon("товар", 10)
+
+    assert len(offers) == 1
+    got = offers[0]
+    assert got.product_id == "123456"
+    assert got.price_rub == 1999.0
+    assert got.rating == 4.8
+    assert got.rating_count == 24086, "review count was always None before"
+    assert got.in_stock is True, "stock was ignored entirely before"
+    assert got.url == "https://www.ozon.ru/product/123456/"
+    # Ozon search rows genuinely carry neither, so they are empty by definition.
+    assert got.brand == ""
+    assert got.seller == ""
+
+
+async def test_ozon_adapter_survives_a_priceless_row(monkeypatch):
+    class FakeOzonServer:
+        async def ozon_search(self, query):
+            return _FakeResponse([_FakeOzonItem(sku=1, title="без цены")])
+
+    monkeypatch.setitem(server.SOURCES, "ozon", FakeOzonServer())
+
+    offers = await server._search_ozon("тест", 10)
+
+    assert offers[0].price_rub is None
+    assert offers[0].in_stock is None
+
+
+async def test_wildberries_adapter_reads_typed_attributes(monkeypatch):
+    from wb_connector.models_output import WbCardItem
+
+    class FakeWbServer:
+        async def wb_search(self, query, page):
+            return _FakeResponse(
+                [
+                    WbCardItem(
+                        nm_id=5535522,
+                        name="фильтр",
+                        brand="DEFENDER",
+                        supplier="Продавец",
+                        review_rating=4.7,
+                        feedbacks=120,
+                        in_stock=True,
+                        price_rub=1500.0,
+                    )
+                ]
+            )
+
+    monkeypatch.setitem(server.SOURCES, "wildberries", FakeWbServer())
+
+    offers = await server._search_wildberries("фильтр", 10)
+
+    got = offers[0]
+    assert got.product_id == "5535522"
+    assert got.price_rub == 1500.0
+    assert got.rating == 4.7
+    assert got.rating_count == 120
+    assert got.in_stock is True
+    assert got.url == "https://www.wildberries.ru/catalog/5535522/detail.aspx"
+
+
+async def test_wildberries_adapter_tolerates_a_no_results_response(monkeypatch):
+    """wb_search can return a distinct no-results model with no items at all."""
+    from wb_connector.models_output import WbNoResultsResponse
+
+    class FakeWbServer:
+        async def wb_search(self, query, page):
+            return WbNoResultsResponse(query="ничего")
+
+    monkeypatch.setitem(server.SOURCES, "wildberries", FakeWbServer())
+
+    assert await server._search_wildberries("ничего", 10) == []
+
+
+async def test_yandex_adapter_keeps_the_subscriber_price_out_of_ranking(monkeypatch):
+    from yandex_connector.models_output import YandexProduct
+
+    class FakeYandexServer:
+        async def yandex_search(self, query, page, limit):
+            return _FakeResponse(
+                [
+                    YandexProduct(
+                        product_id="777",
+                        title="телефон",
+                        brand="Бренд",
+                        seller="Магазин",
+                        price_rub=30000.0,
+                        price_with_plus=21000.0,
+                        rating=4.5,
+                        rating_count=88,
+                        in_stock=True,
+                        url="https://market.yandex.ru/product/777",
+                    )
+                ]
+            )
+
+    monkeypatch.setitem(server.SOURCES, "yandex_market", FakeYandexServer())
+
+    got = (await server._search_yandex("телефон", 10))[0]
+
+    assert got.price_rub == 30000.0, "ranking must use the everyday price"
+    assert got.price_with_subscription_rub == 21000.0

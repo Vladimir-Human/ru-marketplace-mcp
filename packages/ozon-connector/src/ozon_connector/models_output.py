@@ -12,13 +12,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class MetaOut(BaseModel):
-    source: str = Field(default="", description="Tool name that produced this response.")
-    healthy: bool = Field(default=True, description="Whether the response passed structural validation.")
-    warnings: list[str] = Field(default_factory=list, description="Connector-level warnings (schema drift, etc.).")
+class MetaOut(MetaOutBase):
+    """Ozon carries the shared envelope unchanged."""
 
 
 class OzonSellerOut(BaseModel):
@@ -102,30 +101,14 @@ class OzonSearchResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 
-class OzonSelfcheckCheckOut(BaseModel):
-    """One tri-state selfcheck sub-check entry.
+class OzonSelfcheckCheckOut(SelfCheckEntryBase):
+    """Ozon sub-check entry: adds the baseline-comparison fields Ozon reports."""
 
-    ``extra="allow"`` preserves the variable diagnostics (missing_widgets,
-    added_widgets, smoke, code, max_pages, ...) that ``resilience.selfcheck_entry``
-    injects without forcing an exhaustive field list here.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    state: str = Field(default="", description="Sub-check verdict: healthy, drift, or inconclusive.")
     ok: bool | None = Field(default=None, description="Boolean health summary if applicable.")
     baseline: str = Field(default="", description="Baseline identifier used for comparison.")
     reason: str | None = Field(default=None, description="Reason code for non-healthy verdicts.")
-    notes: list[str] = Field(default_factory=list, description="Diagnostic notes.")
 
 
-class OzonSelfcheckResponse(BaseModel):
-    status: str = Field(default="", description="Overall selfcheck status: success, drift_detected, or inconclusive.")
+class OzonSelfcheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
-    connector: str = Field(default="", description="Connector name: ozon.")
     checks: dict[str, OzonSelfcheckCheckOut] = Field(default_factory=dict, description="Per-subcheck results.")
-    server_version: str = Field(default="", description="Connector server version.")
-    server_started_at: str = Field(default="", description="Server start timestamp (UTC ISO-8601).")
-    process_id: int = Field(default=0, description="OS process id.")
-    config_loaded: bool = Field(default=False, description="Whether settings loaded successfully from env/defaults.")
-    tool_count: int = Field(default=0, description="Number of MCP tools registered on the server.")

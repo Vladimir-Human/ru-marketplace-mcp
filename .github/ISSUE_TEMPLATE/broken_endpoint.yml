@@ -1,0 +1,112 @@
+name: Broken endpoint
+description: A marketplace endpoint changed shape, or a tool started failing against live data.
+title: "[endpoint] "
+labels: ["broken-endpoint"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Upstream endpoints break; that is expected, not a defect in your report.
+
+        The one fact that resolves most reports is **where your traffic comes from**. A geo
+        block reads as `inconclusive` and says nothing about parser health, so the IP question
+        below is required. See [docs/ANTI_BOT.md](https://github.com/Vladimir-Human/ru-marketplace-mcp/blob/main/docs/ANTI_BOT.md)
+        for what each source does from where.
+
+  - type: checkboxes
+    id: ran_selfcheck
+    attributes:
+      label: Before you file
+      options:
+        - label: I ran the connector's `*_selfcheck()` and pasted its output below. It distinguishes format drift from a block, and without it the report cannot be triaged.
+          required: true
+
+  - type: dropdown
+    id: connector
+    attributes:
+      label: Connector
+      description: Which server exposes the failing tool?
+      options:
+        - Wildberries
+        - Ozon
+        - Yandex Market
+        - Detsky Mir
+        - Compare
+    validations:
+      required: true
+
+  - type: input
+    id: tool
+    attributes:
+      label: Tool name
+      description: The exact tool that failed, e.g. wb_search, ozon_card, yandex_card, detmir_category, compare_prices.
+      placeholder: wb_search
+    validations:
+      required: true
+
+  - type: dropdown
+    id: network_vantage
+    attributes:
+      label: Where are you connecting from?
+      description: >
+        This is usually the deciding factor. Ozon rejects datacenter traffic, and any geo block
+        surfaces as `inconclusive`, which is not a parser bug. Say where your requests originate.
+      options:
+        - Russian residential IP
+        - Datacenter IP (cloud host, server)
+        - VPN or proxy (exit outside Russia)
+        - VPN or proxy (Russian exit)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: selfcheck_output
+    attributes:
+      label: "`*_selfcheck()` output"
+      description: >
+        Paste the verbatim result of the matching selfcheck (wb_selfcheck, ozon_selfcheck,
+        yandex_selfcheck, detmir_selfcheck). Include the top-level status and the per-check
+        entries. Do not paraphrase.
+      render: text
+      placeholder: |
+        status=drift_detected
+        checks={'card': healthy, 'reviews': drift, 'search_goods': healthy, ...}
+    validations:
+      required: true
+
+  - type: dropdown
+    id: error_code
+    attributes:
+      label: Error code seen
+      description: >
+        The `error` field in the tool's JSON, or the selfcheck status. `parser_drift` means the
+        data changed shape; `transport_down` / `rate_limited` mean we were refused, not that the
+        product is absent.
+      options:
+        - parser_drift
+        - transport_down
+        - rate_limited
+        - not_found
+        - "selfcheck: drift_detected"
+        - "selfcheck: inconclusive"
+        - Other / none of these
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_json
+    attributes:
+      label: Error JSON
+      description: The full error payload the tool returned. Redact anything personal.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The exact call and arguments, e.g. `wb_search("кроссовки мужские", page=1)`. Note anything non-default in your environment variables.
+    validations:
+      required: false

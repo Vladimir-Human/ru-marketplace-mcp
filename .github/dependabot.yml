@@ -1,0 +1,38 @@
+# Dependabot keeps the toolchain and the locked Python deps current.
+#
+# Two ecosystems:
+#   - github-actions: the pinned action versions in .github/workflows/*
+#   - uv: the workspace dependencies tracked in uv.lock. Dependabot's native uv
+#     support (uv.lock-aware) reached general availability on 2025-03-13, so we
+#     use `package-ecosystem: "uv"` directly rather than the older `pip` shim.
+#
+# Minor and patch bumps are grouped per ecosystem so routine upgrades land as a
+# single PR instead of one-per-dependency; majors stay separate for deliberate
+# review. Weekly cadence and modest open-PR caps keep the noise down.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      uv-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"

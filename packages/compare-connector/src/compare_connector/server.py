@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import os
+import re
 import time
 from typing import Annotated, Any
 
@@ -47,7 +48,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -104,76 +105,177 @@ SOURCES = _available_sources()
 SEARCHABLE = ("wildberries", "yandex_market", "ozon")
 
 
+def _wb_product_url(nm_id: object) -> str:
+    return f"https://www.wildberries.ru/catalog/{nm_id}/detail.aspx" if nm_id else ""
+
+
+# Ozon's search tiles carry display text, not numbers: "1 234 ₽" for a price and
+# "4,8" for a rating, with non-breaking and narrow no-break spaces as thousands
+# separators and a comma decimal mark.
+_NUMERIC_JUNK_RE = re.compile(r"[^\d,.\-]")
+
+
+def _as_price(value: object) -> float | None:
+    """Coerce a marketplace price into a float, or ``None`` when there isn't one.
+
+    Never returns 0.0 as a stand-in. A zero would rank a listing with no live
+    offer as the cheapest result, which is the one outcome a price comparison must
+    never produce.
+
+    Handles Ozon's rouble display strings — "1 234 ₽", "1 234,50 ₽" — where the
+    separators include U+00A0 and U+202F. ``MarketOffer.price_rub`` is typed
+    ``float | None``, so passing the raw string through would raise a pydantic
+    validation error and take down the whole Ozon source.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) or None
+    if not isinstance(value, str):
+        return None
+    cleaned = _NUMERIC_JUNK_RE.sub("", value)
+    if not cleaned:
+        return None
+    # A comma is a decimal mark here, not a thousands separator: Ozon writes
+    # "1 234,50", never "1,234.50".
+    cleaned = cleaned.replace(",", ".")
+    if cleaned.count(".") > 1:
+        head, _, tail = cleaned.rpartition(".")
+        cleaned = head.replace(".", "") + "." + tail
+    try:
+        parsed = float(cleaned)
+    except ValueError:
+        return None
+    return parsed or None
+
+
+def _as_count(value: object) -> int | None:
+    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if not isinstance(value, str):
+        return None
+    digits = re.sub(r"[^\d]", "", value)
+    return int(digits) if digits else None
+
+
+def _stock_from_label(value: object) -> bool | None:
+    """Read Ozon's stock hint, e.g. "осталось 3 шт".
+
+    Only a positive statement counts as in stock. Absence of a label means Ozon
+    said nothing, which is ``None`` — not ``False``, because "unknown" and "out of
+    stock" are different answers to a shopper.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value > 0
+    if not isinstance(value, str) or not value.strip():
+        return None
+    digits = re.sub(r"[^\d]", "", value)
+    if digits:
+        return int(digits) > 0
+    return True
+
+
 async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``wb_search`` results.
+
+    Fields are read as typed attributes on ``WbCardItem`` rather than by string
+    key, so a rename upstream fails mypy here instead of silently turning a price
+    into ``None``. WB's search can return a distinct no-results response with no
+    ``items`` at all, hence the ``getattr`` guard.
+    """
     server = SOURCES["wildberries"]
     response = await server.wb_search(query=query, page=1)
-    payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
 
     offers: list[MarketOffer] = []
-    for item in (payload.get("items") or [])[:limit]:
-        price = item.get("price_rub")
+    for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
             MarketOffer(
                 source="wildberries",
-                product_id=str(item.get("nm_id") or ""),
-                title=str(item.get("name") or ""),
-                brand=str(item.get("brand") or ""),
-                seller=str(item.get("supplier") or ""),
-                price_rub=price,
-                rating=item.get("review_rating"),
-                rating_count=item.get("feedbacks"),
-                in_stock=item.get("in_stock"),
-                url=f"https://www.wildberries.ru/catalog/{item.get('nm_id')}/detail.aspx" if item.get("nm_id") else "",
+                product_id=str(item.nm_id or ""),
+                title=item.name,
+                brand=item.brand,
+                seller=item.supplier,
+                price_rub=item.price_rub,
+                rating=item.review_rating,
+                rating_count=item.feedbacks,
+                in_stock=item.in_stock,
+                url=_wb_product_url(item.nm_id),
             )
         )
     return offers
 
 
 async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``yandex_search`` results.
+
+    ``price_rub`` is the everyday price and the only one that ranks;
+    ``price_with_plus`` needs a paid subscription, so it rides along in a separate
+    field where it cannot masquerade as a bargain.
+    """
     server = SOURCES["yandex_market"]
     response = await server.yandex_search(query=query, page=1, limit=limit)
-    payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
 
     offers: list[MarketOffer] = []
-    for item in (payload.get("items") or [])[:limit]:
+    for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
             MarketOffer(
                 source="yandex_market",
-                product_id=str(item.get("product_id") or ""),
-                title=str(item.get("title") or ""),
-                brand=str(item.get("brand") or ""),
-                seller=str(item.get("seller") or ""),
-                # Everyday price for ranking; the subscriber price is reported
-                # separately so a Plus discount can never masquerade as a bargain.
-                price_rub=item.get("price_rub"),
-                price_with_subscription_rub=item.get("price_with_plus"),
-                rating=item.get("rating"),
-                rating_count=item.get("rating_count"),
-                in_stock=item.get("in_stock"),
-                url=str(item.get("url") or ""),
+                product_id=item.product_id,
+                title=item.title,
+                brand=item.brand,
+                seller=item.seller,
+                price_rub=item.price_rub,
+                price_with_subscription_rub=item.price_with_plus,
+                rating=item.rating,
+                rating_count=item.rating_count,
+                in_stock=item.in_stock,
+                url=item.url,
             )
         )
     return offers
 
 
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``ozon_search`` results.
+
+    This adapter was previously written blind — Ozon refuses datacenter IPs, so it
+    could not be exercised from CI or a sandbox — and it guessed wrong. It read
+    ``price_rub``, ``reviews_count``, ``feedbacks``, ``name``, ``id`` and
+    ``brand``; ``OzonSearchItemOut`` declares none of those. Every one silently
+    resolved to ``None``, so Ozon offers arrived with no review count at all and
+    depended on a fallback key for the price.
+
+    Reading typed attributes makes that class of error a type failure rather than
+    a quiet blank. Ozon reports no brand or seller on a search row, so those stay
+    empty by definition rather than by accident, and ``stock`` — which the old
+    version ignored entirely — now populates ``in_stock``.
+    """
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
-    payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
 
     offers: list[MarketOffer] = []
-    for item in (payload.get("items") or [])[:limit]:
+    for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
             MarketOffer(
                 source="ozon",
-                product_id=str(item.get("sku") or item.get("id") or ""),
-                title=str(item.get("title") or item.get("name") or ""),
-                brand=str(item.get("brand") or ""),
-                seller=str(item.get("seller") or ""),
-                price_rub=item.get("price_rub") or item.get("price"),
-                rating=item.get("rating"),
-                rating_count=item.get("reviews_count") or item.get("feedbacks"),
-                url=str(item.get("url") or ""),
+                product_id=str(item.sku or ""),
+                title=item.title or "",
+                # Ozon search rows carry neither brand nor seller; a card lookup
+                # does. Left empty rather than invented.
+                brand="",
+                seller="",
+                price_rub=_as_price(item.price),
+                rating=_as_price(item.rating),
+                rating_count=_as_count(item.rating_count),
+                in_stock=_stock_from_label(item.stock),
+                url=item.url or "",
             )
         )
     return offers

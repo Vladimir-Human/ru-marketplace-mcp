@@ -1,0 +1,48 @@
+name: Release
+
+# Fires when a version tag is pushed (e.g. v1.1.0). Builds a wheel and sdist for
+# every workspace package and attaches them to the GitHub Release for that tag.
+#
+# Deliberately NOT publishing to PyPI: the distribution names (wb-connector and
+# friends) are too generic and undecided, so the packages are not on PyPI yet
+# (see RELEASE_PROMPT.md). This job only builds and attaches artifacts.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to create/update the GitHub Release and upload assets
+
+jobs:
+  release:
+    name: Build packages and publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build wheels and sdists for all workspace packages
+        # --all-packages builds each of the six members (mcp-core + five
+        # connectors) into a wheel and an sdist under dist/. Verified against the
+        # pinned uv version.
+        run: uv build --all-packages --out-dir dist
+
+      - name: List built artifacts
+        run: ls -l dist
+
+      - name: Attach artifacts to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

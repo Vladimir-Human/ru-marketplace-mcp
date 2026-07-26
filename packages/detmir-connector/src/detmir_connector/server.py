@@ -72,7 +72,7 @@ from detmir_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 API_BASE = "https://api.detmir.ru"
@@ -103,6 +103,30 @@ _cache: TTLCache[Any] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
 
 def _proxy() -> str | None:
     return (_settings.proxy or "").strip() or proxy_from_env("DETMIR_PROXY")
+
+
+# Region codes are ISO 3166-2:RU (RU-MOW Moscow, RU-SPE St Petersburg, ...). Validated
+# rather than escaped, because the value is interpolated into a filter expression.
+_REGION_RE = re.compile(r"^[A-Z]{2}-[A-Z0-9]{2,4}$")
+
+
+def _resolve_region(region: str | None) -> str:
+    """Pick the region for one call: the argument wins, else ``DETMIR_REGION``.
+
+    A per-call parameter matters because prices and — far more visibly — offline
+    store availability differ by city. Verified live on one product: 152 stores
+    carried it in RU-MOW, 37 in RU-SPE, 2 in RU-KHA. Before this parameter existed
+    the only way to compare cities was restarting the server with a different
+    environment variable, which no agent mid-conversation can do.
+    """
+    candidate = (region or "").strip().upper() or _settings.region.strip().upper()
+    if not _REGION_RE.match(candidate):
+        raise_tool_error(
+            BadRequestError(
+                f"invalid region {region or _settings.region!r}: expected an ISO code like 'RU-MOW' or 'RU-SPE'"
+            )
+        )
+    return candidate
 
 
 async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
@@ -284,25 +308,49 @@ async def detmir_card(
             description="Numeric Detsky Mir product id — the digits in /product/index/id/<id>/.",
         ),
     ],
+    region: Annotated[
+        str,
+        Field(
+            default="",
+            max_length=16,
+            description="ISO region code for prices and offline stock, e.g. 'RU-MOW' or 'RU-SPE'. Defaults to DETMIR_REGION.",
+        ),
+    ] = "",
     ctx: Context | None = None,
 ) -> DetmirCardResponse:
     """Fetch price, rating, stock and seller for one Detsky Mir product.
 
     Covers the kids-and-baby category that the general marketplaces cover
-    unevenly: prices and availability are region-specific (set ``DETMIR_REGION``),
-    and the response distinguishes Detsky Mir's own stock from third-party
+    unevenly, and distinguishes Detsky Mir's own stock from third-party
     marketplace sellers.
+
+    **Region matters most here.** ``store_count`` is the number of physical shops
+    holding the item, and it swings hard by city — one item verified live sat in
+    152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. Pass ``region`` to
+    ask about a specific city; it overrides ``DETMIR_REGION`` for this call only,
+    so one session can compare cities.
 
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
     message describing the error code and whether it is retryable.
     """
-    log_event("detmir_card.start", product_id=product_id)
+    region_used = _resolve_region(region)
+    log_event("detmir_card.start", product_id=product_id, region=region_used)
     if ctx is not None:
-        await ctx.info(f"detmir_card: product_id={product_id}")
+        await ctx.info(f"detmir_card: product_id={product_id} region={region_used}")
 
-    url = f"{API_BASE}/v2/products/{product_id}"
+    # The region MUST travel as filter=withregion:..., not ?withregion=...:
+    # verified live that the query-parameter form is silently ignored, which left
+    # this tool reporting store_count=0 for every city while labelling the
+    # response with the configured region. The filter form returns the real
+    # per-city counts.
+    #
+    # It also belongs in the URL because _fetch_json caches by URL — passing the
+    # region out of band would let a Moscow response answer a St Petersburg
+    # request from cache.
+    query = urllib.parse.urlencode({"filter": f"withregion:{region_used}"})
+    url = f"{API_BASE}/v2/products/{product_id}?{query}"
     payload = await _fetch_json(url, "detmir_card", ctx)
 
     body_status = _body_error_status(payload)
@@ -331,7 +379,7 @@ async def detmir_card(
     log_event("detmir_card.done", product_id=product_id, price=product.price_rub, warnings=len(warnings))
     return DetmirCardResponse(
         product=product,
-        region=_settings.region,
+        region=region_used,
         meta=MetaOut(source="detmir_card", healthy=not warnings, warnings=warnings, cached=_cache.get(url) is not None),
     )
 
@@ -357,6 +405,14 @@ async def detmir_category(
     ],
     limit: Annotated[int, Field(default=20, ge=1, le=60, description="Items per page.")] = 20,
     offset: Annotated[int, Field(default=0, ge=0, le=10_000, description="Items to skip, for pagination.")] = 0,
+    region: Annotated[
+        str,
+        Field(
+            default="",
+            max_length=16,
+            description="ISO region code for prices and offline stock, e.g. 'RU-MOW' or 'RU-SPE'. Defaults to DETMIR_REGION.",
+        ),
+    ] = "",
     ctx: Context | None = None,
 ) -> DetmirListResponse:
     """List products in a Detsky Mir category, with the total match count.
@@ -380,11 +436,12 @@ async def detmir_category(
             )
         )
 
-    log_event("detmir_category.start", alias=slug, limit=limit, offset=offset)
+    region_used = _resolve_region(region)
+    log_event("detmir_category.start", alias=slug, limit=limit, offset=offset, region=region_used)
     if ctx is not None:
-        await ctx.info(f"detmir_category: {slug} limit={limit} offset={offset}")
+        await ctx.info(f"detmir_category: {slug} limit={limit} offset={offset} region={region_used}")
 
-    filter_expr = f"categories[].alias:{slug};withregion:{_settings.region}"
+    filter_expr = f"categories[].alias:{slug};withregion:{region_used}"
     query = urllib.parse.urlencode(
         {
             "filter": filter_expr,
@@ -433,7 +490,7 @@ async def detmir_category(
         returned=len(products),
         offset=offset,
         items=products,
-        region=_settings.region,
+        region=region_used,
         meta=MetaOut(source="detmir_category", healthy=not warnings, warnings=warnings),
     )
 
@@ -458,6 +515,14 @@ async def detmir_categories(
         ),
     ] = "top",
     limit: Annotated[int, Field(default=30, ge=1, le=100, description="Maximum categories to return.")] = 30,
+    region: Annotated[
+        str,
+        Field(
+            default="",
+            max_length=16,
+            description="ISO region code for prices and offline stock, e.g. 'RU-MOW' or 'RU-SPE'. Defaults to DETMIR_REGION.",
+        ),
+    ] = "",
     ctx: Context | None = None,
 ) -> DetmirCategoriesResponse:
     """Browse the Detsky Mir catalog tree and get the aliases `detmir_category` needs.
@@ -472,12 +537,13 @@ async def detmir_categories(
     On validation or transport/parse failure, raises ToolError with a JSON
     message describing the error code and whether it is retryable.
     """
+    region_used = _resolve_region(region)
     requested = (parent or "top").strip()
     if requested.lower() in ("", "top", "root", "all"):
-        filter_expr = f"level:1;withregion:{_settings.region}"
+        filter_expr = f"level:1;withregion:{region_used}"
         resolved = "top"
     elif requested.isdigit():
-        filter_expr = f"parent_id:{requested};withregion:{_settings.region}"
+        filter_expr = f"parent_id:{requested};withregion:{region_used}"
         resolved = requested
     else:
         # Only 'top' or a numeric id are accepted: the upstream filter is a
@@ -490,9 +556,9 @@ async def detmir_categories(
         )
         raise AssertionError("unreachable")  # pragma: no cover
 
-    log_event("detmir_categories.start", parent=resolved, limit=limit)
+    log_event("detmir_categories.start", parent=resolved, limit=limit, region=region_used)
     if ctx is not None:
-        await ctx.info(f"detmir_categories: parent={resolved} limit={limit}")
+        await ctx.info(f"detmir_categories: parent={resolved} limit={limit} region={region_used}")
 
     query = urllib.parse.urlencode({"filter": filter_expr, "limit": limit, "meta": "*"})
     url = f"{API_BASE}/v2/categories?{query}"
@@ -542,7 +608,7 @@ async def detmir_categories(
         returned=len(items),
         total_available=R.coerce_int(R.first_present(meta_node, "total", "length", default=None)),
         items=items,
-        region=_settings.region,
+        region=region_used,
         meta=MetaOut(source="detmir_categories", healthy=not warnings, warnings=warnings),
     )
 

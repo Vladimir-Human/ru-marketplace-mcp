@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+import urllib.parse
 from pathlib import Path
 
 import pytest
@@ -449,3 +450,129 @@ def test_body_error_status_only_flags_real_errors():
     assert server._body_error_status({"status": 200}) is None
     assert server._body_error_status({"item": {}}) is None
     assert server._body_error_status([1, 2]) is None
+
+
+# ------------------------------------------------------------------ region ----
+
+
+async def test_card_sends_the_region_as_a_filter_not_a_query_parameter(monkeypatch):
+    """?withregion= is silently ignored upstream; only filter=withregion: works.
+
+    Verified live: the query-parameter form returned store_count=0 for every city
+    while the filter form returned 152/37/2 for Moscow/St Petersburg/Khabarovsk.
+    Sending the wrong form made this tool label region-less data with a region.
+    """
+    seen = {}
+
+    async def capture(url: str, label: str, ctx=None):
+        seen["url"] = url
+        return CARD_PAYLOAD
+
+    monkeypatch.setattr(server, "_fetch_json", capture)
+
+    await server.detmir_card(product_id=123, region="RU-SPE")
+
+    assert "filter=withregion" in seen["url"].replace("%3A", ":")
+    assert "?withregion=" not in seen["url"]
+    assert "RU-SPE" in urllib.parse.unquote(seen["url"])
+
+
+async def test_card_reports_the_region_it_actually_queried(monkeypatch):
+    stub_json(monkeypatch, {"/v2/products/": CARD_PAYLOAD})
+
+    result = await server.detmir_card(product_id=123, region="RU-SPE")
+    assert result.region == "RU-SPE"
+
+
+async def test_card_region_defaults_to_the_configured_one(monkeypatch):
+    stub_json(monkeypatch, {"/v2/products/": CARD_PAYLOAD})
+
+    result = await server.detmir_card(product_id=123)
+    assert result.region == server._settings.region.upper()
+
+
+async def test_region_argument_overrides_the_environment(monkeypatch):
+    """One session must be able to compare cities without a restart."""
+    monkeypatch.setattr(server._settings, "region", "RU-MOW")
+    stub_json(monkeypatch, {"/v2/products/": CARD_PAYLOAD})
+
+    result = await server.detmir_card(product_id=123, region="RU-KHA")
+    assert result.region == "RU-KHA"
+
+
+async def test_region_is_normalised_to_upper_case(monkeypatch):
+    stub_json(monkeypatch, {"/v2/products/": CARD_PAYLOAD})
+
+    result = await server.detmir_card(product_id=123, region="ru-spe")
+    assert result.region == "RU-SPE"
+
+
+@pytest.mark.parametrize(
+    "bad_region",
+    ["moscow", "RU_MOW", "'; drop--", "RU-MOW;level:1", "R", "RU-"],
+)
+async def test_an_invalid_region_is_rejected_before_any_request(monkeypatch, bad_region):
+    """The region lands in a semicolon-delimited filter, so it is validated."""
+
+    async def forbidden(url: str, label: str, ctx=None):
+        raise AssertionError(f"{bad_region!r} must be rejected before the network")
+
+    monkeypatch.setattr(server, "_fetch_json", forbidden)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.detmir_card(product_id=123, region=bad_region)
+    assert error_payload(excinfo.value)["error"] == "bad_request"
+
+
+async def test_category_listing_passes_the_region_through(monkeypatch):
+    seen = {}
+
+    async def capture(url: str, label: str, ctx=None):
+        seen["url"] = url
+        return CATEGORY_PAYLOAD
+
+    monkeypatch.setattr(server, "_fetch_json", capture)
+
+    result = await server.detmir_category(alias="pups", region="RU-SPE")
+    assert result.region == "RU-SPE"
+
+    decoded = urllib.parse.unquote(seen["url"])
+    assert "withregion:RU-SPE" in decoded
+    assert "categories[].alias:pups" in decoded
+
+
+async def test_categories_tree_passes_the_region_through(monkeypatch):
+    seen = {}
+
+    async def capture(url: str, label: str, ctx=None):
+        seen["url"] = url
+        return CATEGORIES_PAYLOAD
+
+    monkeypatch.setattr(server, "_fetch_json", capture)
+
+    result = await server.detmir_categories(region="RU-KHA")
+    assert result.region == "RU-KHA"
+
+    assert "withregion:RU-KHA" in urllib.parse.unquote(seen["url"])
+
+
+async def test_different_regions_do_not_share_a_cache_entry(monkeypatch):
+    """Region lives in the URL, and the cache keys on URL — so cities stay separate."""
+    urls: list[str] = []
+
+    async def capture(url: str, label: str, ctx=None):
+        urls.append(url)
+        return CARD_PAYLOAD
+
+    monkeypatch.setattr(server, "_fetch_json", capture)
+
+    await server.detmir_card(product_id=123, region="RU-MOW")
+    await server.detmir_card(product_id=123, region="RU-SPE")
+
+    assert len(urls) == 2
+    assert urls[0] != urls[1], "a St Petersburg request must not be answerable from Moscow's cache"
+
+
+async def test_all_four_tools_are_still_registered():
+    names = {tool.name for tool in await server.mcp.list_tools()}
+    assert names == {"detmir_card", "detmir_category", "detmir_categories", "detmir_selfcheck"}

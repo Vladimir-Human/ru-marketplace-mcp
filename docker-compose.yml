@@ -1,0 +1,117 @@
+# Run the connectors as HTTP MCP servers in containers.
+#
+# Each service is the SAME image with a different command, one per marketplace,
+# each on its own port. HTTP is the only transport that makes sense here: a
+# detached container has no MCP client attached to its stdin/stdout, so stdio
+# would just sit idle. (If you truly want stdio in a container, a client has to
+# `docker exec -i` into it and speak JSON-RPC over that pipe — niche, and not
+# what this file sets up.)
+#
+# SECURITY: every port below is published as "127.0.0.1:PORT:PORT", so it is
+# reachable only from the host, not the LAN. These servers have NO built-in
+# auth — the tools are read-only, but an open port is still an unauthenticated
+# scraper anyone who can reach it may drive. To expose one deliberately, put an
+# authenticating reverse proxy in front and point IT at the published port;
+# do not change these to 0.0.0.0:PORT.
+
+services:
+  wb:
+    build: .
+    image: ru-marketplace-mcp:1.1.0
+    command: ["wb-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0 # inside the container; the host binding below is what gates access
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  yandex:
+    build: .
+    image: ru-marketplace-mcp:1.1.0
+    command: ["yandex-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+    ports:
+      - "127.0.0.1:8001:8000"
+    restart: unless-stopped
+
+  detmir:
+    build: .
+    image: ru-marketplace-mcp:1.1.0
+    command: ["detmir-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+      DETMIR_REGION: RU-MOW
+    ports:
+      - "127.0.0.1:8002:8000"
+    restart: unless-stopped
+
+  # Ozon is included for completeness but comes with two honest caveats; see
+  # docs/DEPLOYMENT.md for the full story.
+  #
+  # 1. TIER 1 (anonymous HTTP) needs a Russian-friendly IP. From a datacenter
+  #    container it is usually blocked outright, so tools will report Ozon as
+  #    unavailable. Route through a Russian residential proxy to change that:
+  #    set OZON_PROXY or the standard HTTPS_PROXY.
+  # 2. TIER 2 (authenticated Chrome over the DevTools Protocol) does NOT work in
+  #    this container by default. The CDP client dials 127.0.0.1:<CHROME_CDP_PORT>
+  #    and that host is hardcoded — only the port is configurable. Inside the
+  #    container 127.0.0.1 is the container itself, where no Chrome runs. The one
+  #    way to make it reach a Chrome running on the HOST's loopback is host
+  #    networking (network_mode: host, Linux only), so the container shares the
+  #    host's 127.0.0.1. host.docker.internal does NOT help, because the client
+  #    never dials any host but 127.0.0.1. Exposing a CDP debug port grants full
+  #    control of that browser profile, so use a dedicated scraping profile only.
+  #
+  # The block below shows the host-networking route. It is commented out because
+  # it drops this service's port isolation (host networking ignores `ports:`),
+  # so opt in deliberately. When enabled, the server listens on the host's
+  # 127.0.0.1:8000 directly (set MCP_HTTP_HOST=127.0.0.1 to keep it loopback).
+  ozon:
+    build: .
+    image: ru-marketplace-mcp:1.1.0
+    command: ["ozon-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+      # CHROME_CDP_PORT: "9222"  # only the port is configurable; host is 127.0.0.1
+      # A Russian residential proxy is what makes tier 1 work from a datacenter.
+      # OZON_PROXY: http://user:pass@ru-residential-proxy:port
+    ports:
+      - "127.0.0.1:8003:8000"
+    restart: unless-stopped
+    # --- Tier-2 (host Chrome) variant: uncomment to share the host's loopback.
+    # network_mode: host        # Linux only; makes host 127.0.0.1:9222 reachable
+    # environment:
+    #   MCP_TRANSPORT: http
+    #   MCP_HTTP_HOST: 127.0.0.1 # host networking has no port mapping; stay loopback
+    #   MCP_HTTP_PORT: 8003
+    #   MCP_HTTP_PATH: /mcp
+    #   CHROME_CDP_PORT: "9222"
+
+  # compare-mcp fans a query out across all marketplaces at once. It runs its
+  # own fetches in-process (it does not call the services above), so one
+  # container is enough; Ozon inside it inherits the same two caveats.
+  compare:
+    build: .
+    image: ru-marketplace-mcp:1.1.0
+    command: ["compare-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+    ports:
+      - "127.0.0.1:8004:8000"
+    restart: unless-stopped

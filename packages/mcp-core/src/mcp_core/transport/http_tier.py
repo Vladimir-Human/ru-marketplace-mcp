@@ -26,6 +26,7 @@ import asyncio
 import os
 import time
 from dataclasses import dataclass, field
+from typing import Any, Protocol
 
 import httpx
 
@@ -52,6 +53,18 @@ def proxy_from_env(*env_names: str) -> str | None:
         if value:
             return value
     return None
+
+
+class PoliteGate(Protocol):
+    """Anything that can space out requests.
+
+    Structural, not nominal, so a connector that already owns a polite gate (WB
+    keeps one as module state its tests monkeypatch) can hand it to
+    ``get_text_budgeted`` without inheriting from ``RateLimiter`` or giving up
+    those test seams.
+    """
+
+    async def wait(self) -> None: ...
 
 
 @dataclass(slots=True)
@@ -163,6 +176,117 @@ async def get_text_with_retries(
         # response so it can classify the failure precisely.
         return last_result
     raise last_exc if last_exc else RuntimeError("request failed without an exception")
+
+
+async def get_text_budgeted(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    max_bytes: int,
+    wall_timeout_s: float,
+    retries: int = 2,
+    backoff_s: float = 0.8,
+    limiter: PoliteGate | None = None,
+    headers: dict[str, str] | None = None,
+    chunk_size: int = 64 * 1024,
+) -> tuple[int, str | None, str | None]:
+    """GET ``url`` under a hard wall-clock budget, returning ``(status, text, err)``.
+
+    The sibling of ``get_text_with_retries``, for callers that need three things
+    it cannot offer:
+
+    **A whole-operation deadline.** ``retries`` bounds the *number* of attempts
+    but not the time they consume: a per-request timeout of 15s with two retries
+    can still block an agent for 45s plus backoff. ``wall_timeout_s`` caps the
+    total, so a tool call has a predictable worst case no matter how the failures
+    arrange themselves.
+
+    **Errors returned, not raised.** A connector that fans out over several hosts
+    (WB probes its basket CDN mirrors in order) needs to inspect a failure and
+    try the next candidate. Exceptions force that control flow into try/except
+    around every call site; a classified ``err`` string keeps it as a value. The
+    prefix is stable and meaningful: ``timeout:``, ``network:``, ``http_status:``,
+    or a body-cap message.
+
+    **Politeness preserved across retries.** The rate limiter is re-entered
+    before each retry. Skipping it would burst a marketplace precisely when it
+    has already signalled trouble — the surest way to earn an IP ban.
+
+    HTTP statuses are never retried here, deliberately. Retrying a 429 deepens a
+    rate limit, and no repeat request changes a 4xx. Gateway-status retries are
+    ``get_text_with_retries``' business; this function hands every status straight
+    back to the caller.
+    """
+    deadline = time.monotonic() + wall_timeout_s
+    budget_exhausted = f"timeout: global {wall_timeout_s}s budget exhausted"
+    last_exc: Exception | None = None
+
+    for attempt in range(retries + 1):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return 0, None, budget_exhausted
+
+        async def _drain(response: Any) -> tuple[int, str | None, str | None]:
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in response.aiter_bytes(chunk_size=chunk_size):
+                total += len(chunk)
+                if total > max_bytes:
+                    return response.status_code, None, f"body exceeds {max_bytes} bytes"
+                chunks.append(chunk)
+            raw = b"".join(chunks)
+            try:
+                text = raw.decode(response.encoding or "utf-8", errors="replace")
+            except (LookupError, TypeError):
+                text = raw.decode("utf-8", errors="replace")
+            return response.status_code, text, None
+
+        async def _once() -> tuple[int, str | None, str | None]:
+            # Two client shapes are supported on purpose. ``build_request``/``send``
+            # is the path that carries per-request headers, which the plain
+            # ``stream()`` context manager cannot. Callers with a client whose
+            # headers are already set (and test doubles that only implement
+            # ``stream``) still work through the second branch.
+            if headers is not None and hasattr(client, "build_request"):
+                request = client.build_request("GET", url, headers=headers)
+                response = await client.send(request, stream=True)
+                try:
+                    return await _drain(response)
+                finally:
+                    await response.aclose()
+            async with client.stream("GET", url) as response:
+                return await _drain(response)
+
+        try:
+            return await asyncio.wait_for(_once(), timeout=remaining)
+        except httpx.HTTPStatusError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", 0) or 0
+            return status_code, None, f"http_status: {exc.__class__.__name__}: {exc}"
+        except (TimeoutError, httpx.TransportError) as exc:
+            last_exc = exc
+            # A builtin/asyncio TimeoutError here is wait_for firing, i.e. the wall
+            # clock ran out mid-attempt. httpx's own timeouts are TransportError
+            # subclasses and stay retryable.
+            if isinstance(exc, asyncio.TimeoutError):
+                return 0, None, f"timeout: {exc.__class__.__name__}: {exc} (after {attempt + 1} attempt)"
+            if attempt < retries:
+                delay = backoff_s * (attempt + 1)
+                if (deadline - time.monotonic()) <= delay:
+                    return 0, None, budget_exhausted
+                await asyncio.sleep(delay)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return 0, None, budget_exhausted
+                if limiter is not None:
+                    try:
+                        await asyncio.wait_for(limiter.wait(), timeout=remaining)
+                    except TimeoutError:
+                        return 0, None, budget_exhausted
+                continue
+            kind = "timeout" if isinstance(exc, httpx.TimeoutException) else "network"
+            return 0, None, f"{kind}: {exc.__class__.__name__}: {exc} (after {attempt + 1} attempts)"
+
+    return 0, None, f"network: {last_exc}"
 
 
 def build_client(

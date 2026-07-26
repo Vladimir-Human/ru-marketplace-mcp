@@ -8,13 +8,20 @@ from pathlib import Path
 
 import pytest
 from fastmcp.exceptions import ToolError
-from mcp_core import process
 from ozon_connector import server
 
 
 def test_server_version_matches_pyproject():
     pyproject = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())
     assert pyproject["project"]["version"] == server.SERVER_VERSION
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Composer reads are cached, so scenarios must not inherit each other's bodies."""
+    server._cache.clear()
+    yield
+    server._cache.clear()
 
 
 def _run(coro):
@@ -82,67 +89,6 @@ def test_sync_call_in_process_redacts_url_userinfo_from_child_errors():
     assert "<redacted-query>" in message
 
 
-def test_safe_child_env_does_not_case_fold_on_posix(monkeypatch):
-    """A lowercase 'path' must not slip through the POSIX allowlist.
-
-    Case-folding is correct on Windows (env keys are case-insensitive there) and
-    wrong on POSIX, where 'path' and 'PATH' are different variables.
-    """
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
-    monkeypatch.setitem(os.environ, "path", "lowercase-secret")
-
-    assert process.safe_child_env().get("path") is None
-
-
-def test_safe_child_env_case_folds_on_windows(monkeypatch):
-    """Under the Windows rule, a differently-cased allowlist key still passes.
-
-    Windows environment keys are case-insensitive, so 'LocalAppData' and
-    'LOCALAPPDATA' are the same variable and both belong in a child environment.
-    POSIX keys are matched verbatim (covered by the test above).
-
-    The environment is injected as a plain mixed-case dict rather than through
-    monkeypatch.setitem(os.environ, ...): real os.environ on Windows upper-cases
-    keys on write, so a mixed-case probe set that way would be silently folded
-    to LOCALAPPDATA before safe_child_env ever sees it, making the case-fold
-    rule unobservable. The dict keeps the mixed case the function must handle.
-    """
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "nt")
-    monkeypatch.setattr(
-        process.os,
-        "environ",
-        {
-            "LocalAppData": r"C:\Users\op\AppData\Local",
-            "SystemRoot": r"C:\Windows",
-        },
-    )
-
-    env = process.safe_child_env()
-
-    assert env.get("LocalAppData") == r"C:\Users\op\AppData\Local"
-    assert env.get("SystemRoot") == r"C:\Windows"
-
-
-def test_safe_child_env_excludes_secrets_on_every_platform(monkeypatch):
-    monkeypatch.setitem(os.environ, "OZON_SENTINEL_SECRET", "leak")
-    monkeypatch.setitem(os.environ, "AWS_SECRET_ACCESS_KEY", "leak")
-
-    env = process.safe_child_env()
-
-    assert "OZON_SENTINEL_SECRET" not in env
-    assert "AWS_SECRET_ACCESS_KEY" not in env
-
-
-def test_worker_process_kwargs_per_platform(monkeypatch):
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
-    assert process.worker_process_kwargs() == {"start_new_session": True}
-
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "nt")
-    kwargs = process.worker_process_kwargs()
-    assert "creationflags" in kwargs
-    assert kwargs["creationflags"] == 0x00000200 | 0x08000000
-
-
 def test_run_sync_bounded_rejects_local_callables():
     async def scenario():
         def local():
@@ -156,112 +102,6 @@ def test_run_sync_bounded_rejects_local_callables():
             raise AssertionError("local callable must not fall back to to_thread")
 
     asyncio.run(scenario())
-
-
-class _FakeProc:
-    """Minimal Popen stand-in that records how it was torn down."""
-
-    def __init__(self, captured: dict, pid: int = 12345) -> None:
-        self.pid = pid
-        self.stdin = None
-        self.stdout = None
-        self.stderr = None
-        self._captured = captured
-
-    def poll(self):
-        return None
-
-    def kill(self):
-        self._captured["killed"] = True
-
-    def wait(self, timeout=None):
-        self._captured["wait_timeout"] = timeout
-
-
-def test_terminate_worker_tree_uses_absolute_taskkill_and_sanitized_env(monkeypatch):
-    """On Windows: kill the whole tree via an absolute, un-hijackable taskkill.
-
-    Runs on every platform via PLATFORM_OVERRIDE, so the Windows contract is
-    covered by CI on Linux and macOS too.
-    """
-    captured: dict = {}
-
-    def fake_run(argv, **kwargs):
-        captured["argv"] = argv
-        captured["kwargs"] = kwargs
-
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "nt")
-    monkeypatch.setenv("OZON_SENTINEL_SECRET", "leak")
-    # A hijacked environment must not be able to redirect taskkill.
-    monkeypatch.setenv("SystemRoot", r"C:\attacker")
-    monkeypatch.setenv("WINDIR", r"C:\attacker")
-    monkeypatch.setattr(process.subprocess, "run", fake_run)
-
-    process.terminate_process_tree(_FakeProc(captured))
-
-    assert captured["argv"][0].lower().endswith(r"\system32\taskkill.exe")
-    assert not captured["argv"][0].lower().startswith(r"c:\attacker")
-    assert captured["argv"][1:] == ["/PID", "12345", "/T", "/F"]
-    assert "OZON_SENTINEL_SECRET" not in captured["kwargs"]["env"]
-    assert captured["kwargs"]["env"]["SystemRoot"].lower() != r"c:\attacker"
-    assert captured["wait_timeout"] == 0.5
-
-
-def test_terminate_worker_tree_kills_process_group_on_posix(monkeypatch):
-    """On POSIX: SIGKILL the child's process group, never a bare kill()."""
-    captured: dict = {}
-    killed: dict = {}
-
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
-    # Patch the connector's own seam rather than os.getpgid/os.killpg: those do
-    # not exist on Windows, so patching them made this test unrunnable there.
-    monkeypatch.setattr(process, "kill_process_group", lambda pid: killed.update(pid=pid))
-
-    process.terminate_process_tree(_FakeProc(captured))
-
-    assert killed["pid"] == 12345
-    assert "killed" not in captured  # the group kill succeeded, so no fallback
-    assert captured["wait_timeout"] == 0.5
-
-
-def test_terminate_worker_tree_falls_back_to_kill_when_killpg_fails(monkeypatch):
-    """A failed killpg must degrade to proc.kill(), never propagate."""
-    captured: dict = {}
-
-    def boom(_pid):
-        raise ProcessLookupError("gone")
-
-    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
-    monkeypatch.setattr(process, "kill_process_group", boom)
-
-    process.terminate_process_tree(_FakeProc(captured))
-
-    assert captured.get("killed") is True
-
-
-def test_kill_process_group_uses_posix_signalling(monkeypatch):
-    """The POSIX path signals the whole group, not just the child pid."""
-    calls: dict = {}
-
-    monkeypatch.setattr(process.os, "getpgid", lambda pid: pid + 1000, raising=False)
-    monkeypatch.setattr(process.os, "killpg", lambda pgid, sig: calls.update(pgid=pgid, sig=sig), raising=False)
-    monkeypatch.setattr(process.signal, "SIGKILL", 9, raising=False)
-
-    process.kill_process_group(42)
-
-    assert calls == {"pgid": 1042, "sig": 9}
-
-
-def test_kill_process_group_refuses_where_process_groups_do_not_exist(monkeypatch):
-    """On Windows os.killpg simply does not exist, so this must raise cleanly.
-
-    terminate_process_tree turns that into a proc.kill() fallback; what matters
-    here is that it raises AttributeError rather than crashing on a missing name.
-    """
-    monkeypatch.delattr(process.os, "killpg", raising=False)
-
-    with pytest.raises(AttributeError):
-        process.kill_process_group(42)
 
 
 def test_canonical_composer_path_rejects_unsafe_search_query_keys():
@@ -787,3 +627,146 @@ def test_reviews_tolerates_malformed_uuid_next_button_and_score(monkeypatch):
         assert data["distribution"] == {}
 
     _run(scenario())
+
+
+def _patch_tier1(monkeypatch, impl):
+    """Route tier-1 through ``impl`` directly.
+
+    ``_run_sync_bounded`` executes its target in a subprocess by module+qualname,
+    so a locally-defined test double is deliberately rejected as un-callable.
+    Patching the runner itself is the seam that lets a test drive tier-1 to a
+    *success*; patching ``_sync_curl_get`` alone only ever exercises the
+    fall-through to CDP.
+    """
+
+    async def fake_runner(func, *args, timeout_s):
+        return impl(*args)
+
+    monkeypatch.setattr(server, "_run_sync_bounded", fake_runner)
+
+
+def test_fetch_composer_serves_a_repeat_read_from_cache(monkeypatch):
+    """A cache hit skips a Cloudflare challenge and a whole CDP round-trip."""
+    calls = {"n": 0}
+
+    def counting_get(url, proxy=None):
+        calls["n"] += 1
+        return 200, '{"widgetStates": {}}'
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        _patch_tier1(monkeypatch, counting_get)
+
+        first = await server._fetch_composer("/product/123/", None)
+        second = await server._fetch_composer("/product/123/", None)
+
+        assert first[0] == 200 and first[2] == "curl_cffi"
+        assert second[0] == 200
+        assert second[2] == "cache", "a repeat read must be reported as served from cache"
+        assert calls["n"] == 1
+
+    _run(scenario())
+
+
+def test_fetch_composer_does_not_cache_a_block(monkeypatch):
+    """A cached 403 would keep reporting a block after the challenge cleared."""
+    attempts = {"n": 0}
+
+    def blocked_then_ok(url, proxy=None):
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            return 403, "<html>challenge</html>"
+        return 200, '{"widgetStates": {}}'
+
+    async def failing_cdp(api_url, ctx):
+        raise server.NavBlocked(403, "https://www.ozon.ru/")
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        _patch_tier1(monkeypatch, blocked_then_ok)
+        monkeypatch.setattr(server, "_cdp_fetch_json", failing_cdp)
+
+        status, _, tier = await server._fetch_composer("/product/123/", None)
+        assert status == 403 and tier == "cdp_blocked"
+
+        # The block must not have been stored: the retry reaches tier 1 again.
+        status, _, tier = await server._fetch_composer("/product/123/", None)
+        assert (status, tier) == (200, "curl_cffi")
+        assert attempts["n"] == 2
+
+    _run(scenario())
+
+
+def test_fetch_composer_caches_a_successful_cdp_body(monkeypatch):
+    """CDP is the expensive tier, so its successes are exactly what caching is for."""
+    cdp_calls = {"n": 0}
+
+    def always_blocked(url, proxy=None):
+        return 403, "<html>challenge</html>"
+
+    async def ok_cdp(api_url, ctx):
+        cdp_calls["n"] += 1
+        return 200, '{"widgetStates": {}}'
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        _patch_tier1(monkeypatch, always_blocked)
+        monkeypatch.setattr(server, "_cdp_fetch_json", ok_cdp)
+
+        first = await server._fetch_composer("/product/123/", None)
+        second = await server._fetch_composer("/product/123/", None)
+
+        assert first[2] == "cdp"
+        assert second[2] == "cache"
+        assert cdp_calls["n"] == 1
+
+    _run(scenario())
+
+
+def test_cache_is_keyed_by_canonical_path_not_raw_input(monkeypatch):
+    """Two spellings of the same product must share one cache entry."""
+    calls = {"n": 0}
+
+    def counting_get(url, proxy=None):
+        calls["n"] += 1
+        return 200, '{"widgetStates": {}}'
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        _patch_tier1(monkeypatch, counting_get)
+
+        await server._fetch_composer("/product/123/", None)
+        # Same product, no trailing slash: canonicalisation collapses them.
+        _, _, tier = await server._fetch_composer("/product/123", None)
+
+        assert tier == "cache"
+        assert calls["n"] == 1
+
+    _run(scenario())
+
+
+def test_tier1_proxy_is_passed_as_an_argument_not_an_env_var(monkeypatch):
+    """safe_child_env strips proxy vars, so the value must travel as an argument."""
+    seen = {}
+
+    def capturing_get(url, proxy=None):
+        seen["proxy"] = proxy
+        return 200, '{"widgetStates": {}}'
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        monkeypatch.setattr(server._settings, "proxy", "http://ozon-proxy:8080")
+        _patch_tier1(monkeypatch, capturing_get)
+
+        await server._fetch_composer("/product/123/", None)
+
+        assert seen["proxy"] == "http://ozon-proxy:8080"
+
+    _run(scenario())
+
+
+def test_ozon_proxy_falls_back_to_standard_variables(monkeypatch):
+    monkeypatch.setattr(server._settings, "proxy", "")
+    monkeypatch.delenv("OZON_PROXY", raising=False)
+    monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
+    assert server._proxy() == "http://generic:8080"

@@ -2,10 +2,11 @@
 
 All tunable parameters are configurable via environment variables with a WB_
 prefix, e.g. WB_TIMEOUT, WB_WALL_TIMEOUT, WB_MIN_GAP, WB_DEFAULT_DEST,
-WB_MAX_BODY_BYTES, WB_NET_RETRIES, WB_NET_BACKOFF_S.
+WB_MAX_BODY_BYTES, WB_NET_RETRIES, WB_NET_BACKOFF_S, WB_CACHE_TTL, WB_PROXY.
 
 WB public catalog APIs need no credentials, so this settings object holds only
-operational knobs — timeouts, rate-limit gap, retry budget, and body-size cap.
+operational knobs — timeouts, rate-limit gap, retry budget, body-size cap, cache
+TTL, and proxy.
 """
 
 from __future__ import annotations
@@ -59,6 +60,15 @@ class WBSettings(BaseSettings):
         default=0.8,
         ge=0,
         description="Backoff between transport retries in seconds.",
+    )
+    cache_ttl: float = Field(
+        default=120.0,
+        ge=0,
+        description="Seconds to cache upstream reads. 0 disables caching. An agent asking price, then reviews, then a comparison hits the same SKU repeatedly.",
+    )
+    proxy: str = Field(
+        default="",
+        description="Optional proxy URL. Empty means honour the standard HTTPS_PROXY/ALL_PROXY variables.",
     )
     basket_fallback: str = Field(
         default="basket-28",

@@ -39,6 +39,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
+from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
     ParserDriftError,
@@ -52,6 +53,7 @@ from mcp_core.process import (
     worker_process_kwargs,
 )
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.transport import proxy_from_env
 from mcp_core.transport.chrome_cdp import NavBlocked, cdp_setup_hint, open_page
 from pydantic import Field
 
@@ -63,7 +65,7 @@ from ozon_connector.models_output import (
 )
 from ozon_connector.settings import get_settings
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -126,6 +128,21 @@ _last_request_ts = 0.0
 _min_gap = _settings.min_gap
 _rate_lock = asyncio.Lock()
 _cdp_lock = asyncio.Lock()  # serialize CDP tab creation
+
+# Caches the (status, body) of successful composer reads, keyed by canonical path.
+# Small by design: Ozon bodies are large, and an agent revisits a handful of
+# products, not hundreds. OZON_CACHE_TTL=0 disables.
+_cache: TTLCache[tuple[int, str]] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=64)
+
+
+def _proxy() -> str | None:
+    """Resolve Ozon's tier-1 proxy: explicit ``OZON_PROXY`` first, then the standard vars.
+
+    Tier 2 is intentionally unaffected. That tier runs inside a Chrome instance
+    the operator started themselves, so its egress is that browser's business —
+    routing it from here would silently contradict the user's own browser config.
+    """
+    return (_settings.proxy or "").strip() or proxy_from_env("OZON_PROXY")
 
 
 class _SyncCallTimeout(TimeoutError):
@@ -245,7 +262,7 @@ async def _polite_wait():
         _last_request_ts = time.monotonic()
 
 
-def _sync_curl_get(url: str) -> tuple[int, str]:
+def _sync_curl_get(url: str, proxy: str | None = None) -> tuple[int, str]:
     """Tier-1: curl_cffi sync GET with INCREMENTAL body cap.
 
     Streams the response and aborts mid-download once MAX_BODY_BYTES is
@@ -260,6 +277,14 @@ def _sync_curl_get(url: str) -> tuple[int, str]:
     chunks: list[bytes] = []
     total = 0
     encoding = "utf-8"
+    # The proxy arrives as an explicit argument rather than an environment
+    # variable because this function runs in a subprocess whose environment is
+    # deliberately reduced to an allowlist (mcp_core.process.safe_child_env), and
+    # that allowlist excludes proxy vars on purpose. Passing it as an argument
+    # keeps the child's environment minimal while still honouring OZON_PROXY.
+    kwargs: dict[str, Any] = {}
+    if proxy:
+        kwargs["proxies"] = {"http": proxy, "https": proxy}
     r = cffi.get(
         url,
         headers=OZON_HEADERS,
@@ -269,6 +294,7 @@ def _sync_curl_get(url: str) -> tuple[int, str]:
         impersonate=cast(Any, IMPERSONATE),
         timeout=TIMEOUT,
         stream=True,
+        **kwargs,
     )
     try:
         encoding = r.encoding or "utf-8"
@@ -469,6 +495,13 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
     """Try Tier-1 (curl_cffi); fall back to Tier-2 (CDP) on 403/non-200.
 
     Returns (status_code, body, tier_used).
+
+    Successful reads are cached for ``OZON_CACHE_TTL``, keyed by the canonical
+    composer path. Caching matters more here than in any other connector: a miss
+    can cost a Cloudflare challenge plus a full browser round-trip through CDP,
+    so replaying a known-good body is the difference between a fast answer and a
+    multi-second one. Only 200s are stored — a cached 403 would keep reporting a
+    block after the challenge cleared.
     """
     try:
         safe_path = _canonical_composer_path(api_path)
@@ -476,11 +509,17 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
         return 0, str(exc), "invalid_path"
     api_url = f"https://www.ozon.ru/api/composer-api.bx/page/json/v2?url={urllib.parse.quote(safe_path, safe='/')}"
 
+    cached = _cache.get(safe_path)
+    if cached is not None:
+        status, body = cached
+        return status, body, "cache"
+
     await _polite_wait()
 
     try:
-        status, body = await _run_sync_bounded(_sync_curl_get, api_url, timeout_s=max(0.01, float(TIMEOUT)))
+        status, body = await _run_sync_bounded(_sync_curl_get, api_url, _proxy(), timeout_s=max(0.01, float(TIMEOUT)))
         if status == 200 and body and not body.lstrip().startswith("<"):
+            _cache.set(safe_path, (status, body))
             return status, body, "curl_cffi"
         if ctx and status == 403:
             await ctx.debug("Ozon Tier-1 403 (Cloudflare __cf_bm); trying CDP")
@@ -490,6 +529,8 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
 
     try:
         status, body = await _cdp_fetch_json(api_url, ctx)
+        if status == 200 and body and not body.lstrip().startswith("<"):
+            _cache.set(safe_path, (status, body))
         return status, body, "cdp"
     except NavBlocked as exc:
         if exc.status:

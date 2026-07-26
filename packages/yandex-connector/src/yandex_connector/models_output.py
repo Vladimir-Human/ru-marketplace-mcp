@@ -10,15 +10,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
 from pydantic import BaseModel, Field
 
 
-class MetaOut(BaseModel):
-    source: str = Field(default="", description="Tool name that produced this response.")
-    healthy: bool = Field(default=True, description="Whether the response passed structural validation.")
-    warnings: list[str] = Field(
-        default_factory=list, description="Connector-level warnings (drift, partial data, fallbacks)."
-    )
+class MetaOut(MetaOutBase):
+    """Yandex reports which extraction path produced the payload.
+
+    The SSR widget state is the good path; ``ld+json`` is a degraded fallback
+    carrying far fewer fields, so a caller seeing thin data needs to know which
+    one it got rather than assuming the product simply has no price.
+    """
+
     extraction: str = Field(
         default="", description="How data was extracted: 'ssr' (widget state) or 'ld+json' (degraded fallback)."
     )
@@ -109,19 +112,11 @@ class YandexCardResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
 
 
-class YandexSelfcheckEntry(BaseModel):
-    state: str = Field(default="", description="Sub-check verdict: healthy, drift, or inconclusive.")
+class YandexSelfcheckEntry(SelfCheckEntryBase):
     detail: str = Field(default="", description="What was observed.")
-    notes: list[str] = Field(default_factory=list, description="Diagnostic notes.")
 
 
-class YandexSelfcheckResponse(BaseModel):
-    status: str = Field(default="", description="Overall verdict: success, drift_detected, or inconclusive.")
+class YandexSelfcheckResponse(SelfCheckResponseBase):
     connector: str = Field(default="yandex", description="Connector name.")
     checks: dict[str, YandexSelfcheckEntry] = Field(default_factory=dict, description="Per-page-type results.")
-    server_version: str = Field(default="", description="Connector version.")
-    server_started_at: str = Field(default="", description="Server start timestamp (UTC ISO-8601).")
-    process_id: int = Field(default=0, description="OS process id.")
-    config_loaded: bool = Field(default=False, description="Whether settings loaded successfully.")
-    tool_count: int = Field(default=0, description="Number of registered MCP tools.")
     cache_stats: dict[str, Any] = Field(default_factory=dict, description="TTL cache counters for this process.")

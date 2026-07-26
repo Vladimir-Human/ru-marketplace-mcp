@@ -6,6 +6,8 @@ Env vars (all optional, defaults match the pre-settings constants):
   OZON_MIN_GAP         - polite inter-request gap seconds, default 2.5
   OZON_IMPERSONATE     - curl_cffi fingerprint profile, default "chrome"
   OZON_SELFCHECK_SKU   - golden-fixture SKU for ozon_selfcheck, default 3015796642
+  OZON_CACHE_TTL       - seconds to cache upstream reads, 0 disables, default 120
+  OZON_PROXY           - proxy URL for the tier-1 fetch, default unset (honours HTTPS_PROXY)
 
 Settings are read once at import; callers that need to override in tests
 patch the module-level constants in server.py (TIMEOUT, _min_gap, ...) as
@@ -36,6 +38,15 @@ class OzonSettings(BaseSettings):
     min_gap: float = Field(default=2.5, ge=0)
     impersonate: str = Field(default="chrome", min_length=1)
     selfcheck_sku: str = Field(default="3015796642", min_length=1)
+    cache_ttl: float = Field(
+        default=120.0,
+        ge=0,
+        description="Seconds to cache upstream reads. 0 disables caching.",
+    )
+    proxy: str = Field(
+        default="",
+        description="Optional proxy URL for the tier-1 impersonation fetch. Empty honours HTTPS_PROXY/ALL_PROXY.",
+    )
 
 
 @lru_cache(maxsize=1)

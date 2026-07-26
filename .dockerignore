@@ -1,0 +1,59 @@
+# Keep the build context small and reproducible: only source + lock/manifests
+# should reach the image. Everything below is either host-specific, secret, or
+# regenerated inside the build.
+
+# The virtualenv is platform-specific. It MUST be rebuilt inside the image from
+# uv.lock, never copied from the host, or the image gets a Linux-incompatible
+# tree (uv's own Docker guidance calls this out explicitly).
+.venv/
+**/.venv/
+venv/
+env/
+
+# Python build/cache artifacts — noise that only invalidates layers.
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Tooling caches — never needed at runtime.
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# VCS and CI — not needed to run the servers, and .git can be large.
+.git/
+.github/
+.gitignore
+.pre-commit-config.yaml
+
+# Secrets must never enter an image layer. This project needs none, but a stray
+# .env on the host must not be baked in regardless.
+.env
+.env.*
+!.env.example
+
+# Chrome scraping profile: the operator's own logged-in session. Baking it into
+# an image would ship their credentials. It is host-only, always.
+Chrome-Scraping/
+chrome-scraping/
+
+# Editors / OS cruft.
+.vscode/
+.idea/
+.DS_Store
+
+# Docs and top-level markdown are not needed to run the servers. The Dockerfile
+# copies only what the install needs; this keeps the context lean.
+docs/
+*.md
+!README.md

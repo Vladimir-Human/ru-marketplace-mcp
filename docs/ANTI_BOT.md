@@ -40,6 +40,26 @@ The real trap here was not anti-bot but a **stale index**:
 `search-goods.wildberries.ru` returns ids for delisted SKUs. See
 [the search fix](#the-wildberries-search-trap).
 
+Two more endpoints were verified live for v1.1.0, each with a silent-failure mode
+worth knowing:
+
+- **Buyer questions** live on `questions.wildberries.ru/api/v1/questions`, keyed by
+  `imtId` like reviews. `take` and `skip` are **mandatory**: omit either and every
+  product returns `{"questions": null, "count": 0}`, which reads as "nobody asked
+  anything" but is really a rejected request. `take` is capped at 30 — `take=31` is
+  a 400. There are no mirrors; `questions1`/`questions2` and `questions*.wb.ru` all
+  answer 502. Worse, `feedbacks{1,2}.wb.ru` answer *any* questions-shaped path with
+  an identical 277-byte empty stub, so pointing questions at the reviews hosts
+  looks like a valid empty result.
+- **Category feeds** live at `catalog.wb.ru/catalog/{shard}/v4/catalog`, with the
+  shard in the path. Only v4 works; v2, v8, v9 and the shard-less form are 404.
+  The catch is the shard `blackhole`, which several of the largest sections carry
+  (smartphones `cat=9455`, laptops `cat=9491`, TV/audio `cat=9834`): those have no
+  feed at all. The first probe answered 429, which looked like throttling, but four
+  more spaced 8s apart all returned a clean empty 404. `wb_category_products`
+  refuses those up front and names the alternative, because an empty product list
+  would assert the category is empty.
+
 ### Yandex Market — captcha present but dormant
 
 Server-rendered pages answer HTTP 200 from a datacenter IP. Search is ~2 MB, a
@@ -66,6 +86,12 @@ rapid sequential requests. Three quirks:
 - **HTTP 200 can carry `{"status": 404}`.** Status codes alone cannot be trusted.
 - **Listings are `/v4/` only.** The old `/v2/products?filter=` path is gone.
 - **Sporadic 502s**, retried automatically.
+- **Region only applies via `filter=withregion:`.** The query-parameter spelling
+  `?withregion=RU-SPE` is accepted and silently ignored, which is how `detmir_card`
+  shipped in v1.0.0 reporting `store_count: 0` for every product while labelling
+  the response with a region. The filter form returns real per-city numbers — one
+  product sat in 152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. Fixed in
+  v1.1.0, where every tool also takes a per-call `region`.
 
 And one thing that is not a quirk but a genuine absence — see
 [the Detsky Mir search trap](#the-detsky-mir-search-trap).
@@ -79,6 +105,9 @@ redirect ceiling. TLS impersonation alone does not clear it.
 The working answer is not a better fingerprint but a different vantage point: run
 the fetch **inside a browser the operator already logged into**, over the DevTools
 Protocol. That is tier 2. Setup and threat model: [CDP_SETUP.md](CDP_SETUP.md).
+
+Ozon's seller pages were spiked for v1.1.0 and deliberately left out — see
+[the seller-details refusal](#the-ozon-seller-details-refusal-v110).
 
 ## Rejected sources
 
@@ -165,7 +194,7 @@ Anonymously reachable: `sitemap/main/sitemap.xml` (product URL inventory only).
 **Verdict:** two hard problems stacked — IP reputation and a binary protocol. Out
 of scope.
 
-## Two traps worth their own section
+## Traps and refusals worth their own section
 
 ### The Wildberries search trap
 
@@ -213,6 +242,54 @@ That tool was deleted. `detmir_categories` → `detmir_category` is the honest p
 and the absence is documented in the tool descriptions so an agent does not go
 looking for a search tool that should not exist.
 
+### The Ozon seller-details refusal (v1.1.0)
+
+Ozon product pages link to a seller page carrying the legal entity behind a
+listing — the OGRN/INN equivalent of what `wb_seller` returns for Wildberries.
+That parity would be genuinely useful, so it was spiked for v1.1.0. It is not in
+the release.
+
+The path is right. `composer-api.bx/page/json/v2?url=/seller/{slug}-{id}/` is the
+route Ozon's own web client uses, and the seller id is already available: it comes
+back on `ozon_card` as `seller.link`, so nothing has to be guessed.
+
+What could not be done is see a successful response. From a datacenter IP every
+attempt ends the same way:
+
+| Composer `url=` | Result |
+|---|---|
+| `/product/{id}/` (known-good control) | 307 → 403 `fab_…` |
+| `/seller/ozon-1749/` | 307 → 403 `fab_…` |
+| `/seller/1749/` | 307 → 403 `fab_…` |
+| `/` (homepage warmup) | 403 |
+
+The first request returns 307 from nginx and sets a `__Secure-ETC` cookie with a
+`&__rr=1` retry hint; following it with the cookie, under chrome124 TLS
+impersonation, yields 403 with an anti-bot incident body. The control matters more
+than the seller rows: the repo's **already-working** product path fails identically,
+which proves this is the IP being gated, not a malformed seller URL.
+
+So the endpoint almost certainly works. The **field paths do not exist yet** —
+nobody has seen the widget that carries the seller's legal name and tax ids, and
+Ozon's payload is a dictionary of JSON-encoded widget states whose keys carry
+version suffixes. Writing a parser against an unseen shape means inventing field
+names and shipping whatever they happen to match.
+
+That is the Detsky Mir lesson in a different costume. A seller tool returning a
+plausible-looking company name for the wrong legal entity is worse than no tool,
+because the entire point of a seller lookup is telling an official brand store from
+a lookalike reseller. Confidence without verification is the failure mode this
+project refuses.
+
+**What exists instead:** the verified URL template and the live-verification steps
+are in `RELEASE_PROMPT.md`, for an operator on a Russian residential IP or with the
+CDP tier available. If the payload confirms, the tool is a small addition on top of
+the existing two-tier fetch. Until then there is no `ozon_seller`.
+
+For the same reason, `wb_questions` **did** ship in v1.1.0: its endpoint was
+verified across six products from this same datacenter IP before a line of it was
+written. The difference is evidence, not ambition.
+
 ## Practical guidance
 
 **Rate limits are real.** WB search rate-limits within a few requests; Yandex is
@@ -225,7 +302,10 @@ distinct via `source_outcomes` and `complete`.
 
 **Residential IP changes the picture.** From a Russian residential address, Ozon
 tier 1 often works, Lamoda's HTML likely opens, and Citilink's rate block may
-clear. Set `*_PROXY` to route through one.
+clear — and Ozon's seller pages become verifiable, which is the one thing blocking
+an `ozon_seller` tool. Set `*_PROXY` to route through one. As of v1.1.0 every
+connector honours its own proxy variable (`WB_PROXY`, `OZON_PROXY`,
+`YANDEX_PROXY`, `DETMIR_PROXY`), not just two of them.
 
 **Run the selfchecks.** `success` / `drift_detected` / `inconclusive` — and note
 that `inconclusive` from a geo block says nothing about whether the parsers still

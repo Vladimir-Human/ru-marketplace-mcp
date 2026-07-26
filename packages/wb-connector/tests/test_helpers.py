@@ -4,8 +4,10 @@ import tomllib
 from datetime import datetime
 from pathlib import Path
 
+import httpx
 import pytest
 from fastmcp.exceptions import ToolError
+from mcp_core.cache import TTLCache
 from wb_connector import server
 
 
@@ -1189,5 +1191,694 @@ def test_wb_selfcheck_rich_text_feedback_body_is_drift(monkeypatch):
         data = result.model_dump()
         assert data["checks"]["reviews"]["state"] == "drift"
         assert data["checks"]["reviews"]["with_text"] == 0
+
+    asyncio.run(scenario())
+
+
+def _clear_wb_cache():
+    server._cache.clear()
+
+
+def test_cache_serves_a_repeated_successful_read(monkeypatch):
+    """An agent walks the same SKU repeatedly; the second look must not re-hit WB."""
+    calls = {"n": 0}
+
+    class FakeResponse:
+        status_code = 200
+        encoding = "utf-8"
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def aiter_bytes(self, chunk_size):
+            yield b'{"ok":true}'
+
+    class FakeClient:
+        def stream(self, method, url):
+            calls["n"] += 1
+            return FakeResponse()
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        url = "https://cache-hit.test/a"
+        first = await server._safe_get_text(FakeClient(), url)
+        second = await server._safe_get_text(FakeClient(), url)
+        assert first == second == (200, '{"ok":true}', None)
+        assert calls["n"] == 1, "second read must come from the cache"
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_cache_does_not_remember_a_transient_failure(monkeypatch):
+    """Caching a blip would turn one bad moment into a TTL-long outage."""
+    attempts = {"n": 0}
+
+    class FailingResponse:
+        status_code = 200
+        encoding = "utf-8"
+
+        async def __aenter__(self):
+            raise httpx.ConnectError("refused")
+
+        async def __aexit__(self, *args):
+            return None
+
+    class OkResponse:
+        status_code = 200
+        encoding = "utf-8"
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def aiter_bytes(self, chunk_size):
+            yield b'{"recovered":true}'
+
+    class FlakyClient:
+        def stream(self, method, url):
+            attempts["n"] += 1
+            return FailingResponse() if attempts["n"] == 1 else OkResponse()
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_NET_RETRIES", 0)
+        url = "https://transient.test/a"
+        status, text, err = await server._safe_get_text(FlakyClient(), url)
+        assert err is not None and text is None
+        # A retry after the blip must reach the network again, not replay the error.
+        status, text, err = await server._safe_get_text(FlakyClient(), url)
+        assert (status, text, err) == (200, '{"recovered":true}', None)
+        assert attempts["n"] == 2
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_cache_does_not_remember_a_rate_limit(monkeypatch):
+    """A cached 429 would keep reporting rate-limited after the limit lifted."""
+    calls = {"n": 0}
+
+    class RateLimited:
+        status_code = 429
+        encoding = "utf-8"
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def aiter_bytes(self, chunk_size):
+            yield b"slow down"
+
+    class FakeClient:
+        def stream(self, method, url):
+            calls["n"] += 1
+            return RateLimited()
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        url = "https://ratelimited.test/a"
+        assert (await server._safe_get_text(FakeClient(), url))[0] == 429
+        assert (await server._safe_get_text(FakeClient(), url))[0] == 429
+        assert calls["n"] == 2, "a 429 must never be served from cache"
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_cache_can_be_disabled_by_ttl_zero(monkeypatch):
+    """WB_CACHE_TTL=0 means every read goes upstream."""
+    calls = {"n": 0}
+
+    class FakeResponse:
+        status_code = 200
+        encoding = "utf-8"
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def aiter_bytes(self, chunk_size):
+            yield b"{}"
+
+    class FakeClient:
+        def stream(self, method, url):
+            calls["n"] += 1
+            return FakeResponse()
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=0))
+        url = "https://nocache.test/a"
+        await server._safe_get_text(FakeClient(), url)
+        await server._safe_get_text(FakeClient(), url)
+        assert calls["n"] == 2
+
+    asyncio.run(scenario())
+
+
+def test_proxy_prefers_the_connector_specific_variable(monkeypatch):
+    monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
+    monkeypatch.setattr(server._settings, "proxy", "http://explicit:9090")
+    assert server._proxy() == "http://explicit:9090"
+
+
+def test_proxy_falls_back_to_standard_variables(monkeypatch):
+    monkeypatch.setattr(server._settings, "proxy", "")
+    monkeypatch.delenv("WB_PROXY", raising=False)
+    monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
+    assert server._proxy() == "http://generic:8080"
+
+
+def test_client_is_built_without_following_redirects():
+    """WB answers some datacenter requests with a self-referential 307."""
+    client = server._wb_client()
+    assert client.follow_redirects is False
+
+
+# ------------------------------------------------------------- wb_questions ----
+
+
+def _questions_payload(count, items):
+    return 200, json.dumps({"questions": items, "count": count, "err": None}), None
+
+
+def _question(qid, text, answer_text=None, nm_id=5535526, name="покупатель"):
+    raw = {
+        "id": qid,
+        "text": text,
+        "createdDate": "2026-06-30T10:10:26.155795075Z",
+        "nmId": nm_id,
+        "wbUserDetails": {"name": name, "country": "ru"},
+    }
+    if answer_text is not None:
+        raw["answer"] = {"text": answer_text, "createDate": "2026-07-01T09:00:00Z", "supplierId": 1}
+    return raw
+
+
+def _patch_questions(monkeypatch, responder):
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(server, "_safe_get_text", responder)
+
+
+def test_questions_returns_pairs_and_marks_answered(monkeypatch):
+    async def responder(client, url):
+        assert "imtId=1002173489" in url
+        # take and skip are mandatory upstream; omitting either yields a silent empty.
+        assert "take=30" in url and "skip=0" in url
+        return _questions_payload(
+            2,
+            [
+                _question("q1", "10 ампер или 16 ампер?", "Максимальный ток 10 А"),
+                _question("q2", "есть ли гарантия?"),
+            ],
+        )
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1002173489, limit=10)
+
+        assert result.total_available == 2
+        assert result.returned == 2
+        assert result.answered_count == 1
+        first, second = result.questions
+        assert first.answered is True
+        assert first.answer_text == "Максимальный ток 10 А"
+        assert first.nm_id == 5535526
+        assert second.answered is False
+        assert second.answer_text == ""
+        assert second.answer_date is None
+
+    asyncio.run(scenario())
+
+
+def test_questions_treats_null_questions_as_empty(monkeypatch):
+    """A product nobody has asked about returns questions: null, not []."""
+
+    async def responder(client, url):
+        return 200, json.dumps({"questions": None, "count": 0, "err": None}), None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=12027820)
+
+        assert result.returned == 0
+        assert result.total_available == 0
+        assert result.has_more is False
+        assert result.meta.healthy is True
+
+    asyncio.run(scenario())
+
+
+def test_questions_paginates_past_the_upstream_take_cap(monkeypatch):
+    """take is capped at 30 upstream, so limit=45 must walk two pages."""
+    seen_skips = []
+
+    async def responder(client, url):
+        skip = int(url.split("skip=")[1])
+        seen_skips.append(skip)
+        items = [_question(f"q{skip + i}", f"вопрос {skip + i}") for i in range(30)]
+        return _questions_payload(70, items)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1, limit=45)
+
+        assert seen_skips == [0, 30]
+        assert result.returned == 45
+        assert len({q.question_id for q in result.questions}) == 45
+        assert result.has_more is True
+
+    asyncio.run(scenario())
+
+
+def test_questions_stops_at_a_short_page(monkeypatch):
+    """A page smaller than the cap means the pool is exhausted."""
+    calls = {"n": 0}
+
+    async def responder(client, url):
+        calls["n"] += 1
+        return _questions_payload(5, [_question(f"q{i}", f"вопрос {i}") for i in range(5)])
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1, limit=100)
+
+        assert calls["n"] == 1, "a short page must not trigger another request"
+        assert result.returned == 5
+        assert result.has_more is False
+
+    asyncio.run(scenario())
+
+
+def test_questions_answered_only_keeps_filling_across_pages(monkeypatch):
+    """Filtering after fetching must not silently shrink the caller's result."""
+
+    async def responder(client, url):
+        skip = int(url.split("skip=")[1])
+        # Page 1 is mostly unanswered; the answers live on page 2.
+        if skip == 0:
+            items = [_question(f"a{i}", "без ответа") for i in range(29)]
+            items.append(_question("answered-1", "с ответом", "да"))
+        else:
+            items = [_question(f"b{i}", "с ответом", "да") for i in range(30)]
+        return _questions_payload(60, items)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1, limit=5, answered_only=True)
+
+        assert result.returned == 5
+        assert all(q.answered for q in result.questions)
+
+    asyncio.run(scenario())
+
+
+def test_questions_warns_when_nothing_is_answered_yet(monkeypatch):
+    async def responder(client, url):
+        return _questions_payload(3, [_question(f"q{i}", "без ответа") for i in range(3)])
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1, limit=10, answered_only=True)
+
+        assert result.returned == 0
+        assert result.meta.healthy is False
+        assert any("seller answer" in w for w in result.meta.warnings)
+
+    asyncio.run(scenario())
+
+
+def test_questions_collapses_newlines_in_answers(monkeypatch):
+    """Seller answers contain literal newlines, which break single-line rendering."""
+
+    async def responder(client, url):
+        return _questions_payload(1, [_question("q1", "вопрос\nв две строки", "ответ\nв\tдве строки")])
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_questions(imt_id=1)
+
+        question = result.questions[0]
+        assert question.text == "вопрос в две строки"
+        assert question.answer_text == "ответ в две строки"
+
+    asyncio.run(scenario())
+
+
+def test_questions_raises_drift_when_count_is_missing(monkeypatch):
+    """A missing count means the contract changed; a zero count is legitimate."""
+
+    async def responder(client, url):
+        return 200, json.dumps({"questions": []}), None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_questions(imt_id=1)
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "parser_drift"
+
+    asyncio.run(scenario())
+
+
+def test_questions_raises_drift_when_questions_is_not_a_list(monkeypatch):
+    async def responder(client, url):
+        return 200, json.dumps({"questions": {"unexpected": "dict"}, "count": 1}), None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_questions(imt_id=1)
+        assert _tool_error_payload(excinfo)["error"] == "parser_drift"
+
+    asyncio.run(scenario())
+
+
+def test_questions_surfaces_rate_limiting(monkeypatch):
+    async def responder(client, url):
+        return 429, "", None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_questions(imt_id=1)
+        assert _tool_error_payload(excinfo)["error"] == "rate_limited"
+
+    asyncio.run(scenario())
+
+
+def test_questions_rejects_an_out_of_range_limit(monkeypatch):
+    async def forbidden(client, url):
+        raise AssertionError("validation must happen before any network call")
+
+    async def scenario():
+        _patch_questions(monkeypatch, forbidden)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_questions(imt_id=1, limit=500)
+        assert _tool_error_payload(excinfo)["error"] == "bad_request"
+
+    asyncio.run(scenario())
+
+
+def test_questions_uses_the_dedicated_host_not_a_feedbacks_mirror(monkeypatch):
+    """feedbacks*.wb.ru answers any questions-ish path with a misleading empty stub."""
+    seen = {}
+
+    async def responder(client, url):
+        seen["url"] = url
+        return _questions_payload(0, None)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        await server.wb_questions(imt_id=1)
+
+        assert "questions.wildberries.ru" in seen["url"]
+        assert "feedbacks" not in seen["url"]
+
+    asyncio.run(scenario())
+
+
+def test_questions_is_registered_as_a_tool():
+    async def scenario():
+        names = {tool.name for tool in await server.mcp.list_tools()}
+        assert "wb_questions" in names
+        # The v1.0.0 contract must remain intact alongside the addition.
+        assert {
+            "wb_search",
+            "wb_card",
+            "wb_root_info",
+            "wb_reviews",
+            "wb_seller",
+            "wb_categories",
+            "wb_selfcheck",
+        } <= names
+
+    asyncio.run(scenario())
+
+
+# ------------------------------------------------- wb_category_products ----
+
+
+def _catalog_payload(count=2, start=1000):
+    products = [
+        {
+            "id": start + i,
+            "name": f"товар {i}",
+            "brand": "БРЕНД",
+            "supplier": "продавец",
+            "supplierId": 7,
+            "reviewRating": 4.5,
+            "feedbacks": 10,
+            "totalQuantity": 5,
+            "sizes": [{"price": {"product": 150000, "basic": 200000}}],
+        }
+        for i in range(count)
+    ]
+    return 200, json.dumps({"data": {"products": products}}), None
+
+
+def test_category_products_lists_a_page(monkeypatch):
+    seen = {}
+
+    async def responder(client, url):
+        seen["url"] = url
+        return _catalog_payload(count=3)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_category_products(shard="electronic58", query="cat=9845")
+
+        assert "catalog.wb.ru/catalog/electronic58/v4/catalog" in seen["url"]
+        assert "cat=9845" in seen["url"]
+        assert "dest=" in seen["url"] and "appType=1" in seen["url"]
+        assert result.count == 3
+        assert result.shard == "electronic58"
+        assert result.dest == server.WB_DEFAULT_DEST
+        first = result.items[0]
+        assert first.nm_id == 1000
+        assert first.price_rub == 1500.0
+        assert first.price_original_rub == 2000.0
+        assert first.in_stock is True
+
+    asyncio.run(scenario())
+
+
+def test_category_products_refuses_the_blackhole_shard_without_a_request(monkeypatch):
+    """An empty list would claim the category has no products, which is false."""
+
+    async def forbidden(client, url):
+        raise AssertionError("an unlistable category must not cost a request")
+
+    async def scenario():
+        _patch_questions(monkeypatch, forbidden)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="blackhole", query="cat=9455")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "bad_request"
+        assert "not directly listable" in payload["message"]
+        # The message has to point somewhere useful, not just refuse.
+        assert "wb_search" in payload["message"] or "wb_categories" in payload["message"]
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "bad_query",
+    [
+        "cat=1&extra=2",  # smuggling a second parameter
+        "../../etc/passwd",
+        "cat=abc",  # non-numeric selector
+        "cat=",  # empty value
+        "",
+    ],
+)
+def test_category_products_rejects_an_unsafe_selector(monkeypatch, bad_query):
+    """The selector is appended to an outbound URL, so it is validated not trusted."""
+
+    async def forbidden(client, url):
+        raise AssertionError(f"{bad_query!r} must be rejected before any network call")
+
+    async def scenario():
+        _patch_questions(monkeypatch, forbidden)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="electronic58", query=bad_query)
+        assert _tool_error_payload(excinfo)["error"] == "bad_request"
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("bad_shard", ["", "has spaces", "shard/../evil", "a"])
+def test_category_products_rejects_an_unsafe_shard(monkeypatch, bad_shard):
+    async def forbidden(client, url):
+        raise AssertionError("must be rejected before any network call")
+
+    async def scenario():
+        _patch_questions(monkeypatch, forbidden)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard=bad_shard, query="cat=9845")
+        assert _tool_error_payload(excinfo)["error"] == "bad_request"
+
+    asyncio.run(scenario())
+
+
+def test_category_products_rejects_an_unknown_sort(monkeypatch):
+    async def forbidden(client, url):
+        raise AssertionError("must be rejected before any network call")
+
+    async def scenario():
+        _patch_questions(monkeypatch, forbidden)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="electronic58", query="cat=9845", sort="cheapest")
+        assert _tool_error_payload(excinfo)["error"] == "bad_request"
+
+    asyncio.run(scenario())
+
+
+def test_category_products_maps_a_404_to_not_found(monkeypatch):
+    """A real shard answering 404 means a stale selector, not a dead connector."""
+
+    async def responder(client, url):
+        return 404, "", None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="electronic58", query="cat=9845")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "not_found"
+        assert "wb_categories" in payload["message"]
+
+    asyncio.run(scenario())
+
+
+def test_category_products_reports_has_more_on_a_full_page(monkeypatch):
+    async def responder(client, url):
+        return _catalog_payload(count=server.WB_CATEGORY_PAGE_SIZE)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_category_products(shard="electronic58", query="cat=9845")
+        assert result.count == server.WB_CATEGORY_PAGE_SIZE
+        assert result.has_more is True
+
+    asyncio.run(scenario())
+
+
+def test_category_products_reports_no_more_on_a_short_page(monkeypatch):
+    async def responder(client, url):
+        return _catalog_payload(count=7)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_category_products(shard="electronic58", query="cat=9845")
+        assert result.has_more is False
+
+    asyncio.run(scenario())
+
+
+def test_category_products_honours_an_explicit_region(monkeypatch):
+    seen = {}
+
+    async def responder(client, url):
+        seen["url"] = url
+        return _catalog_payload()
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_category_products(shard="electronic58", query="cat=9845", dest="-1123300")
+        assert "dest=-1123300" in seen["url"]
+        assert result.dest == "-1123300"
+
+    asyncio.run(scenario())
+
+
+def test_category_products_raises_drift_on_an_unexpected_payload(monkeypatch):
+    async def responder(client, url):
+        return 200, json.dumps({"data": {"products": "not a list"}}), None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="electronic58", query="cat=9845")
+        assert _tool_error_payload(excinfo)["error"] == "parser_drift"
+
+    asyncio.run(scenario())
+
+
+def test_category_products_treats_cloudflare_html_as_transport_down(monkeypatch):
+    async def responder(client, url):
+        return 200, "<html><body>Attention Required</body></html>", None
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_category_products(shard="electronic58", query="cat=9845")
+        assert _tool_error_payload(excinfo)["error"] == "transport_down"
+
+    asyncio.run(scenario())
+
+
+def test_category_item_shape_matches_wb_card(monkeypatch):
+    """A category walk and a text search must be directly comparable."""
+
+    async def responder(client, url):
+        return _catalog_payload(count=1)
+
+    async def scenario():
+        _patch_questions(monkeypatch, responder)
+        result = await server.wb_category_products(shard="electronic58", query="cat=9845")
+        assert set(result.items[0].model_dump()) == set(server.WbCardItem().model_dump())
+
+    asyncio.run(scenario())
+
+
+def test_card_item_dict_never_calls_an_unpriced_listing_in_stock():
+    """A quantity with no price is unsellable; calling it available would rank it cheapest."""
+    mapped = server._card_item_dict({"id": 1, "totalQuantity": 10, "sizes": [{"price": {}}]})
+    assert mapped["price_rub"] is None
+    assert mapped["in_stock"] is False
+
+
+def test_category_products_is_registered_and_v1_tools_are_intact():
+    async def scenario():
+        names = {tool.name for tool in await server.mcp.list_tools()}
+        assert "wb_category_products" in names
+        assert {
+            "wb_search",
+            "wb_card",
+            "wb_root_info",
+            "wb_reviews",
+            "wb_seller",
+            "wb_categories",
+            "wb_selfcheck",
+        } <= names
 
     asyncio.run(scenario())

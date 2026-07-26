@@ -1,5 +1,10 @@
 # ru-marketplace-mcp
 
+[![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
+
 **MCP-серверы для российских маркетплейсов.** Цены, наличие, рейтинги, отзывы и
 реквизиты продавцов с Wildberries, Ozon, Яндекс Маркета и Детского мира. Плюс
 сравнение цен по всем источникам одним вызовом.
@@ -15,13 +20,13 @@
 
 | Сервер | Инструментов | Доступ | Что умеет |
 |---|---|---|---|
-| **Wildberries** | 7 | анонимный HTTP | Поиск, карточки, отзывы, реквизиты продавца, каталог |
+| **Wildberries** | 9 | анонимный HTTP | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
 | **Яндекс Маркет** | 3 | анонимный HTTP | Цены разных продавцов, разбивка оценок по звёздам, отзывы |
 | **Детский мир** | 4 | анонимный HTTP | Детские товары, наличие в офлайн-магазинах, категории |
 | **Ozon** | 4 | TLS-имперсонация, дальше ваш Chrome | Поиск, карточки, отзывы |
 | **Сравнение** | 2 | опрашивает всё перечисленное | «Где дешевле?» одним вызовом |
 
-Всего 20 инструментов в 5 stdio-серверах на общем рантайме `mcp-core`.
+Всего 22 инструмента в 5 stdio-серверах на общем рантайме `mcp-core`.
 
 ## Быстрый старт
 
@@ -31,7 +36,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 221 офлайн-тест, сеть не нужна
+uv run pytest -q            # 375 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -133,13 +138,26 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 | `wb_card(nm_ids)` | Пакетный запрос до 100 известных SKU |
 | `wb_root_info(nm_id)` | Находит `imt_id` (нужен для отзывов) и цветовые варианты |
 | `wb_reviews(imt_id, limit, sort)` | Пул отзывов. Ключ — `imt_id`, а не `nm_id` |
+| `wb_questions(imt_id, limit, skip, answered_only)` | Вопросы покупателей и ответы продавца. Тоже по `imt_id` |
 | `wb_seller(supplier_id)` | Юрлицо, ИНН, КПП, ОГРН, юридический адрес |
 | `wb_categories(root, max_depth)` | Дерево каталога с шардами и запросами самого WB |
+| `wb_category_products(shard, query, page, sort, dest)` | Товары категории по `shard` и `query` из `wb_categories` |
 | `wb_selfcheck()` | Канарейка на дрейф формата |
 
 `wb_seller` отвечает на вопрос, который карточка товара скрывает: кто на самом деле
 продаёт? Возвращает зарегистрированное юрлицо и налоговые номера. Так отличают
 официальный магазин бренда от перекупщика с похожим названием.
+
+`wb_questions` закрывает другой пробел. Отзывы говорят, каково владеть товаром;
+вопросы уточняют, что это вообще за товар — «10 или 16 ампер», «кабель в комплекте?».
+Ответ продавца часто единственное публичное утверждение об этом. Пул общий для всех
+вариантов товара, ключ — `imt_id` из `wb_root_info`.
+
+`wb_category_products` замыкает связку с `wb_categories`: та отдаёт `shard` и `query`,
+это — товары по ним. Формат элементов совпадает с `wb_search`, поэтому обход категорий
+и текстовый поиск сравнимы напрямую. Часть крупных разделов WB помечает шардом
+`blackhole` — у них нет своей выдачи, и инструмент честно об этом говорит вместо
+пустого списка.
 
 ### Яндекс Маркет — `yandex_*`
 
@@ -161,10 +179,15 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 | Инструмент | Что делает |
 |---|---|
-| `detmir_categories(parent, limit)` | Дерево каталога. Начинать отсюда |
-| `detmir_category(alias, limit, offset)` | Товары категории с настоящим счётчиком |
-| `detmir_card(product_id)` | Цена, рейтинг, наличие онлайн и в магазинах |
+| `detmir_categories(parent, limit, region)` | Дерево каталога. Начинать отсюда |
+| `detmir_category(alias, limit, offset, region)` | Товары категории с настоящим счётчиком |
+| `detmir_card(product_id, region)` | Цена, рейтинг, наличие онлайн и в магазинах |
 | `detmir_selfcheck()` | Канарейка на дрейф формата |
+
+**Регион задаётся на каждый вызов.** Цены и особенно наличие в офлайн-магазинах
+сильно зависят от города: один и тот же товар лежал в 152 магазинах Москвы, 37
+Петербурга и 2 Хабаровска. Параметр `region` перекрывает `DETMIR_REGION`, так что
+города можно сравнивать в одной сессии.
 
 **Текстового поиска здесь нет, и это намеренно.** API Детского мира молча игнорирует
 любые текстовые фильтры и возвращает весь каталог на 300 тысяч позиций, а сайтовый
@@ -218,15 +241,21 @@ compare_prices("кроссовки мужские")
 
 | Префикс | Основные параметры |
 |---|---|
-| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES` |
+| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY` |
 | `YANDEX_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `DETMIR_` | `REGION` (`RU-MOW`, `RU-SPE` и другие), `CACHE_TTL`, `PROXY` |
-| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE` |
+| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
 | `CHROME_` | `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MCP_` | `TRANSPORT` (`stdio` по умолчанию, либо `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `*_CACHE_TTL=0` выключает кэш. `*_PROXY` перекрывает стандартные `HTTPS_PROXY` и
-`ALL_PROXY`.
+`ALL_PROXY` — с версии 1.1.0 это работает у всех четырёх коннекторов, а не у двух.
+Кэшируются только удачные ответы: запомнить сбой значило бы растянуть секундную
+помеху на весь TTL.
+
+У Ozon прокси применяется к первому уровню. Второй идёт через ваш собственный Chrome,
+и его трафик — дело настроек этого браузера, а не наших.
 
 **Секретов в проекте нет вообще.** Нечего настраивать, нечему утечь.
 
@@ -234,8 +263,9 @@ compare_prices("кроссовки мужские")
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 221 офлайн-тест
+uv run pytest -q                              # 375 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
+uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
 uv run mypy packages/*/src
 uv run mypy --platform win32 packages/*/src   # ловит ошибки, видимые только на Windows
@@ -292,13 +322,15 @@ Read-only. No credentials, no API keys, no account required.
 
 | Server | Tools | Access | Notes |
 |---|---|---|---|
-| **Wildberries** | 7 | anonymous HTTP | Search, cards, reviews, seller legal identity, catalog tree |
+| **Wildberries** | 9 | anonymous HTTP | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
 | **Yandex Market** | 3 | anonymous HTTP | Multi-seller prices, star distribution, reviews |
 | **Detsky Mir** | 4 | anonymous HTTP | Kids' goods, offline store stock, category listings |
 | **Ozon** | 4 | TLS impersonation, then your Chrome | Search, cards, reviews |
 | **Compare** | 2 | aggregates the above | "Where is this cheapest?" in one call |
 
-20 tools across 5 stdio MCP servers, sharing one runtime (`mcp-core`).
+22 tools across 5 stdio MCP servers, sharing one runtime (`mcp-core`). stdio is the
+default; HTTP transport is opt-in for remote deployment — see
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Quickstart
 
@@ -308,7 +340,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 221 offline tests, no network needed
+uv run pytest -q            # 375 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -328,13 +360,26 @@ family and reports `success`, `drift_detected`, or `inconclusive`.
 | `wb_card(nm_ids)` | Batch lookup for up to 100 known SKUs |
 | `wb_root_info(nm_id)` | Resolves `imt_id` (needed for reviews) plus colour variants |
 | `wb_reviews(imt_id, limit, sort)` | Review pool, keyed by `imt_id`, not `nm_id` |
+| `wb_questions(imt_id, limit, skip, answered_only)` | Buyer questions with seller answers, also keyed by `imt_id` |
 | `wb_seller(supplier_id)` | Registered entity, INN, KPP, OGRN, legal address |
 | `wb_categories(root, max_depth)` | Catalog tree with WB's own shard/query selectors |
+| `wb_category_products(shard, query, page, sort, dest)` | Products in a category, using those selectors |
 | `wb_selfcheck()` | Drift canary |
 
 `wb_seller` answers the question a listing hides: who actually ships this? It returns
 the registered legal entity and tax ids, which is how you distinguish an official
 brand store from a reseller trading under a lookalike name.
+
+`wb_questions` covers a different gap. Reviews describe what owning the product is
+like; questions clarify what it actually is — "10A or 16A?", "is the cable
+included?" — and the seller's reply is often the only public statement of that fact.
+One pool per `imt_id`, shared across every variant.
+
+`wb_category_products` closes the loop `wb_categories` opens: that tool hands back
+WB's `shard` and `query`, and this one fetches the products behind them. Items use
+the same shape as `wb_search`, so a category walk and a text search are directly
+comparable. Several of WB's largest sections carry the shard `blackhole` and have no
+feed at all; the tool says so instead of returning an empty list.
 
 ### Yandex Market — `yandex_*`
 
@@ -355,10 +400,14 @@ That reveals whether a 4.8 average is earned or hides a cluster of complaints.
 
 | Tool | What it does |
 |---|---|
-| `detmir_categories(parent, limit)` | Catalog tree, start here |
-| `detmir_category(alias, limit, offset)` | Products in a category, with real totals |
-| `detmir_card(product_id)` | Price, rating, online and offline store stock |
+| `detmir_categories(parent, limit, region)` | Catalog tree, start here |
+| `detmir_category(alias, limit, offset, region)` | Products in a category, with real totals |
+| `detmir_card(product_id, region)` | Price, rating, online and offline store stock |
 | `detmir_selfcheck()` | Drift canary |
+
+**Region is per call.** Prices and especially offline availability swing by city —
+one item sat in 152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. The
+`region` parameter overrides `DETMIR_REGION`, so one session can compare cities.
 
 **There is no text search, deliberately.** Detsky Mir's API silently ignores every
 text filter and returns its entire 300k-item catalog; the website's search route
@@ -410,15 +459,21 @@ Every setting is an environment variable with a per-connector prefix. All option
 
 | Prefix | Common knobs |
 |---|---|
-| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES` |
+| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY` |
 | `YANDEX_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `DETMIR_` | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY` |
-| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE` |
+| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
 | `CHROME_` | `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MCP_` | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
-`HTTPS_PROXY`/`ALL_PROXY`.
+`HTTPS_PROXY`/`ALL_PROXY` — as of 1.1.0 that works on all four connectors, not two.
+Only successful reads are cached: remembering a failure would stretch a one-second
+blip across the whole TTL window.
+
+Ozon's proxy applies to tier 1. Tier 2 runs inside your own Chrome, whose egress is
+that browser's configuration, not ours.
 
 **No secrets exist anywhere in this project.** Nothing to configure, nothing to leak.
 
@@ -426,8 +481,9 @@ Every setting is an environment variable with a per-connector prefix. All option
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 221 offline tests
+uv run pytest -q                              # 375 offline tests
 uv run pytest -q -m "not live"                # what CI runs
+uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
 uv run mypy packages/*/src
 uv run mypy --platform win32 packages/*/src   # catches Windows-only type errors
