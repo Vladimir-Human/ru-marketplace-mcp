@@ -140,7 +140,7 @@ jobs:
           import asyncio
 
           EXPECTED = {
-              "wb": 7,
+              "wb": 9,
               "ozon": 4,
               "detmir": 4,
               "yandex": 3,
