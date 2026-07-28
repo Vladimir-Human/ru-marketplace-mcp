@@ -5,7 +5,7 @@ name: Release
 #
 # Deliberately NOT publishing to PyPI: the distribution names (wb-connector and
 # friends) are too generic and undecided, so the packages are not on PyPI yet
-# (see RELEASE_PROMPT.md). This job only builds and attaches artifacts.
+# (see docs/RELEASE_CHECKLIST.md). This job only builds and attaches artifacts.
 on:
   push:
     tags:
