@@ -59,11 +59,11 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement through GitHub's
-private reporting route:
-<https://github.com/Vladimir-Human/ru-marketplace-mcp/security/advisories/new>,
-or by contacting the maintainer directly at <https://github.com/Vladimir-Human>.
-All complaints will be reviewed and investigated promptly and fairly.
+reported to the maintainer by email at <info@feargt.work.gd>. All complaints
+will be reviewed and investigated promptly and fairly.
+
+Security vulnerabilities go through a separate private route, described in
+[SECURITY.md](SECURITY.md) — please do not use the address above for those.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
