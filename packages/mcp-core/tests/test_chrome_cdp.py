@@ -46,6 +46,55 @@ def test_the_valid_port_range_is_inclusive(monkeypatch, edge):
     assert chrome_cdp._port_from_env() == int(edge)
 
 
+# ------------------------------------------------------------------- host ----
+
+
+def test_host_defaults_to_loopback_when_unset(monkeypatch):
+    monkeypatch.delenv("CHROME_CDP_HOST", raising=False)
+    assert chrome_cdp._host_from_env() == "127.0.0.1"
+
+
+def test_host_reads_the_environment(monkeypatch):
+    monkeypatch.setenv("CHROME_CDP_HOST", "host.docker.internal")
+    assert chrome_cdp._host_from_env() == "host.docker.internal"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "",
+        "http://127.0.0.1",
+        "127.0.0.1:9222",
+        "user:pass@proxy",
+        "127.0.0.1/path",
+        "127 .0.0.1",
+    ],
+)
+def test_a_malformed_host_falls_back_to_loopback(monkeypatch, bad):
+    """A host with a scheme, port, credentials or path must never reach the dialer."""
+    monkeypatch.setenv("CHROME_CDP_HOST", bad)
+    assert chrome_cdp._host_from_env() == "127.0.0.1"
+
+
+def test_an_ipv6_host_with_colons_is_kept(monkeypatch):
+    monkeypatch.setenv("CHROME_CDP_HOST", "::1")
+    assert chrome_cdp._host_from_env() == "::1"
+
+
+def test_cdp_url_uses_the_configured_host(monkeypatch):
+    """The module-level URL is built at import time; rebuild it from the helpers."""
+    monkeypatch.setenv("CHROME_CDP_HOST", "chrome-sidecar")
+    monkeypatch.setenv("CHROME_CDP_PORT", "9223")
+    host = chrome_cdp._host_from_env()
+    port = chrome_cdp._port_from_env()
+    assert f"http://{host}:{port}" == "http://chrome-sidecar:9223"
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1"])
+def test_loopback_hosts_are_recognised(host):
+    assert host in chrome_cdp._LOOPBACK_HOSTS
+
+
 # ---------------------------------------------------------- profile paths ----
 
 
@@ -325,3 +374,36 @@ def test_nav_blocked_carries_the_status_and_url():
 def test_socket_module_is_the_real_one():
     """Guards against a monkeypatch leaking out of the tests above."""
     assert chrome_cdp.socket is socket
+
+
+# ------------------------------------------------------------- probe_session ----
+
+
+def test_probe_session_reports_unreachable_when_port_closed(monkeypatch):
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
+    import asyncio
+
+    result = asyncio.run(chrome_cdp.probe_session())
+
+    assert result["reachable"] is False
+    assert "nothing listening" in str(result["reason"])
+
+
+def test_probe_session_never_raises(monkeypatch):
+    """A wedged browser must surface as reachable=False, not an exception."""
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: True)
+
+    class _Boom:
+        async def __aenter__(self):
+            raise RuntimeError("wedged")
+
+        async def __aexit__(self, *a):
+            return False
+
+    monkeypatch.setattr(chrome_cdp, "get_browser", lambda: _Boom())
+    import asyncio
+
+    result = asyncio.run(chrome_cdp.probe_session())
+
+    assert result["reachable"] is False
+    assert "wedged" in str(result["reason"])

@@ -1,9 +1,10 @@
 [project]
 name = "ozon-connector"
-version = "1.1.0"
+version = "1.2.0"
 description = "Ozon MCP connector — two-tier transport (TLS impersonation + authenticated Chrome CDP)"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
 dependencies = [
     "mcp-core",
     "fastmcp>=3.4.0",

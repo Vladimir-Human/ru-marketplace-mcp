@@ -8,7 +8,7 @@ check before drawing conclusions.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class MarketOffer(BaseModel):
@@ -21,7 +21,21 @@ class MarketOffer(BaseModel):
     seller: str = Field(default="", description="Seller/shop name, when reported.")
     price_rub: float | None = Field(
         default=None,
-        description="Everyday price in roubles — the basis for ranking. None when absent, never 0.",
+        description=(
+            "Everyday price in roubles — the only basis for ranking. None when absent, never 0, "
+            "and always None for a marketplace that quotes in another currency."
+        ),
+    )
+    currency: str = Field(
+        default="rub",
+        description="Currency of price_native, lowercase ISO code. Only 'rub' offers enter the ranking.",
+    )
+    price_native: float | None = Field(
+        default=None,
+        description=(
+            "Price as the marketplace quotes it, in `currency`. Equals price_rub for Russian "
+            "sources; for Taobao it carries the yuan price that price_rub deliberately omits."
+        ),
     )
     price_with_subscription_rub: float | None = Field(
         default=None,
@@ -34,6 +48,18 @@ class MarketOffer(BaseModel):
     rating_count: int | None = Field(default=None, description="Number of ratings or reviews behind that average.")
     in_stock: bool | None = Field(default=None, description="Stock status, when the marketplace reports it.")
     url: str = Field(default="", description="Direct product URL.")
+
+    @model_validator(mode="after")
+    def _mirror_rouble_price_into_native(self) -> MarketOffer:
+        """For rouble sources the native price is the rouble price.
+
+        Filling this here rather than in nine adapters means price_native is
+        always the number the marketplace actually showed, whatever the source,
+        so a caller can read one field without special-casing Taobao.
+        """
+        if self.price_native is None and self.currency == "rub":
+            self.price_native = self.price_rub
+        return self
 
 
 class SourceOutcome(BaseModel):

@@ -32,6 +32,15 @@ WORKDIR /app
 # re-downloading the dependency set. --frozen means "use uv.lock exactly, never
 # re-resolve"; --no-install-project defers the workspace packages themselves to
 # the next step; --no-dev drops the test/lint toolchain from the runtime image.
+#
+# Every one of the 13 workspace members must be listed here. `uv sync
+# --all-packages` reads each member's pyproject.toml even under
+# --no-install-project (it still resolves their workspace deps), so a missing
+# manifest fails the resolve with "Distribution not found at:
+# file:///app/packages/<member>". A `COPY packages/*/pyproject.toml ...` glob
+# does NOT work: a multi-file COPY flattens every match into one destination
+# path, collapsing the packages/<member>/ nesting the file:// sources require.
+# So the members are enumerated explicitly, one COPY each.
 COPY pyproject.toml uv.lock ./
 COPY packages/mcp-core/pyproject.toml packages/mcp-core/pyproject.toml
 COPY packages/wb-connector/pyproject.toml packages/wb-connector/pyproject.toml
@@ -39,6 +48,13 @@ COPY packages/ozon-connector/pyproject.toml packages/ozon-connector/pyproject.to
 COPY packages/yandex-connector/pyproject.toml packages/yandex-connector/pyproject.toml
 COPY packages/detmir-connector/pyproject.toml packages/detmir-connector/pyproject.toml
 COPY packages/compare-connector/pyproject.toml packages/compare-connector/pyproject.toml
+COPY packages/avito-connector/pyproject.toml packages/avito-connector/pyproject.toml
+COPY packages/taobao-connector/pyproject.toml packages/taobao-connector/pyproject.toml
+COPY packages/megamarket-connector/pyproject.toml packages/megamarket-connector/pyproject.toml
+COPY packages/lamoda-connector/pyproject.toml packages/lamoda-connector/pyproject.toml
+COPY packages/dns-connector/pyproject.toml packages/dns-connector/pyproject.toml
+COPY packages/citilink-connector/pyproject.toml packages/citilink-connector/pyproject.toml
+COPY packages/marketplace-connector/pyproject.toml packages/marketplace-connector/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --all-packages --frozen --no-dev --no-install-project
 
@@ -63,6 +79,12 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/packages /app/packages
 
+# The skills travel with the servers. Each connector has one, and it is how an
+# agent learns the tool exists, when to reach for it, and which of its answers
+# need a second look. A container with the servers but not the skills runs
+# twelve MCP endpoints nothing knows how to use.
+COPY --chown=app:app skills/ /app/skills/
+
 # Put the venv on PATH so the console scripts (wb-mcp, ozon-mcp, ...) resolve
 # directly, and keep Python from writing .pyc files or buffering stdout/stderr.
 ENV PATH="/app/.venv/bin:$PATH" \
@@ -85,7 +107,19 @@ USER app
 
 EXPOSE 8000
 
+# No HEALTHCHECK on purpose. These servers expose only the FastMCP JSON-RPC
+# endpoint at $MCP_HTTP_PATH (/mcp); there is no plain-GET liveness route in the
+# codebase (mcp_core/http.py is httpx timeout/error helpers, and runtime.py hands
+# the socket straight to FastMCP without registering a custom route). The /mcp
+# endpoint speaks streamable-HTTP: a bare GET does not return a simple 200, so a
+# naive `curl -f http://127.0.0.1:8000/mcp` would flap. A truthful healthcheck
+# needs a real liveness route — add `@mcp.custom_route("/healthz", methods=["GET"])`
+# in mcp-core returning 200, then a HEALTHCHECK hitting it — but that is a code
+# change in packages/, out of scope here. Until then, no check beats a lying one.
+
 # Default to the Wildberries server; override the command to run any of the
-# five (ozon-mcp, yandex-mcp, detmir-mcp, compare-mcp). docker-compose.yml shows
-# running several at once, each on its own published port.
+# other twelve entry points — ozon-mcp, yandex-mcp, detmir-mcp, compare-mcp,
+# avito-mcp, taobao-mcp, megamarket-mcp, lamoda-mcp, dns-mcp, citilink-mcp, or
+# the unified marketplace-mcp (all sources in one server). docker-compose.yml
+# shows running several at once, each on its own published port.
 CMD ["wb-mcp"]

@@ -57,3 +57,8 @@ chrome-scraping/
 docs/
 *.md
 !README.md
+# ...but the skills are not docs, they are how an agent discovers the tools.
+# `*.md` above matches at every level, so without this exception `COPY skills/`
+# would put empty directories in the image — a change that looks right in review
+# and ships nothing.
+!skills/**/SKILL.md

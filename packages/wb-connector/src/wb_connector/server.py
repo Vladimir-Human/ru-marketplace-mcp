@@ -32,7 +32,6 @@ import json
 import os
 import re
 import string
-import time
 from typing import Annotated, Any
 
 import httpx
@@ -51,6 +50,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport import get_text_budgeted, proxy_from_env
 from pydantic import Field
@@ -76,7 +76,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -160,9 +160,8 @@ _WB_REVIEW_SORT_ALIASES = {
     "complaints": "worst",
 }
 
-_last_request_ts = 0.0
 _min_gap = _settings.min_gap
-_rate_lock = asyncio.Lock()
+_pacer = Pacer(_min_gap)
 
 # Bounded retry for TRANSIENT network faults only (connect/read timeout, conn
 # reset). Verified live Nov 2026: wb_search intermittently throws ConnectTimeout
@@ -178,6 +177,38 @@ _NET_BACKOFF_S = _settings.net_backoff_s
 # also worth remembering for a moment, since retrying it immediately is exactly
 # what provoked it. WB_CACHE_TTL=0 disables.
 _cache: TTLCache[tuple[int, str | None, str | None]] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
+
+# Page-1 fingerprints, keyed by (query, dest).
+#
+# Verified live 2026-07-28: past the end of the real result set, WB does NOT
+# return an empty page. It serves page 1 again — 100 products, HTTP 200, no
+# error, no marker. Measured on query «ноутбук»: page 20 returned byte-identical
+# ids in identical order to page 1. An agent walking pages therefore collects
+# the same products over and over and believes it is paginating.
+#
+# WB's own `total` cannot be used to find the last page: it stays far larger
+# than the depth actually served, so arithmetic on it would not have caught the
+# case above. What does work is remembering what page 1 looked like — and the
+# realistic access pattern is exactly sequential pagination, so page 1 is
+# normally already in hand. When it is not, behaviour is unchanged and the
+# caveat is documented instead of silently wrong.
+# TTLCache is generic over the stored VALUE; the key is the (query, dest) tuple.
+_page1_fingerprints: TTLCache[str] = TTLCache(ttl_s=max(_settings.cache_ttl, 300.0), max_entries=256)
+
+
+def _page_fingerprint(products: list[Any]) -> str | None:
+    """Identity of a result page: the leading ids, in order.
+
+    Order matters — WB re-ranks between requests, so an unordered set would call
+    two genuinely different pages equal often enough to hide real data.
+    """
+    ids = []
+    for product in products[:10]:
+        if isinstance(product, dict):
+            value = R.coerce_int(product.get("id"))
+            if value is not None:
+                ids.append(str(value))
+    return ",".join(ids) if len(ids) >= 3 else None
 
 
 def _proxy() -> str | None:
@@ -251,13 +282,13 @@ async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str 
     return result
 
 
-async def _polite_wait():
-    global _last_request_ts
-    async with _rate_lock:
-        elapsed = time.monotonic() - _last_request_ts
-        if elapsed < _min_gap:
-            await asyncio.sleep(_min_gap - elapsed)
-        _last_request_ts = time.monotonic()
+async def _polite_wait() -> None:
+    """Space this source's requests out, and back off if it refused us.
+
+    Reads ``_min_gap`` at call time so an operator or a test can retune the
+    pace without rebuilding the pacer.
+    """
+    await _pacer.wait(min_gap=_min_gap)
 
 
 def _basket_for_sku(nm_id: int) -> str:
@@ -711,6 +742,12 @@ def _aggregate_offer_warnings(items: list[dict]) -> list[str]:
     for it in items:
         for w in R.validate_offer(it, require_title=True):
             tally[w.split(":")[0]] += 1
+        # in_stock is a plain bool for wire-compatibility with 1.1.0, so a
+        # missing totalQuantity collapses to False — indistinguishable from a
+        # genuine sell-out. Count those separately: the caller can then read
+        # total_quantity is None instead of trusting in_stock=False.
+        if it.get("total_quantity") is None:
+            tally["stock_unknown"] += 1
     n = len(items)
     # Threshold: half the items (systemic drift), but ALWAYS warn when a single
     # item is affected in a 1-item result — wb_card([sku]) / a 1-hit search must
@@ -1269,6 +1306,18 @@ async def wb_search(
 
         if not products:
             log_event("wb_search.no_results", query=query[:100])
+            return WbNoResultsResponse(query=query, page=page, total_ids=total_found or 0)
+
+        # Past the end, WB repeats page 1 rather than returning nothing. Honour
+        # the documented contract — a page past the end is "no results" — instead
+        # of handing back duplicates dressed as a new page.
+        fingerprint = _page_fingerprint(products)
+        fp_key = (query.strip().lower(), dest)
+        if page == 1:
+            if fingerprint:
+                _page1_fingerprints.set(fp_key, fingerprint)
+        elif fingerprint and _page1_fingerprints.get(fp_key) == fingerprint:
+            log_event("wb_search.page_wrapped", query=query[:100], page=page)
             return WbNoResultsResponse(query=query, page=page, total_ids=total_found or 0)
 
         page_size = 100 if not fallback_used else 30

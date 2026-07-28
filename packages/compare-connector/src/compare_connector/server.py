@@ -33,6 +33,7 @@ import datetime
 import os
 import re
 import time
+from collections.abc import Iterable
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
@@ -48,7 +49,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -94,6 +95,48 @@ def _available_sources() -> dict[str, Any]:
     except Exception as exc:
         log_event("compare.source_unavailable", source="ozon", error=_redact(str(exc))[:120])
 
+    try:
+        from avito_connector import server as avito_server
+
+        sources["avito"] = avito_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="avito", error=_redact(str(exc))[:120])
+
+    try:
+        from taobao_connector import server as taobao_server
+
+        sources["taobao"] = taobao_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="taobao", error=_redact(str(exc))[:120])
+
+    try:
+        from megamarket_connector import server as megamarket_server
+
+        sources["megamarket"] = megamarket_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="megamarket", error=_redact(str(exc))[:120])
+
+    try:
+        from lamoda_connector import server as lamoda_server
+
+        sources["lamoda"] = lamoda_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="lamoda", error=_redact(str(exc))[:120])
+
+    try:
+        from dns_connector import server as dns_server
+
+        sources["dns"] = dns_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="dns", error=_redact(str(exc))[:120])
+
+    try:
+        from citilink_connector import server as citilink_server
+
+        sources["citilink"] = citilink_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="citilink", error=_redact(str(exc))[:120])
+
     return sources
 
 
@@ -102,7 +145,181 @@ SOURCES = _available_sources()
 # Marketplaces that support a text query. Detsky Mir is absent on purpose: its
 # API has no working text search (see the detmir connector's module docstring),
 # so including it would mean returning products unrelated to the query.
-SEARCHABLE = ("wildberries", "yandex_market", "ozon")
+SEARCHABLE = (
+    "wildberries",
+    "yandex_market",
+    "ozon",
+    "avito",
+    "taobao",
+    "megamarket",
+    "lamoda",
+    "dns",
+    "citilink",
+)
+
+# Yuan sources rank separately from ruble ones: a baked-in CNY→RUB rate would go
+# silently stale, and ranking a stale conversion against live ruble prices
+# fabricates bargains. Taobao offers are reported with currency="cny" and are
+# excluded from the cheapest-rub ranking.
+FOREIGN_CURRENCY_SOURCES = ("taobao",)
+
+
+def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
+    """Drop repeats of the same listing, keyed on (source, product_id).
+
+    A marketplace can return the same product twice — colour variants sharing
+    an id, a pagination overlap — and every copy would otherwise rank
+    separately. That inflates total_offers and, worse, lets one listing occupy
+    both the cheapest slot and the runner-up, making a single offer look like
+    two independent confirmations of a price.
+
+    Order is preserved so the per-source ordering the marketplaces chose
+    survives. Offers with no product_id cannot be compared this way and are all
+    kept: dropping them on a blank key would silently merge distinct listings.
+    """
+    seen: set[tuple[str, str]] = set()
+    out: list[MarketOffer] = []
+    for offer in offers:
+        if not offer.product_id:
+            out.append(offer)
+            continue
+        key = (offer.source, offer.product_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(offer)
+    return out
+
+
+# Words that mark a listing as something you buy *for* a product rather than
+# the product itself. A search for "iphone 15" matches a case, a screen
+# protector and a cable, all of them cheaper than the phone, and whichever is
+# cheapest becomes the headline answer. Observed live in July 2026: a query for
+# iPhone 15 ranked a 34 224 ₽ listing above genuine 52 049 ₽ ones.
+_ACCESSORY_MARKERS = (
+    "чехол",
+    "чехол-книжка",
+    "бампер",
+    "накладка",
+    "защитное стекло",
+    "стекло",
+    "плёнка",
+    "пленка",
+    "кабель",
+    "адаптер",
+    "зарядка",
+    "зарядное",
+    "держатель",
+    "ремешок",
+    "подставка",
+    "наклейка",
+    "case",
+    "cover",
+    "screen protector",
+    "cable",
+    "charger",
+    "strap",
+)
+
+
+# Words that mark a listing as a different *condition* of the product, not a
+# different product. This is the case the accessory list above misses entirely
+# and the one that actually bit: checked live in July 2026, the cheap iPhone 15
+# rows on Wildberries were "Восстановленный" and "Витринный образец" — a
+# refurbished phone and a display unit, ranked against new ones from other
+# marketplaces. Nothing in the title looks like an accessory, and the price is
+# not low enough to trip a median check. Only the wording gives it away.
+_CONDITION_MARKERS = (
+    "восстановленный",
+    "восстановленная",
+    "витринный образец",
+    "витринный",
+    "уценка",
+    "уценённый",
+    "уцененный",
+    "б/у",
+    "бывший в употреблении",
+    "как новый",
+    "refurbished",
+    "renewed",
+    "pre-owned",
+    "used",
+    "open box",
+)
+
+
+def _looks_like_another_condition(title: str, query: str) -> bool:
+    """Whether a title advertises a used, refurbished or display unit.
+
+    A query that asks for one of these is answered correctly by them, so a
+    marker present in the query itself never counts.
+    """
+    low_title = title.lower()
+    low_query = query.lower()
+    return any(m in low_title and m not in low_query for m in _CONDITION_MARKERS)
+
+
+def _looks_like_an_accessory(title: str, query: str) -> bool:
+    """Whether a title reads as an accessory the query did not ask for.
+
+    Asking for a case and getting cases is correct, so a marker present in the
+    query itself never counts.
+    """
+    low_title = title.lower()
+    low_query = query.lower()
+    return any(m in low_title and m not in low_query for m in _ACCESSORY_MARKERS)
+
+
+def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
+    """Flag a cheapest offer that probably answers a different question.
+
+    Deliberately warnings, never filtering. Dropping a row on a heuristic would
+    hide a real bargain, and no threshold tuned without live data deserves that
+    power. Saying "this looks like an accessory, check it" costs the caller
+    nothing and is the difference between a wrong answer and a checked one.
+    """
+    if not priced:
+        return []
+    warnings: list[str] = []
+    cheapest = priced[0]
+
+    if _looks_like_an_accessory(cheapest.title, query):
+        warnings.append(
+            f"relevance: the cheapest offer ({cheapest.source}, {cheapest.price_rub} ₽) is titled "
+            f"{cheapest.title[:60]!r}, which reads as an accessory rather than {query!r} itself — verify before quoting it"
+        )
+
+    if _looks_like_another_condition(cheapest.title, query):
+        warnings.append(
+            f"condition: the cheapest offer ({cheapest.source}, {cheapest.price_rub} ₽) is titled "
+            f"{cheapest.title[:60]!r} — that is a used, refurbished or display unit, so it is not "
+            f"comparable with new goods from the other marketplaces"
+        )
+
+    # A price far under the middle of the pack is usually a different product,
+    # a different configuration or a grey import. Half the median is
+    # conservative on purpose: normal cross-marketplace spread does not reach it.
+    if len(priced) >= 3:
+        prices = sorted(offer.price_rub or 0.0 for offer in priced)
+        median = prices[len(prices) // 2]
+        low = cheapest.price_rub or 0.0
+        if median > 0 and low < median * 0.5:
+            warnings.append(
+                f"price_outlier: the cheapest offer is {low} ₽ against a median of {median} ₽ across "
+                f"{len(priced)} offers — check it is the same product and configuration"
+            )
+    return warnings
+
+
+def _ranks_in_rubles(offer: MarketOffer) -> bool:
+    """Whether an offer may enter the cheapest-in-rubles ranking.
+
+    Both halves matter. price_rub is None for anything unpriced, and the
+    currency check stops a future adapter from filling price_rub with a figure
+    that is not roubles — the failure mode where a ¥300 listing is announced as
+    the cheapest option against ₽-priced rivals.
+    """
+    return offer.price_rub is not None and offer.currency == "rub"
 
 
 def _wb_product_url(nm_id: object) -> str:
@@ -281,10 +498,176 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     return offers
 
 
+async def _search_avito(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``avito_search`` results.
+
+    Avito is classifieds: no brand, no star rating on listings — seller
+    reputation lives behind avito_seller, not on a search row. price_rub is
+    already a float (None for priceless ads) from the connector itself.
+    """
+    server = SOURCES["avito"]
+    response = await server.avito_search(query=query, page=1)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="avito",
+                product_id=str(item.item_id or ""),
+                title=item.title or "",
+                brand="",
+                seller=item.seller_name or "",
+                price_rub=item.price_rub,
+                rating=None,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
+async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``taobao_search`` results, keeping the price in yuan.
+
+    price_rub stays None so a yuan figure can never win a ruble ranking, and
+    the actual price travels in price_native with currency="cny". Converting
+    here would mean baking in an exchange rate that goes stale silently and
+    fabricates bargains; reporting the yuan price and letting the caller
+    convert is the honest option.
+    """
+    server = SOURCES["taobao"]
+    response = await server.taobao_search(query=query, page=1)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="taobao",
+                product_id=str(item.item_id or ""),
+                title=item.title or "",
+                brand="",
+                seller=item.shop_name or "",
+                price_rub=None,  # never rank yuan against rubles directly
+                currency="cny",
+                price_native=getattr(item, "price_cny", None),
+                rating=None,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
+async def _search_megamarket(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``megamarket_search`` results (CDP tier; rating present)."""
+    server = SOURCES["megamarket"]
+    response = await server.megamarket_search(query=query)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="megamarket",
+                product_id=str(item.item_id or ""),
+                title=item.title or "",
+                brand="",
+                seller="",
+                price_rub=item.price_rub,
+                rating=item.rating,
+                rating_count=item.rating_count,
+                # The search payload reports isAvailable per item, so pass it
+                # through rather than discarding a stock signal we already have.
+                in_stock=getattr(item, "is_available", None),
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
+async def _search_lamoda(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``lamoda_search`` results (CDP tier; Lamoda exposes no ratings)."""
+    server = SOURCES["lamoda"]
+    response = await server.lamoda_search(query=query)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="lamoda",
+                product_id=str(item.sku or ""),
+                title=item.title or "",
+                brand=item.brand or "",
+                seller="",
+                price_rub=item.price_rub,
+                rating=None,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
+async def _search_dns(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``dns_search`` results (CDP tier; electronics, no ratings on tiles)."""
+    server = SOURCES["dns"]
+    response = await server.dns_search(query=query)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="dns",
+                product_id=str(item.product_id or ""),
+                title=item.title or "",
+                brand="",
+                seller="",
+                price_rub=item.price_rub,
+                rating=None,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
+async def _search_citilink(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``citilink_search`` results (CDP tier; electronics)."""
+    server = SOURCES["citilink"]
+    response = await server.citilink_search(query=query)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="citilink",
+                product_id=str(item.product_id or ""),
+                title=item.title or "",
+                brand="",
+                seller="",
+                price_rub=item.price_rub,
+                rating=None,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
 _SEARCH_IMPLS = {
     "wildberries": _search_wildberries,
     "yandex_market": _search_yandex,
     "ozon": _search_ozon,
+    "avito": _search_avito,
+    "taobao": _search_taobao,
+    "megamarket": _search_megamarket,
+    "lamoda": _search_lamoda,
+    "dns": _search_dns,
+    "citilink": _search_citilink,
 }
 
 
@@ -424,7 +807,7 @@ async def compare_prices(
     results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
 
     outcomes = [outcome for outcome, _ in results]
-    offers: list[MarketOffer] = [offer for _, source_offers in results for offer in source_offers]
+    offers: list[MarketOffer] = _dedupe(offer for _, source_offers in results for offer in source_offers)
 
     for name in missing:
         outcomes.append(
@@ -435,14 +818,20 @@ async def compare_prices(
             )
         )
 
-    # Rank on everyday prices only. Unpriced offers keep their place at the end
-    # rather than being dropped: "found but no price" is information.
+    # Rank on everyday ruble prices only. The currency check is explicit rather
+    # than implied by price_rub being None: an adapter that starts populating
+    # price_rub from a foreign-currency field should fail this filter, not
+    # quietly win the comparison.
     priced = sorted(
-        (offer for offer in offers if offer.price_rub is not None),
+        (offer for offer in offers if _ranks_in_rubles(offer)),
         key=lambda offer: offer.price_rub or 0.0,
     )
-    unpriced = [offer for offer in offers if offer.price_rub is None]
+    # Unpriced offers keep their place at the end rather than being dropped:
+    # "found, but not priced in rubles" is information, and for Taobao the yuan
+    # price still rides along in price_native.
+    unpriced = [offer for offer in offers if not _ranks_in_rubles(offer)]
     ranked = priced + unpriced
+    foreign = [offer for offer in offers if offer.currency != "rub"]
 
     ok_sources = [outcome.source for outcome in outcomes if outcome.status == "ok"]
     failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
@@ -462,6 +851,13 @@ async def compare_prices(
         )
     if not priced:
         warnings.append("no_prices: no marketplace returned a usable price for this query")
+    warnings.extend(_relevance_warnings(text, priced))
+    if foreign:
+        currencies = ", ".join(sorted({offer.currency for offer in foreign}))
+        warnings.append(
+            f"foreign_currency: {len(foreign)} offer(s) are priced in {currencies}, not roubles — "
+            f"their price is in price_native and they are excluded from the ranking and from cheapest"
+        )
 
     log_event(
         "compare_prices.done",
@@ -522,6 +918,11 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
             else "not installed",
             "ozon": ("requires curl_cffi and, when Cloudflare challenges, a logged-in Chrome on the CDP port"),
             "yandex_market": "reports both an everyday price and a Plus-subscriber price",
+            "taobao": "reports yuan prices and is never ranked against rubles",
+            "megamarket": "reachable only through the operator's Chrome (ServicePipe)",
+            "lamoda": "search through the operator's Chrome; cards via anonymous GraphQL",
+            "dns": "reachable only through the operator's Chrome (Qrator)",
+            "citilink": "reachable only through the operator's Chrome (Qrator)",
         },
         "source_timeout_s": SOURCE_TIMEOUT_S,
         "server_version": SERVER_VERSION,

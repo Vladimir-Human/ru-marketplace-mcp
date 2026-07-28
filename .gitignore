@@ -49,3 +49,6 @@ Thumbs.db
 /tmp/
 scratch/
 *.log
+
+# Operational note for the release run, not part of the project.
+PUBLISH_PROMPT.md

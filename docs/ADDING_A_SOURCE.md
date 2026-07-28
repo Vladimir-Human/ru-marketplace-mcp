@@ -18,8 +18,10 @@ Answer these five questions with real HTTP responses, not assumptions:
    different from a JS proof-of-work. Loops (`?...&__rr=1`) mean IP reputation;
    proof-of-work means you need a real browser.
 3. **Are all three data families reachable?** Search, product detail, reviews. A
-   source with detail but no search cannot be discovered through — that is why
-   Lamoda was rejected.
+   source with detail but no search cannot be discovered through. Lamoda is the
+   case to study: its GraphQL endpoint answers card queries over plain HTTPS but
+   offers no text search, so search had to go through the CDP tier. That split is
+   why the connector carries two transports instead of one.
 4. **Does the "search" actually search?** Send a distinctive query and read the
    results. Detsky Mir's API accepts text filters and ignores them, returning its
    entire 300k catalog. See [ANTI_BOT.md](ANTI_BOT.md).
@@ -123,6 +125,41 @@ async def <name>_selfcheck(ctx=None) -> SelfcheckResponse:
 Chain the probes where you can: have the search probe supply a live id for the card
 probe, so the canary never depends on a hardcoded SKU that may be delisted.
 
+## 5a. If you read a rendered page, reuse the shared extractor
+
+Do not write your own DOM helpers. `mcp_core.dom` exports `JS_HELPERS`; splice it
+into your extractor and you inherit four things that were each learned the hard
+way on a live site:
+
+```python
+from mcp_core.dom import JS_HELPERS, prices_from_tile, title_from_tile
+
+_SEARCH_EXTRACT_TEMPLATE = """
+() => {
+    //__SHARED_HELPERS__
+    ...
+}
+"""
+_SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS_HELPERS)
+```
+
+| helper | what it saves you from |
+|---|---|
+| `tileRootFor(anchor, idRe)` | `closest()` tests the element *itself* first, so an image link whose class contains "product" becomes the tile — and the tile reads as empty |
+| `priceTextsIn(root)` | splits numbers by whether a currency glyph is attached; a bare number never becomes the price |
+| `cleanText` / `cleanTextWithout` | `textContent`, not `innerText` — the latter depends on layout and is unavailable in the test harness |
+| `DECOY_RE` | instalments, bonuses, discount badges, delivery counts and ratings, generated from one Python list |
+
+**The extractor must not do arithmetic.** Return the display strings and let
+`prices_from_tile` decide: `coerce_price` already understands non-breaking
+spaces, a missing glyph and comma decimals, and refuses an ambiguous
+multi-number blob instead of inventing a value.
+
+The one rule to carry: **the price is the number attached to a currency glyph.**
+A tile also shows "от 5 751 ₽/ мес.", "- 10%", "в 1356 пунктов" and a rating. A
+parser that takes the smallest number reports the monthly instalment, and that
+answer validates, looks right, and is wrong.
+
 ## 6. Test offline
 
 Never let a test touch the network. Monkeypatch the fetch layer and assert the
@@ -132,13 +169,42 @@ For HTML/SSR sources, capture a real page and **trim it** rather than inventing
 markup: preserve the exact nesting so upstream structural changes still surface.
 The Yandex fixtures went from ~2 MB to ~60 KB this way.
 
+**Test the extractor against that markup, not around it.** Mocking the render
+call and feeding a pre-parsed dict leaves the parser itself uncovered — that is
+exactly where the DNS and Citilink bugs lived while 707 tests stayed green.
+`mcp_core.domtest` runs your real extractor over a fixture in jsdom:
+
+```python
+from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+
+def _extract(js_source):
+    try:
+        return run_extractor(js_source, FIXTURE, page_url="https://example.ru/search/")
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+```
+
+jsdom is a developer tool, not a dependency: without it the DOM half skips and
+the pure-Python price-selection assertions still run. Write both halves.
+
+Record in the fixture header what the page *displayed* when you captured it —
+price, old price, availability. That turns the fixture from a blob into evidence
+someone can re-check.
+
 Mark anything that needs the network `@pytest.mark.live` and anything needing a
 browser `@pytest.mark.cdp`; CI excludes both.
 
 ## 7. Wire it up
 
-- **`skills/<name>-connector/SKILL.md`** — when to use it, workflow patterns, and
-  the gotchas you found in step 1. Be explicit about what the source *cannot* do.
+- **`skills/<name>-connector/SKILL.md`** — required, and enforced:
+  `packages/marketplace-connector/tests/test_skills_parity.py` fails the build if
+  a connector has no skill, if the skill omits a tool the server exposes, or if it
+  names a tool that does not exist. Cover when to use it, the workflow patterns,
+  and the gotchas from step 1 — and be explicit about what the source *cannot* do
+  and which of its answers need a second look. "Run the selfcheck" is not a
+  verification story: a green selfcheck proves the transport answered, not that
+  the parser understood it.
 - **`compare-connector`** — add a `_search_<name>` adapter and an entry in
   `_SEARCH_IMPLS`, but only if the source has a working text search. If it does not,
   leave it out of `SEARCHABLE` and say why in a comment.

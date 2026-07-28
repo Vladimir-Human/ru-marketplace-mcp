@@ -1,9 +1,10 @@
 [project]
 name = "mcp-core"
-version = "1.1.0"
+version = "1.2.0"
 description = "Shared runtime for ru-marketplace-mcp connectors — error taxonomy, transports, tolerant-reader helpers"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.6",
@@ -12,7 +13,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cdp = ["websockets>=12.0"]
+# transport/chrome_cdp.py drives Chrome through Playwright's connect_over_cdp,
+# not a raw websocket. This extra used to pull websockets, which installed the
+# wrong library and still left playwright missing.
+cdp = ["playwright>=1.40"]
 impersonate = ["curl-cffi>=0.7"]
 
 [build-system]

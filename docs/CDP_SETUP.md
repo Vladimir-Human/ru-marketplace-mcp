@@ -5,8 +5,13 @@ Some marketplaces refuse datacenter traffic outright. Ozon answers
 clears it. The reliable answer is not a better fingerprint — it is to run the fetch
 **inside a browser you already trust**, over the Chrome DevTools Protocol.
 
-Only Ozon needs this, and only when Cloudflare challenges. Wildberries, Yandex
-Market and Detsky Mir never do.
+Seven sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS and Citilink.
+The split matters. Taobao, Megamarket, DNS and Citilink are **CDP-only** — no
+anonymous tier exists, so nothing reads from them without a logged-in Chrome. Ozon
+and Avito use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) usually works
+from a Russian residential IP, and CDP only kicks in when the anonymous tier is
+challenged. Lamoda is split — its card path is anonymous GraphQL, but search needs
+CDP. Wildberries, Yandex Market and Detsky Mir never touch it.
 
 ## Read this before you enable it
 
@@ -57,10 +62,12 @@ Useful flags: `--port 9333`, `--profile /path/to/dir`, `--headless`.
 Headless is off by default and should stay off: anti-bot systems detect headless
 Chrome readily, which defeats the purpose of using a real browser.
 
-### 2. Log into Ozon — and nothing else
+### 2. Log into the marketplaces you need — and nothing else
 
-In the window that opens, sign into `ozon.ru`. **Do not** sign into banking, email,
-or work accounts in this profile. Keeping it single-purpose is what bounds the risk.
+In the window that opens, sign into whichever CDP sources you use — `ozon.ru`,
+`avito.ru`, `taobao.com`, `megamarket.ru`, `lamoda.ru`, `dns-shop.ru`,
+`citilink.ru`. One profile serves them all. **Do not** sign into banking, email, or
+work accounts here. Keeping it single-purpose is what bounds the risk.
 
 ### 3. Verify
 
@@ -133,10 +140,16 @@ launcher adds `--no-sandbox` automatically when it detects that case.
 ## Should you use this at all?
 
 If you only need Wildberries, Yandex Market and Detsky Mir: **no**. All three work
-over plain anonymous HTTP, and `compare_prices` will simply report Ozon as blocked
-and rank the rest.
+over plain anonymous HTTP, and `compare_prices` will report every CDP source it
+can't reach as blocked and rank the rest.
 
-Enable it when Ozon data specifically matters to you, and when you are comfortable
-with the trade-off above. A residential IP is the alternative — from a Russian
-residential address, Ozon's tier 1 often works without any browser at all. Set
-`OZON_PROXY` or the standard `HTTPS_PROXY` to route through one.
+You need it the moment Taobao, Megamarket, DNS or Citilink matter — those four have
+no anonymous tier, so without a logged-in Chrome they return nothing at all. For
+Ozon and Avito it is optional insurance: tier 1 usually answers, and CDP only earns
+its keep when the anonymous tier is challenged. For Lamoda, card lookups work
+without it but search does not.
+
+A residential IP is the alternative for the fallback sources — from a Russian
+residential address Ozon's and Avito's tier 1 often work without any browser. It
+does nothing for the CDP-only four, whose block is at the API, not the IP. Set
+`OZON_PROXY`/`AVITO_PROXY` or the standard `HTTPS_PROXY` to route through one.

@@ -1,12 +1,14 @@
 # Anti-bot reality, source by source
 
 Every marketplace here was probed live from a datacenter IP in July 2026. This
-document records what actually happened — including the four sources that did not
-make the release — because that determines what is buildable and what is a trap.
+document records what actually happened — including the sources that only became
+buildable once the CDP tier existed — because that determines what is buildable
+and what is a trap.
 
 The single most useful finding: **anti-bot posture, not API quality, decides
 whether a marketplace is usable.** Wildberries has a messy API and works
-perfectly. Megamarket has a clean one and is unreachable.
+perfectly. Megamarket has a clean one and was unreachable until the fetch moved
+inside a real browser.
 
 ## Summary
 
@@ -16,10 +18,106 @@ perfectly. Megamarket has a clean one and is unreachable.
 | Yandex Market | ✅ works | SmartCaptcha (dormant) | ✅ |
 | Detsky Mir | ✅ works | none | ✅ |
 | Ozon | ❌ 307 loop | Cloudflare | ✅ via your Chrome |
-| Megamarket | ❌ blocked | ServicePipe | ❌ |
-| Lamoda | ⚠️ partial | anti-bot redirect loop | ❌ |
-| DNS | ❌ 401 | Qrator JS proof-of-work | ❌ |
-| Citilink | ❌ 429 | Qrator rate block | ❌ |
+| Avito | ❌ 403 firewall | IP reputation + captcha | ✅ via your Chrome |
+| Taobao | ⚠️ shell only | signed mtop API | ✅ via your Chrome + login |
+| Megamarket | ❌ blocked | ServicePipe | ✅ via your Chrome + login |
+| Lamoda | ⚠️ partial | anti-bot redirect loop | ✅ via your Chrome |
+| DNS | ❌ 401 | Qrator JS proof-of-work | ✅ via your Chrome |
+| Citilink | ❌ 429 | Qrator rate block | ✅ via your Chrome |
+
+A second live run in July 2026 confirmed all four CDP sources on the maintainer's
+own machine — a Russian residential IP, a logged-in Chrome over CDP — and it
+changed some verdicts. Wildberries, Ozon, Yandex Market, Detsky Mir and Citilink
+were stable and healthy. Citilink and DNS carried a real bug, now fixed: the
+product-id regex demanded 24 hex characters (a MongoDB ObjectId shape) while the
+live routes are `/product/noutbuk-lenovo-2169270/` on Citilink (a slug ending in
+digits) and `/product/b7a1667f9b19ed20/` on DNS (16 hex), so search parsed zero
+tiles and reported drift. Three sources stayed hard: Megamarket returns an empty
+result to an anonymous session, Lamoda renders no product links, and Avito hands
+back an IP block. The one lesson under all of it — there is no public endpoint
+that turns these sources healthy. Every open-source implementation lands on the
+same three requirements: a real browser or a residential/mobile IP, a logged-in
+session, and requests paced apart. The per-source sections below say which each
+one needs.
+
+A burst of back-to-back requests is its own failure mode, separate from the
+initial challenge. DNS went healthy after the regex fix, then degraded to
+`transport_down` once it was hit with a run of requests with no gap between them;
+Taobao did the same, dropping from healthy to a parse failure after a burst. The
+connectors pace their own requests for exactly this reason. Do not remove the gap.
+
+## Независимая проверка с резидентного IP, июль 2026
+
+Прогон из отдельного облачного Chrome с резидентным прокси — не с машины
+мейнтейнера. Он важен тем, что отделяет «площадка блокирует датацентр» от
+«площадка блокирует всех».
+
+**Wildberries** отвечает анонимно, как и раньше. Заодно выяснилось, почему по
+запросу «iphone 15» самое дешёвое предложение оказывалось на треть ниже
+остальных: дешёвые позиции — «Восстановленный» и «Витринный образец», то есть
+телефон после ремонта и витринный экземпляр против новых у конкурентов. Ни по
+названию, ни по величине скидки это не отличить автоматически без словаря
+состояний, поэтому он и появился в `compare_prices`.
+
+**Ситилинк и DNS-Shop** отдали настоящую выдачу без видимого челленджа Qrator.
+Это не значит, что анонимный HTTP-клиент справится: запрос шёл из настоящего
+Chrome, то есть ровно из того окружения, ради которого и существует CDP-уровень.
+Вывод скромнее и полезнее — proof-of-work смотрит на репутацию адреса, и с
+резидентного IP реальный браузер проходит его незаметно.
+
+**Ситилинк в этой выдаче рисует плитки внутри iframe.** В верхнем документе
+товарных ссылок нет вообще, все 27 лежат во вложенном фрейме того же
+происхождения. Экстрактор, который читает только `document`, на такой раскладке
+видит ноль плиток и сообщает дрейф, хотя парсер исправен. Отсюда и плавающий
+результат: раскладка приходит не всем и не всегда. Экстракторы Ситилинка и DNS
+теперь собирают ссылки и из фреймов, которые им разрешено читать.
+
+**Lamoda** отвечает «Запрос отклонен» и на поиск, и на главную. Это блок по
+адресу, а не смена вёрстки: страница вообще не отдаётся. Совпадает с выводом из
+разбора публичных реализаций — искать несуществующий search-endpoint смысла нет.
+
+Идентификатор товара Ситилинка подтверждён на живой карточке: числовой
+(`2140628`), не 24-символьный hex.
+
+Отдельно про Lamoda: её GraphQL-эндпоинт ответил **с датацентрового адреса**,
+хотя HTML-страницы того же домена отдают «Запрос отклонен». То есть анонимный
+tier карточек живёт по своим правилам, и архитектура «карточка через GraphQL,
+поиск через CDP» подтверждается напрямую. Снятые конверты (июль 2026):
+
+| Запрос | Ответ |
+|---|---|
+| корректные поля | `{"error": null, "result": [{…}]}` |
+| неизвестный SKU | `{"error": null, "result": null}` |
+| поле `old_price` | `{"error": "Internal server error", "code": -32603}` |
+
+Стандартного GraphQL-конверта здесь нет: товары лежат в `result`, а не в
+`data.products`, и ошибка приходит одной строкой `error`, а не массивом `errors`.
+Коннектор читал стандартную форму, поэтому успешный ответ выглядел дрейфом.
+
+Полная картина по всем десяти источникам с этого адреса, без единого логина:
+
+| Источник | Что ответил | Что это значит |
+|---|---|---|
+| Wildberries | выдача с товарами | анонимный доступ работает |
+| Яндекс Маркет | выдача с товарами | анонимный доступ работает |
+| Детский мир | каталог отрисован | анонимный доступ работает |
+| Ситилинк | выдача, плитки в iframe | челлендж не показан, но раскладка другая |
+| DNS-Shop | 24 товарные ссылки | челлендж не показан, плитки в основном документе |
+| Ozon | «Похоже, нет соединения» | соединение не состоялось: адрес отклонён на транспорте |
+| Авито | «Доступ ограничен: проблема с IP» | ровно тот файрвол, что описан выше |
+| Мегамаркет | слайдер-капча «разверните картинку» | ServicePipe показывает челлендж человеку |
+| Lamoda | «Запрос отклонен» | отказ на всех путях, включая главную |
+| Taobao | стена логина | без сессии выдачи нет, как и задокументировано |
+
+Lamoda проверена с двух независимых резидентных адресов, на поиске, категории и
+главной — везде одинаковый отказ. Это блокировка целого класса трафика, а не
+сгоревший конкретный адрес, и перебор адресов её не решает.
+
+Три источника разошлись с прогоном на машине мейнтейнера, и расхождение
+полезно. Ситилинк и DNS отдали данные без логина и без челленджа — значит их
+нестабильность у оператора была не про доступ, а про темп запросов подряд.
+Ozon, наоборот, здоров с домашнего российского адреса и недоступен отсюда:
+адрес решает больше, чем браузер.
 
 ## Shipped sources
 
@@ -109,7 +207,80 @@ Protocol. That is tier 2. Setup and threat model: [CDP_SETUP.md](CDP_SETUP.md).
 Ozon's seller pages were spiked for v1.1.0 and deliberately left out — see
 [the seller-details refusal](#the-ozon-seller-details-refusal-v110).
 
-## Rejected sources
+### Avito — hard IP firewall, workable API behind it
+
+Probed July 2026 from a datacenter IP with TLS impersonation (the same
+`curl_cffi` setup that clears Ozon's tier 1):
+
+- **Search page** (`/moskva/noutbuki?q=…`): HTTP 403, «Доступ ограничен:
+  проблема с IP». The block page sets `srv_id` and `_avisc` cookies — Avito
+  fingerprints the session before it will talk at all.
+- **`/web/1/js/items`** (the internal JSON search endpoint, the one
+  third-party parsers drive): 403 with
+  `{"too-many-requests":{"link":"ru.avito://1/firewall/captcha/show"}}` — a
+  firewall captcha challenge, not a rate limit that clears by waiting.
+- **Mobile API** (`app.avito.ru/api/1/search`): nginx 404 — the route third
+  parties use lives elsewhere, and it is gated the same way.
+
+The API itself is well documented by open-source parsers (Duff89/parser_avito):
+`GET /web/1/js/items` with `categoryId`, `locationId`, `p`, `q`, `context`,
+`updateListOnly=true` plus price/seller/delivery filters returns the same JSON
+the site renders. Those parsers survive on mobile proxies and bought cookies —
+the firewall is the whole problem.
+
+**Verdict:** tier 2. From a residential Russian IP with a warmed-up session the
+`js/items` endpoint answers; from your logged-in Chrome it always does. The
+connector tries tier 1 (impersonated HTTPS) first and falls back to CDP, same
+as Ozon — but expect tier 1 to be dead from any datacenter.
+
+The July 2026 run confirmed the endpoint is right and the block is the whole
+problem. Even from the residential IP, search came back with an HTTP 439/429-class
+refusal — an IP/rate block, not a challenge that a browser clears. The seller
+endpoint answered while search did not, which is the rate limiter biting the
+heavier query first. Three public parsers — `Duff89/parser_avito`,
+`ihydrad/avito-parser`, `ergon73/avito-parser` — all drive the same `js/items`
+endpoint this connector uses, and their code and issue trackers are dominated by
+cookie handling and HTTP 429; Duff89 has an open issue reporting 429 even behind
+a server proxy. Nobody has a cleaner path. IP reputation and request rate are the
+blocker, so this one wants a residential or mobile IP and patience on top of the
+browser.
+
+### Taobao — anonymous pages, signed API
+
+Also probed July 2026 from a datacenter IP:
+
+- **Search page** (`s.taobao.com/search?q=…`): HTTP 200, but only a ~33 KB
+  client-side-rendered shell. No `g_page_config` item list, no embedded state —
+  results load over XHR after the page boots.
+- **The XHR layer is mtop** (`h5api.m.taobao.com`): every call wants a `sign`
+  parameter computed from the `_m_h5_tk` cookie token plus the request body.
+  Without the token: `FAIL_SYS_TOKEN_EMPTY::令牌为空`. The signing scheme is
+  reversed in open source, but token rotation makes it a treadmill.
+- **No captcha on anonymous browsing.** Main page, 1688 search and AliExpress
+  all answer 200 from the same IP. The block is API-level, not IP-level.
+
+**Verdict:** tier 2 by a different mechanism than Avito — not IP reputation but
+a signed API. A real Chrome computes signatures natively via the site's own JS,
+so the connector drives search through CDP page evaluation and reads the
+rendered DOM / page state. No impersonation shortcut is worth maintaining here.
+
+Live check, July 2026: this works only while the operator's Taobao session is
+logged in. A QR login in the scraping profile took it to healthy; a burst of
+back-to-back requests then took it back down to a parse failure. So Taobao needs
+two things the other CDP sources do not both need at once — a logged-in session
+*and* paced requests. `taobao_search` says as much when it lands on a login wall,
+and the connector paces its own calls.
+
+## Sources that needed the CDP tier
+
+The four below were rejected in v1.0/v1.1 because anonymous probing could not
+confirm them end to end. The CDP tier changed that — in a real Chrome the
+proof-of-work and IP-reputation challenges pass natively. All four shipped in
+v1.2.0, and the July 2026 run on the maintainer's residential IP and logged-in
+Chrome finally confirmed them end to end. DNS and Citilink went healthy once the
+product-id regex was fixed. Megamarket and Lamoda did not: the challenge passes
+but the result comes back empty or link-less, which the sections below explain.
+Run the `*_selfcheck` tools from your own session before quoting either of those.
 
 ### Megamarket — clean API, hard block
 
@@ -132,8 +303,21 @@ best-known open-source parser for this API states plainly that it stopped workin
 without browser cookies in early 2025.
 
 **Verdict:** a second Ozon, but stricter — needs residential IP *and* cookies from
-a browser that has passed the challenge. Reachable in principle through the CDP
-tier; not included because it could not be verified end to end.
+a browser that has passed the challenge. Shipped in v1.2.0 via the CDP tier: the
+`megamarket-connector` POSTs the mobile API from inside the operator's Chrome and
+maps the code-7 refusal to `transport_down`.
+
+The July 2026 run got past the code-7 block — from the browser the ServicePipe
+challenge passes and the API answers a valid envelope — but `items` came back as
+an empty array for every query. That points at the session, not the fetch. The
+actively maintained `xob0t/mmparser` (Python, same mobile API) documents that
+since early 2025 parsing without cookies does not work: the challenge passes, the
+session is not authenticated, and the API answers an empty result instead of an
+error. So a passed challenge is not enough — Megamarket needs a session that is
+actually logged in, and an anonymous but challenge-cleared browser reads empty.
+`mmparser` also paces its calls at 1.8 s normally and 5 s after an error and
+carries a dedicated "you are logged out" alert, which matches what an empty
+`items` array means here. Run `megamarket_selfcheck` from a logged-in session.
 
 ### Lamoda — prices without discovery
 
@@ -152,9 +336,20 @@ That returns real prices, brands, availability and sizes. But:
 - `rating` is not in the schema; introspection is disabled.
 - The mobile API (`api.lamoda.ru`) returns 403.
 
-**Verdict:** a connector could enrich a SKU you already have, but could never find
-one. A price tool that cannot search is not a marketplace connector, so it was
-left out rather than shipped half-working.
+**Verdict:** shipped in v1.2.0 as two tiers. Cards come from the anonymous GraphQL
+endpoint (works tier 1, no ratings — `rating` is not in the schema); search runs
+through the CDP tier, which is what supplies the discovery the GraphQL lacks.
+
+The split is right, and the July 2026 run is why it matters. The public GraphQL
+endpoint `POST /goapi/v2/catalog/graphql/products/` takes a list of SKUs, not a
+search query — it enriches known products, and there is no public search API at
+all. Every open-source Lamoda scraper reads catalog pages for discovery, which is
+exactly this connector's architecture. So when the live run found the search page
+rendering zero `/p/` product links with no embedded product JSON state, and the
+anonymous GraphQL card endpoint no longer answering either, that is a block or a
+layout change on top of the right design — not a missing endpoint to go hunting
+for. Cards and search were both down that day; run `lamoda_selfcheck` from a
+residential IP to tell a layout drift from a block before you conclude anything.
 
 ### DNS — proof-of-work challenge
 
@@ -170,8 +365,34 @@ script does not set it.
   that is itself behind Qrator.
 - Anonymously reachable: `robots.txt`, `sitemap.xml` (~600k product URLs).
 
-**Verdict:** viable only through a real browser, and even then it is DOM/state
-scraping plus CSRF management rather than an API. Not worth the fragility for v1.
+**Verdict:** shipped in v1.2.0 via the CDP tier. Qrator's proof-of-work executes
+natively in a real Chrome, so the `dns-connector` renders the page and reads the
+DOM rather than touching the CSRF-gated ajax routes.
+
+Getting there took two separate fixes, and the first one only looked like a win.
+The product-id regex demanded 24 hex while the real id is 16
+(`/product/b7a1667f9b19ed20/`), so search had been parsing zero tiles; fixing it
+made the tool report 24 links and `selfcheck` go green. The data was still empty —
+every item came back with `title=None` and `price=None`, because the extractor
+resolved a tile with `closest()`, which tests the element itself first and so
+landed on the image link instead of the tile. That is the whole lesson of this
+file in one bug: a green selfcheck proves the transport answered, not that the
+parser understood the answer. The 2026-07-28 audit fixed the tile resolution and
+pinned it with a test that runs the extractor against captured tile markup.
+
+Note what the same audit found next door: DNS tiles advertise an instalment
+("от 5 751 ₽/ мес.") beside the real price, and the old price heuristic took the
+smallest number on the tile. Had the tile resolution been correct from the start,
+DNS would have reported the monthly payment as the price — green, plausible, and
+wrong. Prefer the null.
+
+Then a burst of back-to-back requests degrades DNS to `transport_down`, which is
+Qrator rate-limiting the rendered browser, not a parser fault. The DOM route is
+the only route: no public JSON API exists, and every open-source DNS
+implementation drives a real browser through Selenium, undetected-chromedriver or
+Puppeteer — the same thing this connector does. Pace the calls and run
+`dns_selfcheck` from your Chrome; from a datacenter address the site answers 401
+and there is nothing to verify.
 
 ### Citilink — Qrator plus gRPC-web
 
@@ -191,8 +412,18 @@ client; every working third-party parser drives a real browser.
 
 Anonymously reachable: `sitemap/main/sitemap.xml` (product URL inventory only).
 
-**Verdict:** two hard problems stacked — IP reputation and a binary protocol. Out
-of scope.
+**Verdict:** shipped in v1.2.0 via the CDP tier, with gRPC-web deliberately not
+reversed. A real Chrome passes Qrator and renders the pages, so the
+`citilink-connector` reads the DOM instead of the binary protocol — the
+maintainable route.
+
+The July 2026 run had Citilink stable and healthy once the product-id regex was
+fixed. The old pattern demanded 24 hex; the real route is a slug ending in digits
+(`/product/noutbuk-lenovo-2169270/`), so search had been parsing zero tiles and
+reporting drift. With that corrected it held steady across the run. This is the
+right route for the same reason as DNS: every working third-party Citilink parser
+drives a real browser, and the `github.com/citilinkru` repos are internal
+infrastructure tooling, not a catalog client.
 
 ## Traps and refusals worth their own section
 

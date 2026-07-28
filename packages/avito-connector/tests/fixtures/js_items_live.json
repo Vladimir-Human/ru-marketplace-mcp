@@ -1,0 +1,211 @@
+{
+ "count": 51343,
+ "totalCount": 51343,
+ "totalElements": 51350,
+ "itemsOnPage": 50,
+ "items": [
+  {
+   "id": 8056271479,
+   "locationId": 637640,
+   "urlPath": "/moskva/noutbuki/noutbuki_novye_v_korobkah_pod_lyubye_zadachi_8056271479?context=H4sIAAAAAAAA_wE_AMD_YToyOntzOjEzOiJsb2NhbFByaW9yaXR5IjtiOjA7czoxOiJ4IjtzOjE2OiJxcmxuNTVSZmtMZTRrTjVvIjt9NPDK4T8AAAA",
+   "title": "Ноутбуки новые в коробках под любые задачи",
+   "description": "Новые ноутбуки в упаковке (i3, i5, i7, i9) со скидкой до 70%! Гарантия 1 год!\n\nИщете мощный и надежный ноутбук по адеква",
+   "category": {
+    "id": 98,
+    "name": "Ноутбуки",
+    "slug": "noutbuki",
+    "rootId": 6,
+    "compare": false,
+    "pageRootId": 6
+   },
+   "location": {
+    "id": 637640,
+    "name": "Москва",
+    "namePrepositional": "Москве",
+    "isCurrent": true,
+    "isRegion": false
+   },
+   "addressDetailed": {
+    "locationName": "Москва"
+   },
+   "sortTimeStamp": 1782893206000,
+   "allowTimeStamp": 1782893206000,
+   "priceDetailed": {
+    "enabled": true,
+    "fullString": "15 500 ₽",
+    "hasValue": true,
+    "postfix": "",
+    "string": "15 500",
+    "stringWithoutDiscount": null,
+    "title": {
+     "full": "Цена",
+     "short": "Цена"
+    },
+    "titleDative": "цене",
+    "value": 15500,
+    "wasLowered": false,
+    "exponent": "16 тыс."
+   },
+   "images": [
+    {
+     "472x472": "https://60.img.avito.st/image/1/1.l7xByLaAO1VHbIlQY_Kvwn1oOVHzfz9V8xhaUfPbPufwaz9PR2yJUPc.wP7Tw96ZAE-xSG86Os6bmAVa3stZAX2EhA86Xs3d3B8",
+     "208x208": "https://60.img.avito.st/image/1/1.l7xByLaAO1VXaJlUY_Kvwn1oOVHzfz9V8xhaUfPLOvf0az9PV2iZVPc.zO7sT5QpMYBw-zPQskuSxxuSfYnflFcgmRjrvoToUPk",
+     "236x236": "https://60.img.avito.st/image/1/1.l7xByLaAO1UvaOFUY_Kvwn1oOVHzfz9V8xhaUfOzOo_0az9PL2jhVPc.r-U9Y9gKFNcVj_EwMa-e7KwTHYQ4xpXZxz3Dxc2OyZ8",
+     "416x416": "https://60.img.avito.st/image/1/1.l7xByLaAO1U3bflRY_Kvwn1oOVHzfz9V8xhaUfOrP5fxaz9PN235Ufc.gKNgQMbW46Hfsw_GcaY7rkSb_Riv1t9TaZYl53r3BFE"
+    },
+    {
+     "472x472": "https://80.img.avito.st/image/1/1.gAbSPLaALO_UmJ7q3hb0e-6cLutgiyjvYOxN62AvKV1jnyj11Jie6mQ.BWdTY3NAgiQabMA185SBRi6T1QMPx1o4iKVNqf0YsAs",
+     "208x208": "https://80.img.avito.st/image/1/1.gAbSPLaALO_EnI7u3hb0e-6cLutgiyjvYOxN62A_LU1nnyj1xJyO7mQ.3bq52j-D7k2WM-L2Ay15AexDv_bGlgEC6P7FDK-1KIQ",
+     "236x236": "https://80.img.avito.st/image/1/1.gAbSPLaALO-8nPbu3hb0e-6cLutgiyjvYOxN62BHLTVnnyj1vJz27mQ.ui2tEFZ_od6ZOgLankXlL0u-EaVv_CYLAs6tPXn7Dgg",
+     "416x416": "https://80.img.avito.st/image/1/1.gAbSPLaALO-kme7r3hb0e-6cLutgiyjvYOxN62BfKC1inyj1pJnu62Q.eExoTcrk-_b9AKq-7bPqwmQQJF3faysvTGWZ88zUiXM"
+    }
+   ],
+   "imagesCount": 6,
+   "geo": {
+    "geoReferences": [
+     {
+      "content": "Автозаводская"
+     }
+    ]
+   },
+   "isMarketplace": false,
+   "rating": {
+    "score": 4.8,
+    "summary": "647 отзывов",
+    "showChevronEnd": false
+   }
+  },
+  {
+   "id": 8033089127,
+   "locationId": 637640,
+   "urlPath": "/moskva/noutbuki/bolshoy_vybor_noutbukov_pod_vashi_zadachi_garantiya_8033089127?context=H4sIAAAAAAAA_wE_AMD_YToyOntzOjEzOiJsb2NhbFByaW9yaXR5IjtiOjA7czoxOiJ4IjtzOjE2OiJxcmxuNTVSZmtMZTRrTjVvIjt9NPDK4T8AAAA",
+   "title": "Большой выбор ноутбуков под Ваши задачи + гарантия",
+   "description": "Ноутбуки Оптом И В Розницу / Скидка 50% / Гарантия.\n\nБолее 500 ноутбуков в наличии (Москва, м. Волжская / м. Печатники /",
+   "category": {
+    "id": 98,
+    "name": "Ноутбуки",
+    "slug": "noutbuki",
+    "rootId": 6,
+    "compare": false,
+    "pageRootId": 6
+   },
+   "location": {
+    "id": 637640,
+    "name": "Москва",
+    "namePrepositional": "Москве",
+    "isCurrent": true,
+    "isRegion": false
+   },
+   "addressDetailed": {
+    "locationName": "Москва"
+   },
+   "sortTimeStamp": 1784794285000,
+   "allowTimeStamp": 1784794285000,
+   "priceDetailed": {
+    "enabled": true,
+    "fullString": "15 990 ₽",
+    "hasValue": true,
+    "postfix": "",
+    "string": "15 990",
+    "stringWithoutDiscount": null,
+    "title": {
+     "full": "Цена",
+     "short": "Цена"
+    },
+    "titleDative": "цене",
+    "value": 15990,
+    "wasLowered": false,
+    "exponent": "16 тыс."
+   },
+   "images": [
+    {
+     "472x472": "https://40.img.avito.st/image/1/1.w2zoZbaAb4Xuwd2A4lqFK9zFbYFa0muFWrUOgVp2ajdZxmuf7sHdgF4.y771zzyvDwDLwF6ASqTiqqTDZKqPRldgC0-LYujToI4",
+     "208x208": "https://40.img.avito.st/image/1/1.w2zoZbaAb4X-xc2E4lqFK9zFbYFa0muFWrUOgVpmbiddxmuf_sXNhF4.QwiNWe0WdGckt3MOu3m70bgmdeLU62_Hh_cCy8oje2Q",
+     "236x236": "https://40.img.avito.st/image/1/1.w2zoZbaAb4WGxbWE4lqFK9zFbYFa0muFWrUOgVoebl9dxmufhsW1hF4.SkVdSUBXbLPUX_39HJM9urmYrTyx5uLKKkG0Faeur5k",
+     "416x416": "https://40.img.avito.st/image/1/1.w2zoZbaAb4WewK2B4lqFK9zFbYFa0muFWrUOgVoGa0dYxmufnsCtgV4.GDXHym8MubVcjYTkUVmweV2WyW1pX2SHD0YPjKeDFOU"
+    },
+    {
+     "208x208": "https://90.img.avito.st/image/1/1.Rm5AzLaA6odWbEiGQI1dLHRs6IPye-6H8hyLg_LP6yX1b-6dVmxIhvY.sMk8zc46R5op7rEeyLLS6WRb4Ox8SBs9vTx0oKJzIEU",
+     "236x236": "https://90.img.avito.st/image/1/1.Rm5AzLaA6ocubDCGQI1dLHRs6IPye-6H8hyLg_K36131b-6dLmwwhvY.4_ZbmX5RIh4JBnMvXwKIVEtMUongSD91wuIIl-v2u_0",
+     "416x416": "https://90.img.avito.st/image/1/1.Rm5AzLaA6oc2aSiDQI1dLHRs6IPye-6H8hyLg_Kv7kXwb-6dNmkog_Y.n4KG3VMMO-c0Wi0CpcOpva7cZR0m7mlTF2jrhS6PfeI",
+     "472x472": "https://90.img.avito.st/image/1/1.Rm5AzLaA6odGaFiCQI1dLHRs6IPye-6H8hyLg_Lf7zXxb-6dRmhYgvY.xwGN28arjihm5LR9ID9KX1F4U6_SJu0gWz3Vn57JmT4"
+    }
+   ],
+   "imagesCount": 9,
+   "geo": {
+    "geoReferences": [
+     {
+      "content": "Люблино"
+     }
+    ]
+   },
+   "isMarketplace": false,
+   "rating": {
+    "score": 5,
+    "summary": "731 отзыв",
+    "showChevronEnd": false
+   }
+  },
+  {
+   "id": 7931870037,
+   "locationId": 625810,
+   "urlPath": "/voronezh/noutbuki/shustrye_noutbuki_dlya_ucheby_raboty_pvz_na_ssd_7931870037?slocation=637640&context=H4sIAAAAAAAA_wFaAKX_YTozOntzOjE1OiJoYXNHZW9UYXJnZXRpbmciO2I6MTtzOjEzOiJsb2NhbFByaW9yaXR5IjtiOjA7czoxOiJ4IjtzOjE2OiJxcmxuNTVSZmtMZTRrTjVvIjt9v_t2f1oAAAA",
+   "title": "Шустрые ноутбуки для учебы, работы, пвз на SSD",
+   "description": "Более 20 ноутбуков в наличии.\nВсе ноутбуки обслужены — чистка системы охлаждения и замена термопасты.\nУстановлен Windows",
+   "category": {
+    "id": 98,
+    "name": "Ноутбуки",
+    "slug": "noutbuki",
+    "rootId": 6,
+    "compare": false,
+    "pageRootId": 6
+   },
+   "location": null,
+   "addressDetailed": {
+    "locationName": ""
+   },
+   "sortTimeStamp": 1783145335000,
+   "allowTimeStamp": 1783145335000,
+   "priceDetailed": {
+    "enabled": true,
+    "fullString": "8 700 ₽",
+    "hasValue": true,
+    "postfix": "",
+    "string": "8 700",
+    "stringWithoutDiscount": null,
+    "title": {
+     "full": "Цена",
+     "short": "Цена"
+    },
+    "titleDative": "цене",
+    "value": 8700,
+    "wasLowered": false,
+    "exponent": "9 тыс."
+   },
+   "images": [
+    {
+     "472x472": "https://90.img.avito.st/image/1/1.InXE8baAjpzCVTyZjIFsI_JRjJh2RoqcdiHvmHbiiy51UoqGwlU8mXI.pLSIlhuNyuODaJ3QJJczg-Jkft-yVcIcFanAc7QmCLo",
+     "208x208": "https://90.img.avito.st/image/1/1.InXE8baAjpzSUSydjIFsI_JRjJh2RoqcdiHvmHbyjz5xUoqG0lEsnXI.7YzjA2d0NjnCjWIMIjNXcjM4Ka4uL8raNY9aPguDxVY",
+     "236x236": "https://90.img.avito.st/image/1/1.InXE8baAjpyqUVSdjIFsI_JRjJh2RoqcdiHvmHaKj0ZxUoqGqlFUnXI.FCey1WtFO5zR1ujSXMBIqQ0W4Q0q1ixkk1l2IaB0WQ8",
+     "416x416": "https://90.img.avito.st/image/1/1.InXE8baAjpyyVEyYjIFsI_JRjJh2RoqcdiHvmHaSil50UoqGslRMmHI.aRuHYcpecI6TMjKmINp213aoq8_LI7bfsb2tO1u7vBc"
+    },
+    {
+     "236x236": "https://70.img.avito.st/image/1/1.pd8BmbaACTZvOdM3R5f2jzc5CzKzLg02s0loMrPiCOy0Og0sbznTN7c.fIIjWdLOSiJfHHFP8rjXnvFx2Xq4P1YyUkvvJ-qxd0g",
+     "416x416": "https://70.img.avito.st/image/1/1.pd8BmbaACTZ3PMsyR5f2jzc5CzKzLg02s0loMrP6DfSxOg0sdzzLMrc.qXtORCnW-jdfYZ0tUw_mntGbbM4PMVnWswizGyMZONg",
+     "472x472": "https://70.img.avito.st/image/1/1.pd8BmbaACTYHPbszR5f2jzc5CzKzLg02s0loMrOKDISwOg0sBz27M7c.zIBrmQI6GAWYd160TtK74JWZDYYMNfM7peDzbZCRHeE",
+     "208x208": "https://70.img.avito.st/image/1/1.pd8BmbaACTYXOas3R5f2jzc5CzKzLg02s0loMrOaCJS0Og0sFzmrN7c.995U4WaxyUtlpfhY92D1LfBq5xgpnZ0ClkJrl01j14M"
+    }
+   ],
+   "imagesCount": 7,
+   "geo": {
+    "geoReferences": []
+   },
+   "isMarketplace": false,
+   "rating": {
+    "score": 5,
+    "summary": "73 отзыва",
+    "showChevronEnd": false
+   }
+  }
+ ]
+}

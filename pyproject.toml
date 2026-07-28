@@ -1,11 +1,11 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.1.0"
+version = "1.2.0"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "ru-marketplace-mcp contributors" }]
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
 keywords = ["mcp", "model-context-protocol", "wildberries", "ozon", "marketplace", "russia", "ecommerce"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -23,6 +23,13 @@ dependencies = [
     "detmir-connector",
     "yandex-connector",
     "compare-connector",
+    "avito-connector",
+    "taobao-connector",
+    "megamarket-connector",
+    "lamoda-connector",
+    "dns-connector",
+    "citilink-connector",
+    "marketplace-connector",
 ]
 
 [project.urls]
@@ -41,6 +48,13 @@ ozon-connector = { workspace = true }
 detmir-connector = { workspace = true }
 yandex-connector = { workspace = true }
 compare-connector = { workspace = true }
+avito-connector = { workspace = true }
+taobao-connector = { workspace = true }
+megamarket-connector = { workspace = true }
+lamoda-connector = { workspace = true }
+dns-connector = { workspace = true }
+citilink-connector = { workspace = true }
+marketplace-connector = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -95,6 +109,13 @@ testpaths = [
     "packages/detmir-connector/tests",
     "packages/yandex-connector/tests",
     "packages/compare-connector/tests",
+    "packages/avito-connector/tests",
+    "packages/taobao-connector/tests",
+    "packages/megamarket-connector/tests",
+    "packages/lamoda-connector/tests",
+    "packages/dns-connector/tests",
+    "packages/citilink-connector/tests",
+    "packages/marketplace-connector/tests",
 ]
 asyncio_mode = "auto"
 addopts = "--import-mode=importlib"
@@ -105,7 +126,7 @@ markers = [
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
-# Measure the six workspace packages' source, not their tests. This is what the
+# Measure the thirteen workspace packages' source, not their tests. This is what the
 # `--cov` invocation in the CI coverage job reports against; the enforcing
 # --cov-fail-under floor is passed on that job's command line, not baked in here,
 # so the rest of the test matrix runs exactly as before.
@@ -117,6 +138,13 @@ source = [
     "packages/detmir-connector/src/detmir_connector",
     "packages/yandex-connector/src/yandex_connector",
     "packages/compare-connector/src/compare_connector",
+    "packages/avito-connector/src/avito_connector",
+    "packages/taobao-connector/src/taobao_connector",
+    "packages/megamarket-connector/src/megamarket_connector",
+    "packages/lamoda-connector/src/lamoda_connector",
+    "packages/dns-connector/src/dns_connector",
+    "packages/citilink-connector/src/citilink_connector",
+    "packages/marketplace-connector/src/marketplace_connector",
 ]
 omit = [
     "*/tests/*",
@@ -126,7 +154,7 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 # Measured branch-coverage total on the offline suite (-m "not live and not
-# cdp") was 72.03%. The CI floor (--cov-fail-under=70) sits a couple of points
+# cdp") was 77.35%. The CI floor (--cov-fail-under=70) sits a couple of points
 # below so unrelated churn does not break the build; it ratchets up as coverage
 # improves. The threshold is passed on the CI command line rather than fixed
 # here, keeping the number visible in the workflow.

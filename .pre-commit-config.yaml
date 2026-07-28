@@ -21,7 +21,12 @@ repos:
         args: [--fix=lf]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
+    # Keep this pin equal to the ruff version in uv.lock (0.16.0), which is the
+    # one CI runs via `uv run ruff`. ruff's formatter and lint rules shift
+    # between releases, so a stale pin here formats code one way locally and CI
+    # rejects it the other way — a maddening loop of "clean commit, red CI".
+    # When you bump ruff in the lock, bump this rev in the same change.
+    rev: v0.16.0
     hooks:
       - id: ruff
         args: [--fix]

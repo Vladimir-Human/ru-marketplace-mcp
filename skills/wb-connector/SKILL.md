@@ -27,6 +27,17 @@ from a residential IP without proxies.
   trademark
 - `wb_categories(root, max_depth)` — catalog tree with WB's own `shard`/`query`
   selectors
+- `wb_category_products(shard, query, ...)` — the feed those selectors address.
+  This is what closes the loop `wb_categories` opens: browsing "what humidifiers
+  exist" stops requiring an invented search phrase. Items come back in the same
+  shape as `wb_search` and `wb_card`, so a category walk and a text search are
+  directly comparable. Categories WB marks with the shard `blackhole` have no
+  feed — several large sections, including smartphones and laptops, are among them.
+- `wb_questions(imt_id)` — buyer questions and the seller's answers. Reviews say
+  what owning the thing is like; questions pin down what it actually *is* — "does
+  it fit a 60cm opening", "is the cable included". Often the seller's reply is the
+  only public statement of a spec. **Keyed by imt_id like `wb_reviews`**: pass an
+  nmId and you get an empty pool with no error, so resolve through `wb_root_info`.
 - `wb_selfcheck()` — tri-state drift canary across every endpoint family
 
 ## Workflow patterns
@@ -70,6 +81,30 @@ no prices, the connector warns with `no_prices`.
 **`wb_search` is 429-prone.** WB rate-limits repeated searches aggressively; the
 error is retryable but needs a genuine wait, not a tight retry loop. For known
 SKUs prefer `wb_card`, which is far more tolerant.
+
+**Search and card can disagree on the price, and the card is the one that matches
+the site.** Measured 2026-07-28 on nmId 824935779 within the same minute:
+`wb_card` returned 60 275 — exactly the figure on the product page — while
+`wb_search` returned 60 571. The same ratio (1.0049) showed up on the
+strikethrough pair too, so it is a systematic offset between the two endpoints,
+not price drift between two calls.
+
+Practical rule: **quote a price from `wb_card`.** Use `wb_search` to discover
+SKUs, then re-read the ones that matter by nmId. This is measured on one product
+only — WB throttles search hard from a datacenter address — so treat the exact
+size of the gap as unconfirmed, but treat the direction as known.
+
+**Past the end, WB repeats page 1 instead of returning nothing.** Measured
+2026-07-28 on «ноутбук»: `page=20` came back with the same 100 products, in the
+same order, as `page=1` — HTTP 200, no error, no marker. Walking pages therefore
+collects duplicates that look exactly like new data. WB's own `total` does not
+help: it stays far larger than the depth actually served.
+
+The connector now recognises the repeat when it has seen page 1 for that
+query and `dest`, and answers `WbNoResultsResponse` as the contract says it
+should. That covers sequential pagination, which is the normal pattern; if you
+jump straight to a deep page it cannot compare, so **dedupe by `nm_id`** and
+treat a page identical to an earlier one as the end of the list.
 
 **Search sorting is by WB relevance,** not price. Sort client-side if the operator
 wants cheapest-first, or use `compare_prices` for a ranked cross-marketplace view.

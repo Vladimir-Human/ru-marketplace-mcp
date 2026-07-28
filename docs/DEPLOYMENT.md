@@ -16,7 +16,8 @@ anything.
 ## Transport selection
 
 Selection is environment-driven and lives in `mcp_core.runtime`, shared by all
-five entry points so they behave identically.
+twelve entry points (eleven source servers plus the unified `marketplace-mcp`)
+so they behave identically.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -95,7 +96,7 @@ Image tags are pinned: the builder is `ghcr.io/astral-sh/uv:0.11.32-python3.12-t
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:1.1.0 .
+docker build -t ru-marketplace-mcp:1.2.0 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -116,14 +117,14 @@ host, so the container binds to all of its *own* interfaces and the perimeter
 moves to the **published port**. Publish it to the host's loopback:
 
 ```bash
-docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.1.0
+docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.2.0
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
 Run a different marketplace by overriding the command:
 
 ```bash
-docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.1.0 yandex-mcp
+docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.2.0 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` is the security boundary. `-p 8000:8000` would publish
@@ -143,48 +144,64 @@ docker compose down
 
 ## Honest limitations
 
-### Ozon tier 2 (authenticated Chrome) does not work in Docker by default
+### Tier-2 sources (authenticated Chrome) need a reachable Chrome in Docker
 
-Ozon has two fetch tiers (see [CDP_SETUP.md](CDP_SETUP.md)). Tier 2 exists
+Ozon, Avito, Taobao, Megamarket, Lamoda search, DNS and Citilink all have a
+tier 2 (see [CDP_SETUP.md](CDP_SETUP.md)). Tier 2 exists
 because Ozon answers datacenter traffic with an endless redirect loop that no
 TLS fingerprint clears; the fix is to fetch **inside a browser you are already
 logged into**, over the Chrome DevTools Protocol.
 
-The connector's CDP client dials `http://127.0.0.1:<CHROME_CDP_PORT>`, and **the
-host is hardcoded to `127.0.0.1`** — only the port is configurable, via
-`CHROME_CDP_PORT`. Inside a container, `127.0.0.1` is the container itself, where
-no Chrome is running. So tier 2 is dead in a stock container, and tools that
-depend on it report Ozon as unavailable rather than returning wrong data.
+The connector's CDP client dials `http://<CHROME_CDP_HOST>:<CHROME_CDP_PORT>`.
+Both are configurable: `CHROME_CDP_HOST` defaults to `127.0.0.1` and
+`CHROME_CDP_PORT` to `9222`. Inside a container, `127.0.0.1` is the container
+itself, where no Chrome is running — so a stock container cannot reach the
+host's browser until you point the host elsewhere.
 
 The options, honestly:
 
-- **Host networking (`network_mode: host`, Linux only).** The container shares
-  the host's network namespace, so the host's `127.0.0.1:9222` becomes reachable
-  and the hardcoded dial target resolves. This is the only clean route given the
-  hardcoded host. It drops the container's port isolation (host networking
-  ignores `ports:`), so set `MCP_HTTP_HOST=127.0.0.1` to keep the MCP endpoint on
-  the host's loopback. The commented `ozon` variant in `docker-compose.yml` shows
-  this.
-- **`host.docker.internal` does not help.** It resolves the host from inside a
-  container, but the CDP client never dials it — it only dials `127.0.0.1`. There
-  is no `CHROME_CDP_HOST` variable to point elsewhere.
+- **Chrome sidecar (cleanest in Docker).** Run Chrome with remote debugging in
+  a second container on the same compose network and set
+  `CHROME_CDP_HOST=chrome` (the service name). The CDP client dials the sidecar,
+  port isolation stays intact, and no host networking is needed. The scraping
+  profile lives in a named volume, so your Ozon login survives rebuilds.
+- **`host.docker.internal` (Desktop and modern Linux).** Points at the host's
+  browser from inside the container: `CHROME_CDP_HOST=host.docker.internal`.
+  On Linux this needs Docker 20.10+ with `--add-host=host.docker.internal:host-gateway`,
+  which recent Docker and compose add automatically.
+- **Host networking (`network_mode: host`, Linux only).** The legacy route:
+  the container shares the host's network namespace, so the host's
+  `127.0.0.1:9222` resolves. It drops port isolation (host networking ignores
+  `ports:`), so set `MCP_HTTP_HOST=127.0.0.1` to keep the MCP endpoint on the
+  host's loopback. The commented `ozon` variant in `docker-compose.yml` still
+  shows this for hosts where the other two are unavailable.
 - **Run Chrome for the CDP tier on the host, not in the container.** Chrome's
   sandbox will not run as root and a headless browser is easy to fingerprint;
-  keeping the logged-in browser on your own machine is also what bounds the risk.
+  keeping the logged-in browser on your own machine is also what bounds the
+  risk. When the client dials a remote host it never tries to autostart Chrome
+  locally — autostart is loopback-only, because a remote host means you run
+  that browser yourself.
 
 Whichever you pick, understand the trade: a reachable CDP debug port grants **full
 control of that Chrome profile and every session in it**. Use a dedicated
-scraping profile logged into Ozon and nothing else, exactly as CDP_SETUP.md
-requires. Never expose 9222 beyond loopback.
+scraping profile logged into the marketplaces you need and nothing else, exactly
+as CDP_SETUP.md requires. Never expose 9222 beyond loopback.
 
-### Ozon tier 1 (and any Russian marketplace) needs a Russian-friendly IP
+The same tier-2 story now covers every challenge-gated source, not just Ozon:
+Avito (IP firewall), Taobao (signed mtop API), Megamarket (ServicePipe), Lamoda
+search (redirect loop), DNS and Citilink (Qrator proof-of-work). One Chrome
+sidecar serves them all — log each marketplace into the same dedicated profile
+once, and `CHROME_CDP_HOST=chrome` lets every connector reach it.
 
-Tier 1 is anonymous HTTP, but Ozon commonly refuses non-Russian and datacenter
-addresses outright. A container on a cloud host will usually be blocked, so Ozon
-tools return "unavailable" there regardless of transport. Route through a Russian
-**residential** proxy to change that: set `OZON_PROXY`, or the standard
-`HTTPS_PROXY`/`ALL_PROXY`. The same geo reality applies in spirit to the other
-marketplaces — a datacenter IP is a worse vantage point than a residential
-Russian one — though Wildberries, Yandex Market, and Detsky Mir tolerate it far
-better than Ozon does. `compare_prices` degrades gracefully: a blocked source is
-reported as blocked (`complete: false`) and the rest are still ranked.
+### Any Russian marketplace needs a Russian-friendly IP
+
+Tier 1 is anonymous HTTP, but Ozon, Avito and others commonly refuse non-Russian
+and datacenter addresses outright. A container on a cloud host will usually be
+blocked, so those tools return "unavailable" there regardless of transport.
+Route through a Russian **residential** proxy to change that: set the per-source
+`*_PROXY`, or the standard `HTTPS_PROXY`/`ALL_PROXY`. The same geo reality
+applies in spirit to every source — a datacenter IP is a worse vantage point
+than a residential Russian one — though Wildberries, Yandex Market, and Detsky
+Mir tolerate it far better than Ozon or Avito do. `compare_prices` degrades
+gracefully: a blocked source is reported as blocked (`complete: false`) and the
+rest are still ranked.

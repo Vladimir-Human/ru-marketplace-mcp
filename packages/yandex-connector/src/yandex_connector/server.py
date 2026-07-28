@@ -70,7 +70,7 @@ from yandex_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://market.yandex.ru"
@@ -272,6 +272,18 @@ async def yandex_search(
 
     warnings: list[str] = []
     extraction = "ssr"
+
+    # Drift guard: a page where every product lost both its price and its title
+    # is the SSR shape quietly moving under the parser, not a catalog full of
+    # priceless unnamed goods. Warn loudly rather than passing the blanks off as
+    # results — this is the same "confident empty answer" failure the WB search
+    # fix addressed.
+    if items and all(p.price_rub is None for p in items):
+        warnings.append(
+            "no_prices_on_page: every product lacks an everyday price — likely SSR drift, verify before quoting"
+        )
+    if items and all(not p.title for p in items):
+        warnings.append("no_titles_on_page: every product lacks a title — likely SSR drift")
 
     if parsed["status"] == ssr.ParseStatus.OK_LDJSON_ONLY:
         # The widget state was unreadable but schema.org markup carried the first

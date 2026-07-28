@@ -6,14 +6,22 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Nightly live canary: catches endpoint drift on its own timetable instead
+    # of waiting for a user to trip over it. See the `live` job.
+    - cron: "0 3 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  # Keep CI hermetic: no test may reach a marketplace, and none should try.
-  UV_FROZEN: "0"
+  # Prove the committed uv.lock rather than re-resolving in CI. With "1" every
+  # `uv sync`/`uv run` refuses to touch the lockfile, so CI installs the exact
+  # graph a release will ship; a drifted manifest fails instead of being
+  # silently papered over by a fresh resolve. The `uv lock --check` step in the
+  # lint job turns that same drift into an early, clearly-labelled failure.
+  UV_FROZEN: "1"
 
 jobs:
   lint:
@@ -30,6 +38,13 @@ jobs:
 
       - name: Set up Python
         run: uv python install 3.12
+
+      - name: Lockfile is up to date
+        # Fail fast and loud if pyproject changed without re-running `uv lock`.
+        # Under UV_FROZEN=1 a later `uv sync` would also fail, but with a message
+        # about the frozen flag; this makes the actual cause — a stale uv.lock —
+        # the first thing that turns the build red. Fix locally with `uv lock`.
+        run: uv lock --check
 
       - name: Sync workspace
         run: uv sync --all-packages
@@ -50,6 +65,14 @@ jobs:
         run: |
           uv run mypy --platform win32 packages/*/src
           uv run mypy --platform darwin packages/*/src
+
+      - name: No stdout writes in connector code
+        # A print()/sys.stdout write in a server module corrupts the JSON-RPC
+        # stream on stdio transports — the worst kind of bug here because it is
+        # silent until a client chokes on a garbled frame. pre-commit runs this,
+        # but pre-commit is opt-in; running it in CI too means a contributor who
+        # skipped the hook still gets caught. No args = scan every packages/*/src.
+        run: uv run python scripts/check_no_print.py
 
   test:
     name: Tests (${{ matrix.os }}, py${{ matrix.python }})
@@ -108,7 +131,7 @@ jobs:
         # suite without coverage. Deselects live/cdp so the measured percentage
         # matches the offline suite the floor was derived from.
         #
-        # Measured branch-coverage total on the offline suite was 72.03%; the
+        # Measured branch-coverage total on the offline suite was 77.35%; the
         # 70% floor sits a couple of points below so unrelated churn does not
         # break the build while the number still ratchets up. --cov reads its
         # source/omit (and branch=true) from [tool.coverage.run] in pyproject.toml.
@@ -145,6 +168,12 @@ jobs:
               "detmir": 4,
               "yandex": 3,
               "compare": 2,
+              "avito": 4,
+              "taobao": 3,
+              "megamarket": 3,
+              "lamoda": 3,
+              "dns": 3,
+              "citilink": 3,
           }
 
           async def main() -> None:
@@ -153,6 +182,12 @@ jobs:
               from wb_connector.server import mcp as wb_mcp
               from compare_connector.server import mcp as compare_mcp
               from yandex_connector.server import mcp as yandex_mcp
+              from avito_connector.server import mcp as avito_mcp
+              from taobao_connector.server import mcp as taobao_mcp
+              from megamarket_connector.server import mcp as megamarket_mcp
+              from lamoda_connector.server import mcp as lamoda_mcp
+              from dns_connector.server import mcp as dns_mcp
+              from citilink_connector.server import mcp as citilink_mcp
 
               servers = {
                   "wb": wb_mcp,
@@ -160,6 +195,12 @@ jobs:
                   "detmir": detmir_mcp,
                   "yandex": yandex_mcp,
                   "compare": compare_mcp,
+                  "avito": avito_mcp,
+                  "taobao": taobao_mcp,
+                  "megamarket": megamarket_mcp,
+                  "lamoda": lamoda_mcp,
+                  "dns": dns_mcp,
+                  "citilink": citilink_mcp,
               }
               failures = []
               for name, server in servers.items():
@@ -181,3 +222,108 @@ jobs:
           uv run which detmir-mcp
           uv run which yandex-mcp
           uv run which compare-mcp
+          uv run which avito-mcp
+          uv run which taobao-mcp
+          uv run which megamarket-mcp
+          uv run which lamoda-mcp
+          uv run which dns-mcp
+          uv run which citilink-mcp
+          uv run which marketplace-mcp
+
+      - name: Real MCP session over stdio
+        # The import check above proves the decorators ran. It does not prove
+        # the console script starts, that the JSON-RPC handshake completes, or
+        # that stdout stays parseable — which is how a stdio server actually
+        # breaks for a user. This spawns each server the way a client does and
+        # runs initialize / tools/list / tools/call. It is what caught six
+        # connectors advertising the FastMCP library version instead of their
+        # own, since the in-process check never reads serverInfo.
+        run: uv run python scripts/e2e_stdio_check.py
+
+  live:
+    name: Live endpoint canaries (nightly / manual)
+    # Runs on a schedule and on demand, never on a push: live endpoints drift
+    # on their own timetable, and a flaky marketplace must not gate a PR. The
+    # job needs a Russian-friendly IP — from GitHub's datacenter runners most
+    # sources report inconclusive, which is still a useful baseline signal.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Run live canaries
+        id: canaries
+        # A blocked source is information, not a build failure, so we do not let
+        # a red assertion abort the job — but we DO capture the exact pytest exit
+        # code and hand it to the summary step, which is what makes the outcome
+        # honest instead of a blanket green. Only wb, detmir and yandex carry
+        # @pytest.mark.live tests (3 of the 11 sources), so this canary covers 3
+        # of 11 — the summary spells that out so a pass is not mistaken for
+        # "everything works". Exit codes: 0 = all passed, 1 = failures (from a
+        # datacenter runner with no Russian IP this usually means blocked, but it
+        # is indistinguishable here from real drift), 5 = nothing collected, other
+        # = a hard error (crash/collection failure) that is a genuine problem.
+        run: |
+          set +e
+          uv run pytest -q -m "live" --tb=short 2>&1 | tee live.log
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Summarise canary outcome
+        # Always runs, even after a failing canary step, so the verdict is
+        # recorded. This is the step the old comment promised but never existed;
+        # without it the job was green regardless and a blocked run looked
+        # identical to a healthy one. It fails the job ONLY on a hard error
+        # (exit code neither 0/1/5), because that is a broken canary rather than
+        # an unreachable marketplace.
+        if: always()
+        env:
+          RC: ${{ steps.canaries.outputs.exit_code }}
+        run: |
+          {
+            echo "## Live endpoint canaries"
+            echo ""
+            echo "Coverage: **3 of 11 sources** carry \`@pytest.mark.live\` tests — wb, detmir, yandex. The other 8 have none, so a green canary says nothing about them."
+            echo ""
+            echo "GitHub's runners have no Russian-friendly IP, so a blocked source and genuine drift both surface as test failures here; disambiguating needs a rerun from a Russian-friendly IP."
+            echo ""
+            case "$RC" in
+              0)
+                echo "### Result: PASS — all live tests passed (endpoints reachable and healthy)." ;;
+              1)
+                echo "### Result: BLOCKED or INCONCLUSIVE — live tests failed. From a datacenter runner this is most likely a blocked endpoint, but it cannot be told apart from real drift here. Rerun from a Russian-friendly IP to confirm before treating it as drift." ;;
+              5)
+                echo "### Result: HARD FAILURE — no live tests were collected. Expected 3 sources' worth; the marker or test layout is broken." ;;
+              *)
+                echo "### Result: HARD FAILURE — the canary errored (exit code $RC). This is a broken test run, not an unreachable marketplace." ;;
+            esac
+            echo ""
+            echo "<details><summary>pytest output</summary>"
+            echo ""
+            echo '```'
+            cat live.log
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Honest conclusion: PASS (0) and BLOCKED/INCONCLUSIVE (1) leave the
+          # job green — a blocked marketplace must not page anyone. Anything else
+          # fails it: exit 5 means the 3 live sources stopped being collected (a
+          # canary silently testing nothing is the exact false-green this job was
+          # fixed to kill), and any other code is a crash.
+          case "$RC" in
+            0|1) : ;;
+            *) echo "Canary did not run cleanly (exit $RC); failing the job — see the step summary."; exit 1 ;;
+          esac

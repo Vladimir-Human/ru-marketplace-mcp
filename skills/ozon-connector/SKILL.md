@@ -1,18 +1,21 @@
 ---
 name: ozon-connector
-description: Use this skill when the operator needs Ozon marketplace data — product details, search, price/rating checks, or seller info. Trigger on Russian queries like "найди на озоне", "цена ozon", "отзывы на озоне", or English mentions of Ozon. Requires Chrome CDP running (start_chrome_cdp.ps1). Skip for non-Ozon tasks.
+description: Use this skill when the operator needs Ozon marketplace data — product details, search, prices, ratings, or reviews. Trigger on Russian queries like "найди на озоне", "цена ozon", "отзывы на озоне", or English mentions of Ozon. Tier 1 (TLS impersonation) handles most queries with no browser; Chrome CDP is only the tier-2 fallback when Cloudflare challenges. Skip for non-Ozon tasks.
 ---
 
 # Ozon Connector
 
-Reads Ozon via Chrome CDP — uses the operator's logged-in browser session.
-Direct curl/httpx fails (307 loop on TLS fingerprint). Must run from inside browser.
+Two-tier connector. Tier 1 is `curl_cffi` with TLS impersonation and handles most
+queries — no browser involved. Only when Cloudflare serves a JS challenge does the
+fetch fall back to tier 2, inside the operator's logged-in Chrome over the DevTools
+Protocol. Plain curl/httpx fails outright (307 loop on the TLS fingerprint), which is
+why tier 1 impersonates and tier 2 exists at all.
 
 ## Prerequisite
-Chrome CDP starts automatically on first call (shared/chrome_cdp.py:_ensure_cdp_running)
-into a dedicated %LOCALAPPDATA%\Chrome-Scraping profile. No manual setup required.
-Tier-1 (curl_cffi) handles most queries; Tier-2 (CDP) kicks in only when Cloudflare
-serves a JS challenge.
+Nothing to set up for tier 1. For the tier-2 fallback, Chrome is started on first use
+by `mcp_core.transport.chrome_cdp` if the CDP port is not already listening, into a
+dedicated `%LOCALAPPDATA%\Chrome-Scraping` profile. From a Russian residential IP
+tier 1 usually answers and Chrome is never touched.
 
 ## When to use
 - Product detail: price, rating, seller, characteristics
@@ -20,13 +23,18 @@ serves a JS challenge.
 - Cross-check Ozon vs WB prices
 
 ## Tools available
-- `ozon_card(sku_or_url)` — fetch full product card via composer-api.bx
+- `ozon_card(sku_or_path)` — fetch full product card via composer-api.bx
 - `ozon_search(query)` — search Ozon catalog (top 20 results)
+- `ozon_reviews(sku_or_path, limit, sort)` — product reviews
+- `ozon_selfcheck()` — drift canary; `success` means both tiers answered, `inconclusive` means Chrome was unreachable, `drift_detected` means the payload shape moved
 
 ## Workflow
-1. Confirm Chrome CDP running (`Test-NetConnection 127.0.0.1 -Port 9222`)
-2. `ozon_search("query")` → get list of SKUs
-3. `ozon_card(sku)` → drill into chosen product
+1. `ozon_search("query")` → get list of SKUs
+2. `ozon_card(sku)` → drill into chosen product
+3. If a call comes back blocked, the tier-1 request was challenged — start Chrome
+   for the fallback (`scripts/start_chrome_cdp.ps1`), log into ozon.ru in the
+   scraping profile, and retry. Confirm the port with
+   `Test-NetConnection 127.0.0.1 -Port 9222`.
 
 ## Gotchas
 - Ozon sometimes shows captcha challenge. Library waits 5s but cannot solve captcha.

@@ -1882,3 +1882,35 @@ def test_category_products_is_registered_and_v1_tools_are_intact():
         } <= names
 
     asyncio.run(scenario())
+
+
+# ---------------------------------------------------------------- stock honesty ----
+
+
+def test_missing_quantity_is_flagged_rather_than_read_as_out_of_stock():
+    """in_stock=False is ambiguous, so an unreported quantity must be visible.
+
+    WbCardItem.in_stock stays a plain bool for wire-compatibility with 1.1.0,
+    which means "WB did not report a quantity" and "WB reports zero left"
+    collapse to the same False. Without this warning a caller cannot tell the
+    two apart and will skip a product that may well be available.
+    """
+    items = [
+        {"nm_id": 1, "name": "Товар", "price_rub": 100.0, "total_quantity": None, "in_stock": False},
+        {"nm_id": 2, "name": "Товар", "price_rub": 200.0, "total_quantity": None, "in_stock": False},
+    ]
+
+    warnings = server._aggregate_offer_warnings(items)
+
+    assert any(w.startswith("stock_unknown") for w in warnings), warnings
+
+
+def test_known_quantities_produce_no_stock_warning():
+    items = [
+        {"nm_id": 1, "name": "Товар", "price_rub": 100.0, "total_quantity": 5, "in_stock": True},
+        {"nm_id": 2, "name": "Товар", "price_rub": 200.0, "total_quantity": 0, "in_stock": False},
+    ]
+
+    warnings = server._aggregate_offer_warnings(items)
+
+    assert not any(w.startswith("stock_unknown") for w in warnings), warnings
