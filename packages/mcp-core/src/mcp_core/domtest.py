@@ -85,23 +85,42 @@ def _node() -> str:
     return node
 
 
-def jsdom_available() -> bool:
-    """True when this machine can execute an extractor against real markup."""
+def _resolve_jsdom() -> str | None:
+    """Absolute path of the `node_modules` directory holding jsdom, or None.
+
+    Resolution happens from the working directory — which is where
+    `npm install jsdom` puts it — but the runner script lives in a temp
+    directory, and Node resolves `require` relative to the *script*, not the
+    process. Without passing the location through, a jsdom installed exactly as
+    the docs instruct is found by the probe and then not found by the run: the
+    check fails instead of skipping, which is worse than either.
+    """
     try:
         node = _node()
     except JsdomUnavailable:
-        return False
+        return None
     try:
         probe = subprocess.run(
-            [node, "-e", "require.resolve('jsdom')"],
+            [node, "-e", "process.stdout.write(require.resolve('jsdom'))"],
             capture_output=True,
             text=True,
             timeout=30,
             env=dict(os.environ),
         )
     except (OSError, subprocess.SubprocessError):  # pragma: no cover - env dependent
-        return False
-    return probe.returncode == 0
+        return None
+    if probe.returncode != 0 or not probe.stdout.strip():
+        return None
+    entry = Path(probe.stdout.strip())
+    for parent in entry.parents:
+        if parent.name == "node_modules":
+            return str(parent)
+    return None
+
+
+def jsdom_available() -> bool:
+    """True when this machine can execute an extractor against real markup."""
+    return _resolve_jsdom() is not None
 
 
 def run_extractor(
@@ -128,10 +147,14 @@ def run_extractor(
         AssertionError: the extractor itself threw, with Node's stderr attached.
     """
     node = _node()
-    if not jsdom_available():
+    modules = _resolve_jsdom()
+    if modules is None:
         raise JsdomUnavailable("jsdom not installed (npm install jsdom, or set NODE_PATH) — DOM check skipped")
 
     env = dict(os.environ)
+    # Hand the runner the directory the probe actually found jsdom in.
+    existing = env.get("NODE_PATH")
+    env["NODE_PATH"] = f"{modules}{os.pathsep}{existing}" if existing else modules
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         extractor = tmp_path / "extract.js"

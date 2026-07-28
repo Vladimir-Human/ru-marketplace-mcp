@@ -18,7 +18,7 @@ Chrome over CDP — same pattern as Ozon.
 
 ## Tools available
 - `avito_search(query, page, location_id, category_id)` — listings via js/items.
-  price_rub is None for priceless ads (free/exchange) — never 0.
+  price_rub is None for ads with no price (free/exchange) — never 0.
 - `avito_card(item_id_or_url)` — one listing: price, description, views, seller
 - `avito_seller(seller_id_or_url)` — seller rating, review count, active listings
 - `avito_selfcheck()` — tri-state drift canary

@@ -20,7 +20,8 @@
   объявления через внутренний `js/items` API. Двухуровневый, как Ozon:
   TLS-имперсонация с резидентного IP, дальше ваш Chrome по CDP. Авито — это
   объявления, а не каталог: пула отзывов на товар нет, репутация продавца и есть
-  сигнал доверия. Бесценное объявление приходит с `price_rub: null`, не `0`.
+  сигнал доверия. Объявление без цены (обмен, даром, цена по запросу) приходит с
+  `price_rub: null`, не `0`.
 - **Taobao** (`taobao_search`, `taobao_card`, `taobao_selfcheck`) — поиск и
   карточки. Поиск Taobao — клиентское React-приложение с подписанным mtop API,
   поэтому все чтения идут внутри вашего Chrome, где сайт сам подписывает запросы.
@@ -42,7 +43,7 @@
 
 **Объединённый сервер**
 - `marketplace-mcp` монтирует все установленные коннекторы как один namespaced
-  набор инструментов — одна запись в конфиге клиента вместо десяти. Имена
+  набор инструментов — одна запись в конфиге клиента вместо одиннадцати. Имена
   инструментов (`wb_search`, `avito_seller`, …) не меняются.
 - Операторский CLI: `marketplace-mcp install` печатает готовый блок
   `mcpServers`, `marketplace-mcp doctor` запускает все selfcheck разом плюс пробу
@@ -177,11 +178,6 @@
   `data.products`, а ошибка приходит одной строкой `error`, а не массивом
   `errors`. Неизвестный SKU даёт `result: null`, и это честный not_found, а не
   дрейф. Все три конверта сняты с живого эндпоинта и лежат в тестах.
- В запросе стояло `old_price`,
-  а published-схема называет его `old_price_amount`, — сервер отклонял весь
-  запрос. Ответ с блоком `errors` приходит как HTTP 200, и коннектор читал
-  только `data.products`, поэтому чужая ошибка выглядела дрейфом нашего парсера.
-  Теперь текст ошибки сервера доходит до вызывающего дословно.
 - В JS-экстракторе Lamoda `\/p\/` записывался как `\/p\/` в неraw-строке —
   Python это терпит с предупреждением и сломает в будущей версии.
 - **Поиск Ситилинка и DNS теперь читает и вложенные фреймы.** Живая проверка с
@@ -323,7 +319,7 @@ are unchanged — additions only.
   classifieds via the internal `js/items` API. Two-tier like Ozon: TLS
   impersonation from a residential IP, then your Chrome over CDP. Avito is
   classifieds, not a catalog: no per-item reviews — seller reputation is the
-  trust signal. A priceless listing reports `price_rub: null`, never `0`.
+  trust signal. A listing with no price (swap, free, price on request) reports `price_rub: null`, never `0`.
 - **Taobao** (`taobao_search`, `taobao_card`, `taobao_selfcheck`) — search and
   cards. Taobao search is a client-side React app over the signed mtop API, so
   every read runs inside your Chrome where the site signs requests natively.
@@ -475,11 +471,6 @@ exactly what their `*_selfcheck` tools report.
   as a single `error` string rather than an `errors` array. An unknown SKU
   returns `result: null`, which is an honest not_found rather than drift. All
   three envelopes were captured from the live endpoint and are pinned in tests.
- The query requested
-  `old_price` where the published schema calls it `old_price_amount`, so the
-  server rejected the whole query. A GraphQL error block arrives as HTTP 200 and
-  the connector read only `data.products`, so somebody else's error looked like
-  drift in our parser. The server's own message now reaches the caller verbatim.
 - Fixed an invalid escape in Lamoda's JS extractor string, which Python tolerates
   with a warning today and will reject in a future version.
 - **Citilink and DNS search now read nested frames too.** A live check from a
