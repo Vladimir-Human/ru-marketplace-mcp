@@ -409,9 +409,10 @@ uv run pytest -q -m "not live and not cdp"    # 822 офлайн-теста
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
-uv run mypy packages/*/src
-uv run mypy --platform win32 packages/*/src   # ловит ошибки, видимые только на Windows
+uv run mypy                                   # что проверять — в [tool.mypy] files
+uv run mypy --platform win32                  # ловит ошибки, видимые только на Windows
 uv run python scripts/check_no_print.py       # запись в stdout ломает JSON-RPC
+uv run python scripts/check_versions.py       # одна версия во всех 55 местах
 ```
 
 Часть тестов прогоняет **настоящий JS-экстрактор коннектора** по снятой разметке
@@ -459,6 +460,17 @@ CI прогоняет линтер, типы и все тесты на Ubuntu, W
 веб-клиент. В приватные и административные разделы запросов нет. Уровень Ozon с
 браузером работает внутри сессии, которую вы открыли сами. Используйте на своё
 усмотрение, для личных исследований, в вежливом темпе запросов.
+
+## Как это сделано
+
+Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 822 офлайн-теста,
+аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
+сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
+страницами вручную и какие остались непроверенными.
+
+Вопрос «кто набрал текст» кажется мне менее интересным, чем вопрос «чем это
+проверено». Второй здесь задокументирован, и проверить его может любой.
 
 ## Лицензия
 
@@ -718,9 +730,10 @@ uv run pytest -q -m "not live and not cdp"    # 822 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
-uv run mypy packages/*/src
-uv run mypy --platform win32 packages/*/src   # catches Windows-only type errors
+uv run mypy                                   # the tree lives in [tool.mypy] files
+uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
+uv run python scripts/check_versions.py       # one version across all 55 places
 ```
 
 Some tests execute a connector's **real extractor JavaScript** against captured
@@ -767,6 +780,17 @@ read only the public catalog endpoints the official web clients use; no authenti
 or administrative areas are touched. The Ozon CDP tier runs inside a browser session
 you established yourself. Use at your discretion, for personal research, at a polite
 request rate.
+
+## How this was built
+
+I wrote the code and the documentation with AI assistants. They are fast and they
+are confidently wrong, so the project is arranged around verification: 822 offline
+tests, an audit before the release, tests that run the real extractor against
+markup captured from the live site. The release notes say which sources were
+compared against live pages by hand and which were left unverified.
+
+Who typed the text seems a less interesting question than what checks it survived.
+The second one is documented here, and anyone can re-run it.
 
 ## License
 

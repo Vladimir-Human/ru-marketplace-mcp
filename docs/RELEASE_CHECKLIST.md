@@ -49,9 +49,11 @@ uv lock --check
 uv sync --frozen --all-packages
 uv run pytest -q -m "not live and not cdp"
 uv run ruff check . ; uv run ruff format --check .
-uv run mypy packages/*/src
-uv run mypy --platform win32 packages/*/src
+uv run mypy
+uv run mypy --platform win32
+uv run mypy --platform darwin
 uv run python scripts/check_no_print.py
+uv run python scripts/check_versions.py
 uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=70
 uv run python scripts/e2e_stdio_check.py
 ```
@@ -68,9 +70,21 @@ npm install jsdom
 
 ## 2. Консистентность версий
 
-Одна версия во всех тринадцати `pyproject.toml`, в `server.json`, в
-`SERVER_VERSION` каждого сервера и в `docker-compose.yml`. `e2e_stdio_check.py`
-показывает версию каждого сервера — сверить глазами.
+Одна версия живёт в пятидесяти пяти местах: четырнадцать `pyproject.toml`,
+тринадцать `__version__`, двенадцать `SERVER_VERSION`, `server.json` и теги
+образа в `docker-compose.yml` и `docs/DEPLOYMENT.md`. Вручную такое не
+сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
+версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
+
+```powershell
+uv run python scripts/check_versions.py v1.2.1
+```
+
+Корневой `pyproject.toml` — эталон, аргумент необязателен и нужен, только чтобы
+поймать случай «подняли везде, но не туда, куда собирались». Сверх того
+`e2e_stdio_check.py` показывает версию каждого сервера уже по живому
+JSON-RPC — это единственное место, где число приходит из запущенного кода, а не
+из текста файла.
 
 ## 3. Живая проверка с машины оператора
 
@@ -217,13 +231,16 @@ install, image build or CI is red.
 
 ## The steps
 
-1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on host and
-   win32, the no-print check, coverage floor, and a real stdio MCP session for
-   all twelve servers. Seconds, not minutes; a slow run means a test is sleeping
+1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
+   plus win32 and darwin, the no-print and version-consistency checks, the
+   coverage floor, and a real stdio MCP session for all twelve servers. Seconds, not minutes; a slow run means a test is sleeping
    on the live pacer or reaching for Chrome. `npm install jsdom` to also run the
    extractor checks against captured markup.
-2. **Version consistency** — one version across all thirteen `pyproject.toml`
-   files, `server.json`, every `SERVER_VERSION`, and `docker-compose.yml`.
+2. **Version consistency** — `scripts/check_versions.py` compares all
+   fifty-five declarations (fourteen `pyproject.toml`, thirteen `__version__`,
+   twelve `SERVER_VERSION`, `server.json`, image tags) against the root
+   `pyproject.toml`; `e2e_stdio_check.py` then reports what the running servers
+   actually say.
 3. **Live checks from the operator's machine** — seven sources refuse datacenter
    addresses, so this is the only place they are exercised at all. Run each
    `*_selfcheck`: `success` means the transport answered, `drift_detected` means

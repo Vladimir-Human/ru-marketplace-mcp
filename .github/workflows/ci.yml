@@ -56,15 +56,19 @@ jobs:
         run: uv run ruff format --check .
 
       - name: mypy (host platform)
-        run: uv run mypy packages/*/src
+        # The tree to check lives in [tool.mypy] files, not on the command line:
+        # a `packages/*/src` glob is expanded by bash here but not by PowerShell
+        # on the maintainer's machine, so the documented command has to be one
+        # that behaves the same in both.
+        run: uv run mypy
 
       - name: mypy (cross-platform)
         # The lint job runs on Linux, where mypy resolves os.killpg/getpgid and
         # signal.SIGKILL as present — so a Windows-only type error stays invisible
         # until someone runs the checks on Windows. These flags catch it here.
         run: |
-          uv run mypy --platform win32 packages/*/src
-          uv run mypy --platform darwin packages/*/src
+          uv run mypy --platform win32
+          uv run mypy --platform darwin
 
       - name: No stdout writes in connector code
         # A print()/sys.stdout write in a server module corrupts the JSON-RPC
@@ -73,6 +77,13 @@ jobs:
         # but pre-commit is opt-in; running it in CI too means a contributor who
         # skipped the hook still gets caught. No args = scan every packages/*/src.
         run: uv run python scripts/check_no_print.py
+
+      - name: One version, everywhere
+        # A release version is written down in fifty-five places. Preparing
+        # 1.2.1 moved fourteen pyproject.toml files and left thirteen
+        # __version__ strings behind — installed packages would have reported
+        # the previous release. Nothing was comparing them; now something is.
+        run: uv run python scripts/check_versions.py
 
   test:
     name: Tests (${{ matrix.os }}, py${{ matrix.python }})

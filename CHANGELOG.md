@@ -7,6 +7,59 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.2.1] — 2026-07-28
+
+Патч по итогам стороннего ревью. Поведение инструментов не менялось; правки
+касаются документации и одного пути к модулю в тестовом харнессе.
+
+### Исправлено
+
+- **`npm install jsdom` не работал так, как написано в README.** Проба искала
+  модуль из корня репозитория и находила его, а раннер запускался из временного
+  каталога, где Node его уже не видел. Девять DOM-тестов падали вместо того,
+  чтобы честно скипнуться. Теперь проба возвращает путь, по которому jsdom
+  нашёлся, и передаёт его раннеру через `NODE_PATH`.
+- **Число офлайн-тестов в документации разошлось на три значения.** README писал
+  812, `docs/ARCHITECTURE.md` — 726, `AUDIT_REPORT.md` содержал и 822, и 726.
+  Измеренное значение 822 теперь стоит везде.
+- **Быстрый старт в README запускал живые тесты.** Команда `uv run pytest -q` с
+  подписью «сеть не нужна» собирала четыре теста, которым сеть нужна, и у
+  пользователя за пределами России падала на Wildberries. В примере теперь тот
+  же фильтр, что в CI.
+- **Шаг чек-листа проверял пустое множество.** `pytest -m "cdp"` собирает ноль
+  тестов: маркер объявлен в `pyproject.toml`, но не стоит ни на одном тесте.
+  Команда убрана, вместо неё сказано, что этот ярус проверяется вызовами
+  `*_selfcheck` и сверкой глазами. Из `ARCHITECTURE.md` убрано утверждение, что
+  CDP-тесты помечены маркером.
+- Число заменяемых записей конфига в разных файлах стояло как «десять» и
+  «двенадцать». Верное значение — одиннадцать: всего двенадцать серверов, и
+  объединённый монтирует остальные одиннадцать.
+- Абзац про карточку Lamoda дублировался в обеих языковых секциях этого файла.
+- **Версия релиза не доехала до `__version__`.** Тринадцать пакетов сообщали
+  бы `1.2.0` из установленного колеса с метаданными `1.2.1`. Ловится тем, что
+  версию никто не сверял: она написана в пятидесяти пяти местах и правится
+  руками. Теперь сверяет `scripts/check_versions.py` — он в гейте, в CI и в
+  pre-commit, и именно он нашёл этот дефект.
+- **`uv run mypy packages/*/src` не работает в PowerShell.** Глоб раскрывает
+  оболочка, а PowerShell для нативных команд этого не делает, и mypy получал
+  путь с звёздочкой буквально. В CI команда проходила (там bash), у владельца
+  падала. Дерево переехало в `files` внутри `[tool.mypy]`, команда стала
+  `uv run mypy` и ведёт себя одинаково везде.
+- `npm install jsdom` оставляет рядом `package.json` и `package-lock.json` —
+  оба добавлены в `.gitignore` вслед за `node_modules/`.
+- «Бесценное объявление» заменено на «объявление без цены»: первое означает
+  «неоценимо дорогое». Та же калька была в английском зеркале и в тексте навыка
+  Авито.
+- `node_modules/` добавлен в `.gitignore`.
+
+### Изменено
+
+- README получил раздел «Как это сделано» с прямым указанием, что код и
+  документация писались с ИИ-ассистентами, и с перечнем того, чем это проверено.
+- `AUDIT_REPORT.md` прошёл редакторскую правку: плотность тире снижена с одного
+  на 45 слов до одного на 180, навязчивая антитеза «X, а не Y» убрана в
+  большинстве мест. Числа, идентификаторы и вердикты не тронуты.
+
 ## [1.2.0] — 2026-07-28
 
 Шесть новых маркетплейсов, объединённый сервер и настраиваемый CDP-хост. 41
@@ -305,6 +358,55 @@
 - `ANTI_BOT.md` больше не пишет «DNS went healthy». Записана честная
   последовательность: правка регулярки id позеленила `selfcheck`, а данные
   остались пустыми.
+
+## [1.2.1] — 2026-07-28 (English)
+
+A patch release following an outside review. Tool behaviour is unchanged; the
+fixes cover documentation and one module path in the test harness.
+
+### Fixed
+
+- **`npm install jsdom` did not work the way the README described it.** The
+  probe resolved the module from the repository root and found it, while the
+  runner executed from a temp directory where Node could not. Nine DOM tests
+  failed instead of skipping. The probe now reports where jsdom was found and
+  hands that path to the runner through `NODE_PATH`.
+- **The offline test count disagreed with itself across three files.** README
+  said 812, `docs/ARCHITECTURE.md` said 726, `AUDIT_REPORT.md` carried both 822
+  and 726. The measured figure, 822, is now used everywhere.
+- **The README quickstart ran live tests.** `uv run pytest -q`, labelled "no
+  network needed", collected four tests that need one and failed on Wildberries
+  for anyone outside Russia. The example now uses the same filter as CI.
+- **A checklist step verified an empty set.** `pytest -m "cdp"` collects zero
+  tests, because the marker is declared but carried by none. The command is gone;
+  the checklist now says this tier is exercised through `*_selfcheck` calls and
+  by comparing against the site. `ARCHITECTURE.md` no longer claims CDP tests are
+  marked.
+- The number of config entries the unified server replaces was written as ten in
+  one file and twelve in another. It is eleven.
+- A Lamoda paragraph was duplicated in both language sections of this file.
+- **The release version never reached `__version__`.** Thirteen packages would
+  have reported `1.2.0` from a wheel whose metadata said `1.2.1`. A version
+  string is written in fifty-five places here and was compared by nobody;
+  `scripts/check_versions.py` now compares them, in the gate, in CI and in
+  pre-commit — and it found this defect.
+- **`uv run mypy packages/*/src` does not work in PowerShell,** which does not
+  expand globs for native commands, so mypy received the path with a literal
+  asterisk: green in CI on bash, red on the maintainer's machine. The file list
+  moved into `[tool.mypy]` and the command is now plain `uv run mypy`.
+- `npm install jsdom` also leaves `package.json` and `package-lock.json`; both
+  join `node_modules/` in `.gitignore`.
+- "Бесценное объявление" means an invaluable listing, not one without a price;
+  reworded here, in the English mirror and in the Avito skill.
+- `node_modules/` is now ignored.
+
+### Changed
+
+- The README gained a "How this was built" section stating plainly that the code
+  and documentation were written with AI assistants, and listing what verifies them.
+- `AUDIT_REPORT.md` was copy-edited: dash density dropped from one per 45 words to
+  one per 180, and the repeated "X, not Y" antithesis is mostly gone. Numbers,
+  identifiers and verdicts were left untouched.
 
 ## [1.2.0] — 2026-07-28 (English)
 

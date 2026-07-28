@@ -1,6 +1,6 @@
 [project]
 name = "lamoda-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Lamoda MCP connector — GraphQL SKU enrichment plus CDP-backed search"
 requires-python = ">=3.12"
 license = { text = "MIT" }

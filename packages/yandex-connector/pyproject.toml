@@ -1,6 +1,6 @@
 [project]
 name = "yandex-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Yandex Market MCP connector — SSR state extraction (search, cards, reviews)"
 requires-python = ">=3.12"
 license = { text = "MIT" }

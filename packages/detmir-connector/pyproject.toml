@@ -1,6 +1,6 @@
 [project]
 name = "detmir-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Detsky Mir MCP connector — anonymous public JSON API (cards, category listings, search)"
 requires-python = ">=3.12"
 license = { text = "MIT" }

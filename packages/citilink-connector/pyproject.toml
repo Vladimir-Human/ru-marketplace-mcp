@@ -1,6 +1,6 @@
 [project]
 name = "citilink-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Citilink-Shop MCP connector — catalog search and cards rendered in the operator's Chrome over CDP (Qrator)"
 requires-python = ">=3.12"
 license = { text = "MIT" }

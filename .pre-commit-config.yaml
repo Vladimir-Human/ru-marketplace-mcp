@@ -42,3 +42,12 @@ repos:
         language: system
         files: ^packages/.*/src/.*\.py$
         pass_filenames: true
+
+      - id: check-versions
+        # Version strings live in fifty-five places and are edited by hand at
+        # release time; the one that gets missed is silent.
+        name: one version, everywhere
+        entry: python scripts/check_versions.py
+        language: system
+        files: (pyproject\.toml|__init__\.py|server\.py|server\.json|docker-compose\.yml|DEPLOYMENT\.md)$
+        pass_filenames: false

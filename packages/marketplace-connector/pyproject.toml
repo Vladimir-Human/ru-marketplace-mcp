@@ -1,6 +1,6 @@
 [project]
 name = "marketplace-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Unified marketplace MCP server — mounts every installed connector as one namespaced toolset"
 requires-python = ">=3.12"
 license = { text = "MIT" }

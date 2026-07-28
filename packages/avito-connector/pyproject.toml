@@ -1,6 +1,6 @@
 [project]
 name = "avito-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Avito MCP connector — search, cards and sellers via the internal js/items API, with a CDP fallback"
 requires-python = ">=3.12"
 license = { text = "MIT" }

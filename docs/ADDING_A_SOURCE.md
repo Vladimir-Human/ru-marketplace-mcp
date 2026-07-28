@@ -217,7 +217,7 @@ browser `@pytest.mark.cdp`; CI excludes both.
 ```bash
 uv sync --all-packages
 uv run ruff check . && uv run ruff format --check .
-uv run mypy packages/*/src
+uv run mypy
 uv run pytest -q
 uv run python scripts/check_no_print.py
 ```
