@@ -1,6 +1,6 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.2.0"
+version = "1.2.1"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -86,6 +86,11 @@ ignore = [
 "**/tests/*" = ["B011", "SIM117"]
 
 [tool.mypy]
+# Listed here rather than passed on the command line: PowerShell does not expand
+# globs for native commands, so `mypy packages/*/src` fails on the maintainer's
+# machine while passing in CI. With this, plain `mypy` checks the same tree
+# everywhere.
+files = ["packages/*/src"]
 python_version = "3.12"
 warn_unused_configs = true
 ignore_missing_imports = true

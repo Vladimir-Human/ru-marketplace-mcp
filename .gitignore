@@ -57,4 +57,7 @@ PUBLISH_PROMPT.md
 *.zip
 
 # jsdom для DOM-тестов ставится локально и в репозиторий не едет.
+# npm пишет рядом ещё два файла — проект не Node-овский, им тут тоже не место.
 node_modules/
+package.json
+package-lock.json

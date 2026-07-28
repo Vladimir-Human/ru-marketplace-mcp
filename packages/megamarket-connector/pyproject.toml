@@ -1,6 +1,6 @@
 [project]
 name = "megamarket-connector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Megamarket MCP connector — mobile JSON API fetched inside the operator's Chrome over CDP (ServicePipe)"
 requires-python = ">=3.12"
 license = { text = "MIT" }

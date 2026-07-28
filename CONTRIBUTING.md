@@ -24,8 +24,8 @@ uv run pre-commit install
 
 ```bash
 uv run ruff check . && uv run ruff format --check .
-uv run mypy packages/*/src
-uv run mypy --platform win32 packages/*/src
+uv run mypy
+uv run mypy --platform win32
 uv run pytest -q
 uv run python scripts/check_no_print.py
 ```
@@ -133,8 +133,8 @@ uv run pre-commit install
 
 ```bash
 uv run ruff check . && uv run ruff format --check .
-uv run mypy packages/*/src
-uv run mypy --platform win32 packages/*/src
+uv run mypy
+uv run mypy --platform win32
 uv run pytest -q
 uv run python scripts/check_no_print.py
 ```

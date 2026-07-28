@@ -14,8 +14,9 @@ Run locally before pushing (this is what CI enforces):
 - [ ] `uv run pytest -q -m "not live"` — full offline suite passes
 - [ ] `uv run ruff check .` — lint clean
 - [ ] `uv run ruff format --check .` — formatting clean
-- [ ] `uv run mypy packages/*/src` — types clean
+- [ ] `uv run mypy` — types clean
 - [ ] `uv run python scripts/check_no_print.py` — no stdout writes
+- [ ] `uv run python scripts/check_versions.py` — one version everywhere
 
 If you touched platform-specific code (process handling, signals):
 
