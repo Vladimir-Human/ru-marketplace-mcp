@@ -46,7 +46,7 @@
 
 Всего 41 инструмент в 11 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
-вместо десяти. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
+вместо одиннадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
 поднялись, а какие отвалились и почему), так что в нём 42 инструмента: 41
 смонтированный плюс этот.
 
@@ -58,7 +58,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 812 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 822 офлайн-теста, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -405,7 +405,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 812 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 822 офлайн-теста
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -517,7 +517,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q                              # 812 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 822 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -714,7 +714,7 @@ that browser's configuration, not ours.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 812 offline tests
+uv run pytest -q -m "not live and not cdp"    # 822 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .

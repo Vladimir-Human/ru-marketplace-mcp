@@ -192,7 +192,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-726 offline tests, no network required. Three flavours:
+822 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.
@@ -204,7 +204,7 @@ which error code, which warning, which fields.
 ~2 MB to ~60 KB, preserving exact nesting so upstream structural changes still
 surface.
 
-Live and CDP tests are marked (`-m "not live and not cdp"`) and excluded from CI,
+Live tests are marked (`-m "not live and not cdp"`) and excluded from CI,
 which has neither a Russian-friendly IP nor a logged-in browser. Including them
 would produce noise instead of signal.
 

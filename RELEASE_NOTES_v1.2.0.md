@@ -5,7 +5,7 @@ MCP-серверы для чтения российских маркетплей
 
 Было пять источников и 22 инструмента. Стало **одиннадцать источников и 42
 инструмента**, и всё это теперь можно подключить одной строкой конфига вместо
-десяти.
+одиннадцати.
 
 ## Что нового
 
@@ -21,7 +21,7 @@ MCP-серверы для чтения российских маркетплей
   конвертируются: зашитый курс молча устареет.
 
 **Объединённый сервер `marketplace-mcp`** — одна запись в конфиге MCP-клиента
-вместо двенадцати. Внутри те же 41 инструмент плюс `marketplace_sources`,
+вместо одиннадцати. Внутри те же 41 инструмент плюс `marketplace_sources`,
 который честно говорит, какие источники поднялись, а какие нет и почему.
 
 **Сравнение цен по девяти источникам сразу.** Детский мир исключён намеренно:
@@ -107,7 +107,7 @@ cd ru-marketplace-mcp
 uv sync --all-packages
 ```
 
-Один сервер вместо двенадцати:
+Один сервер вместо одиннадцати:
 
 ```json
 {
@@ -132,7 +132,7 @@ MCP servers for reading Russian marketplaces. Read-only: no keys, no passwords,
 no account.
 
 Five sources and 22 tools became **eleven sources and 42 tools**, and the whole
-set now connects through a single config entry instead of twelve.
+set now connects through a single config entry instead of eleven.
 
 ## New
 
@@ -140,7 +140,7 @@ set now connects through a single config entry instead of twelve.
 Citilink (3), Taobao (3). Taobao prices stay in yuan and are never converted — a
 hardcoded rate would go stale silently.
 
-**A unified `marketplace-mcp` server** — one MCP client entry instead of twelve,
+**A unified `marketplace-mcp` server** — one MCP client entry instead of eleven,
 carrying the same 41 tools plus `marketplace_sources`, which reports which
 sources actually mounted and why the others did not.
 

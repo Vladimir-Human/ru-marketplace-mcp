@@ -612,7 +612,7 @@ Taobao и Lamoda не отдались даже с резидентного ад
 # 1. Гейт
 uv lock --check
 uv sync --frozen --all-packages
-uv run pytest -q -m "not live and not cdp"            # 726 passed
+uv run pytest -q -m "not live and not cdp"            # 822 passed
 uv run ruff check . ; uv run ruff format --check .
 uv run mypy packages/*/src
 uv run mypy --platform win32 packages/*/src
@@ -627,8 +627,8 @@ uv run pytest -q packages/dns-connector/tests/test_search_extractor_dom.py `
 
 # 3. Живое, из вашего Chrome на 127.0.0.1:9222
 pwsh scripts/start_chrome_cdp.ps1
-uv run pytest -q -m "cdp"
-# затем руками сверить два-три товара на dns, citilink, ozon, avito, megamarket, taobao
+# тестов с маркером cdp нет — проверка идёт вызовами *_selfcheck и глазами:
+# сверить два-три товара на dns, citilink, ozon, avito, megamarket, taobao
 
 # 4. Docker
 docker build -t ru-marketplace-mcp:1.2.0 .
