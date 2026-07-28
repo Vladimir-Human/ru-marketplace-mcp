@@ -1,13 +1,17 @@
 ---
 name: compare-prices
-description: Use this skill when the operator wants to know where something is cheapest across Russian marketplaces, or asks to compare prices between Wildberries, Ozon, Yandex Market and Detsky Mir. Trigger on Russian phrases like "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip for single-marketplace questions — use the per-marketplace skills for those.
+description: Use this skill when the operator wants to know where something is cheapest across marketplaces. It fans out to the nine searchable sources — Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS and Citilink (Detsky Mir is excluded — no text search). Trigger on Russian phrases like "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip for single-marketplace questions — use the per-marketplace skills for those.
 ---
 
 # Cross-Marketplace Price Comparison
 
-One tool call queries every installed Russian marketplace concurrently and returns
-a single price-ranked list. Use it instead of calling each marketplace's search
-tool in sequence: same data, one round trip, plus the ranking and the spread.
+One tool call queries every installed searchable marketplace concurrently and
+returns a single price-ranked list. Use it instead of calling each marketplace's
+search tool in sequence: same data, one round trip, plus the ranking and the spread.
+Offers are de-duplicated on (source, product id), so one listing can't hold two
+ranking slots.
+Taobao is in the fan-out too, and it prices in yuan — see the note below before you
+rank its rows against rouble sources.
 
 ## When to use
 
@@ -46,6 +50,13 @@ below its everyday price. Ranking deliberately ignores it. Quote `price_rub` as
 the price; mention the subscriber price only as a footnote, and only if the
 operator has Plus.
 
+**`currency` and `price_native`** — every offer reports its currency (lowercase ISO,
+default `rub`) and the price in that currency as the marketplace shows it. For rouble
+sources `price_native` equals `price_rub`; for Taobao it holds the yuan price while
+`price_rub` is `null`. Only `rub` offers rank, so a foreign-currency row rides along
+with its real price visible but out of the ranking — the `foreign_currency` warning
+counts them. Read `price_native` if you want to convert.
+
 ## Workflow
 
 **Standard comparison:**
@@ -73,12 +84,26 @@ find the product on one marketplace first, then search its exact model name.
 those offers appear at the end with `price_rub: null`. That is real data, not a
 parse failure.
 
+**The WB row comes from WB search, which reads slightly high.** The fan-out calls
+`wb_search`, and that endpoint was measured 2026-07-28 returning 60 571 for a
+product whose card — and whose page — said 60 275, about half a percent above the
+real figure. Where the two cheapest offers are within a percent of each other,
+confirm the WB one with `wb_card(nmId)` before declaring a winner.
+
 **Rate limits are common.** Wildberries search is 429-prone under repeated
 queries. Space comparisons out; do not retry in a tight loop.
 
 **Detsky Mir is absent from comparisons by design.** Its API ignores text queries
 and returns the entire catalog, so including it would produce products unrelated
 to the query. Use `detmir_category` when kids' goods matter.
+
+**Taobao prices are in yuan (CNY), not roubles.** A Taobao offer carries
+`currency: "cny"` and its price in `price_native`; `price_rub` stays `null`, so it
+never enters the ranking and can't win `cheapest` on a yuan figure. When any offer is
+priced in another currency, a `foreign_currency: …` warning says how many were
+excluded and why. Nothing is converted — a baked-in rate would go stale silently — so
+read `price_native` and convert yourself before comparing a Taobao row against rouble
+sources.
 
 ## Trust boundary
 

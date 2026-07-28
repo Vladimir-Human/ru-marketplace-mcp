@@ -1,0 +1,32 @@
+[project]
+name = "avito-connector"
+version = "1.2.0"
+description = "Avito MCP connector — search, cards and sellers via the internal js/items API, with a CDP fallback"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
+dependencies = [
+    "mcp-core",
+    "fastmcp>=3.4.0",
+    "httpx>=0.27",
+    "curl_cffi>=0.8",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    # server.py imports mcp_core.transport.chrome_cdp at module load for the
+    # tier-2 fallback, and that module imports playwright. Without this the
+    # connector installs fine and then dies on the first Avito ban.
+    "playwright>=1.40",
+]
+
+[project.scripts]
+avito-mcp = "avito_connector.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/avito_connector"]
+
+[tool.uv.sources]
+mcp-core = { workspace = true }

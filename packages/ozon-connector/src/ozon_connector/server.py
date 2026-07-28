@@ -26,7 +26,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import time
 import urllib.parse
 from collections.abc import Callable
 from pathlib import Path
@@ -47,6 +46,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.pacing import Pacer
 from mcp_core.process import (
     safe_child_env,
     terminate_process_tree,
@@ -65,7 +65,7 @@ from ozon_connector.models_output import (
 )
 from ozon_connector.settings import get_settings
 
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -124,9 +124,8 @@ MAX_BODY_BYTES = _settings.max_body_bytes  # 50 MB hard cap default; OZON_MAX_BO
 _SELFCHECK_SKU = _settings.selfcheck_sku  # golden-fixture baseline SKU; OZON_SELFCHECK_SKU
 
 # Polite rate limit (Ozon Cloudflare more aggressive than WB v4)
-_last_request_ts = 0.0
 _min_gap = _settings.min_gap
-_rate_lock = asyncio.Lock()
+_pacer = Pacer(_min_gap)
 _cdp_lock = asyncio.Lock()  # serialize CDP tab creation
 
 # Caches the (status, body) of successful composer reads, keyed by canonical path.
@@ -253,13 +252,13 @@ async def _run_sync_bounded(func: Any, *args: Any, timeout_s: float) -> Any:
     raise _SyncCallError(f"{getattr(func, '__qualname__', repr(func))} is not subprocess-callable")
 
 
-async def _polite_wait():
-    global _last_request_ts
-    async with _rate_lock:
-        elapsed = time.monotonic() - _last_request_ts
-        if elapsed < _min_gap:
-            await asyncio.sleep(_min_gap - elapsed)
-        _last_request_ts = time.monotonic()
+async def _polite_wait() -> None:
+    """Space this source's requests out, and back off if it refused us.
+
+    Reads ``_min_gap`` at call time so an operator or a test can retune the
+    pace without rebuilding the pacer.
+    """
+    await _pacer.wait(min_gap=_min_gap)
 
 
 def _sync_curl_get(url: str, proxy: str | None = None) -> tuple[int, str]:

@@ -29,7 +29,13 @@ class WbCardItem(BaseModel):
     review_rating: float | None = Field(default=None, description="Product review rating.")
     feedbacks: int | None = Field(default=None, description="Total feedback count.")
     total_quantity: int | None = Field(default=None, description="Total stock quantity.")
-    in_stock: bool = Field(default=False, description="Whether the product has stock and a valid price.")
+    in_stock: bool = Field(
+        default=False,
+        description=(
+            "True only when WB reports a positive quantity and a usable price. False also covers "
+            "'quantity not reported' — read total_quantity is None to tell an unknown from a sell-out."
+        ),
+    )
     price_rub: float | None = Field(default=None, description="Current price in rubles.")
     price_original_rub: float | None = Field(default=None, description="Strikethrough original price in rubles.")
 

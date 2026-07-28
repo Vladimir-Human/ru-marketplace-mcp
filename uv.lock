@@ -11,11 +11,18 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "avito-connector",
+    "citilink-connector",
     "compare-connector",
     "detmir-connector",
+    "dns-connector",
+    "lamoda-connector",
+    "marketplace-connector",
     "mcp-core",
+    "megamarket-connector",
     "ozon-connector",
     "ru-marketplace-mcp",
+    "taobao-connector",
     "wb-connector",
     "yandex-connector",
 ]
@@ -115,6 +122,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/36/98/7d93f30d029643c0275dbc0bd6d5a6f670661ee6c9a94d93af7ab4887600/authlib-1.7.2.tar.gz", hash = "sha256:2cea25fefcd4e7173bdf1372c0afc265c8034b23a8cd5dcb6a9164b826c64231", size = 176511, upload-time = "2026-05-06T08:10:23.116Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/95/adcb68e20c34162e9135f370d6e31737719c2b6f94bc953fe7ed1f10fe21/authlib-1.7.2-py2.py3-none-any.whl", hash = "sha256:3e1faedc9d87e7d56a164eca3ccb6ace0d61b94abe83e92242f8dc8bba9b4a9f", size = 259548, upload-time = "2026-05-06T08:10:21.436Z" },
+]
+
+[[package]]
+name = "avito-connector"
+version = "1.2.0"
+source = { editable = "packages/avito-connector" }
+dependencies = [
+    { name = "curl-cffi" },
+    { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "curl-cffi", specifier = ">=0.8" },
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
 ]
 
 [[package]]
@@ -251,6 +283,27 @@ wheels = [
 ]
 
 [[package]]
+name = "citilink-connector"
+version = "1.2.0"
+source = { editable = "packages/citilink-connector" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
+]
+
+[[package]]
 name = "click"
 version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -273,7 +326,7 @@ wheels = [
 
 [[package]]
 name = "compare-connector"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/compare-connector" }
 dependencies = [
     { name = "detmir-connector" },
@@ -286,22 +339,62 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "avito-connector" },
+    { name = "citilink-connector" },
+    { name = "dns-connector" },
+    { name = "lamoda-connector" },
+    { name = "megamarket-connector" },
+    { name = "ozon-connector" },
+    { name = "taobao-connector" },
+]
+avito = [
+    { name = "avito-connector" },
+]
+citilink = [
+    { name = "citilink-connector" },
+]
+dns = [
+    { name = "dns-connector" },
+]
+lamoda = [
+    { name = "lamoda-connector" },
+]
+megamarket = [
+    { name = "megamarket-connector" },
+]
 ozon = [
     { name = "ozon-connector" },
+]
+taobao = [
+    { name = "taobao-connector" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "avito-connector", marker = "extra == 'all'", editable = "packages/avito-connector" },
+    { name = "avito-connector", marker = "extra == 'avito'", editable = "packages/avito-connector" },
+    { name = "citilink-connector", marker = "extra == 'all'", editable = "packages/citilink-connector" },
+    { name = "citilink-connector", marker = "extra == 'citilink'", editable = "packages/citilink-connector" },
     { name = "detmir-connector", editable = "packages/detmir-connector" },
+    { name = "dns-connector", marker = "extra == 'all'", editable = "packages/dns-connector" },
+    { name = "dns-connector", marker = "extra == 'dns'", editable = "packages/dns-connector" },
     { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "lamoda-connector", marker = "extra == 'all'", editable = "packages/lamoda-connector" },
+    { name = "lamoda-connector", marker = "extra == 'lamoda'", editable = "packages/lamoda-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "megamarket-connector", marker = "extra == 'all'", editable = "packages/megamarket-connector" },
+    { name = "megamarket-connector", marker = "extra == 'megamarket'", editable = "packages/megamarket-connector" },
+    { name = "ozon-connector", marker = "extra == 'all'", editable = "packages/ozon-connector" },
     { name = "ozon-connector", marker = "extra == 'ozon'", editable = "packages/ozon-connector" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pydantic-settings", specifier = ">=2.2" },
+    { name = "taobao-connector", marker = "extra == 'all'", editable = "packages/taobao-connector" },
+    { name = "taobao-connector", marker = "extra == 'taobao'", editable = "packages/taobao-connector" },
     { name = "wb-connector", editable = "packages/wb-connector" },
     { name = "yandex-connector", editable = "packages/yandex-connector" },
 ]
-provides-extras = ["ozon"]
+provides-extras = ["ozon", "avito", "taobao", "megamarket", "lamoda", "dns", "citilink", "all"]
 
 [[package]]
 name = "coverage"
@@ -472,7 +565,7 @@ wheels = [
 
 [[package]]
 name = "detmir-connector"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/detmir-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -487,6 +580,27 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=3.4.0" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
+]
+
+[[package]]
+name = "dns-connector"
+version = "1.2.0"
+source = { editable = "packages/dns-connector" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pydantic-settings", specifier = ">=2.2" },
 ]
@@ -860,6 +974,29 @@ wheels = [
 ]
 
 [[package]]
+name = "lamoda-connector"
+version = "1.2.0"
+source = { editable = "packages/lamoda-connector" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
+]
+
+[[package]]
 name = "librt"
 version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -934,6 +1071,45 @@ wheels = [
 ]
 
 [[package]]
+name = "marketplace-connector"
+version = "1.2.0"
+source = { editable = "packages/marketplace-connector" }
+dependencies = [
+    { name = "avito-connector" },
+    { name = "citilink-connector" },
+    { name = "compare-connector" },
+    { name = "detmir-connector" },
+    { name = "dns-connector" },
+    { name = "fastmcp" },
+    { name = "lamoda-connector" },
+    { name = "mcp-core" },
+    { name = "megamarket-connector" },
+    { name = "ozon-connector" },
+    { name = "pydantic" },
+    { name = "taobao-connector" },
+    { name = "wb-connector" },
+    { name = "yandex-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "avito-connector", editable = "packages/avito-connector" },
+    { name = "citilink-connector", editable = "packages/citilink-connector" },
+    { name = "compare-connector", editable = "packages/compare-connector" },
+    { name = "detmir-connector", editable = "packages/detmir-connector" },
+    { name = "dns-connector", editable = "packages/dns-connector" },
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "lamoda-connector", editable = "packages/lamoda-connector" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "megamarket-connector", editable = "packages/megamarket-connector" },
+    { name = "ozon-connector", editable = "packages/ozon-connector" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "taobao-connector", editable = "packages/taobao-connector" },
+    { name = "wb-connector", editable = "packages/wb-connector" },
+    { name = "yandex-connector", editable = "packages/yandex-connector" },
+]
+
+[[package]]
 name = "mcp"
 version = "1.28.1"
 source = { registry = "https://pypi.org/simple" }
@@ -960,7 +1136,7 @@ wheels = [
 
 [[package]]
 name = "mcp-core"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/mcp-core" }
 dependencies = [
     { name = "fastmcp" },
@@ -971,7 +1147,7 @@ dependencies = [
 
 [package.optional-dependencies]
 cdp = [
-    { name = "websockets" },
+    { name = "playwright" },
 ]
 impersonate = [
     { name = "curl-cffi" },
@@ -982,9 +1158,9 @@ requires-dist = [
     { name = "curl-cffi", marker = "extra == 'impersonate'", specifier = ">=0.7" },
     { name = "fastmcp", specifier = ">=3.4.0" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "playwright", marker = "extra == 'cdp'", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pydantic-settings", specifier = ">=2.2" },
-    { name = "websockets", marker = "extra == 'cdp'", specifier = ">=12.0" },
 ]
 provides-extras = ["cdp", "impersonate"]
 
@@ -995,6 +1171,27 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "megamarket-connector"
+version = "1.2.0"
+source = { editable = "packages/megamarket-connector" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
 ]
 
 [[package]]
@@ -1086,7 +1283,7 @@ wheels = [
 
 [[package]]
 name = "ozon-connector"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/ozon-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -1633,13 +1830,20 @@ wheels = [
 
 [[package]]
 name = "ru-marketplace-mcp"
-version = "1.1.0"
+version = "1.2.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "avito-connector" },
+    { name = "citilink-connector" },
     { name = "compare-connector" },
     { name = "detmir-connector" },
+    { name = "dns-connector" },
+    { name = "lamoda-connector" },
+    { name = "marketplace-connector" },
     { name = "mcp-core" },
+    { name = "megamarket-connector" },
     { name = "ozon-connector" },
+    { name = "taobao-connector" },
     { name = "wb-connector" },
     { name = "yandex-connector" },
 ]
@@ -1656,10 +1860,17 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "avito-connector", editable = "packages/avito-connector" },
+    { name = "citilink-connector", editable = "packages/citilink-connector" },
     { name = "compare-connector", editable = "packages/compare-connector" },
     { name = "detmir-connector", editable = "packages/detmir-connector" },
+    { name = "dns-connector", editable = "packages/dns-connector" },
+    { name = "lamoda-connector", editable = "packages/lamoda-connector" },
+    { name = "marketplace-connector", editable = "packages/marketplace-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "megamarket-connector", editable = "packages/megamarket-connector" },
     { name = "ozon-connector", editable = "packages/ozon-connector" },
+    { name = "taobao-connector", editable = "packages/taobao-connector" },
     { name = "wb-connector", editable = "packages/wb-connector" },
     { name = "yandex-connector", editable = "packages/yandex-connector" },
 ]
@@ -1736,6 +1947,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/eb/e3/7c1dc7381d9f8ab7d854328ebfa884e62cb3f3d8549ddfd37c7814f42afa/starlette-1.3.1.tar.gz", hash = "sha256:05d0213193f2fbaae60e2ecb593b4add4262ad4e46536b54abe36f11a71724e0", size = 2703240, upload-time = "2026-06-12T09:23:11.602Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/bb/2799cc2ede3ed41131f8975621e7213dfc7ef4acbbaadfa440f32500c370/starlette-1.3.1-py3-none-any.whl", hash = "sha256:c7372aae11c3c3f26a42df7bd626cec2f47d03483d261d369516a615a53714c6", size = 73632, upload-time = "2026-06-12T09:23:10.017Z" },
+]
+
+[[package]]
+name = "taobao-connector"
+version = "1.2.0"
+source = { editable = "packages/taobao-connector" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "mcp-core" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.0" },
+    { name = "mcp-core", editable = "packages/mcp-core" },
+    { name = "playwright", specifier = ">=1.40" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
 ]
 
 [[package]]
@@ -1878,7 +2110,7 @@ wheels = [
 
 [[package]]
 name = "wb-connector"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/wb-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1976,7 +2208,7 @@ wheels = [
 
 [[package]]
 name = "yandex-connector"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "packages/yandex-connector" }
 dependencies = [
     { name = "fastmcp" },

@@ -56,8 +56,38 @@ def _port_from_env() -> int:
     return port if 1 <= port <= 65535 else 9222
 
 
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _host_from_env() -> str:
+    """Where the CDP client dials. Defaults to loopback.
+
+    ``CHROME_CDP_HOST`` exists for containers and remote-Chrome setups: a
+    container's own 127.0.0.1 never holds the operator's browser, so pointing
+    at ``host.docker.internal`` or a Chrome sidecar is what makes tier 2 work
+    there. Values are trimmed and must look like a hostname or IP — a malformed
+    one falls back to loopback rather than crashing Playwright with a cryptic
+    URL error.
+    """
+    raw = os.environ.get("CHROME_CDP_HOST", "127.0.0.1").strip()
+    if not raw:
+        return "127.0.0.1"
+    # Reject anything that is clearly not a bare host: schemes, paths,
+    # credentials. "host:9222" is a common mistake — the port is separate.
+    if any(ch in raw for ch in ("/", "@", " ")):
+        return "127.0.0.1"
+    if ":" in raw:
+        # Colons are only legitimate in IPv6 literals: bare (::1) or bracketed.
+        if raw.count(":") > 1 or raw.startswith("["):
+            return raw
+        return "127.0.0.1"
+    return raw
+
+
 CDP_PORT = _port_from_env()
-CDP_URL = f"http://127.0.0.1:{CDP_PORT}"
+CDP_HOST = _host_from_env()
+CDP_URL = f"http://{CDP_HOST}:{CDP_PORT}"
+CDP_IS_LOOPBACK = CDP_HOST in _LOOPBACK_HOSTS
 
 
 def _default_profile_dir() -> Path:
@@ -121,9 +151,9 @@ _AUTOSTART_LOCK = asyncio.Lock()
 
 
 def _cdp_port_open() -> bool:
-    """Quick TCP probe: is something already listening on the CDP port?"""
+    """Quick TCP probe: is something already listening on the CDP endpoint?"""
     try:
-        with socket.create_connection(("127.0.0.1", CDP_PORT), timeout=0.5):
+        with socket.create_connection((CDP_HOST, CDP_PORT), timeout=0.5):
             return True
     except (ConnectionRefusedError, TimeoutError, OSError):
         return False
@@ -198,10 +228,18 @@ def _start_chrome_with_cdp() -> tuple[bool, str]:
 
 
 async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
-    """Make sure Chrome is listening on the CDP port, auto-starting if needed."""
+    """Make sure Chrome is listening on the CDP endpoint, auto-starting if needed.
+
+    Autostart only makes sense on loopback: a remote ``CHROME_CDP_HOST`` means
+    the operator runs Chrome elsewhere (a sidecar, the host's browser), and
+    spawning a local one would connect to the wrong profile.
+    """
     async with _AUTOSTART_LOCK:
         if _cdp_port_open():
             return True, "already running"
+
+        if not CDP_IS_LOOPBACK:
+            return False, f"Chrome not reachable on {CDP_HOST}:{CDP_PORT} (remote host — autostart is loopback-only)"
 
         ok, msg = await asyncio.to_thread(_start_chrome_with_cdp)
         if not ok:
@@ -298,7 +336,7 @@ async def get_browser() -> AsyncIterator[Browser]:
             # The raw detail can contain an absolute profile path (and thus the
             # OS username), so it never reaches a tool-visible error string.
             raise RuntimeError(
-                f"CDP autostart failed (Chrome not reachable on 127.0.0.1:{CDP_PORT} — {cdp_setup_hint()})"
+                f"CDP autostart failed (Chrome not reachable on {CDP_HOST}:{CDP_PORT} — {cdp_setup_hint()})"
             )
 
     async with async_playwright() as p:
@@ -342,6 +380,33 @@ class NavBlocked(RuntimeError):
         self.status = status
         self.final_url = final_url
         super().__init__(f"navigation blocked: HTTP {status}")
+
+
+async def probe_session(*, timeout_s: float = 6.0) -> dict[str, object]:
+    """Health-check the CDP session itself, for operator-facing diagnostics.
+
+    Answers the questions a ``doctor`` command or a connector's blocked error
+    wants answered before it blames the marketplace: is Chrome reachable, does
+    it have a live context, and which host/port were dialed. Never raises — a
+    failed probe is the answer, returned as ``reachable: False`` with a reason.
+    """
+    result: dict[str, object] = {"host": CDP_HOST, "port": CDP_PORT, "is_loopback": CDP_IS_LOOPBACK}
+    if not _cdp_port_open():
+        result["reachable"] = False
+        result["reason"] = f"nothing listening on {CDP_HOST}:{CDP_PORT}" + (
+            " — autostart is loopback-only" if not CDP_IS_LOOPBACK else f" ({cdp_setup_hint()})"
+        )
+        return result
+    try:
+        async with asyncio.timeout(timeout_s):
+            async with get_browser() as browser:
+                result["reachable"] = True
+                result["contexts"] = len(browser.contexts)
+                result["reason"] = None
+    except Exception as exc:
+        result["reachable"] = False
+        result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+    return result
 
 
 @asynccontextmanager

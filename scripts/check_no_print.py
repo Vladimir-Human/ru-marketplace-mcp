@@ -83,7 +83,11 @@ def collect_default_paths() -> list[Path]:
 def main(argv: list[str]) -> int:
     paths = [Path(arg) for arg in argv] if argv else collect_default_paths()
     # Entry points legitimately run as scripts; only server modules are protocol-critical.
-    targets = [p for p in paths if p.suffix == ".py" and p.is_file()]
+    # Operator CLI modules (cli.py) print to stdout by design — they are run by a
+    # human as `marketplace-mcp install/doctor`, never as a stdio JSON-RPC server.
+    targets = [
+        p for p in paths if p.suffix == ".py" and p.is_file() and p.name != "cli.py" and "__main__" not in p.name
+    ]
 
     violations: list[str] = []
     for path in targets:

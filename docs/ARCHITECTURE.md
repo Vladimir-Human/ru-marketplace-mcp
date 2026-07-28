@@ -1,19 +1,27 @@
 # Architecture
 
-Five MCP servers over one shared runtime. This document covers how they fit
-together and why the structure is what it is.
+Eleven source servers (ten marketplaces plus price comparison) plus a unified `marketplace-mcp`, all over one shared
+runtime. This document covers how they fit together and why the structure is what it
+is.
 
 ## Layout
 
 ```
 ru-marketplace-mcp/
 ├── packages/
-│   ├── mcp-core/            shared runtime — errors, transports, parsing, cache
-│   ├── wb-connector/        Wildberries          → wb-mcp
-│   ├── ozon-connector/      Ozon                 → ozon-mcp
-│   ├── yandex-connector/    Yandex Market        → yandex-mcp
-│   ├── detmir-connector/    Detsky Mir           → detmir-mcp
-│   └── compare-connector/   cross-marketplace    → compare-mcp
+│   ├── mcp-core/               shared runtime — errors, transports, parsing, cache
+│   ├── wb-connector/           Wildberries          → wb-mcp
+│   ├── ozon-connector/         Ozon                 → ozon-mcp
+│   ├── yandex-connector/       Yandex Market        → yandex-mcp
+│   ├── detmir-connector/       Detsky Mir           → detmir-mcp
+│   ├── avito-connector/        Avito classifieds    → avito-mcp
+│   ├── taobao-connector/       Taobao (CN)          → taobao-mcp
+│   ├── megamarket-connector/   Megamarket           → megamarket-mcp
+│   ├── lamoda-connector/       Lamoda               → lamoda-mcp
+│   ├── dns-connector/          DNS-Shop             → dns-mcp
+│   ├── citilink-connector/     Citilink             → citilink-mcp
+│   ├── compare-connector/      cross-marketplace    → compare-mcp
+│   └── marketplace-connector/  unified mount + CLI  → marketplace-mcp
 ├── skills/                  agent-facing usage docs, one per connector
 ├── scripts/                 CDP launchers, stdout guard
 ├── docs/                    this directory
@@ -23,7 +31,8 @@ ru-marketplace-mcp/
 Each package is independently installable and declares its own dependencies, so a
 user who only wants Wildberries never installs Playwright. `compare-connector`
 depends on the others but imports them defensively — a missing one reduces coverage
-instead of breaking startup.
+instead of breaking startup. `marketplace-connector` mounts every installed source
+as one namespaced toolset and carries the operator CLI (`install`/`doctor`).
 
 **Why a workspace rather than one package:** the connectors have genuinely
 different dependency needs (Ozon alone needs `curl_cffi` + Playwright), and users
@@ -68,6 +77,14 @@ logged into. This is the answer for sources that reject datacenter fingerprints
 outright, and it is why the project needs no stored credentials. Threat model and
 setup: [CDP_SETUP.md](CDP_SETUP.md).
 
+The CDP dial target is configurable: `CHROME_CDP_HOST` (default `127.0.0.1`) and
+`CHROME_CDP_PORT` (default `9222`). Autostart only fires on loopback — a remote
+host means the operator runs that Chrome themselves (a sidecar, the host's
+browser), and spawning a local one would connect to the wrong profile. This is
+what lets tier 2 work inside Docker, where the container's own `127.0.0.1` never
+holds a browser. `probe_session()` health-checks the session for operator-facing
+diagnostics without raising.
+
 Playwright is imported lazily, so a tier-1-only connector never pays for it.
 
 ### `resilience` — tolerant readers
@@ -80,7 +97,10 @@ loudly, and be fixable in one place:
 - `coerce_int` / `coerce_price` — type coercion that **refuses to guess**. An
   ambiguous input (`"1.2K"`, a price range, a signed number) returns `None` rather
   than a plausible-but-wrong number.
-- `shape_signature` — structural fingerprinting for drift detection.
+- `shape_signature` — a structural fingerprint of a parsed payload: the sorted set
+  of key paths and their value types, with the values themselves dropped. That lets a
+  selfcheck tell "the shape moved" (a code change) from "the data changed" (nothing to
+  fix). Landing now — not yet wired into every connector's selfcheck.
 
 The rule everything follows: **a missing value is `None`, never `0`.** A zero price
 would rank a dead listing as the cheapest option, which is exactly the bug class
@@ -172,7 +192,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-221 offline tests, no network required. Three flavours:
+726 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

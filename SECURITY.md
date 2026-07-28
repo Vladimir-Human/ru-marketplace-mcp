@@ -22,9 +22,10 @@
 
 ## Единственная часть с реальным риском: уровень CDP
 
-Ozon отклоняет датацентровый трафик, поэтому его второй уровень транспорта выполняет
-запросы внутри Chrome, который **вы** запустили и в котором залогинились сами, через
-DevTools Protocol.
+Семь источников читают через Chrome, который **вы** запустили и в котором залогинились
+сами, по DevTools Protocol. Taobao, Мегамаркет, DNS и Ситилинк — только так,
+анонимного уровня у них нет. Ozon и Авито уходят в браузер лишь когда анонимный
+уровень получил отказ. Lamoda берёт через браузер поиск, карточка идёт анонимно.
 
 **CDP даёт любому локальному процессу полный контроль над тем профилем, к которому он
 подключён**, включая все залогиненные в нём сессии. Это и есть угроза, которую нужно
@@ -42,8 +43,8 @@ DevTools Protocol.
 Отдельный профиль здесь работает как основной контроль. Логиньтесь там только в
 маркетплейсы. Подробности в [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
-Если Ozon вам не нужен, не включайте этот уровень. Три остальных маркетплейса
-работают по обычному анонимному HTTP.
+Wildberries, Яндекс Маркет и Детский мир к CDP не обращаются вообще. Если вам хватает
+их, уровень можно не включать — но тогда семь остальных источников читать нечем.
 
 ## Прочие меры
 
@@ -66,7 +67,9 @@ DevTools Protocol.
 
 **Вычистка ошибок.** Bearer-токены, ключи API и секреты в query-строке удаляются из
 текста ошибки до того, как он попадёт в ответ инструмента. Абсолютные пути к профилю
-(в них содержится имя пользователя ОС) в видимые ошибки не попадают.
+(в них содержится имя пользователя ОС) в видимые ошибки не попадают. С 1.2.0 вырезается
+и `user:pass@` из URL: прокси настраивается строкой `http://user:pass@host:port`, и
+раньше ошибка соединения уносила логин с паролем в лог и в ответ клиенту.
 
 **Проверка формы вместо экранирования.** Значения, попадающие в путь URL или в
 выражение фильтра, проверяются строгим шаблоном.
@@ -119,8 +122,11 @@ use. No authenticated or administrative areas are touched.
 
 ## The one part that carries real risk: the CDP tier
 
-Ozon rejects datacenter traffic, so its second transport tier runs fetches inside a
-Chrome instance **you** started and logged into, over the DevTools Protocol.
+Seven sources run their fetches inside a Chrome instance **you** started and logged
+into, over the DevTools Protocol. Taobao, Megamarket, DNS and Citilink work no other
+way — they have no anonymous tier. Ozon and Avito fall back to the browser only after
+the anonymous tier is refused. Lamoda splits the difference: search goes through the
+browser, the product card does not.
 
 **CDP grants any local process full control of the profile it is attached to**,
 including every session logged into that profile. That is the threat to understand
@@ -139,8 +145,8 @@ The dedicated profile is not a nicety, it is the primary control. Log into
 marketplaces there and nothing else. Full detail:
 [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
-If you do not need Ozon, do not enable this tier. The other three marketplaces work
-over plain anonymous HTTP.
+Wildberries, Yandex Market and Detsky Mir never touch CDP. If those three cover your
+needs, leave the tier off — but the other seven sources cannot be read without it.
 
 ## Other hardening in place
 
@@ -159,9 +165,11 @@ environment variables that any process able to set the environment could redirec
 self-referential 307 loops; following them burns the request budget instead of
 surfacing the block.
 
-**Error redaction.** Bearer tokens, API keys and query-string secrets are stripped
-from error text before it reaches a tool response, and absolute profile paths (which
-contain the OS username) are kept out of user-visible errors.
+**Error redaction.** Proxy credentials, bearer tokens, API keys and query-string
+secrets are stripped from error text before it reaches a tool response, and absolute
+profile paths (which contain the OS username) are kept out of user-visible errors. The
+`user:pass@` case landed in 1.2.0: proxies are configured as `http://user:pass@host:port`,
+so a connect failure used to carry the login into both the log and the client's error.
 
 **Input validation over escaping.** Values that reach URL paths or filter expressions
 are validated against a strict shape rather than escaped.

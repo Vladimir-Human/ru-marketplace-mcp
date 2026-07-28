@@ -9,6 +9,12 @@ _AUTH_HEADER_RE = re.compile(r"(Authorization:\s*(?:Bearer|Basic|Token)\s+)[A-Za
 _SK_RE = re.compile(r"(sk-)[A-Za-z0-9]{20,}")
 _GHP_RE = re.compile(r"(gh[pousr]_)[A-Za-z0-9]{20,}")
 _AKIA_RE = re.compile(r"(AKIA)[0-9A-Z]{16}")
+# Proxies are configured as http://user:pass@host:port (see *_PROXY), and a
+# connect failure puts that whole URL into the exception text — which then
+# travels into stderr logs and into the ToolError the client sees. Strip the
+# userinfo, keep the scheme and host so the error still says what was
+# unreachable.
+_URL_USERINFO_RE = re.compile(r"(?<=://)[^/\s@]+@")
 
 
 def redact_error_text(text: str, max_len: int = 500) -> str:
@@ -21,10 +27,12 @@ def redact_error_text(text: str, max_len: int = 500) -> str:
     redacted = _SK_RE.sub(r"\1<redacted>", redacted)
     redacted = _GHP_RE.sub(r"\1<redacted>", redacted)
     redacted = _AKIA_RE.sub(r"\1<redacted>", redacted)
+    redacted = _URL_USERINFO_RE.sub("<redacted>@", redacted)
     return redacted[:max_len]
 
 
 def redact_url(url: str) -> str:
     if not url:
         return ""
-    return _TOKEN_QUERY_RE.sub(r"\1<redacted>", url)
+    redacted = _TOKEN_QUERY_RE.sub(r"\1<redacted>", url)
+    return _URL_USERINFO_RE.sub("<redacted>@", redacted)

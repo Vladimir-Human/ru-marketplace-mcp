@@ -1,9 +1,10 @@
 [project]
 name = "compare-connector"
-version = "1.1.0"
-description = "Cross-marketplace price comparison MCP server — queries every configured Russian marketplace at once"
+version = "1.2.0"
+description = "Cross-marketplace price comparison MCP server — queries every configured marketplace at once"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
 dependencies = [
     "mcp-core",
     "wb-connector",
@@ -15,8 +16,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Ozon needs curl_cffi + playwright, which not every user wants installed.
+# Tier-2 sources pull curl_cffi and/or playwright, which not every user wants.
 ozon = ["ozon-connector"]
+avito = ["avito-connector"]
+taobao = ["taobao-connector"]
+megamarket = ["megamarket-connector"]
+lamoda = ["lamoda-connector"]
+dns = ["dns-connector"]
+citilink = ["citilink-connector"]
+all = [
+    "ozon-connector",
+    "avito-connector",
+    "taobao-connector",
+    "megamarket-connector",
+    "lamoda-connector",
+    "dns-connector",
+    "citilink-connector",
+]
 
 [project.scripts]
 compare-mcp = "compare_connector.__main__:main"
@@ -34,3 +50,9 @@ wb-connector = { workspace = true }
 detmir-connector = { workspace = true }
 yandex-connector = { workspace = true }
 ozon-connector = { workspace = true }
+avito-connector = { workspace = true }
+taobao-connector = { workspace = true }
+megamarket-connector = { workspace = true }
+lamoda-connector = { workspace = true }
+dns-connector = { workspace = true }
+citilink-connector = { workspace = true }

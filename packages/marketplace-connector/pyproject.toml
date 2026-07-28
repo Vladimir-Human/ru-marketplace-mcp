@@ -1,0 +1,50 @@
+[project]
+name = "marketplace-connector"
+version = "1.2.0"
+description = "Unified marketplace MCP server — mounts every installed connector as one namespaced toolset"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
+# The point of this package is "install one thing, get every source", so the
+# connectors are hard dependencies rather than extras. _mount_all still guards
+# each import: a broken install should cost you one source, not the server.
+dependencies = [
+    "mcp-core",
+    "fastmcp>=3.4.0",
+    "pydantic>=2.6",
+    "wb-connector",
+    "ozon-connector",
+    "yandex-connector",
+    "detmir-connector",
+    "avito-connector",
+    "taobao-connector",
+    "megamarket-connector",
+    "lamoda-connector",
+    "dns-connector",
+    "citilink-connector",
+    "compare-connector",
+]
+
+[project.scripts]
+marketplace-mcp = "marketplace_connector.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marketplace_connector"]
+
+[tool.uv.sources]
+mcp-core = { workspace = true }
+wb-connector = { workspace = true }
+ozon-connector = { workspace = true }
+yandex-connector = { workspace = true }
+detmir-connector = { workspace = true }
+avito-connector = { workspace = true }
+taobao-connector = { workspace = true }
+megamarket-connector = { workspace = true }
+lamoda-connector = { workspace = true }
+dns-connector = { workspace = true }
+citilink-connector = { workspace = true }
+compare-connector = { workspace = true }

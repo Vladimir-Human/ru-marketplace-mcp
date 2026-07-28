@@ -15,7 +15,11 @@ The three pillars implemented here:
   2. Type coercion         -> coerce_int/coerce_price (type-drift resilience)
   3. Loud output validation-> validate_offer/validate_review_block (drift alarm)
 
-Plus structural drift detection for golden-fixture self-checks: shape_signature().
+Plus structural drift detection for golden-fixture self-checks: shape_signature()
+fingerprints a payload's paths and types with the values dropped, and diff_keys()
+turns two fingerprints into missing/added paths. Connector selfchecks currently
+do a live parse-smoke instead; wiring them onto stored baselines is the next
+step, not something already in place.
 """
 
 from __future__ import annotations
@@ -320,6 +324,64 @@ def widget_prefixes(widget_states: dict) -> set[str]:
     return out
 
 
+def shape_signature(payload: Any, *, max_depth: int = 6) -> list[str]:
+    """Fingerprint a parsed payload's structure, dropping every value.
+
+    Returns a sorted list of ``path:type`` entries — ``items[].price_rub:float``
+    rather than ``items[0].price_rub: 52999.0``. Values change on every request
+    and say nothing about drift; the set of paths and their types is what a
+    parser actually depends on, so comparing two signatures answers the one
+    question a selfcheck cares about: did the shape move, or did the data just
+    change?
+
+    List indices collapse to ``[]`` and element shapes are unioned, so a
+    10-item page and a 2-item page of the same products fingerprint identically
+    while a renamed or retyped field shows up immediately. Feed the result to
+    ``diff_keys`` against a stored baseline to get missing/added paths.
+
+    Depth is bounded because some of these payloads are recursive (WB's
+    category tree), and an unbounded walk on a drifted response is a hang
+    rather than a diagnosis.
+    """
+    acc: set[str] = set()
+    _walk_shape(payload, "", acc, max_depth)
+    return sorted(acc)
+
+
+def _type_tag(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):  # bool before int — bool is an int subclass
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "str"
+    return type(value).__name__
+
+
+def _walk_shape(value: Any, path: str, acc: set[str], depth: int) -> None:
+    if depth <= 0:
+        acc.add(f"{path or '.'}:<truncated>")
+        return
+    if isinstance(value, dict):
+        if not value:
+            acc.add(f"{path or '.'}:empty_object")
+        for key, item in value.items():
+            child = f"{path}.{key}" if path else str(key)
+            _walk_shape(item, child, acc, depth - 1)
+        return
+    if isinstance(value, (list, tuple)):
+        if not value:
+            acc.add(f"{path or '.'}:empty_array")
+        for item in value:
+            _walk_shape(item, f"{path}[]", acc, depth - 1)
+        return
+    acc.add(f"{path or '.'}:{_type_tag(value)}")
+
+
 def diff_keys(expected: Iterable[str], actual: Iterable[str]) -> dict[str, list[str]]:
     """Return {'missing': [...], 'added': [...]} comparing two key collections.
     'missing' (in expected, gone from live) is the dangerous one — a parser
@@ -448,3 +510,69 @@ def selfcheck_result(
     if process_id is not None:
         result["process_id"] = process_id
     return result
+
+
+def flatten_text(value: Any, *keys: str) -> str | None:
+    """Reduce a value upstream ships as EITHER a string OR an object to text.
+
+    Audit 2026-07-28 (CONFIRMED live): Avito's ``js/items`` returns ``location``
+    as a nested object (``{"id": 637640, "name": "Москва", ...}``), while the
+    output model declares ``location: str | None``. Passing the dict through
+    ``first_present`` unchanged made Pydantic raise ``ValidationError`` and took
+    the whole ``avito_search`` call down — a page of perfectly good listings lost
+    to one field that grew a level of nesting.
+
+    The rule this encodes: a display field must degrade to a name or to an honest
+    ``None``, never to ``str(dict)``. ``"{'id': 637640, 'name': 'Москва'}"`` is
+    not a location, and shipping it would put Python repr syntax in front of a
+    user while passing validation — silent-wrong, which is worse than the crash.
+
+    Lists take their first usable element, because upstream sometimes wraps a
+    single value in an array.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, dict):
+        for key in keys or ("name", "title", "text", "value"):
+            got = value.get(key)
+            if isinstance(got, str) and got.strip():
+                return got.strip()
+            if isinstance(got, (int, float)) and not isinstance(got, bool):
+                return str(got)
+        return None
+    if isinstance(value, (list, tuple)):
+        for element in value:
+            text = flatten_text(element, *keys)
+            if text:
+                return text
+        return None
+    return None
+
+
+def price_from_texts(*candidates: Any) -> float | None:
+    """First candidate that parses to a real positive price, else None.
+
+    DOM extractors collect several price-shaped strings per tile (current price,
+    strikethrough price, an instalment line). They must NOT do the arithmetic
+    themselves: ``coerce_price`` already understands non-breaking spaces, a
+    missing currency glyph, comma decimals, and — critically — refuses an
+    ambiguous multi-number blob instead of concatenating it into nonsense.
+
+    Audit 2026-07-28: the CDP extractors were computing ``Math.min`` over every
+    line containing ``руб``/``₽``, which (a) missed Citilink entirely, where the
+    glyph lives in a sibling element of the digits, and (b) returned the monthly
+    instalment on DNS, whose tiles carry "от 5 751 ₽/ мес." next to a 58 999 ₽
+    price. Order the candidates most-specific-first and let this pick.
+    """
+    for candidate in candidates:
+        price = coerce_price(candidate)
+        if price is not None:
+            return price
+    return None
