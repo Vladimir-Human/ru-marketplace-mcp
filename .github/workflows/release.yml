@@ -54,4 +54,17 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          # Взять написанный от руки текст релиза, если он есть в репозитории.
+          # generate_release_notes: true отдаёт список PR'ов от dependabot и
+          # затирает то, что автор написал для читателя: так вышло с v1.1.0 и
+          # так же вышло с v1.2.0.
+          #
+          # body задан намеренно как запасной вариант. Действие сначала пробует
+          # body_path и откатывается на body, если файл прочитать не удалось;
+          # до октября 2025 такой откат отсутствовал и отсутствующий файл ронял
+          # шаг с ENOENT. Пара body_path + body ведёт себя правильно в обоих
+          # случаях, поэтому забытый файл заметок не сорвёт релиз.
+          body_path: RELEASE_NOTES_${{ github.ref_name }}.md
+          body: |
+            Заметки к ${{ github.ref_name }} — см. CHANGELOG.md.
+          generate_release_notes: false

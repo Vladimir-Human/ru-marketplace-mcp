@@ -52,3 +52,6 @@ scratch/
 
 # Operational note for the release run, not part of the project.
 PUBLISH_PROMPT.md
+
+# Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
+*.zip
