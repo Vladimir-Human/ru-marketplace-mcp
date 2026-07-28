@@ -651,7 +651,8 @@ scratch, and part of the sources compared against live pages.
   это придумать имена полей и отдать то, что случайно совпадёт. Инструмент,
   возвращающий правдоподобное название чужого юрлица, хуже отсутствующего:
   проверяют продавца ровно для того, чтобы отличить официальный магазин от
-  похожего перекупщика. Шаблон URL и порядок проверки — в `RELEASE_PROMPT.md`.
+  похожего перекупщика. Шаблон URL и порядок проверки — в
+  `docs/RELEASE_CHECKLIST.md`.
 
 ---
 
@@ -720,7 +721,7 @@ release only adds.
   endpoint is almost certainly live; the field paths are what nobody has seen.
   A seller tool returning a plausible name for the wrong legal entity is worse than
   no tool, since the only reason to look a seller up is telling an official store
-  from a lookalike. Template and verification steps: `RELEASE_PROMPT.md`.
+  from a lookalike. Template and verification steps: `docs/RELEASE_CHECKLIST.md`.
 
 ---
 

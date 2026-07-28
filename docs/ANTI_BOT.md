@@ -513,7 +513,7 @@ a lookalike reseller. Confidence without verification is the failure mode this
 project refuses.
 
 **What exists instead:** the verified URL template and the live-verification steps
-are in `RELEASE_PROMPT.md`, for an operator on a Russian residential IP or with the
+are in `RELEASE_CHECKLIST.md`, for an operator on a Russian residential IP or with the
 CDP tier available. If the payload confirms, the tool is a small addition on top of
 the existing two-tier fetch. Until then there is no `ozon_seller`.
 
