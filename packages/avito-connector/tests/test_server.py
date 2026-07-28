@@ -129,8 +129,15 @@ async def test_search_a_pricelss_listing_is_none_never_zero(monkeypatch):
 
 @pytest.mark.parametrize("bad_loc", ["", "moscow", "63 7640", "637640;rm -rf", "1"])
 async def test_search_rejects_a_malformed_location_id(bad_loc):
-    with pytest.raises(ToolError):
+    """Отказ должен быть по разбору аргумента, а не по неудачному запросу.
+
+    Пустая строка раньше падала на дефолт 637640, уходила в сеть и зеленила
+    тест на транспортной ошибке — то есть проверка проходила, не проверив
+    ничего. Ошибка обязана быть bad_request, и до сети дойти не должно.
+    """
+    with pytest.raises(ToolError) as excinfo:
         await server.avito_search("ноутбук", location_id=bad_loc)
+    assert "bad_request" in str(excinfo.value), f"ожидался отказ по валидации, получено: {excinfo.value}"
 
 
 async def test_search_rejects_a_non_digit_category_id():
