@@ -53,6 +53,15 @@
           "subfolder": "packages/compare-connector",
           "transport": "stdio",
           "toolPrefix": "compare_"
+        },
+        {
+          "id": "mpstats",
+          "script": "mpstats-mcp",
+          "package": "mpstats-connector",
+          "subfolder": "packages/mpstats-connector",
+          "transport": "stdio",
+          "toolPrefix": "mpstats_",
+          "note": "Requires MPSTATS_MP_AUTH env (paid MPStats account JWT cookie). Tools return auth_missing without it."
         }
       ]
     }

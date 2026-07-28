@@ -23,6 +23,7 @@ dependencies = [
     "detmir-connector",
     "yandex-connector",
     "compare-connector",
+    "mpstats-connector",
 ]
 
 [project.urls]
@@ -41,6 +42,7 @@ ozon-connector = { workspace = true }
 detmir-connector = { workspace = true }
 yandex-connector = { workspace = true }
 compare-connector = { workspace = true }
+mpstats-connector = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -95,6 +97,7 @@ testpaths = [
     "packages/detmir-connector/tests",
     "packages/yandex-connector/tests",
     "packages/compare-connector/tests",
+    "packages/mpstats-connector/tests",
 ]
 asyncio_mode = "auto"
 addopts = "--import-mode=importlib"
@@ -117,6 +120,7 @@ source = [
     "packages/detmir-connector/src/detmir_connector",
     "packages/yandex-connector/src/yandex_connector",
     "packages/compare-connector/src/compare_connector",
+    "packages/mpstats-connector/src/mpstats_connector",
 ]
 omit = [
     "*/tests/*",

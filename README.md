@@ -25,8 +25,9 @@
 | **Детский мир** | 4 | анонимный HTTP | Детские товары, наличие в офлайн-магазинах, категории |
 | **Ozon** | 4 | TLS-имперсонация, дальше ваш Chrome | Поиск, карточки, отзывы |
 | **Сравнение** | 2 | опрашивает всё перечисленное | «Где дешевле?» одним вызовом |
+| **MPStats** | 3 | платный аккаунт, cookie `mp_auth` | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO) |
 
-Всего 22 инструмента в 5 stdio-серверах на общем рантайме `mcp-core`.
+Всего 25 инструментов в 6 stdio-серверах на общем рантайме `mcp-core`.
 
 ## Быстрый старт
 
@@ -36,7 +37,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 406 офлайн-тестов, сеть не нужна
+uv run pytest -q            # 436 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -81,10 +82,19 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
     "compare-prices": {
       "command": "uv",
       "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "compare-mcp"]
+    },
+    "mpstats": {
+      "command": "uv",
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "mpstats-mcp"],
+      "env": { "MPSTATS_MP_AUTH": "ваш_токен_mp_auth_из_плагина" }
     }
   }
 }
 ```
+
+`mpstats` опционален — нужен платный аккаунт MPStats. Без `MPSTATS_MP_AUTH`
+сервер запускается, но инструменты возвращают `auth_missing`. Остальные пять
+серверов ключей не требуют.
 
 Путь пишите с прямыми слешами `/` или двойными обратными `\\`.
 </details>
@@ -98,6 +108,8 @@ claude mcp add yandex-market -- uv run --directory /путь/к/ru-marketplace-m
 claude mcp add detsky-mir -- uv run --directory /путь/к/ru-marketplace-mcp detmir-mcp
 claude mcp add ozon -- uv run --directory /путь/к/ru-marketplace-mcp ozon-mcp
 claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-mcp compare-mcp
+# mpstats опционален, нужен платный аккаунт MPStats:
+MPSTATS_MP_AUTH='ваш_токен' claude mcp add mpstats -- uv run --directory /путь/к/ru-marketplace-mcp mpstats-mcp
 ```
 </details>
 
@@ -120,7 +132,7 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 <summary><b>Другой stdio-клиент</b></summary>
 
 Запустите `uv run --directory /путь/к/репозиторию <команда>`, где команда — одна из
-`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`. Серверы говорят по
+`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`, `mpstats-mcp`. Серверы говорят по
 JSON-RPC через stdin и stdout, диагностику пишут в stderr.
 </details>
 
@@ -234,6 +246,26 @@ compare_prices("кроссовки мужские")
 заблокирован, сравнение не рушится: `complete: false` вместе с `source_outcomes`
 покажет, что именно вы видите. Подписочные цены в ранжировании не участвуют.
 
+### MPStats — `mpstats_*`
+
+Аналитика продаж/остатков по SKU Ozon и Wildberries через плагин MPStats.
+В отличие от остальных коннекторов, требует **платный аккаунт MPStats** —
+авторизация одной cookie `mp_auth` (JWT из залогиненной сессии плагина в
+mpstats.io), задаётся переменной `MPSTATS_MP_AUTH`. Без неё инструменты
+возвращают `auth_missing`, сервер при этом запускается чисто.
+
+| Инструмент | Что делает |
+|---|---|
+| `mpstats_item(skus, place, oz_fbs=True)` | Аналитика за 30 дней по до 100 SKU: продажи, цена, остатки, графики по дням, продавец/бренд |
+| `mpstats_warehouses(skus, place)` | Остатки по складам: FBS (склад продавца) и FBO (склад маркетплейса), `last_update` |
+| `mpstats_selfcheck()` | Канарейка: `success` / `drift_detected` / `inconclusive` |
+
+`place` — `ozon` или `wildberries`. Графики длиной 30, от старых к новым: последняя
+ненулевая ячейка — текущая цена/остаток (снятое с продажи SKU даёт `None`, не
+ложный `0`). Ноль в ячейке означает «нет данных за тот день», а не «значение было
+нулевым» — для суммы за окно суммируйте график. Токен — секрет: он идентифицирует
+платный аккаунт с квотой, не логируйте и не коммитьте его.
+
 ## Настройка
 
 Все параметры задаются переменными окружения с префиксом коннектора. Все
@@ -247,6 +279,7 @@ compare_prices("кроссовки мужские")
 | `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
 | `CHROME_` | `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MPSTATS_` | `MP_AUTH` (обязателен для данных), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `MCP_` | `TRANSPORT` (`stdio` по умолчанию, либо `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `*_CACHE_TTL=0` выключает кэш. `*_PROXY` перекрывает стандартные `HTTPS_PROXY` и
@@ -327,8 +360,9 @@ Read-only. No credentials, no API keys, no account required.
 | **Detsky Mir** | 4 | anonymous HTTP | Kids' goods, offline store stock, category listings |
 | **Ozon** | 4 | TLS impersonation, then your Chrome | Search, cards, reviews |
 | **Compare** | 2 | aggregates the above | "Where is this cheapest?" in one call |
+| **MPStats** | 3 | paid account, `mp_auth` cookie | 30-day sales/stock graphs per Ozon/WB SKU, warehouse stock split (FBS/FBO) |
 
-22 tools across 5 stdio MCP servers, sharing one runtime (`mcp-core`). stdio is the
+25 tools across 6 stdio MCP servers, sharing one runtime (`mcp-core`). stdio is the
 default; HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -340,12 +374,12 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q            # 406 offline tests, no network needed
+uv run pytest -q            # 436 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
-script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`) launched
-through `uv run --directory /path/to/repo <script>`.
+script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`,
+`mpstats-mcp`) launched through `uv run --directory /path/to/repo <script>`.
 
 After connecting, ask your agent to run `wb_selfcheck`. It probes every endpoint
 family and reports `success`, `drift_detected`, or `inconclusive`.
@@ -453,6 +487,26 @@ Sources are queried concurrently and each reports its own outcome. One marketpla
 being blocked never sinks the comparison: `complete: false` plus `source_outcomes`
 tells you exactly what you are looking at. Subscription prices never win the ranking.
 
+### MPStats — `mpstats_*`
+
+Sales/stock analytics per Ozon or Wildberries SKU via the MPStats browser plugin.
+Unlike the other connectors, this one needs a **paid MPStats account** — auth is a
+single `mp_auth` cookie (JWT from a logged-in plugin session at mpstats.io), set
+via the `MPSTATS_MP_AUTH` env var. Without it the tools return `auth_missing`; the
+server still boots cleanly.
+
+| Tool | What it does |
+|---|---|
+| `mpstats_item(skus, place, oz_fbs=True)` | 30-day analytics for up to 100 SKUs: sales, price, stock, per-day graphs, seller/brand |
+| `mpstats_warehouses(skus, place)` | Warehouse stock split: FBS (seller) vs FBO (marketplace), plus `last_update` |
+| `mpstats_selfcheck()` | Tri-state canary: `success` / `drift_detected` / `inconclusive` |
+
+`place` is `ozon` or `wildberries`. Graphs are length 30, oldest-first: the last
+non-zero cell is the current price/stock (a delisted SKU yields `None`, not a
+false `0`). A zero cell means "no data for that day", not "the value was zero" —
+sum the graph for a window total. The token is a secret: it identifies a paid,
+quota-billed account. Never log or commit it.
+
 ## Configuration
 
 Every setting is an environment variable with a per-connector prefix. All optional.
@@ -465,6 +519,7 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
 | `CHROME_` | `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MPSTATS_` | `MP_AUTH` (required for data), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `MCP_` | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
@@ -481,7 +536,7 @@ that browser's configuration, not ours.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q                              # 406 offline tests
+uv run pytest -q                              # 436 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .

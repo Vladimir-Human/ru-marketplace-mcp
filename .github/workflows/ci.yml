@@ -145,6 +145,7 @@ jobs:
               "detmir": 4,
               "yandex": 3,
               "compare": 2,
+              "mpstats": 3,
           }
 
           async def main() -> None:
@@ -153,6 +154,7 @@ jobs:
               from wb_connector.server import mcp as wb_mcp
               from compare_connector.server import mcp as compare_mcp
               from yandex_connector.server import mcp as yandex_mcp
+              from mpstats_connector.server import mcp as mpstats_mcp
 
               servers = {
                   "wb": wb_mcp,
@@ -160,6 +162,7 @@ jobs:
                   "detmir": detmir_mcp,
                   "yandex": yandex_mcp,
                   "compare": compare_mcp,
+                  "mpstats": mpstats_mcp,
               }
               failures = []
               for name, server in servers.items():
@@ -181,3 +184,4 @@ jobs:
           uv run which detmir-mcp
           uv run which yandex-mcp
           uv run which compare-mcp
+          uv run which mpstats-mcp
