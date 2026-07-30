@@ -24,6 +24,7 @@ step, not something already in place.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Iterable
 from typing import Any
@@ -93,7 +94,11 @@ def coerce_int(value: Any) -> int | None:
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        return int(value)
+        # NaN and infinity reach here from the wire: json.loads accepts both by
+        # default, and int() raises on either. coerce_price already guards with
+        # isfinite; without the same guard here one poisoned cell aborts the
+        # whole tool instead of degrading to "no data" for that field.
+        return int(value) if math.isfinite(value) else None
     if isinstance(value, str):
         s = value.strip()
         # Reject ambiguous forms instead of fabricating: a sign, a decimal
@@ -129,8 +134,6 @@ def coerce_price(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        import math
-
         v = float(value)
         return v if math.isfinite(v) and v > 0 else None
     if isinstance(value, str):
@@ -152,7 +155,20 @@ def _parse_money_string(s: str) -> float | None:
     # Normalize unicode spaces to plain space, drop currency/letters except sep.
     t = s.replace("\u2009", " ").replace("\u00a0", " ").replace("\u202f", " ")
     # Find number-like tokens: digits with optional grouping and one decimal tail.
-    tokens = re.findall(r"\d[\d \.\,]*\d|\d", t)
+    matches = list(re.finditer(r"\d[\d \.\,]*\d|\d", t))
+    # A leading minus makes this a delta, not a price. Marketplaces render the
+    # discount badge as "-500 ₽" right beside the real price, and the token regex
+    # below sees only digits — so without this the badge parses to 500 and, being
+    # the smaller number, wins any "cheapest" ranking. Same bug class as the
+    # instalment payment that once landed in five connectors' price fields. The
+    # numeric branch above already rejects negatives; this is the string half of
+    # the same promise. Covers ASCII hyphen, U+2212 minus and the dashes that
+    # marketplaces use interchangeably.
+    if matches:
+        before = t[: matches[0].start()].rstrip()
+        if before.endswith(("-", "\u2212", "\u2013", "\u2014")):
+            return None
+    tokens = [m.group(0) for m in matches]
     cleaned: list[str] = []
     for tok in tokens:
         tok = tok.strip()
@@ -395,10 +411,10 @@ def diff_keys(expected: Iterable[str], actual: Iterable[str]) -> dict[str, list[
 
 
 # --------------------------------------------------------------------------
-# Tri-state selfcheck contract (shared by youtube/fourpda/x selfcheck canaries).
+# Tri-state selfcheck contract, shared by the nine connectors that ship a
+# *_selfcheck canary.
 #
-# Design (10-lens gpt-5.5-xhigh consult 2026-06-01, all lenses converged): the
-# wb/ozon 2-state {success|drift_detected} is INSUFFICIENT for connectors whose
+# Two states — {success | drift_detected} — are not enough for a connector whose
 # baseline can rot, whose session can expire, or whose transport can be blocked.
 # Collapsing not_authenticated / transport_down / baseline_gone into "drift"
 # trains the operator to ignore real drift alarms (false positives); collapsing

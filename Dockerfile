@@ -54,6 +54,7 @@ COPY packages/megamarket-connector/pyproject.toml packages/megamarket-connector/
 COPY packages/lamoda-connector/pyproject.toml packages/lamoda-connector/pyproject.toml
 COPY packages/dns-connector/pyproject.toml packages/dns-connector/pyproject.toml
 COPY packages/citilink-connector/pyproject.toml packages/citilink-connector/pyproject.toml
+COPY packages/mpstats-connector/pyproject.toml packages/mpstats-connector/pyproject.toml
 COPY packages/marketplace-connector/pyproject.toml packages/marketplace-connector/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --all-packages --frozen --no-dev --no-install-project
@@ -82,7 +83,7 @@ COPY --from=builder --chown=app:app /app/packages /app/packages
 # The skills travel with the servers. Each connector has one, and it is how an
 # agent learns the tool exists, when to reach for it, and which of its answers
 # need a second look. A container with the servers but not the skills runs
-# twelve MCP endpoints nothing knows how to use.
+# thirteen MCP endpoints nothing knows how to use.
 COPY --chown=app:app skills/ /app/skills/
 
 # Put the venv on PATH so the console scripts (wb-mcp, ozon-mcp, ...) resolve
@@ -119,7 +120,8 @@ EXPOSE 8000
 
 # Default to the Wildberries server; override the command to run any of the
 # other twelve entry points — ozon-mcp, yandex-mcp, detmir-mcp, compare-mcp,
-# avito-mcp, taobao-mcp, megamarket-mcp, lamoda-mcp, dns-mcp, citilink-mcp, or
-# the unified marketplace-mcp (all sources in one server). docker-compose.yml
-# shows running several at once, each on its own published port.
+# avito-mcp, taobao-mcp, megamarket-mcp, lamoda-mcp, dns-mcp, citilink-mcp,
+# mpstats-mcp, or the unified marketplace-mcp (all sources in one server).
+# docker-compose.yml shows running several at once, each on its own published
+# port.
 CMD ["wb-mcp"]

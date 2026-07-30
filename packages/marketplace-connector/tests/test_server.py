@@ -48,23 +48,24 @@ def test_tool_names_keep_their_source_prefixes():
 def test_the_mounted_count_matches_the_imported_sources():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
-    # 9 + 4 + 3 + 4 + 4 + 3 + 3 + 3 + 3 + 3 + 2 = 41 tools across 11 servers,
+    # 9 + 4 + 3 + 4 + 4 + 3 + 3 + 3 + 3 + 3 + 2 + 3 = 44 tools across 12 servers,
     # plus marketplace_sources, which this server owns rather than mounts.
     own = {"marketplace_sources"}
     assert own <= names
-    assert len(tools) == 42, f"expected 41 mounted tools + 1 own, got {len(tools)}"
-    assert len(names - own) == 41
+    assert len(tools) == 45, f"expected 44 mounted tools + 1 own, got {len(tools)}"
+    assert len(names - own) == 44
 
 
 def test_marketplace_sources_reports_what_mounted():
     """A skipped source must be visible to the client, not just to stderr."""
     result = asyncio.run(server.marketplace_sources())
 
-    assert result.mounted_count == 11
+    assert result.mounted_count == 12
     assert result.skipped_count == 0
     assert result.skipped == {}
     assert "wildberries" in result.mounted
     assert "citilink" in result.mounted
+    assert "mpstats" in result.mounted
     assert result.server_version == server.SERVER_VERSION
 
 

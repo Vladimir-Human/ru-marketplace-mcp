@@ -7,12 +7,167 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.3.0] — 2026-07-30
+
+Новый коннектор MPStats, первый платный источник в проекте. До этого все серверы
+читали анонимные scrape-эндпоинты без ключей, а MPStats устроен качественно
+иначе: это аналитический слой поверх Ozon и Wildberries, с квотой и аккаунтом. Он
+опционален: без `MPSTATS_MP_AUTH` сервер запускается, инструменты отвечают
+`auth_missing`, а остальные двенадцать серверов работают как прежде.
+
+### Добавлено
+
+**Новый сервер `mpstats-mcp` (3 инструмента)**
+- `mpstats_item(skus, place, oz_fbs=True)` — аналитика продаж/цены/остатков за 30
+  дней по до 100 SKU Ozon или Wildberries: 4 графика по дням (заказы, цены,
+  остатки, рубрики), текущая цена и остаток (последняя ненулевая ячейка графика),
+  продавец/бренд, агрегаты `totals` (orders/sum/sum_prev), скользящий
+  `orders_per_day`.
+- `mpstats_warehouses(skus, place)` — остатки по складам: FBS (склад продавца) и
+  FBO (склад маркетплейса), плюс `last_update` апстрима.
+- `mpstats_selfcheck()` — канарейка в трёх состояниях: `success` /
+  `drift_detected` / `inconclusive`. Отсутствие токена и транспортные сбои
+  попадают в `inconclusive`, а не в `drift`, чтобы не гнать мейнтейнера искать
+  дрейф схемы, которого не было.
+
+**Авторизация.** Эндпоинт `POST plugin.mpstats.io/pluginapi` работает в стиле
+RPC: метод лежит в поле `Request`, параметры называются `Sku`, `Place`, `ozFBS`.
+Авторизует одна cookie `mp_auth`, то есть JWT из залогиненной сессии плагина на
+mpstats.io, и задаётся она через `MPSTATS_MP_AUTH`. По данным автора холодный
+replay с одним только `mp_auth` отвечает 200 с данными, а без него приходит тело
+`{"code":403,"message":"Unauthorized"}` под HTTP 200. Этот внутренний код мапится
+в `auth_missing`, чтобы отказ авторизации не читался как «нет данных». Токен
+остаётся секретом платного аккаунта с квотой: он не логируется и не коммитится.
+
+**Транспорт.** Первый ярус на httpx, но только POST, а `get_text_budgeted` из
+`mcp-core` умеет исключительно GET. Поэтому в коннекторе живёт локальный помощник
+`_post_json_budgeted` с теми же инвариантами: байтовый кап, бюджет по времени,
+классифицированные ошибки, ретраи только транспортных сбоев, вежливый гейт между
+попытками. POST-путь в общий рантайм не добавлен намеренно. Он нужен одному
+коннектору, а перенос в ядро расширил бы тестовую поверхность для всех
+тринадцати.
+
+**Парсеры.** Графики длиной `days` (по умолчанию 30), от старых к новым: последняя
+ненулевая ячейка — текущая цена/остаток, снятое с продажи SKU даёт `None`, не
+ложный `0`, который выиграл бы сравнение «где дешевле». Остаток при сплошь
+нулевом графике ведёт себя наоборот и становится `0`, потому что «нет на складе»
+это показание, а не отсутствие данных. Пустой график даёт `None` в обоих случаях.
+Ноль в отдельной ячейке значит «нет данных за тот день», а не «значение было
+нулевым». `coerce_int` и `coerce_price` отказываются угадывать неоднозначные
+формы, будь то знак или диапазон цен: лучше `None`, чем правдоподобное и неверное
+число. 52 офлайн-теста
+покрывают парсеры, контракт ошибок, auth-гейт, три-стейт selfcheck и транспорт
+`_post_json_budgeted` (байтовый кап, wall-clock бюджет, ретраи только транспортных
+сбоев, классификация ошибок).
+
+**Прочее.** `mpstats-mcp` смонтирован в объединённый `marketplace-mcp` (стало 45
+инструментов: 44 смонтированных плюс `marketplace_sources`), добавлен в `doctor`,
+registry-запись в `server.json`, навык `skills/mpstats-connector`, README (RU+EN),
+CI-счётчик инструментов.
+
 ## [1.2.1] — 2026-07-28
 
 Патч по итогам стороннего ревью. Поведение инструментов не менялось; правки
 касаются документации и одного пути к модулю в тестовом харнессе.
 
 ### Исправлено
+
+- **Скидочный бейдж мог стать ценой.** `coerce_price` обещает в докстринге
+  «NEVER a negative», но выполнял это только для чисел: строка `-500 ₽`
+  разбиралась в 500, потому что токенайзер смотрел на цифры и не смотрел на
+  знак перед ними. Маркетплейсы печатают такой бейдж рядом с настоящей ценой, а
+  меньшее число выигрывает сравнение «где дешевле» — тот же класс, что рассрочка
+  в поле цены. Теперь ведущий минус (в четырёх начертаниях) отбрасывает
+  кандидата.
+- **`NaN` и бесконечность роняли инструмент целиком.** `json.loads` принимает
+  оба по умолчанию, а `int()` на них падает; у `coerce_price` проверка на
+  конечность была, у `coerce_int` — нет. Одна испорченная ячейка обрывала весь
+  вызов вместо того, чтобы обнулить одно поле.
+- **Токен MPStats попадал в текст `ToolError`.** В лог ошибка писалась
+  вычищенной, а в ответ инструмента — сырой; достаточно перевода строки в конце
+  скопированного токена, чтобы httpx положил весь заголовок `Cookie` в текст
+  исключения, а тот уходит модели и в транскрипт клиента. Остальные коннекторы
+  вычищают это место; MPStats был единственным с секретом и единственным без
+  вычистки. Заодно `mp_auth` стал `SecretStr`, так что `repr` и `model_dump`
+  настроек больше не печатают его.
+- **Отказ авторизации кешировался.** Запись в кеш шла по HTTP 200 до разбора
+  внутреннего `code`, а MPStats отдаёт и `403`, и свои `5xx` под двухсотым
+  статусом. Пользователь вставлял свежую cookie и продолжал получать
+  `auth_missing`, пока не истечёт TTL. Кеш переехал за вердикт.
+- **`uv run pre-commit install` из `CONTRIBUTING.md` не работал.** Хуки
+  документированы как запускаемые через `uv run`, но самого `pre-commit` в
+  dev-зависимостях не было: команда падала на чистом клоне и проходила только у
+  того, у кого он стоял глобально. Добавлен в группу `dev`.
+- **Комментарий в `resilience.py` ссылался на три коннектора, которых в проекте
+  нет** (`youtube`, `fourpda`, `x`), и обосновывал устройство трёхсостоянийного
+  selfcheck ссылкой на консультацию с языковой моделью. Первое — след чужого
+  проекта, второе ничего не сообщает читателю. Обоснование там и без этого
+  самодостаточное, ссылки убраны, названы девять коннекторов, которые контракт
+  реально используют.
+- **MPStats не замедлялся после отказа.** Восемь коннекторов ходят через общий
+  `mcp_core.pacing.Pacer`, который после `429` или блокировки удлиняет паузу;
+  MPStats был единственным со своим трёхстрочным гейтом и после отказа шёл в ту
+  же стену с той же скоростью. Для источника, чья оферта делает превышение темпа
+  основанием для блокировки аккаунта без возврата денег, это била по пользователю.
+  Переведён на общий `Pacer`, отказы и успехи записываются.
+- **Одна ошибка у Lamoda уходила невычищенной.** `TransportDownError` с текстом
+  исключения без `_redact` — единственное такое место в проекте после правок
+  MPStats.
+- **Число офлайн-тестов в документации снова разошлось** — и дважды подряд по
+  вине самого аудита, который его же и правил, потому что добавлял тесты. Цифра
+  стоит в семи местах и правится руками, то есть портится по расписанию. Теперь
+  её сверяет `scripts/check_test_count.py` (в гейте, в CI и в pre-commit),
+  сравнивая с тем, что реально отбирает коллекция. Заодно выяснилось, что число
+  было неоднозначным: тестов существует 946, а без необязательного jsdom
+  проходит 937 и девять честно скипаются.
+- **Пин `mcp-core` мог разойтись с версией и остаться незамеченным.** Внутри
+  workspace `uv.sources` перекрывает ограничение, поэтому устаревший пин проходит
+  и `uv lock`, и `uv sync`, и весь набор тестов — ударяет он только по тому, кто
+  ставит колесо со страницы релиза. `check_versions.py` теперь сверяет и пин:
+  мест стало 72 вместо 59.
+- **Зависимость `mcp-core` не была запинена, а имя занято на PyPI** посторонним
+  пакетом. Колесо, скачанное со страницы релиза и поставленное `pip`, тихо
+  подтягивало чужой код, после чего сервер падал на импорте. Во всех тринадцати
+  коннекторах стоит `mcp-core==1.2.1`: теперь это громкий отказ разрешения
+  зависимостей вместо тихой подмены.
+- **`classify_http_error` падал при любом вызове** — импортировал `mcp_common`,
+  пакета с таким именем в проекте нет. Функция экспортирована из `mcp_core`, но
+  ни разу не вызывалась, поэтому никто не замечал. Импорт исправлен на
+  `mcp_core.errors`.
+- **CI-шаг «Every server imports and registers its tools» проверял 11 серверов
+  из 12.** `mpstats` был в списке ожиданий, но не в проверяемом словаре, и цикл
+  его пропускал, печатая «all servers registered their expected tools». Теперь
+  расхождение ключей — первая же ошибка шага.
+- `check_versions.py` не замечал исчезнувшего объявления версии: удаление строки
+  `__version__` просто уменьшало число в сводке. Теперь это провал.
+- `pre-commit` был красным на чистом дереве: девяти файлам не хватало
+  завершающего перевода строки. Двум исходникам он дописан, а снятые с сайтов
+  фикстуры исключены из хука — это разметка-улика, править её нельзя.
+- `scripts/start_chrome_cdp.sh` был закоммичен без бита исполнения, хотя
+  документация просит запускать его напрямую.
+- Заголовок `start_chrome_cdp.ps1` описывал несуществующий коннектор и советовал
+  логиниться в x.com, а выделенный профиль называл «для параноиков» — при том
+  что он и есть поведение по умолчанию.
+
+### Исправлено в документации
+
+- Число офлайн-тестов, счёт артефактов релиза (28, не 26), число тестов MPStats
+  и замер покрытия приведены к измеренному.
+- Проза про `*_PROXY` называла среди семи коннекторов Taobao, у которого этой
+  настройки нет намеренно, и не называла MPStats, у которого она есть.
+- `CONTRIBUTING.md` и `docs/ADDING_A_SOURCE.md` советовали голый
+  `uv run pytest -q`, который собирает живые тесты; в шаблоне PR остался глоб
+  `packages/*/src`, не работающий в PowerShell.
+- «CI прогоняет линтер, типы и все тесты на трёх ОС» — на трёх ОС идут только
+  тесты, остальное один раз на Ubuntu.
+- Навык Мегамаркета обещал данные пройденному челленджу; на деле нужен вход в
+  аккаунт. Навык Ozon показывал `ozon_search(query)` и «top 20 results» вместо
+  настоящей сигнатуры с `page`.
+- Разное поведение цены и остатка при сплошь нулевом графике описано прямо, а не
+  одним обещанием `None` на оба поля.
+- `SECURITY.md` в русской секции утверждал, что учётных данных нет вообще,
+  включая «ни требования заводить `.env`»; английское зеркало уже было
+  поправлено, русское — нет.
 
 - **`npm install jsdom` не работал так, как написано в README.** Проба искала
   модуль из корня репозитория и находила его, а раннер запускался из временного
@@ -358,6 +513,60 @@
 - `ANTI_BOT.md` больше не пишет «DNS went healthy». Записана честная
   последовательность: правка регулярки id позеленила `selfcheck`, а данные
   остались пустыми.
+
+## [1.3.0] — 2026-07-30 (English)
+
+New MPStats connector — the first paid source in the project. Until now every
+server worked over anonymous scrape endpoints with no keys; MPStats is a
+different kind: an analytics layer over Ozon/Wildberries with a quota and an
+account. It is optional: without `MPSTATS_MP_AUTH` the server boots, the tools
+answer `auth_missing`, and the other twelve servers behave exactly as before.
+
+### Added
+
+**New `mpstats-mcp` server (3 tools)**
+- `mpstats_item(skus, place, oz_fbs=True)` — 30-day sales/price/stock analytics
+  for up to 100 Ozon or Wildberries SKUs: 4 per-day graphs (orders, prices,
+  stock, categories), current price/stock (last non-zero graph cell),
+  seller/brand, `totals` aggregates (orders/sum/sum_prev), rolling
+  `orders_per_day`.
+- `mpstats_warehouses(skus, place)` — warehouse stock split: FBS (seller's
+  warehouse) and FBO (marketplace warehouse), plus upstream `last_update`.
+- `mpstats_selfcheck()` — tri-state canary: `success` / `drift_detected` /
+  `inconclusive`. A missing token and transport failures report `inconclusive`,
+  not `drift`, so the maintainer is not sent hunting a schema drift that never
+  happened.
+
+**Auth.** Endpoint `POST plugin.mpstats.io/pluginapi` (RPC style: method in the
+`Request` field, parameters as `Sku`/`Place`/`ozFBS`). Auth is a single
+`mp_auth` cookie (JWT from a logged-in plugin session at mpstats.io), set via
+`MPSTATS_MP_AUTH`. Per the author's report: a cold replay with only `mp_auth`
+answers 200 with data; without it the body is
+`{"code":403,"message":"Unauthorized"}` behind HTTP 200 — that inner code maps
+to `auth_missing` so an auth failure does not read as "no data". The token is a
+secret on a paid, quota-billed account; it is never logged or committed.
+
+**Transport.** Tier 1 (httpx) but POST-only, so instead of the GET-only
+`get_text_budgeted` from `mcp-core` the connector carries a local
+`_post_json_budgeted` helper with the same invariants: byte cap, wall-clock
+budget, classified errors, retries of transport failures only, a polite gate
+between attempts. No POST path was added to `mcp-core` on purpose: POST is
+needed by one connector, and promoting it to the shared runtime would grow the
+test surface for everyone.
+
+**Parsers.** Graphs are `days` long (30 by default), oldest first: the last
+non-zero cell is the current price/stock, a delisted SKU yields `None`, not a
+false `0`. A zero cell means "no data for that day", not "the value was zero".
+`coerce_int`/`coerce_price` refuse to guess ambiguous shapes (signs, price
+ranges) — `None` instead of a plausibly-wrong number. 52 offline tests cover
+the parsers, the error contract, the auth gate, the tri-state selfcheck and the
+`_post_json_budgeted` transport (byte cap, wall-clock budget, retries of
+transport faults only, classified errors).
+
+**Also.** `mpstats-mcp` is mounted into the unified `marketplace-mcp` (now 45
+tools: 44 mounted plus `marketplace_sources`), added to `doctor`, the registry
+entry in `server.json`, the `skills/mpstats-connector` skill, README (RU+EN),
+and the CI tool-count.
 
 ## [1.2.1] — 2026-07-28 (English)
 

@@ -49,7 +49,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.2.1"
+SERVER_VERSION = "1.3.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so

@@ -11,7 +11,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q
+uv run pytest -q -m "not live and not cdp"
 ```
 
 Можно поставить хуки, чтобы коммит падал сразу, а не в CI:
@@ -26,7 +26,7 @@ uv run pre-commit install
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 uv run mypy --platform win32
-uv run pytest -q
+uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
 ```
 
@@ -120,7 +120,7 @@ that.
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q
+uv run pytest -q -m "not live and not cdp"
 ```
 
 Optionally install the hooks so a commit fails fast rather than in CI:
@@ -135,11 +135,13 @@ uv run pre-commit install
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 uv run mypy --platform win32
-uv run pytest -q
+uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
 ```
 
-CI runs the same checks on Ubuntu, Windows and macOS against Python 3.12 and 3.13.
+CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,
+types and the no-print and version checks run once, on Ubuntu — mypy covers the other
+platforms through `--platform`, not by running there.
 
 **Run the cross-platform mypy pass if you touch anything platform-specific.** On
 Linux, mypy resolves `os.killpg`, `os.getpgid` and `signal.SIGKILL` as present, so a

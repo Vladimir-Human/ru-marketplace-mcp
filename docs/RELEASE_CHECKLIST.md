@@ -16,7 +16,7 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 70;
-- `e2e_stdio_check.py` даёт 12/12, у всех серверов версия релиза;
+- `e2e_stdio_check.py` даёт 13/13, у всех серверов версия релиза;
 - `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
   непроверенному источнику;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
@@ -54,6 +54,7 @@ uv run mypy --platform win32
 uv run mypy --platform darwin
 uv run python scripts/check_no_print.py
 uv run python scripts/check_versions.py
+uv run python scripts/check_test_count.py
 uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=70
 uv run python scripts/e2e_stdio_check.py
 ```
@@ -70,8 +71,8 @@ npm install jsdom
 
 ## 2. Консистентность версий
 
-Одна версия живёт в пятидесяти пяти местах: четырнадцать `pyproject.toml`,
-тринадцать `__version__`, двенадцать `SERVER_VERSION`, `server.json` и теги
+Одна версия живёт в пятидесяти девяти местах: пятнадцать `pyproject.toml`,
+четырнадцать `__version__`, тринадцать `SERVER_VERSION`, `server.json` и теги
 образа в `docker-compose.yml` и `docs/DEPLOYMENT.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
@@ -185,7 +186,7 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-Пуш тега запускает release workflow: он собирает 26 артефактов (13 wheel и 13
+Пуш тега запускает release workflow: он собирает 28 артефактов (14 wheel и 14
 sdist) и прикладывает их к релизу.
 
 ## 8. Проверка после публикации
@@ -200,7 +201,7 @@ uv run python scripts/e2e_stdio_check.py
 ```
 
 Проверить страницу релиза глазами: текст на месте, таблица проверенных
-источников отрисовалась, приложено 26 файлов.
+источников отрисовалась, приложено 28 файлов.
 
 ---
 
@@ -214,7 +215,7 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 70% coverage
-floor; `e2e_stdio_check.py` reports 12/12 at the release version; `doctor`
+floor; `e2e_stdio_check.py` reports 13/13 at the release version; `doctor`
 returns `0`, or `2` with a clear account of every unverified source; every
 source that answered was compared by eye on price and availability; Taobao's
 yuan did not win a rouble ranking; CI is green.
@@ -233,12 +234,12 @@ install, image build or CI is red.
 
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
    plus win32 and darwin, the no-print and version-consistency checks, the
-   coverage floor, and a real stdio MCP session for all twelve servers. Seconds, not minutes; a slow run means a test is sleeping
+   coverage floor, and a real stdio MCP session for all thirteen servers. Seconds, not minutes; a slow run means a test is sleeping
    on the live pacer or reaching for Chrome. `npm install jsdom` to also run the
    extractor checks against captured markup.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   fifty-five declarations (fourteen `pyproject.toml`, thirteen `__version__`,
-   twelve `SERVER_VERSION`, `server.json`, image tags) against the root
+   fifty-nine declarations (fifteen `pyproject.toml`, fourteen `__version__`,
+   thirteen `SERVER_VERSION`, `server.json`, image tags) against the root
    `pyproject.toml`; `e2e_stdio_check.py` then reports what the running servers
    actually say.
 3. **Live checks from the operator's machine** — seven sources refuse datacenter
@@ -258,6 +259,6 @@ install, image build or CI is red.
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
 7. **Branch, PR, green CI, squash merge, tag.** The tag push builds and attaches
-   26 artifacts.
+   28 artifacts.
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page.

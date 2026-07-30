@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail if the version number disagrees with itself across the repository.
 
-One release carries one version, but it is written down in forty-odd places:
+One release carries one version, but it is written down in fifty-odd places:
 every package's ``pyproject.toml`` and ``__init__.py``, every server's
 ``SERVER_VERSION``, the MCP registry manifest, the compose file and the
 deployment guide. Bumping a release by hand means editing all of them, and the
@@ -37,6 +37,12 @@ PYPROJECT_VERSION = re.compile(r'^version\s*=\s*"([^"]+)"')
 DUNDER_VERSION = re.compile(r'^__version__\s*=\s*"([^"]+)"')
 SERVER_VERSION = re.compile(r'^SERVER_VERSION\s*=\s*"([^"]+)"')
 IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)")
+# The `mcp-core==X.Y.Z` pin each connector carries. Inside the workspace it is
+# invisible — `uv.sources = { workspace = true }` overrides the constraint, so a
+# stale pin passes `uv lock`, `uv sync` and the whole suite. It only bites the
+# person installing a wheel from a Release, which is exactly the reader this pin
+# exists to protect, so nothing but this check will ever notice it drifting.
+CORE_PIN = re.compile(r'^\s*"mcp-core==([^"]+)",')
 
 
 class Mismatch(tuple[str, int, str, str]):
@@ -87,12 +93,23 @@ def main(argv: list[str]) -> int:
     mismatches: list[Mismatch] = []
     counts: dict[str, int] = {}
 
-    def sweep(label: str, paths: list[Path], pattern: re.Pattern[str]) -> None:
+    silent: list[str] = []
+
+    def sweep(label: str, paths: list[Path], pattern: re.Pattern[str], *, required: bool = True) -> None:
+        """Sweep one family of files.
+
+        ``required`` means every file in the family must declare a version. A
+        file that declares none is the failure this catches: deleting the
+        ``__version__`` line used to just shrink the count in a summary nobody
+        reads, and the package would ship without one.
+        """
         total = 0
         for path in paths:
             found, seen = _scan(path, pattern, expected)
             mismatches.extend(found)
             total += seen
+            if required and seen == 0:
+                silent.append(str(path.relative_to(REPO_ROOT)))
         counts[label] = total
 
     sweep(
@@ -106,6 +123,13 @@ def main(argv: list[str]) -> int:
         "image tag",
         [p for p in (REPO_ROOT / "docker-compose.yml", REPO_ROOT / "docs" / "DEPLOYMENT.md") if p.exists()],
         IMAGE_TAG,
+        required=False,
+    )
+
+    sweep(
+        "mcp-core pin",
+        sorted(p for p in REPO_ROOT.glob("packages/*/pyproject.toml") if p.parent.name != "mcp-core"),
+        CORE_PIN,
     )
 
     # server.json is JSON, not line-oriented text: read the field directly.
@@ -115,6 +139,13 @@ def main(argv: list[str]) -> int:
         counts["server.json"] = 1 if declared is not None else 0
         if declared != expected:
             mismatches.append(Mismatch(("server.json", 0, str(declared), expected)))
+
+    if silent:
+        sys.stderr.write("files that declare no version at all:\n")
+        for path in sorted(silent):
+            sys.stderr.write(f"  {path}\n")
+        sys.stderr.write("\nA missing declaration ships the previous release's number. Add one and re-run.\n")
+        return 1
 
     if mismatches:
         sys.stderr.write(f"version disagreements (root pyproject.toml says {expected}):\n")

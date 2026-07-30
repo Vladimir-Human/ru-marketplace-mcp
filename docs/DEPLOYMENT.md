@@ -16,7 +16,7 @@ anything.
 ## Transport selection
 
 Selection is environment-driven and lives in `mcp_core.runtime`, shared by all
-twelve entry points (eleven source servers plus the unified `marketplace-mcp`)
+thirteen entry points (twelve source servers plus the unified `marketplace-mcp`)
 so they behave identically.
 
 | Variable | Default | Purpose |
@@ -96,7 +96,7 @@ Image tags are pinned: the builder is `ghcr.io/astral-sh/uv:0.11.32-python3.12-t
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:1.2.1 .
+docker build -t ru-marketplace-mcp:1.3.0 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -117,14 +117,14 @@ host, so the container binds to all of its *own* interfaces and the perimeter
 moves to the **published port**. Publish it to the host's loopback:
 
 ```bash
-docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.2.1
+docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.3.0
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
 Run a different marketplace by overriding the command:
 
 ```bash
-docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.2.1 yandex-mcp
+docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.3.0 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` is the security boundary. `-p 8000:8000` would publish
@@ -137,10 +137,18 @@ different command each, each on its own host port, every port published to
 `127.0.0.1` only:
 
 ```bash
-docker compose up -d          # wb:8000 yandex:8001 detmir:8002 ozon:8003 compare:8004
+docker compose up -d          # wb:8000 yandex:8001 detmir:8002 ozon:8003 compare:8004 … mpstats:8012
 docker compose logs -f wb
 docker compose down
 ```
+
+The `mpstats` service is the optional paid source: it starts without
+`MPSTATS_MP_AUTH`, but its tools answer `auth_missing` until you set the token
+in its `environment:` block. Note the same extends to `marketplace-mcp doctor`:
+without the token the mpstats selfcheck reports `inconclusive`, so doctor exits
+`2` even when everything else is healthy — the same semantics the CDP sources
+have without a Chrome. Run `marketplace-mcp doctor wb ozon ...` (named sources)
+to skip it, exactly as you would skip a CDP source you do not use.
 
 ## Honest limitations
 

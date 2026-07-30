@@ -15,6 +15,17 @@ _AKIA_RE = re.compile(r"(AKIA)[0-9A-Z]{16}")
 # userinfo, keep the scheme and host so the error still says what was
 # unreachable.
 _URL_USERINFO_RE = re.compile(r"(?<=://)[^/\s@]+@")
+# A whole Cookie header, and any cookie whose name ends in auth/token/session.
+# The MPStats connector sends `mp_auth=<JWT>`: a live paid session, the only
+# secret this project ever handles. httpx keeps headers out of exception text,
+# so nothing is known to leak today — but a docstring promised this scrubbing
+# existed before it did, and a secret that valuable deserves the belt as well
+# as the braces.
+_COOKIE_HEADER_RE = re.compile(r"(Cookie:\s*)[^\r\n]+", re.IGNORECASE)
+_COOKIE_PAIR_RE = re.compile(r"\b([A-Za-z0-9_-]*(?:auth|token|session)=)[^;,\s\"']+", re.IGNORECASE)
+# A bare JWT, in case one reaches an error string outside a cookie: three
+# base64url segments, the first always starting `eyJ` ({" encoded).
+_JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 
 
 def redact_error_text(text: str, max_len: int = 500) -> str:
@@ -28,6 +39,9 @@ def redact_error_text(text: str, max_len: int = 500) -> str:
     redacted = _GHP_RE.sub(r"\1<redacted>", redacted)
     redacted = _AKIA_RE.sub(r"\1<redacted>", redacted)
     redacted = _URL_USERINFO_RE.sub("<redacted>@", redacted)
+    redacted = _COOKIE_HEADER_RE.sub(r"\1<redacted>", redacted)
+    redacted = _COOKIE_PAIR_RE.sub(r"\1<redacted>", redacted)
+    redacted = _JWT_RE.sub("<redacted>", redacted)
     return redacted[:max_len]
 
 

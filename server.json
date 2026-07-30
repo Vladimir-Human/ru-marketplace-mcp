@@ -3,7 +3,7 @@
   "name": "io.github.Vladimir-Human/ru-marketplace-mcp",
   "description": "Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews, seller identity",
   "title": "ru-marketplace-mcp",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "websiteUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
   "repository": {
     "url": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
@@ -11,7 +11,7 @@
   },
   "_meta": {
     "io.modelcontextprotocol.registry/publisher-provided": {
-      "note": "One repository shipping eleven stdio MCP servers as console scripts on a shared mcp-core runtime, plus a unified marketplace-mcp that mounts them all. Not published to a package registry; install from source with uv and launch a script per server. See README for client configuration.",
+      "note": "One repository shipping twelve stdio MCP servers as console scripts on a shared mcp-core runtime, plus a unified marketplace-mcp that mounts them all. Not published to a package registry; install from source with uv and launch a script per server. See README for client configuration.",
       "install": "uv run --directory /path/to/ru-marketplace-mcp <script>",
       "servers": [
         {
@@ -101,6 +101,15 @@
           "subfolder": "packages/citilink-connector",
           "transport": "stdio",
           "toolPrefix": "citilink_"
+        },
+        {
+          "id": "mpstats",
+          "script": "mpstats-mcp",
+          "package": "mpstats-connector",
+          "subfolder": "packages/mpstats-connector",
+          "transport": "stdio",
+          "toolPrefix": "mpstats_",
+          "note": "Requires MPSTATS_MP_AUTH env (paid MPStats account JWT cookie). Tools return auth_missing without it. Optional: every other server runs without it."
         },
         {
           "id": "marketplace",

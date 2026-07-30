@@ -1,6 +1,6 @@
 [project]
 name = "marketplace-connector"
-version = "1.2.1"
+version = "1.3.0"
 description = "Unified marketplace MCP server — mounts every installed connector as one namespaced toolset"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -9,7 +9,11 @@ authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.nor
 # connectors are hard dependencies rather than extras. _mount_all still guards
 # each import: a broken install should cost you one source, not the server.
 dependencies = [
-    "mcp-core",
+    # Pinned, not floating: the name `mcp-core` on PyPI belongs to an
+    # unrelated project. Unpinned, a wheel installed straight from a GitHub
+    # Release resolves to that stranger's package and the server dies on
+    # import. A pin turns a silent wrong install into a loud resolve failure.
+    "mcp-core==1.3.0",
     "fastmcp>=3.4.0",
     "pydantic>=2.6",
     "wb-connector",
@@ -23,6 +27,7 @@ dependencies = [
     "dns-connector",
     "citilink-connector",
     "compare-connector",
+    "mpstats-connector",
 ]
 
 [project.scripts]
@@ -48,3 +53,4 @@ lamoda-connector = { workspace = true }
 dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
 compare-connector = { workspace = true }
+mpstats-connector = { workspace = true }

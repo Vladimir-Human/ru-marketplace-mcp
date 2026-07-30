@@ -54,6 +54,7 @@ _SELFCHECKS: list[tuple[str, str, str]] = [
     ("lamoda", "lamoda_connector.server", "lamoda_selfcheck"),
     ("dns", "dns_connector.server", "dns_selfcheck"),
     ("citilink", "citilink_connector.server", "citilink_selfcheck"),
+    ("mpstats", "mpstats_connector.server", "mpstats_selfcheck"),
 ]
 
 
@@ -119,7 +120,7 @@ def cmd_install(argv: list[str]) -> int:
     print("\n# Notes:")
     for _, _, note_line in SERVERS:
         print(f"#   - {note_line}")
-    print("\n# Or wire one entry instead of ten: the unified 'marketplace-mcp' server mounts every source.")
+    print("\n# Or wire one entry instead of twelve: the unified 'marketplace-mcp' server mounts every source.")
     return 0
 
 

@@ -31,7 +31,9 @@ is the entire mitigation. The other three layers:
 | Per-connector host allowlists | A crafted SKU becoming a request for `/api/personal/orders` |
 
 **No credentials are ever stored, read or transmitted by this project.** You log in
-by hand, in a browser you control. There is no credential store to leak.
+by hand, in a browser you control. There is no credential store to leak. (The
+optional MPStats connector is the one exception — you supply `MPSTATS_MP_AUTH`
+yourself via env; it is never stored by the project either.)
 
 ## Setup
 

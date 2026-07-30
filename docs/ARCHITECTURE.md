@@ -1,6 +1,7 @@
 # Architecture
 
-Eleven source servers (ten marketplaces plus price comparison) plus a unified `marketplace-mcp`, all over one shared
+Twelve source servers (ten marketplaces, price comparison, and the optional
+MPStats analytics connector) plus a unified `marketplace-mcp`, all over one shared
 runtime. This document covers how they fit together and why the structure is what it
 is.
 
@@ -21,6 +22,7 @@ ru-marketplace-mcp/
 │   ├── dns-connector/          DNS-Shop             → dns-mcp
 │   ├── citilink-connector/     Citilink             → citilink-mcp
 │   ├── compare-connector/      cross-marketplace    → compare-mcp
+│   ├── mpstats-connector/      MPStats analytics (paid, optional) → mpstats-mcp
 │   └── marketplace-connector/  unified mount + CLI  → marketplace-mcp
 ├── skills/                  agent-facing usage docs, one per connector
 ├── scripts/                 CDP launchers, stdout guard
@@ -74,7 +76,9 @@ budget instead of surfacing the block.
 
 **Tier 2, `chrome_cdp`:** the fetch runs inside a Chrome the operator started and
 logged into. This is the answer for sources that reject datacenter fingerprints
-outright, and it is why the project needs no stored credentials. Threat model and
+outright, and it is why those sources need no stored credentials. (The optional
+MPStats connector is the one exception: it takes a paid account token via
+`MPSTATS_MP_AUTH`.) Threat model and
 setup: [CDP_SETUP.md](CDP_SETUP.md).
 
 The CDP dial target is configurable: `CHROME_CDP_HOST` (default `127.0.0.1`) and
@@ -192,7 +196,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-822 offline tests, no network required. Three flavours:
+948 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.
