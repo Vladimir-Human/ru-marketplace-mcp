@@ -13,12 +13,21 @@
 
 ## Чего проект касается, а чего нет
 
-**Учётных данных в проекте нет вообще.** Ни ключей API, ни токенов, ни паролей, ни
-хранилища секретов, ни требования заводить `.env`. Все настройки — эксплуатационные:
-таймауты, задержки, регион, прокси. Утекать нечему.
+**Секрет в проекте один, и тот необязательный.** Одиннадцать источников из
+двенадцати не требуют ни ключей API, ни токенов, ни паролей: все настройки у них
+эксплуатационные, то есть таймауты, задержки, регион и прокси. Исключение одно —
+коннектор MPStats. Ему нужен `MPSTATS_MP_AUTH`, JWT вашей платной сессии. Вы
+передаёте его через переменную окружения или `.env`; проект нигде его не хранит,
+не пишет в логи и вырезает из текста ошибок вместе с прочими секретами. Без этой
+переменной сервер MPStats поднимается и честно отвечает `auth_missing`, а
+остальные одиннадцать работают как работали.
 
-Весь доступ только на чтение, к публичным эндпоинтам каталога, которые использует
-официальный веб-клиент. В приватные и административные разделы запросов нет.
+Весь доступ только на чтение. Одиннадцать источников читают публичные эндпоинты
+каталога, которые дёргает официальный веб-клиент: ни в приватные, ни в
+административные разделы запросов нет. MPStats устроен иначе. Это приватный API
+браузерного плагина, доступный по вашей сессии, и потому единственное место, где
+проект обращается в аккаунтную зону. Что это означает для вашего аккаунта,
+описано в README.
 
 ## Единственная часть с реальным риском: уровень CDP
 
@@ -89,10 +98,21 @@ Wildberries, Яндекс Маркет и Детский мир к CDP не об
 
 ## Юридическая заметка
 
-Условия маркетплейсов, как правило, запрещают неофициальный парсинг. Проект
-обращается только к публичным эндпоинтам каталога, в намеренно вежливом темпе, для
-личных исследований. За своё использование, включая соблюдение местного
-законодательства и условий сервисов, отвечаете вы.
+Условия маркетплейсов, как правило, запрещают неофициальный парсинг. К
+одиннадцати источникам проект обращается только по публичным эндпоинтам каталога,
+в намеренно вежливом темпе, для личных исследований.
+
+MPStats требует отдельной оговорки: там вы рискуете оплаченным аккаунтом, а не
+только доступом. Его оферта называет основанием для блокировки работу одного
+аккаунта с двух и более IP-адресов или браузеров одновременно (п. 5.1.3–5.1.4), а
+плагин в вашем браузере вместе с запущенным сервером это ровно оно. Вторым
+основанием идёт темп чаще одного запроса в пять секунд (п. 5.1.1), поэтому
+`MPSTATS_MIN_GAP` по умолчанию равен пяти секундам. Уменьшать его значит
+приближать блокировку, при которой оплата не возвращается (п. 5.2). У сервиса
+есть и официальный API: если аналитика нужна постоянно, он безопаснее.
+
+За своё использование, включая соблюдение местного законодательства и условий
+сервисов, отвечаете вы.
 
 ## Поддерживаемые версии
 
@@ -113,12 +133,18 @@ transport tier is involved.
 
 ## What this project does and does not touch
 
-**There are no credentials anywhere in this project.** No API keys, no tokens, no
-passwords, no credential store, no `.env` requirement. Every setting is an operational
-knob (timeouts, rate gaps, region, proxy). Nothing to leak.
+**There are no credentials anywhere in this project, with one optional exception.**
+No API keys, no tokens, no passwords, no credential store, no `.env` requirement.
+Every setting is an operational knob (timeouts, rate gaps, region, proxy). The one
+exception is the optional MPStats connector's `MPSTATS_MP_AUTH`: a paid account JWT
+you supply yourself via env. It is never written into code or stored by the project
+— there is still nothing to leak.
 
-All access is read-only, against the public catalog endpoints the official web clients
-use. No authenticated or administrative areas are touched.
+All access is read-only. Eleven sources read the public catalog endpoints the official
+web clients use, touching no authenticated or administrative area. MPStats is the
+exception: a private browser-plugin API reached with your own session, and so the one
+place this project enters an account-gated zone. The README explains what that means
+for your account.
 
 ## The one part that carries real risk: the CDP tier
 
@@ -190,9 +216,19 @@ by anyone.
 ## Legal note
 
 Marketplace terms of service generally disallow unofficial parsing. This project
-queries only public catalog endpoints, at a deliberately polite rate, for personal
-research. You are responsible for your own use, including compliance with local law
-and the relevant terms.
+queries only public catalog endpoints for eleven of its sources, at a deliberately
+polite rate, for personal research.
+
+MPStats needs its own warning, because there you risk a paid account rather than just
+access. Its offer makes grounds for blocking out of running one account from two or
+more IPs or browsers at once (clauses 5.1.3–5.1.4 — the plugin in your browser plus a
+running server is exactly that) and of a rate above one request per five seconds
+(clause 5.1.1). `MPSTATS_MIN_GAP` therefore defaults to five seconds; lowering it
+moves you toward a block, and a blocked account is not refunded (clause 5.2). The
+service also has an official API, which is the safer route for sustained use.
+
+You are responsible for your own use, including compliance with local law and the
+relevant terms.
 
 ## Supported versions
 

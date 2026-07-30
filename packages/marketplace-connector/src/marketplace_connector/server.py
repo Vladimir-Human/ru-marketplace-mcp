@@ -1,6 +1,6 @@
 """Unified marketplace MCP server.
 
-One config entry instead of ten. This server mounts every installed
+One config entry instead of twelve. This server mounts every installed
 marketplace connector as a namespaced toolset — ``wb_search``, ``ozon_card``,
 ``avito_seller`` and the rest keep their names, so client configs and agent
 habits carry over untouched, but the operator wires a single ``marketplace``
@@ -35,14 +35,14 @@ class MarketplaceSourcesResponse(BaseModel):
     server_version: str = Field(default="", description="Unified server version.")
 
 
-SERVER_VERSION = "1.2.1"
+SERVER_VERSION = "1.3.0"
 
 mcp = FastMCP(
     "marketplace",
     instructions=(
         "All marketplace connectors in one server. Tools keep their per-source "
         "names: wb_*, ozon_*, yandex_*, detmir_*, avito_*, taobao_*, "
-        "megamarket_*, lamoda_*, dns_*, citilink_* plus compare_prices and "
+        "megamarket_*, lamoda_*, dns_*, citilink_*, mpstats_* plus compare_prices and "
         "compare_sources. Sources whose optional dependencies are missing are "
         "simply absent from the set."
     ),
@@ -78,6 +78,7 @@ def _mount_all() -> None:
         ("dns", "dns_connector.server"),
         ("citilink", "citilink_connector.server"),
         ("compare", "compare_connector.server"),
+        ("mpstats", "mpstats_connector.server"),
     )
     for name, module_path in mounts:
         try:

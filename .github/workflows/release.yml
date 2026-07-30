@@ -32,9 +32,9 @@ jobs:
         run: uv python install 3.12
 
       - name: Build wheels and sdists for all workspace packages
-        # --all-packages builds each of the 13 members (mcp-core plus the 12
+        # --all-packages builds each of the 14 members (mcp-core plus the 13
         # connectors, including the unified marketplace-connector) into a wheel
-        # and an sdist under dist/ — 26 files in all. Verified against the pinned
+        # and an sdist under dist/ — 28 files in all. Verified against the pinned
         # uv version.
         run: uv build --all-packages --out-dir dist
 
@@ -48,7 +48,7 @@ jobs:
           # into its output directory, and a bare wildcard uploads it as a
           # release asset called "default.gitignore" (v1.1.0 shipped with one).
           # Matching only the distribution extensions keeps the asset list to
-          # the 26 files a user would actually download — the 13 wheels and 13
+          # the 28 files a user would actually download — the 14 wheels and 14
           # sdists (.whl + .tar.gz) that `uv build --all-packages` produces.
           files: |
             dist/*.whl

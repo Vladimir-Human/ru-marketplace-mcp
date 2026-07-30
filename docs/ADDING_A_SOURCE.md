@@ -218,7 +218,7 @@ browser `@pytest.mark.cdp`; CI excludes both.
 uv sync --all-packages
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
-uv run pytest -q
+uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
 ```
 

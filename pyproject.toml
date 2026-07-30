@@ -1,6 +1,6 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.2.1"
+version = "1.3.0"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -29,6 +29,7 @@ dependencies = [
     "lamoda-connector",
     "dns-connector",
     "citilink-connector",
+    "mpstats-connector",
     "marketplace-connector",
 ]
 
@@ -54,6 +55,7 @@ megamarket-connector = { workspace = true }
 lamoda-connector = { workspace = true }
 dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
+mpstats-connector = { workspace = true }
 marketplace-connector = { workspace = true }
 
 [dependency-groups]
@@ -64,6 +66,11 @@ dev = [
     "mypy>=1.13",
     "truststore>=0.10.4",
     "pytest-cov>=7.1.0",
+    # The hooks are documented as `uv run pre-commit run --all-files`, and that
+    # command only works if pre-commit is in the environment the docs tell people
+    # to create. Leaving it out made the documented command fail on a clean
+    # checkout while passing for whoever happened to have it installed globally.
+    "pre-commit>=4.0",
 ]
 
 [tool.ruff]
@@ -120,6 +127,7 @@ testpaths = [
     "packages/lamoda-connector/tests",
     "packages/dns-connector/tests",
     "packages/citilink-connector/tests",
+    "packages/mpstats-connector/tests",
     "packages/marketplace-connector/tests",
 ]
 asyncio_mode = "auto"
@@ -131,7 +139,7 @@ markers = [
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
-# Measure the thirteen workspace packages' source, not their tests. This is what the
+# Measure the fourteen workspace packages' source, not their tests. This is what the
 # `--cov` invocation in the CI coverage job reports against; the enforcing
 # --cov-fail-under floor is passed on that job's command line, not baked in here,
 # so the rest of the test matrix runs exactly as before.
@@ -149,6 +157,7 @@ source = [
     "packages/lamoda-connector/src/lamoda_connector",
     "packages/dns-connector/src/dns_connector",
     "packages/citilink-connector/src/citilink_connector",
+    "packages/mpstats-connector/src/mpstats_connector",
     "packages/marketplace-connector/src/marketplace_connector",
 ]
 omit = [
@@ -159,7 +168,7 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 # Measured branch-coverage total on the offline suite (-m "not live and not
-# cdp") was 77.35%. The CI floor (--cov-fail-under=70) sits a couple of points
+# cdp") was 77.74%. The CI floor (--cov-fail-under=70) sits a couple of points
 # below so unrelated churn does not break the build; it ratchets up as coverage
 # improves. The threshold is passed on the CI command line rather than fixed
 # here, keeping the number visible in the workflow.

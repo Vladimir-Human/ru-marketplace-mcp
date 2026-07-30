@@ -44,7 +44,12 @@ def parse_retry_after(value: str | None) -> float | None:
 
 
 def classify_http_error(status_code: int, provider: str | None = None, body: str = "") -> Exception:
-    from mcp_common.errors import (
+    """Map an HTTP status onto the shared error vocabulary.
+
+    Imported inside the function because ``errors`` imports nothing from here and
+    a module-level import would close the cycle the other way round.
+    """
+    from mcp_core.errors import (
         AuthMissingError,
         BadRequestError,
         RateLimitedError,
@@ -56,7 +61,7 @@ def classify_http_error(status_code: int, provider: str | None = None, body: str
     if status_code == 429:
         return RateLimitedError(provider or "upstream")
     if status_code == 404:
-        from mcp_common.errors import ConnectorError, ErrorCode
+        from mcp_core.errors import ConnectorError, ErrorCode
 
         return ConnectorError(
             ErrorCode.NOT_FOUND, f"not found ({status_code})", provider=provider, status_code=status_code

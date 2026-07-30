@@ -78,8 +78,14 @@ jobs:
         # skipped the hook still gets caught. No args = scan every packages/*/src.
         run: uv run python scripts/check_no_print.py
 
+      - name: Documented test count is current
+        # The figure appears in seven places and is edited by hand, so it rots on
+        # a schedule — it has already been wrong three times, twice while the
+        # audit that fixed it was adding tests of its own.
+        run: uv run python scripts/check_test_count.py
+
       - name: One version, everywhere
-        # A release version is written down in fifty-five places. Preparing
+        # A release version is written down in fifty-nine places. Preparing
         # 1.2.1 moved fourteen pyproject.toml files and left thirteen
         # __version__ strings behind — installed packages would have reported
         # the previous release. Nothing was comparing them; now something is.
@@ -142,7 +148,7 @@ jobs:
         # suite without coverage. Deselects live/cdp so the measured percentage
         # matches the offline suite the floor was derived from.
         #
-        # Measured branch-coverage total on the offline suite was 77.35%; the
+        # Measured branch-coverage total on the offline suite was 77.74%; the
         # 70% floor sits a couple of points below so unrelated churn does not
         # break the build while the number still ratchets up. --cov reads its
         # source/omit (and branch=true) from [tool.coverage.run] in pyproject.toml.
@@ -185,6 +191,7 @@ jobs:
               "lamoda": 3,
               "dns": 3,
               "citilink": 3,
+              "mpstats": 3,
           }
 
           async def main() -> None:
@@ -199,6 +206,7 @@ jobs:
               from lamoda_connector.server import mcp as lamoda_mcp
               from dns_connector.server import mcp as dns_mcp
               from citilink_connector.server import mcp as citilink_mcp
+              from mpstats_connector.server import mcp as mpstats_mcp
 
               servers = {
                   "wb": wb_mcp,
@@ -212,7 +220,18 @@ jobs:
                   "lamoda": lamoda_mcp,
                   "dns": dns_mcp,
                   "citilink": citilink_mcp,
+                  "mpstats": mpstats_mcp,
               }
+              # Guard the guard: mpstats was listed in EXPECTED but never added to
+              # `servers`, so the loop skipped it and the step still printed "all
+              # servers registered their expected tools" while checking 11 of 12.
+              # A key mismatch is now the first failure, not a silent omission.
+              if set(servers) != set(EXPECTED):
+                  raise SystemExit(
+                      f"servers/EXPECTED disagree: only in servers {sorted(set(servers) - set(EXPECTED))}, "
+                      f"only in EXPECTED {sorted(set(EXPECTED) - set(servers))}"
+                  )
+
               failures = []
               for name, server in servers.items():
                   tools = sorted(t.name for t in await server.list_tools())
@@ -239,6 +258,7 @@ jobs:
           uv run which lamoda-mcp
           uv run which dns-mcp
           uv run which citilink-mcp
+          uv run which mpstats-mcp
           uv run which marketplace-mcp
 
       - name: Real MCP session over stdio

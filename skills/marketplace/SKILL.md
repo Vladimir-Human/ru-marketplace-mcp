@@ -1,20 +1,23 @@
 ---
 name: marketplace
-description: Use this skill when the operator wants every marketplace at once — compare prices across sources, or wire one MCP entry instead of ten. Trigger on "сравни цены", "где дешевле", "все маркетплейсы", "compare prices", or when setting up the client config. Skip for single-source tasks (use that source's skill).
+description: Use this skill when the operator wants every marketplace at once — compare prices across sources, or wire one MCP entry instead of twelve. Trigger on "сравни цены", "где дешевле", "все маркетплейсы", "compare prices", or when setting up the client config. Skip for single-source tasks (use that source's skill).
 ---
 
 # Unified Marketplace Server
 
 One server mounting every installed connector as a namespaced toolset:
 `wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`,
-`lamoda_*`, `dns_*`, `citilink_*` plus `compare_prices` / `compare_sources` and its
-own `marketplace_sources`. Tool names keep their prefixes, so habits and configs
-carry over — but the operator wires a single `marketplace` entry instead of ten. The
-server exposes 42 tools: 41 mounted plus `marketplace_sources`.
+`lamoda_*`, `dns_*`, `citilink_*`, `mpstats_*` plus `compare_prices` /
+`compare_sources` and its own `marketplace_sources`. Tool names keep their
+prefixes, so habits and configs carry over — but the operator wires a single
+`marketplace` entry instead of twelve. The server exposes 45 tools: 44 mounted
+plus `marketplace_sources`. `mpstats_*` is the optional paid source: without
+`MPSTATS_MP_AUTH` its tools answer `auth_missing` while everything else is
+unaffected.
 
 ## When to use
 - "Where is X cheapest" — compare_prices fans out across all searchable sources
-- Client setup: one config entry, not ten
+- Client setup: one config entry, not twelve
 - Health overview: the CLI's `doctor` runs every selfcheck at once
 - A source came back empty and you can't tell installed-but-quiet from never-loaded
   → `marketplace_sources`

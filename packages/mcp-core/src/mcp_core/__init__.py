@@ -9,7 +9,6 @@ parse logic and nothing else:
 - ``logging``     — stderr JSON logger (stdout is reserved for JSON-RPC).
 - ``redact``      — strips PII/session material out of error text.
 - ``resilience``  — tolerant-reader parsing plus structural drift detection.
-- ``selfcheck``   — tri-state drift-canary contract shared by all connectors.
 - ``cache``       — in-process TTL cache for idempotent upstream reads.
 - ``transport``   — anonymous HTTP tier and authenticated Chrome-CDP tier.
 
@@ -55,4 +54,4 @@ __all__ = [
     "redact_error_text",
 ]
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"

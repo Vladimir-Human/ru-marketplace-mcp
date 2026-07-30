@@ -11,7 +11,9 @@
 сравнение цен по всем источникам одним вызовом.
 
 Только чтение. Ключи API, токены и регистрация не нужны — площадки с жёстким
-анти-ботом читаются через ваш собственный Chrome.
+анти-ботом читаются через ваш собственный Chrome. Одно исключение по желанию:
+опциональный MPStats берёт платный токен (`MPSTATS_MP_AUTH`) — без него всё
+остальное работает как прежде.
 
 [English version below](#english-version) · [Архитектура](docs/ARCHITECTURE.md) ·
 [Как добавить источник](docs/ADDING_A_SOURCE.md) · [Про анти-бот](docs/ANTI_BOT.md)
@@ -33,6 +35,7 @@
 | **DNS** | 3 | ваш Chrome (Qrator) | Поиск и карточки электроники |
 | **Ситилинк** | 3 | ваш Chrome (Qrator) | Поиск и карточки электроники |
 | **Сравнение** | 2 | опрашивает всё перечисленное | «Где дешевле?» одним вызовом |
+| **MPStats** | 3 | платный аккаунт MPStats, cookie `mp_auth` (опционально) | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO) |
 
 Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
 карточки Lamoda. Остальным нужен ваш залогиненный Chrome (CDP). Taobao и
@@ -44,11 +47,16 @@
 коннекторы держат паузу между вызовами сами. Точное состояние из вашей сессии
 покажет `*_selfcheck`.
 
-Всего 41 инструмент в 11 серверах на общем рантайме `mcp-core`. Плюс объединённый
+MPStats стоит особняком: это единственный **платный** источник. Без
+`MPSTATS_MP_AUTH` сервер запускается, но инструменты отвечают `auth_missing` —
+поэтому он опционален и подключается по желанию, на остальные двенадцать
+серверов он не влияет никак.
+
+Всего 44 инструмента в 12 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
-вместо одиннадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что в нём 42 инструмента: 41
-смонтированный плюс этот.
+вместо двенадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
+поднялись, а какие отвалились и почему), так что в нём 45 инструментов: 44
+смонтированных плюс этот.
 
 ## Быстрый старт
 
@@ -58,7 +66,7 @@
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 822 офлайн-теста, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 948 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -161,7 +169,8 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 
 Запустите `uv run --directory /путь/к/репозиторию <команда>`, где команда — одна из
 `wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`. Серверы говорят по
-JSON-RPC через stdin и stdout, диагностику пишут в stderr.
+JSON-RPC через stdin и stdout, диагностику пишут в stderr. Опциональный
+`mpstats-mcp` запускается так же, с `MPSTATS_MP_AUTH` в окружении.
 </details>
 
 После подключения перезапустите клиент и попросите агента вызвать `wb_selfcheck`. Он
@@ -330,9 +339,35 @@ compare_prices("кроссовки мужские")
 причиной. Конвертировать здесь значило бы зашить курс, который молча устареет, —
 пересчёт за вами.
 
+### MPStats — `mpstats_*`
+
+Аналитика продаж и остатков по SKU Ozon и Wildberries через плагин MPStats.
+В отличие от всех остальных коннекторов, этот **опционален и требует платный
+аккаунт MPStats**: авторизация — одна cookie `mp_auth` (JWT из залогиненной
+сессии плагина на mpstats.io), задаётся переменной `MPSTATS_MP_AUTH`. Без неё
+инструменты возвращают `auth_missing`, а сервер запускается как обычно — ни на
+что другое это не влияет.
+
+| Инструмент | Что делает |
+|---|---|
+| `mpstats_item(skus, place, oz_fbs=True)` | Аналитика за 30 дней по до 100 SKU: заказы, цена, остатки, графики по дням, продавец/бренд |
+| `mpstats_warehouses(skus, place)` | Остатки по складам: FBS (склад продавца) и FBO (склад маркетплейса), `last_update` |
+| `mpstats_selfcheck()` | Канарейка: `success` / `drift_detected` / `inconclusive` |
+
+`place` — `ozon` или `wildberries`. Графики длиной 30, от старых к новым:
+последняя ненулевая ячейка — текущая цена или остаток. Цена и остаток при
+сплошь нулевом графике ведут себя намеренно по-разному: цена становится `None`
+(ложный `0` выиграл бы любое сравнение «где дешевле»), а остаток — `0`, потому
+что «нулевой остаток» это осмысленное показание, а не отсутствие данных. Пустой
+график даёт `None` в обоих случаях. Ноль в отдельной ячейке — «нет данных за тот
+день», а не «значение было нулевым», поэтому сумму за окно считайте по графику. Отсутствие
+токена и транспортные сбои selfcheck отчитывает как `inconclusive`, не `drift`:
+гоняться за дрейфом схемы, которого не было, не нужно. Токен — секрет платного
+аккаунта с квотой: не логируйте и не коммитьте его.
+
 ## Навыки для агента
 
-У каждого коннектора — свой навык в `skills/`, двенадцать штук на двенадцать
+У каждого коннектора — свой навык в `skills/`, тринадцать штук на тринадцать
 серверов. Навык это не пересказ README: он объясняет агенту, когда за этот
 источник вообще браться, чего у источника нет, и каким его ответам нельзя верить
 без второго взгляда.
@@ -350,6 +385,7 @@ compare_prices("кроссовки мужские")
 | `skills/dns-connector` | `dns-mcp` |
 | `skills/citilink-connector` | `citilink-mcp` |
 | `skills/compare-prices` | `compare-mcp` |
+| `skills/mpstats-connector` | `mpstats-mcp` |
 | `skills/marketplace` | `marketplace-mcp` |
 
 `mcp-core` — общий рантайм под остальными серверами. Своего навыка у него нет.
@@ -382,6 +418,7 @@ compare_prices("кроссовки мужские")
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
 | `CHROME_` | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MPSTATS_` | `MP_AUTH` (единственный обязательный — без него инструменты отвечают `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `MCP_` | `TRANSPORT` (`stdio` по умолчанию, либо `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `CHROME_CDP_HOST` указывает, куда дозвониться CDP-клиенту (по умолчанию
@@ -392,7 +429,8 @@ DNS, Ситилинк) в Docker без host networking. Подробности 
 
 `*_CACHE_TTL=0` выключает кэш. `*_PROXY` перекрывает стандартные `HTTPS_PROXY` и
 `ALL_PROXY` — свой префикс есть у семи коннекторов: `WB_`, `YANDEX_`, `DETMIR_`,
-`OZON_`, `AVITO_`, `TAOBAO_` и `LAMODA_`. У Мегамаркета, DNS и Ситилинка своего нет:
+`OZON_`, `AVITO_`, `LAMODA_` и `MPSTATS_`. У Taobao своего нет намеренно: поиск там
+подписан и ходит через собственный клиент. У Мегамаркета, DNS и Ситилинка тоже нет:
 их трафик идёт через ваш Chrome, а его egress — дело настроек браузера. Кэшируются
 только удачные ответы: запомнить сбой значило бы растянуть секундную помеху на весь
 TTL.
@@ -400,20 +438,23 @@ TTL.
 У Ozon прокси применяется к первому уровню. Второй идёт через ваш собственный Chrome,
 и его трафик — дело настроек этого браузера.
 
-**Секретов в проекте нет вообще.** Нечего настраивать, нечему утечь.
+**Секрет один, и тот опциональный.** Всем серверам, кроме MPStats, ничего не нужно:
+нечего настраивать, нечему утечь. У MPStats есть `MPSTATS_MP_AUTH` — JWT платного
+аккаунта, и потому его место только в env клиентской записи: в коде и коммитах его
+нет и быть не должно.
 
 ## Разработка
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 822 офлайн-теста
+uv run pytest -q -m "not live and not cdp"    # 948 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # что проверять — в [tool.mypy] files
 uv run mypy --platform win32                  # ловит ошибки, видимые только на Windows
 uv run python scripts/check_no_print.py       # запись в stdout ломает JSON-RPC
-uv run python scripts/check_versions.py       # одна версия во всех 55 местах
+uv run python scripts/check_versions.py       # одна версия во всех 59 местах
 ```
 
 Часть тестов прогоняет **настоящий JS-экстрактор коннектора** по снятой разметке
@@ -430,7 +471,7 @@ uv run pytest -q packages/dns-connector/tests/test_search_extractor_dom.py \
 кандидатов — идёт всегда. jsdom нужен только разработчику: в зависимости
 коннекторов он не входит.
 
-CI прогоняет линтер, типы и все тесты на Ubuntu, Windows и macOS против Python 3.12
+CI прогоняет тесты на Ubuntu, Windows и macOS против Python 3.12
 и 3.13. Windows-специфичное управление процессами проверяется юнит-тестами на любой
 ОС через подмену платформы, так что эти ветки покрыты даже на Linux.
 
@@ -466,7 +507,7 @@ CI прогоняет линтер, типы и все тесты на Ubuntu, W
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 822 офлайн-теста,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 948 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -488,7 +529,9 @@ Taobao, Megamarket, Lamoda, DNS and Citilink, then compare prices across all of 
 in one call. Taobao is the Chinese one; the other nine are Russian.
 
 Read-only. No credentials, no API keys, no account required — the marketplaces with
-hard anti-bot are read through your own Chrome.
+hard anti-bot are read through your own Chrome. One optional exception: MPStats
+takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
+it every other server is unaffected.
 
 ## What you get
 
@@ -505,6 +548,7 @@ hard anti-bot are read through your own Chrome.
 | **DNS** | 3 | your Chrome (Qrator) | Electronics search and cards |
 | **Citilink** | 3 | your Chrome (Qrator) | Electronics search and cards |
 | **Compare** | 2 | aggregates the above | "Where is this cheapest?" in one call |
+| **MPStats** | 3 | paid MPStats account, `mp_auth` cookie (optional) | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO) |
 
 Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
 The rest need your logged-in Chrome (CDP). Taobao and Megamarket additionally need
@@ -516,10 +560,14 @@ back-to-back calls degrades them (DNS and Taobao both dropped that way in testin
 so the connectors hold a gap between calls themselves. Run `*_selfcheck` from your
 own session for the current state.
 
-41 tools across 11 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
+server boots but its tools answer `auth_missing`. It is therefore optional —
+plug it in if you have an account; the other twelve servers never notice.
+
+44 tools across 12 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds its
 own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 42 tools: the 41 mounted plus that one. stdio is the default;
+why — so it exposes 45 tools: the 44 mounted plus that one. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -531,12 +579,14 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 822 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 948 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
 script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`) launched
-through `uv run --directory /path/to/repo <script>`. `marketplace-mcp install
+through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
+runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
+account; without it the tools return `auth_missing`). `marketplace-mcp install
 [claude|claude-code|cursor]` prints the block with your checkout's real path filled
 in — no placeholder to hand-edit — or the console-script paths on PATH when installed
 as a wheel; an unknown client name is rejected.
@@ -658,9 +708,33 @@ still never ranked against roubles: a `foreign_currency: …` warning lists how 
 offers were excluded and why. Converting here would bake in an exchange rate that goes
 stale silently, so the caller converts if they want to.
 
+### MPStats — `mpstats_*`
+
+Sales and stock analytics per Ozon or Wildberries SKU via the MPStats browser
+plugin. Unlike every other connector, this one is **optional and needs a paid
+MPStats account**: auth is a single `mp_auth` cookie (JWT from a logged-in plugin
+session at mpstats.io), set via the `MPSTATS_MP_AUTH` env var. Without it the tools
+return `auth_missing` while the server boots normally — nothing else is affected.
+
+| Tool | What it does |
+|---|---|
+| `mpstats_item(skus, place, oz_fbs=True)` | 30-day analytics for up to 100 SKUs: orders, price, stock, per-day graphs, seller/brand |
+| `mpstats_warehouses(skus, place)` | Warehouse split: FBS (seller's warehouse) vs FBO (marketplace warehouse), `last_update` |
+| `mpstats_selfcheck()` | Tri-state canary: `success` / `drift_detected` / `inconclusive` |
+
+`place` is `ozon` or `wildberries`. Graphs are length 30, oldest first: the last
+non-zero cell is the current price or stock. The two differ on purpose when the
+whole graph is zero: price becomes `None` (a false `0` would win any "cheapest"
+comparison), while stock becomes `0`, because "none in stock" is a real reading
+rather than an absence of data. An empty graph yields `None` for both. A zero
+cell means "no data for that day", not "the value was zero", so sum the graph for
+a window total. A missing token or a transport failure reports
+as `inconclusive`, not `drift` — no chasing a schema drift that never happened.
+The token is a secret on a paid, quota-billed account: never log or commit it.
+
 ## Agent skills
 
-Every connector ships its own skill under `skills/` — twelve of them for twelve
+Every connector ships its own skill under `skills/` — thirteen of them for thirteen
 servers. A skill is not a restatement of this README: it tells the agent when to
 reach for that source at all, what the source does not have, and which of its
 answers should not be trusted without a second look.
@@ -678,6 +752,7 @@ answers should not be trusted without a second look.
 | `skills/dns-connector` | `dns-mcp` |
 | `skills/citilink-connector` | `citilink-mcp` |
 | `skills/compare-prices` | `compare-mcp` |
+| `skills/mpstats-connector` | `mpstats-mcp` |
 | `skills/marketplace` | `marketplace-mcp` |
 
 `mcp-core` is the shared runtime rather than a server, so it has no skill.
@@ -710,6 +785,7 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
 | `CHROME_` | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
 | `COMPARE_` | `SOURCE_TIMEOUT` |
+| `MPSTATS_` | `MP_AUTH` (the only required one — without it the tools return `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `MCP_` | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT` |
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
@@ -722,20 +798,23 @@ a one-second blip across the whole TTL window.
 Ozon's proxy applies to tier 1. Tier 2 runs inside your own Chrome, whose egress is
 that browser's configuration, not ours.
 
-**No secrets exist anywhere in this project.** Nothing to configure, nothing to leak.
+**One secret, and it is optional.** Every server except MPStats needs nothing:
+nothing to configure, nothing to leak. MPStats alone has `MPSTATS_MP_AUTH`, the JWT
+of a paid account — it belongs only in the client entry's env, never in code or
+commits.
 
 ## Development
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 822 offline tests
+uv run pytest -q -m "not live and not cdp"    # 948 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
-uv run python scripts/check_versions.py       # one version across all 55 places
+uv run python scripts/check_versions.py       # one version across all 59 places
 ```
 
 Some tests execute a connector's **real extractor JavaScript** against captured
@@ -786,7 +865,7 @@ request rate.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 822 offline
+are confidently wrong, so the project is arranged around verification: 948 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

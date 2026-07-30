@@ -35,7 +35,8 @@ EXPECTED_TOOLS = {
     "lamoda-mcp": 3,
     "dns-mcp": 3,
     "citilink-mcp": 3,
-    "marketplace-mcp": 42,  # 41 mounted + marketplace_sources
+    "mpstats-mcp": 3,
+    "marketplace-mcp": 45,  # 44 mounted + marketplace_sources
 }
 
 TIMEOUT_S = 60.0

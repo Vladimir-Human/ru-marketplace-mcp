@@ -11,6 +11,10 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        # Captured markup is evidence: the DOM tests run the real extractor
+        # against bytes taken off the live site, so a hook that appends a
+        # newline is quietly editing the thing under test.
+        exclude: ^packages/.*/tests/fixtures/
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
@@ -43,8 +47,16 @@ repos:
         files: ^packages/.*/src/.*\.py$
         pass_filenames: true
 
+      - id: check-test-count
+        # Adding a test silently invalidates the number the README advertises.
+        name: documented test count is current
+        entry: python scripts/check_test_count.py
+        language: system
+        files: (^packages/.*/tests/.*\.py|README\.md|docs/ARCHITECTURE\.md)$
+        pass_filenames: false
+
       - id: check-versions
-        # Version strings live in fifty-five places and are edited by hand at
+        # Version strings live in fifty-nine places and are edited by hand at
         # release time; the one that gets missed is silent.
         name: one version, everywhere
         entry: python scripts/check_versions.py

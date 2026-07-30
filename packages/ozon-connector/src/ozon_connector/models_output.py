@@ -1,7 +1,7 @@
 """Pydantic output models for the Ozon MCP connector (Stage 2).
 
 Every tool returns a typed Pydantic model instead of a raw dict. Validation
-and transport failures raise ``ToolError`` via ``mcp_common.errors``; these
+and transport failures raise ``ToolError`` via ``mcp_core.errors``; these
 models describe only the success (and partial-success) shapes.
 
 The ``meta`` field is populated from the ``_meta`` key that

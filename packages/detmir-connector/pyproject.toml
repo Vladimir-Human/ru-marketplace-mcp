@@ -1,12 +1,16 @@
 [project]
 name = "detmir-connector"
-version = "1.2.1"
+version = "1.3.0"
 description = "Detsky Mir MCP connector — anonymous public JSON API (cards, category listings, search)"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
 dependencies = [
-    "mcp-core",
+    # Pinned, not floating: the name `mcp-core` on PyPI belongs to an
+    # unrelated project. Unpinned, a wheel installed straight from a GitHub
+    # Release resolves to that stranger's package and the server dies on
+    # import. A pin turns a silent wrong install into a loud resolve failure.
+    "mcp-core==1.3.0",
     "fastmcp>=3.4.0",
     "httpx>=0.27",
     "pydantic>=2.6",

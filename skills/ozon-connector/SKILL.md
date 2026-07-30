@@ -24,7 +24,7 @@ tier 1 usually answers and Chrome is never touched.
 
 ## Tools available
 - `ozon_card(sku_or_path)` — fetch full product card via composer-api.bx
-- `ozon_search(query)` — search Ozon catalog (top 20 results)
+- `ozon_search(query, page)` — search Ozon catalog; `page` is 1..10, one page per call
 - `ozon_reviews(sku_or_path, limit, sort)` — product reviews
 - `ozon_selfcheck()` — drift canary; `success` means both tiers answered, `inconclusive` means Chrome was unreachable, `drift_detected` means the payload shape moved
 

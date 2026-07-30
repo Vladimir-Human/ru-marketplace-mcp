@@ -80,6 +80,40 @@ def test_known_secret_shapes_are_scrubbed(text, secret):
     assert secret not in redact_error_text(text)
 
 
+_JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"connect failed; Cookie: mp_auth={_JWT}; region=ru",
+        f"request body carried mp_auth={_JWT} inline",
+        f"session_token={_JWT}&next=1",
+        f"upstream rejected {_JWT}",
+    ],
+)
+def test_session_cookies_and_jwts_are_scrubbed(text):
+    """The MPStats connector holds the only secret this project ever sees — a
+    live paid-session JWT. Nothing is known to put it in an error string today,
+    but its docstring claimed this scrubbing existed before it did, so the claim
+    is pinned here rather than trusted."""
+    assert _JWT not in redact_error_text(text)
+    assert "eyJ" not in redact_error_text(text)
+
+
+def test_redaction_keeps_the_diagnosis_readable():
+    """Scrubbing must not eat the part that says what went wrong."""
+    out = redact_error_text(f"POST plugin.mpstats.io timed out; Cookie: mp_auth={_JWT}")
+    assert "plugin.mpstats.io" in out
+    assert "timed out" in out
+
+
+def test_ordinary_text_survives_untouched():
+    """A cookie-shaped regex that also eats normal words would hide real errors."""
+    plain = "card.wb.ru returned 429 for nm=176700771 after 3 retries"
+    assert redact_error_text(plain) == plain
+
+
 def test_output_is_capped():
     assert len(redact_error_text("x" * 5000)) == 500
 

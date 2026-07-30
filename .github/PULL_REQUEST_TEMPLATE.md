@@ -20,7 +20,7 @@ Run locally before pushing (this is what CI enforces):
 
 If you touched platform-specific code (process handling, signals):
 
-- [ ] `uv run mypy --platform win32 packages/*/src` — passes; on Linux, mypy resolves `os.killpg`/`signal.SIGKILL` as present, so a Windows-breaking reference slips through the default pass
+- [ ] `uv run mypy --platform win32` — passes; on Linux, mypy resolves `os.killpg`/`signal.SIGKILL` as present, so a Windows-breaking reference slips through the default pass
 
 ## Project gates
 

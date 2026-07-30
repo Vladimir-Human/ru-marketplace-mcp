@@ -1,20 +1,21 @@
-# Start Chrome with CDP enabled, using the operator's existing user profile.
-# Required by Ozon and X connectors.
+# Start Chrome with CDP enabled, in a dedicated scraping profile by default.
+# Required by the seven connectors that read through a browser: Ozon, Avito,
+# Taobao, Megamarket, DNS, Citilink and Lamoda's search path.
 #
-# Run this BEFORE using ozon_* or x_* tools.
+# Run this BEFORE using those connectors' tools.
 # All Chrome windows must be closed first (Chrome refuses CDP if already running).
 #
 # === SECURITY THREAT MODEL ===
-# CDP exposes the operator's FULL Chrome profile (banking, email, GitHub, ozon, x, etc.)
-# to any local-user process. Bound to 127.0.0.1 ONLY (--remote-debugging-address)
+# CDP hands full control of the profile it attaches to — every session logged in
+# there — to any process running as this user. Bound to 127.0.0.1 ONLY (--remote-debugging-address)
 # but any process running as the operator can connect.
 #
 # Recommendations:
 #   - DO NOT run on shared/coworking networks without netstat verification.
 #   - DO NOT run while executing untrusted code on the same machine.
-#   - For paranoid use: pass -Profile to a DEDICATED scraping-only profile dir,
-#     then log into ONLY ozon.ru and x.com in that profile (banking/email NOT
-#     present = blast radius zero). Example:
+#   - A dedicated scraping profile is the DEFAULT here; the main profile needs an
+#     explicit -AllowMainProfile. Log into marketplaces only in it, and banking or
+#     email stay outside the blast radius. To place it yourself:
 #       .\start_chrome_cdp.ps1 -Profile "$env:LOCALAPPDATA\Chrome-Scraping"
 
 param(
@@ -34,7 +35,7 @@ if (-not $Profile) {
         if (-not (Test-Path $Profile)) {
             New-Item -ItemType Directory -Force -Path $Profile | Out-Null
             Write-Host "[+] Created dedicated scraping profile: $Profile"
-            Write-Host "[+] Chrome will start with empty session — log into ozon.ru and x.com only."
+            Write-Host "[+] Chrome will start with an empty session — log into marketplaces only."
             Write-Host "[+] Banking/email session NOT present here = blast radius zero."
             Write-Host ""
         }
