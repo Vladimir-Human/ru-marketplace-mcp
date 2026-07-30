@@ -15,6 +15,11 @@
 опционален: без `MPSTATS_MP_AUTH` сервер запускается, инструменты отвечают
 `auth_missing`, а остальные двенадцать серверов работают как прежде.
 
+Первоначальный код коннектора прислал [@Xpos587](https://github.com/Xpos587) в
+[PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5). Здесь он
+переработан под инварианты, которых держится остальной проект, но идея, разбор
+API плагина и структура парсеров — его.
+
 ### Добавлено
 
 **Новый сервер `mpstats-mcp` (3 инструмента)**
@@ -521,6 +526,11 @@ server worked over anonymous scrape endpoints with no keys; MPStats is a
 different kind: an analytics layer over Ozon/Wildberries with a quota and an
 account. It is optional: without `MPSTATS_MP_AUTH` the server boots, the tools
 answer `auth_missing`, and the other twelve servers behave exactly as before.
+
+The connector's original code came from [@Xpos587](https://github.com/Xpos587) in
+[PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5). It was
+reworked here for the invariants the rest of the project holds to, but the idea,
+the plugin API work and the parser structure are his.
 
 ### Added
 
