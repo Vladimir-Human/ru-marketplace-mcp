@@ -515,6 +515,12 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 Вопрос «кто набрал текст» кажется мне менее интересным, чем вопрос «чем это
 проверено». Второй здесь задокументирован, и проверить его может любой.
 
+## Спасибо
+
+[@Xpos587](https://github.com/Xpos587) — коннектор MPStats
+([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)):
+разбор API плагина, структура парсеров и первая рабочая версия.
+
 ## Лицензия
 
 MIT, файл [LICENSE](LICENSE).
@@ -872,6 +878,12 @@ compared against live pages by hand and which were left unverified.
 
 Who typed the text seems a less interesting question than what checks it survived.
 The second one is documented here, and anyone can re-run it.
+
+## Thanks
+
+[@Xpos587](https://github.com/Xpos587) for the MPStats connector
+([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)): the
+plugin API work, the parser structure and the first working version.
 
 ## License
 
