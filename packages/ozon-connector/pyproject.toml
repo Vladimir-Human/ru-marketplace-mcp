@@ -11,7 +11,7 @@ dependencies = [
     # Release resolves to that stranger's package and the server dies on
     # import. A pin turns a silent wrong install into a loud resolve failure.
     "mcp-core==1.3.0",
-    "fastmcp>=3.4.0",
+    "fastmcp>=3.4.5",
     "httpx>=0.27",
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
