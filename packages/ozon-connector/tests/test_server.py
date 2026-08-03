@@ -10,6 +10,24 @@ import pytest
 from fastmcp.exceptions import ToolError
 from ozon_connector import server
 
+# Every _sync_call_in_process call in this module boots a brand-new interpreter,
+# and that cost belongs to the host rather than to the code under test: a loaded
+# windows-latest runner was measured spending over 2s on the spawn and teardown
+# alone, on a leg that took 110s to run a suite Linux finishes in 8s. The tests
+# below assert behaviour — the timeout fires, the child's env is scrubbed, error
+# text is redacted — and never latency, so their budget is deliberately far larger
+# than any plausible spawn. A tight budget here proves nothing; it only lets
+# runner load turn the build red.
+CHILD_SPAWN_BUDGET_S = 30.0
+
+# What the timeout test actually needs is a child that outlives its deadline by so
+# much that "the timeout was enforced" and "we waited for the child" cannot be
+# confused by a slow spawn. The old pairing — a 5s child under a 2s ceiling — left
+# only ~3s of headroom for spawn overhead that has since been seen above 2s, so it
+# failed at 2.079s while the timeout was working perfectly.
+_TIMEOUT_CHILD_SLEEP_S = 60.0
+_TIMEOUT_RETURN_CEILING_S = 20.0
+
 
 def test_server_version_matches_pyproject():
     pyproject = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())
@@ -56,20 +74,30 @@ def _reviews_body(*, reviews=None, next_button=None):
 def test_sync_call_in_process_times_out_and_next_call_still_works():
     start = time.monotonic()
     try:
-        server._sync_call_in_process(time.sleep, (5,), 0.05)
+        server._sync_call_in_process(time.sleep, (_TIMEOUT_CHILD_SLEEP_S,), 0.05)
     except server._SyncCallTimeout:
         pass
     else:
         raise AssertionError("slow child must time out")
+    elapsed = time.monotonic() - start
 
-    assert time.monotonic() - start < 2
-    assert server._sync_call_in_process(abs, (-3,), 2) == 3
+    # The point of the clock here is to catch a timeout that stopped cutting the
+    # child short — that regression waits out the full sleep and blows the ceiling
+    # by 40s, so a generous ceiling costs no sensitivity. Report the measurement on
+    # failure: the previous bare assert made a slow runner look like a broken one.
+    assert elapsed < _TIMEOUT_RETURN_CEILING_S, (
+        f"timeout was not enforced: returned after {elapsed:.2f}s, "
+        f"ceiling {_TIMEOUT_RETURN_CEILING_S}s, child sleep {_TIMEOUT_CHILD_SLEEP_S}s"
+    )
+    # A killed child must not poison the next call — that is the "still works" half
+    # of this test, and it needs the full spawn budget for the same reason as above.
+    assert server._sync_call_in_process(abs, (-3,), CHILD_SPAWN_BUDGET_S) == 3
 
 
 def test_sync_call_in_process_scrubs_child_env(monkeypatch):
     monkeypatch.setenv("OZON_SENTINEL_SECRET", "leak")
 
-    assert server._sync_call_in_process(os.getenv, ("OZON_SENTINEL_SECRET",), 2) is None
+    assert server._sync_call_in_process(os.getenv, ("OZON_SENTINEL_SECRET",), CHILD_SPAWN_BUDGET_S) is None
 
 
 def test_sync_call_in_process_redacts_url_userinfo_from_child_errors():
@@ -77,7 +105,7 @@ def test_sync_call_in_process_redacts_url_userinfo_from_child_errors():
         server._sync_call_in_process(
             exec,
             ("raise RuntimeError('https://user:secret@example.com/path?token=x')",),
-            2,
+            CHILD_SPAWN_BUDGET_S,
         )
     except server._SyncCallError as exc:
         message = str(exc)
