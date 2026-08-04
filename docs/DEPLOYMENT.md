@@ -96,7 +96,7 @@ Image tags are pinned: the builder is `ghcr.io/astral-sh/uv:0.11.32-python3.12-t
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:1.3.0 .
+docker build -t ru-marketplace-mcp:1.3.1 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -117,14 +117,14 @@ host, so the container binds to all of its *own* interfaces and the perimeter
 moves to the **published port**. Publish it to the host's loopback:
 
 ```bash
-docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.3.0
+docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:1.3.1
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
 Run a different marketplace by overriding the command:
 
 ```bash
-docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.3.0 yandex-mcp
+docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:1.3.1 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` is the security boundary. `-p 8000:8000` would publish
