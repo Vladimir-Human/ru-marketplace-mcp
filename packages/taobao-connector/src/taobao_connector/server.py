@@ -34,6 +34,7 @@ from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
+from mcp_core.dom import JS_HELPERS, prices_from_tile
 from mcp_core.errors import (
     BadRequestError,
     NotFoundError,
@@ -134,63 +135,120 @@ def _extract_item_id(raw: str) -> str | None:
 # In-page extractor: walks the rendered search DOM and returns plain data.
 # Kept defensive — every panel is optional, because Taobao A/B tests layout
 # variants constantly and a missing shop block must not kill the item.
-_SEARCH_EXTRACT_JS = """
+# The shared helpers replace the per-connector heuristics that produced the
+# July-2026 class of bugs elsewhere (closest() resolving to an empty overlay,
+# Math.min picking the instalment, innerText absent in jsdom). Taobao tiles get
+# the same treatment: the extractor returns raw display text, and the price is
+# decided in Python by mcp_core.dom.prices_from_tile from glyph-attached
+# candidates — so a yuan-glued "999¥" is a price and a bare promo number is not.
+_SEARCH_EXTRACT_TEMPLATE = """
 () => {
+    //__SHARED_HELPERS__
+    const ID_RE = /[?&]id=(\\d{9,13})/;
     const out = [];
     const anchors = document.querySelectorAll('a[href*="item.taobao.com"], a[href*="//item.taobao.com"]');
     const seen = new Set();
     for (const a of anchors) {
         const href = a.href || '';
-        const m = href.match(/[?&]id=(\\d{9,13})/);
+        const m = href.match(ID_RE);
         if (!m || seen.has(m[1])) continue;
         seen.add(m[1]);
-        const card = a.closest('[class*="Card"], [class*="card"], [class*="item"], li, div') || a;
-        const text = (card.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean);
-        const title = (a.innerText || '').trim() || text[0] || null;
-        let price = null;
-        const priceEl = card.querySelector('[class*="price"], [class*="Price"]');
-        if (priceEl) {
-            const pm = (priceEl.innerText || '').replace(/[^0-9.]/g, '');
-            if (pm) price = parseFloat(pm);
-        }
-        if (price === null) {
-            for (const line of text) {
-                const pm = line.match(/^[¥￥]?\\s*([0-9]+(?:\\.[0-9]+)?)$/);
-                if (pm) { price = parseFloat(pm[1]); break; }
+        // tileRootFor, not closest(): an anchor whose own class looks like a
+        // card must not become the tile. See mcp_core.dom.
+        const card = tileRootFor(a, ID_RE) || a;
+        // Prefer a text-bearing anchor; the image/overlay link carries no title.
+        let titleEl = cleanText(a) ? a : null;
+        if (!titleEl) {
+            for (const cand of card.querySelectorAll('[class*="title"], [class*="Title"], a[href*="item.taobao.com"]')) {
+                if (cleanText(cand)) { titleEl = cand; break; }
             }
         }
+        const title = cleanText(titleEl) || (a.getAttribute('title') || null);
+
         let shop = null, location = null, sales = null;
-        for (const line of text) {
-            if (/人付款|人收货|付款$/.test(line)) sales = sales || line;
+        const lines = (card.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
+        for (const line of lines) {
+            if (/人付款|人收货|已售|约售|付款$/.test(line)) sales = sales || line;
             else if (/店$/.test(line)) shop = shop || line;
+            else if (/发货地|广东|浙江|江苏|上海|北京/.test(line)) location = location || line;
         }
-        out.push({item_id: m[1], title, price_cny: price, shop_name: shop, location, sales, url: href.split('?')[0] + '?id=' + m[1]});
+        out.push({
+            item_id: m[1],
+            title: title,
+            price_texts: priceTextsIn(card),
+            shop_name: shop,
+            location: location,
+            sales: sales,
+            url: href.split('?')[0] + '?id=' + m[1]
+        });
         if (out.length >= 48) break;
     }
     return JSON.stringify({items: out, title: document.title || ''});
 }
 """
 
-_CARD_EXTRACT_JS = """
+# Spliced like every other CDP source: one fix to tile resolution or price
+# selection lands on all four connectors at once.
+_SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS_HELPERS)
+
+
+_CARD_EXTRACT_TEMPLATE = """
 () => {
-    const text = (document.body.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean);
-    const titleEl = document.querySelector('h1, [class*="title"], [class*="Title"]');
-    const title = titleEl ? (titleEl.innerText || '').trim() : (document.title || null);
-    let price = null;
-    const priceEl = document.querySelector('[class*="price"], [class*="Price"]');
-    if (priceEl) {
-        const pm = (priceEl.innerText || '').replace(/[^0-9.]/g, '');
-        if (pm) price = parseFloat(pm);
-    }
+    //__SHARED_HELPERS__
+    // title from the product heading; the generic [class*="title"] fallback
+    // could pick a section heading.
+    const titleEl = document.querySelector('h1')
+        || document.querySelector('[class*="title"], [class*="Title"]');
+    const title = cleanText(titleEl) || document.title || null;
+
+    // Price from named candidates, not a body scan: the page carries side
+    // offers and promo amounts that would be Math.min-ed into a wrong number.
+    // priceTextsIn collects glyph-attached candidates (yuan signs included);
+    // Python picks with mcp_core.dom.prices_from_tile.
+    const priceTexts = priceTextsIn(document.body);
+
     let shop = null, sales = null;
-    for (const line of text) {
+    const lines = (document.body.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
+    for (const line of lines) {
         if (/人付款|人收货|已售/.test(line)) sales = sales || line;
         if (/店$/.test(line) && !shop) shop = line;
     }
     const imgs = document.querySelectorAll('[class*="desc"] img, [class*="Desc"] img, #description img');
-    return JSON.stringify({title, price_cny: price, shop_name: shop, sales, description_images: imgs.length, page_title: document.title || ''});
+    return JSON.stringify({
+        title: title,
+        price_texts: priceTexts,
+        shop_name: shop,
+        sales: sales,
+        description_images: imgs.length,
+        page_title: document.title || ''
+    });
 }
 """
+
+_CARD_EXTRACT_JS = _CARD_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS_HELPERS)
+
+
+def _search_item_from_tile(tile: dict[str, Any]) -> TaobaoSearchItemOut:
+    """Map one extracted tile onto the wire shape, parsing prices in Python.
+
+    Accepts BOTH shapes on purpose: the extractor now returns ``price_texts``,
+    but a payload cached by an older build still carries a numeric
+    ``price_cny``, and a cache entry outliving a deploy must not start
+    answering with nulls. The wire shape is unchanged: ``price_cny`` is a float
+    or None, never 0.
+    """
+    price, _old = prices_from_tile(tile)
+    if price is None:
+        price = R.coerce_price(tile.get("price_cny"))
+    return TaobaoSearchItemOut(
+        item_id=tile.get("item_id"),
+        title=R.flatten_text(tile.get("title")),
+        price_cny=price,
+        shop_name=R.flatten_text(tile.get("shop_name")),
+        location=R.flatten_text(tile.get("location")),
+        sales=R.flatten_text(tile.get("sales")),
+        url=tile.get("url"),
+    )
 
 
 async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | None) -> dict[str, Any]:
@@ -279,7 +337,7 @@ async def taobao_search(
                     "rendered search page yielded zero items — either the query genuinely matched nothing or the DOM shape moved; verify manually before quoting"
                 )
             )
-        items = [TaobaoSearchItemOut(**it) for it in items_raw if isinstance(it, dict)]
+        items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
         warnings: list[str] = []
         priceless = sum(1 for it in items if it.price_cny is None)
         if priceless == len(items):
@@ -354,9 +412,9 @@ async def taobao_card(
         page_title = str(payload.get("page_title") or "")
         if "不存在" in page_title or "很抱歉" in page_title:
             raise_tool_error(NotFoundError(f"Taobao item {item_id} reports itself gone ({page_title[:60]})."))
-        price = payload.get("price_cny")
-        if price is not None:
-            price = R.coerce_price(price)
+        price, _old = prices_from_tile(payload)
+        if price is None:
+            price = R.coerce_price(payload.get("price_cny"))
         if title is None and price is None:
             raise_tool_error(
                 ParserDriftError(
