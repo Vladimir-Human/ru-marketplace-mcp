@@ -287,10 +287,18 @@ _CARD_EXTRACT_TEMPLATE = """
     if (availText) {
         available = !/Нет в наличии|Под заказ|Закончился/i.test(availText);
     } else if (document.body) {
-        const body = document.body.innerText || '';
+        // Fallback scan of body text. textContent, not innerText: innerText
+        // depends on layout visibility, is unavailable in jsdom, and this
+        // fallback exists so the DOM fixture can assert on it.
+        const body = (document.body.textContent || '').replace(/\\s+/g, ' ');
+
+
         if (/Нет в наличии|Под заказ|Закончился/i.test(body)) available = false;
         else if (/В наличии/i.test(body)) available = true;
     }
+
+
+
 
     return JSON.stringify({
         title: title,
