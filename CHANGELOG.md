@@ -7,6 +7,54 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.3.1] — 2026-08-04
+
+Hardening-правки по итогам независимого аудита. Поведение инструментов не
+менялось: имена, аргументы и формы ответов те же, что в v1.3.0.
+
+### Исправлено
+
+- Экстракторы DOM декодируют вывод как явный UTF-8: без этого фрагмент с
+  кириллицей мог быть прочитан в cp1251, а тест-раннер jsdom терял
+  не-ASCII-символы в фикстурах.
+- Глифы валют генерируются из одного списка, а не из трёх разъехавшихся
+  регулярных выражений; юани признаются наравне с рублём.
+- DNS: признак наличия на карточке берётся из `textContent`, а не из
+  сломанного соседнего элемента.
+- Taobao: оба экстрактора переведены на общие DOM-хелперы из `mcp-core`.
+- Тесты экстракторов закреплены за снятыми фикстурами: Lamoda (поиск),
+  Citilink (карточка), Taobao (поиск и карточка), DNS (карточка). Раньше
+  поведение проверялось только на живой странице, которая может дрейфовать.
+
+### Добавлено
+
+- DOM-фикстуры и тесты для карточек DNS и Citilink и для поиска Taobao и
+  Lamoda — десять новых тестов.
+
+### Прочее
+
+- Число офлайн-тестов в документации приведено к измеренному: 980.
+
+English summary:
+
+### Fixed
+
+- DOM extractors decode output as explicit UTF-8.
+- Currency glyph regexes are generated from one list; yuan is admitted.
+- DNS card availability falls back to `textContent`.
+- Taobao's extractors share the `mcp-core` DOM helpers.
+- Extractor behaviour is pinned to captured fixtures (Lamoda search,
+  Citilink card, Taobao search and card, DNS card).
+
+### Added
+
+- DOM fixtures and extractor tests for DNS/Citilink cards and Taobao/Lamoda
+  search — ten new tests.
+
+### Other
+
+- The documented offline test count is the measured 980.
+
 ## [1.3.0] — 2026-07-30
 
 Новый коннектор MPStats, первый платный источник в проекте. До этого все серверы
