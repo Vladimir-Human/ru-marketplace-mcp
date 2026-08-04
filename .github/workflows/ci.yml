@@ -85,7 +85,7 @@ jobs:
         run: uv run python scripts/check_test_count.py
 
       - name: One version, everywhere
-        # A release version is written down in fifty-nine places. Preparing
+        # A release version is written down in seventy-two places. Preparing
         # 1.2.1 moved fourteen pyproject.toml files and left thirteen
         # __version__ strings behind — installed packages would have reported
         # the previous release. Nothing was comparing them; now something is.

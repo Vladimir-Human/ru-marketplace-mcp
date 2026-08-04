@@ -22,20 +22,20 @@
 
 ## Что внутри
 
-| Сервер | Инструментов | Что нужно, чтобы читалось | Что умеет |
-|---|---|---|---|
-| **Wildberries** | 9 | анонимный HTTP | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
-| **Яндекс Маркет** | 3 | анонимный HTTP | Цены разных продавцов, разбивка оценок по звёздам, отзывы |
-| **Детский мир** | 4 | анонимный HTTP | Детские товары, наличие в офлайн-магазинах, категории |
-| **Ozon** | 4 | ваш Chrome; с домашнего IP часто и без него | Поиск, карточки, отзывы |
-| **Авито** | 4 | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца |
-| **Taobao** | 3 | ваш Chrome с активным входом в Taobao | Поиск и карточки, цены в юанях |
-| **Мегамаркет** | 3 | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто | Поиск и карточки через мобильный API |
-| **Lamoda** | 3 | карточки анонимно (GraphQL), поиск — ваш Chrome | Поиск, карточки с размерами |
-| **DNS** | 3 | ваш Chrome (Qrator) | Поиск и карточки электроники |
-| **Ситилинк** | 3 | ваш Chrome (Qrator) | Поиск и карточки электроники |
-| **Сравнение** | 2 | опрашивает всё перечисленное | «Где дешевле?» одним вызовом |
-| **MPStats** | 3 | платный аккаунт MPStats, cookie `mp_auth` (опционально) | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO) |
+| Сервер            | Инструментов | Что нужно, чтобы читалось                                                  | Что умеет                                                                                 |
+| ----------------- | ------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Wildberries**   | 9            | анонимный HTTP                                                             | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
+| **Яндекс Маркет** | 3            | анонимный HTTP                                                             | Цены разных продавцов, разбивка оценок по звёздам, отзывы                                 |
+| **Детский мир**   | 4            | анонимный HTTP                                                             | Детские товары, наличие в офлайн-магазинах, категории                                     |
+| **Ozon**          | 4            | ваш Chrome; с домашнего IP часто и без него                                | Поиск, карточки, отзывы                                                                   |
+| **Авито**         | 4            | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца                                            |
+| **Taobao**        | 3            | ваш Chrome с активным входом в Taobao                                      | Поиск и карточки, цены в юанях                                                            |
+| **Мегамаркет**    | 3            | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто           | Поиск и карточки через мобильный API                                                      |
+| **Lamoda**        | 3            | карточки анонимно (GraphQL), поиск — ваш Chrome                            | Поиск, карточки с размерами                                                               |
+| **DNS**           | 3            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
+| **Ситилинк**      | 3            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
+| **Сравнение**     | 2            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
+| **MPStats**       | 3            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
 
 Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
 карточки Lamoda. Остальным нужен ваш залогиненный Chrome (CDP). Taobao и
@@ -66,7 +66,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 948 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 980 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -98,9 +98,9 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
   "mcpServers": {
     "marketplace": {
       "command": "uv",
-      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "marketplace-mcp"]
-    }
-  }
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "marketplace-mcp"],
+    },
+  },
 }
 ```
 
@@ -117,17 +117,17 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
   "mcpServers": {
     "wildberries": {
       "command": "uv",
-      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "wb-mcp"]
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "wb-mcp"],
     },
     "ozon": {
       "command": "uv",
-      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "ozon-mcp"]
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "ozon-mcp"],
     },
     "compare-prices": {
       "command": "uv",
-      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "compare-mcp"]
-    }
-  }
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "compare-mcp"],
+    },
+  },
 }
 ```
 
@@ -135,6 +135,7 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 команд — `wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `avito-mcp`,
 `taobao-mcp`, `megamarket-mcp`, `lamoda-mcp`, `dns-mcp`, `citilink-mcp`,
 `compare-mcp`, `marketplace-mcp`.
+
 </details>
 
 <details>
@@ -147,6 +148,7 @@ claude mcp add detsky-mir -- uv run --directory /путь/к/ru-marketplace-mcp 
 claude mcp add ozon -- uv run --directory /путь/к/ru-marketplace-mcp ozon-mcp
 claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-mcp compare-mcp
 ```
+
 </details>
 
 <details>
@@ -157,11 +159,12 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
   "mcpServers": {
     "compare-prices": {
       "command": "uv",
-      "args": ["run", "--directory", "/путь/к/ru-marketplace-mcp", "compare-mcp"]
-    }
-  }
+      "args": ["run", "--directory", "/путь/к/ru-marketplace-mcp", "compare-mcp"],
+    },
+  },
 }
 ```
+
 </details>
 
 <details>
@@ -171,6 +174,7 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 `wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`. Серверы говорят по
 JSON-RPC через stdin и stdout, диагностику пишут в stderr. Опциональный
 `mpstats-mcp` запускается так же, с `MPSTATS_MP_AUTH` в окружении.
+
 </details>
 
 После подключения перезапустите клиент и попросите агента вызвать `wb_selfcheck`. Он
@@ -181,17 +185,17 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 ### Wildberries — `wb_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `wb_search(query, page)` | Поиск по тексту, до 100 товаров на страницу с ценами и остатками |
-| `wb_card(nm_ids)` | Пакетный запрос до 100 известных SKU |
-| `wb_root_info(nm_id)` | Находит `imt_id` (нужен для отзывов) и цветовые варианты |
-| `wb_reviews(imt_id, limit, sort)` | Пул отзывов. Ключ — `imt_id`, а не `nm_id` |
-| `wb_questions(imt_id, limit, skip, answered_only)` | Вопросы покупателей и ответы продавца. Тоже по `imt_id` |
-| `wb_seller(supplier_id)` | Юрлицо, ИНН, КПП, ОГРН, юридический адрес |
-| `wb_categories(root, max_depth)` | Дерево каталога с шардами и запросами самого WB |
-| `wb_category_products(shard, query, page, sort, dest)` | Товары категории по `shard` и `query` из `wb_categories` |
-| `wb_selfcheck()` | Канарейка на дрейф формата |
+| Инструмент                                             | Что делает                                                       |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `wb_search(query, page)`                               | Поиск по тексту, до 100 товаров на страницу с ценами и остатками |
+| `wb_card(nm_ids)`                                      | Пакетный запрос до 100 известных SKU                             |
+| `wb_root_info(nm_id)`                                  | Находит `imt_id` (нужен для отзывов) и цветовые варианты         |
+| `wb_reviews(imt_id, limit, sort)`                      | Пул отзывов. Ключ — `imt_id`, а не `nm_id`                       |
+| `wb_questions(imt_id, limit, skip, answered_only)`     | Вопросы покупателей и ответы продавца. Тоже по `imt_id`          |
+| `wb_seller(supplier_id)`                               | Юрлицо, ИНН, КПП, ОГРН, юридический адрес                        |
+| `wb_categories(root, max_depth)`                       | Дерево каталога с шардами и запросами самого WB                  |
+| `wb_category_products(shard, query, page, sort, dest)` | Товары категории по `shard` и `query` из `wb_categories`         |
+| `wb_selfcheck()`                                       | Канарейка на дрейф формата                                       |
 
 `wb_seller` отвечает на вопрос, который карточка товара скрывает: кто на самом деле
 продаёт? Возвращает зарегистрированное юрлицо и налоговые номера. Так отличают
@@ -210,11 +214,11 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 ### Яндекс Маркет — `yandex_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `yandex_search(query, page, limit)` | Поиск с обеими ценами, рейтингами, продавцами |
+| Инструмент                                 | Что делает                                     |
+| ------------------------------------------ | ---------------------------------------------- |
+| `yandex_search(query, page, limit)`        | Поиск с обеими ценами, рейтингами, продавцами  |
 | `yandex_card(product_id, include_reviews)` | Карточка целиком: разбивка по звёздам и отзывы |
-| `yandex_selfcheck()` | Канарейка на дрейф формата |
+| `yandex_selfcheck()`                       | Канарейка на дрейф формата                     |
 
 **Две цены, всегда.** `price_rub` платит любой покупатель. `price_with_plus`
 требует подписку Яндекс Плюс и обычно на 25–30% ниже. Интерфейс Яндекса показывает
@@ -226,12 +230,12 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 ### Детский мир — `detmir_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `detmir_categories(parent, limit, region)` | Дерево каталога. Начинать отсюда |
-| `detmir_category(alias, limit, offset, region)` | Товары категории с настоящим счётчиком |
-| `detmir_card(product_id, region)` | Цена, рейтинг, наличие онлайн и в магазинах |
-| `detmir_selfcheck()` | Канарейка на дрейф формата |
+| Инструмент                                      | Что делает                                  |
+| ----------------------------------------------- | ------------------------------------------- |
+| `detmir_categories(parent, limit, region)`      | Дерево каталога. Начинать отсюда            |
+| `detmir_category(alias, limit, offset, region)` | Товары категории с настоящим счётчиком      |
+| `detmir_card(product_id, region)`               | Цена, рейтинг, наличие онлайн и в магазинах |
+| `detmir_selfcheck()`                            | Канарейка на дрейф формата                  |
 
 **Регион задаётся на каждый вызов.** Цены и особенно наличие в офлайн-магазинах
 сильно зависят от города: один и тот же товар лежал в 152 магазинах Москвы, 37
@@ -246,12 +250,12 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 ### Ozon — `ozon_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `ozon_search(query)` | Поиск по тексту |
-| `ozon_card(sku_or_path)` | Карточка товара |
-| `ozon_reviews(sku_or_path, limit, sort)` | Отзывы |
-| `ozon_selfcheck()` | Канарейка на дрейф формата |
+| Инструмент                               | Что делает                 |
+| ---------------------------------------- | -------------------------- |
+| `ozon_search(query)`                     | Поиск по тексту            |
+| `ozon_card(sku_or_path)`                 | Карточка товара            |
+| `ozon_reviews(sku_or_path, limit, sort)` | Отзывы                     |
+| `ozon_selfcheck()`                       | Канарейка на дрейф формата |
 
 Ozon отклоняет датацентровый трафик, поэтому коннектор двухуровневый. Сначала
 TLS-имперсонация. Если Cloudflare выдаёт челлендж, запрос выполняется внутри вашего
@@ -263,12 +267,12 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 
 ### Авито — `avito_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API |
-| `avito_card(item_id_or_url)` | Одно объявление: цена, описание, просмотры, продавец |
-| `avito_seller(seller_id_or_url)` | Рейтинг продавца, число отзывов, активные объявления |
-| `avito_selfcheck()` | Канарейка на дрейф формата |
+| Инструмент                                            | Что делает                                           |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API     |
+| `avito_card(item_id_or_url)`                          | Одно объявление: цена, описание, просмотры, продавец |
+| `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов, активные объявления |
+| `avito_selfcheck()`                                   | Канарейка на дрейф формата                           |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
 продавца и есть сигнал доверия. Бесплатное/обменное объявление приходит с
@@ -278,11 +282,11 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 
 ### Taobao — `taobao_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `taobao_search(query, page)` | Поиск по каталогу Taobao |
-| `taobao_card(item_id_or_url)` | Карточка товара |
-| `taobao_selfcheck()` | Канарейка на дрейф формата |
+| Инструмент                    | Что делает                 |
+| ----------------------------- | -------------------------- |
+| `taobao_search(query, page)`  | Поиск по каталогу Taobao   |
+| `taobao_card(item_id_or_url)` | Карточка товара            |
+| `taobao_selfcheck()`          | Канарейка на дрейф формата |
 
 Поиск Taobao — клиентское React-приложение с подписанным mtop API: каждый запрос
 требует `sign`, вычисленный из cookie-токена, поэтому анонимного пути нет.
@@ -307,10 +311,10 @@ Lamoda.
 
 ### Сравнение цен — `compare_*`
 
-| Инструмент | Что делает |
-|---|---|
-| `compare_prices(query, per_source_limit, sources)` | Все маркетплейсы сразу, с ранжированием |
-| `compare_sources()` | Какие маркетплейсы доступны в этой установке |
+| Инструмент                                         | Что делает                                   |
+| -------------------------------------------------- | -------------------------------------------- |
+| `compare_prices(query, per_source_limit, sources)` | Все маркетплейсы сразу, с ранжированием      |
+| `compare_sources()`                                | Какие маркетплейсы доступны в этой установке |
 
 ```
 compare_prices("кроссовки мужские")
@@ -348,11 +352,11 @@ compare_prices("кроссовки мужские")
 инструменты возвращают `auth_missing`, а сервер запускается как обычно — ни на
 что другое это не влияет.
 
-| Инструмент | Что делает |
-|---|---|
+| Инструмент                               | Что делает                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `mpstats_item(skus, place, oz_fbs=True)` | Аналитика за 30 дней по до 100 SKU: заказы, цена, остатки, графики по дням, продавец/бренд |
-| `mpstats_warehouses(skus, place)` | Остатки по складам: FBS (склад продавца) и FBO (склад маркетплейса), `last_update` |
-| `mpstats_selfcheck()` | Канарейка: `success` / `drift_detected` / `inconclusive` |
+| `mpstats_warehouses(skus, place)`        | Остатки по складам: FBS (склад продавца) и FBO (склад маркетплейса), `last_update`         |
+| `mpstats_selfcheck()`                    | Канарейка: `success` / `drift_detected` / `inconclusive`                                   |
 
 `place` — `ozon` или `wildberries`. Графики длиной 30, от старых к новым:
 последняя ненулевая ячейка — текущая цена или остаток. Цена и остаток при
@@ -372,21 +376,21 @@ compare_prices("кроссовки мужские")
 источник вообще браться, чего у источника нет, и каким его ответам нельзя верить
 без второго взгляда.
 
-| Навык | Сервер |
-|---|---|
-| `skills/wb-connector` | `wb-mcp` |
-| `skills/ozon-connector` | `ozon-mcp` |
-| `skills/yandex-connector` | `yandex-mcp` |
-| `skills/detmir-connector` | `detmir-mcp` |
-| `skills/avito-connector` | `avito-mcp` |
-| `skills/taobao-connector` | `taobao-mcp` |
-| `skills/megamarket-connector` | `megamarket-mcp` |
-| `skills/lamoda-connector` | `lamoda-mcp` |
-| `skills/dns-connector` | `dns-mcp` |
-| `skills/citilink-connector` | `citilink-mcp` |
-| `skills/compare-prices` | `compare-mcp` |
-| `skills/mpstats-connector` | `mpstats-mcp` |
-| `skills/marketplace` | `marketplace-mcp` |
+| Навык                         | Сервер            |
+| ----------------------------- | ----------------- |
+| `skills/wb-connector`         | `wb-mcp`          |
+| `skills/ozon-connector`       | `ozon-mcp`        |
+| `skills/yandex-connector`     | `yandex-mcp`      |
+| `skills/detmir-connector`     | `detmir-mcp`      |
+| `skills/avito-connector`      | `avito-mcp`       |
+| `skills/taobao-connector`     | `taobao-mcp`      |
+| `skills/megamarket-connector` | `megamarket-mcp`  |
+| `skills/lamoda-connector`     | `lamoda-mcp`      |
+| `skills/dns-connector`        | `dns-mcp`         |
+| `skills/citilink-connector`   | `citilink-mcp`    |
+| `skills/compare-prices`       | `compare-mcp`     |
+| `skills/mpstats-connector`    | `mpstats-mcp`     |
+| `skills/marketplace`          | `marketplace-mcp` |
 
 `mcp-core` — общий рантайм под остальными серверами. Своего навыка у него нет.
 
@@ -405,21 +409,21 @@ compare_prices("кроссовки мужские")
 Все параметры задаются переменными окружения с префиксом коннектора. Все
 необязательные.
 
-| Префикс | Основные параметры |
-|---|---|
-| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY` |
-| `YANDEX_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `DETMIR_` | `REGION` (`RU-MOW`, `RU-SPE` и другие), `CACHE_TTL`, `PROXY` |
-| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
-| `AVITO_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID` |
-| `TAOBAO_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `MEGAMARKET_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
-| `LAMODA_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
-| `CHROME_` | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
-| `COMPARE_` | `SOURCE_TIMEOUT` |
-| `MPSTATS_` | `MP_AUTH` (единственный обязательный — без него инструменты отвечают `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `MCP_` | `TRANSPORT` (`stdio` по умолчанию, либо `http`), `HTTP_HOST`, `HTTP_PORT` |
+| Префикс              | Основные параметры                                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `WB_`                | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY`                                      |
+| `YANDEX_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
+| `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE` и другие), `CACHE_TTL`, `PROXY`                                                                     |
+| `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                        |
+| `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                         |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
+| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
+| `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
+| `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
+| `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                      |
+| `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                                 |
+| `MPSTATS_`           | `MP_AUTH` (единственный обязательный — без него инструменты отвечают `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
+| `MCP_`               | `TRANSPORT` (`stdio` по умолчанию, либо `http`), `HTTP_HOST`, `HTTP_PORT`                                                        |
 
 `CHROME_CDP_HOST` указывает, куда дозвониться CDP-клиенту (по умолчанию
 `127.0.0.1`). Из контейнера ставьте `chrome` (сайдкар) или `host.docker.internal`
@@ -447,14 +451,14 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 948 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 980 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # что проверять — в [tool.mypy] files
 uv run mypy --platform win32                  # ловит ошибки, видимые только на Windows
 uv run python scripts/check_no_print.py       # запись в stdout ломает JSON-RPC
-uv run python scripts/check_versions.py       # одна версия во всех 59 местах
+uv run python scripts/check_versions.py       # одна версия во всех 72 местах
 ```
 
 Часть тестов прогоняет **настоящий JS-экстрактор коннектора** по снятой разметке
@@ -507,7 +511,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 948 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 980 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -541,20 +545,20 @@ it every other server is unaffected.
 
 ## What you get
 
-| Server | Tools | What it takes to read | Notes |
-|---|---|---|---|
-| **Wildberries** | 9 | anonymous HTTP | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
-| **Yandex Market** | 3 | anonymous HTTP | Multi-seller prices, star distribution, reviews |
-| **Detsky Mir** | 4 | anonymous HTTP | Kids' goods, offline store stock, category listings |
-| **Ozon** | 4 | your Chrome; often no browser from a residential IP | Search, cards, reviews |
-| **Avito** | 4 | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation |
-| **Taobao** | 3 | your Chrome with an active Taobao login | Search and cards, prices in yuan |
-| **Megamarket** | 3 | your Chrome with an active login — an anonymous session reads empty | Search and cards via the mobile API |
-| **Lamoda** | 3 | cards anonymous (GraphQL), search via your Chrome | Search, cards with sizes |
-| **DNS** | 3 | your Chrome (Qrator) | Electronics search and cards |
-| **Citilink** | 3 | your Chrome (Qrator) | Electronics search and cards |
-| **Compare** | 2 | aggregates the above | "Where is this cheapest?" in one call |
-| **MPStats** | 3 | paid MPStats account, `mp_auth` cookie (optional) | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO) |
+| Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
+| ----------------- | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Wildberries**   | 9     | anonymous HTTP                                                                | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
+| **Yandex Market** | 3     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
+| **Detsky Mir**    | 4     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
+| **Ozon**          | 4     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
+| **Avito**         | 4     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
+| **Taobao**        | 3     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
+| **Megamarket**    | 3     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
+| **Lamoda**        | 3     | cards anonymous (GraphQL), search via your Chrome                             | Search, cards with sizes                                                                           |
+| **DNS**           | 3     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **Citilink**      | 3     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **Compare**       | 2     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
+| **MPStats**       | 3     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
 Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
 The rest need your logged-in Chrome (CDP). Taobao and Megamarket additionally need
@@ -585,7 +589,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 948 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 980 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -604,17 +608,17 @@ family and reports `success`, `drift_detected`, or `inconclusive`.
 
 ### Wildberries — `wb_*`
 
-| Tool | What it does |
-|---|---|
-| `wb_search(query, page)` | Text search, up to 100 products/page with prices and stock |
-| `wb_card(nm_ids)` | Batch lookup for up to 100 known SKUs |
-| `wb_root_info(nm_id)` | Resolves `imt_id` (needed for reviews) plus colour variants |
-| `wb_reviews(imt_id, limit, sort)` | Review pool, keyed by `imt_id`, not `nm_id` |
-| `wb_questions(imt_id, limit, skip, answered_only)` | Buyer questions with seller answers, also keyed by `imt_id` |
-| `wb_seller(supplier_id)` | Registered entity, INN, KPP, OGRN, legal address |
-| `wb_categories(root, max_depth)` | Catalog tree with WB's own shard/query selectors |
-| `wb_category_products(shard, query, page, sort, dest)` | Products in a category, using those selectors |
-| `wb_selfcheck()` | Drift canary |
+| Tool                                                   | What it does                                                |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| `wb_search(query, page)`                               | Text search, up to 100 products/page with prices and stock  |
+| `wb_card(nm_ids)`                                      | Batch lookup for up to 100 known SKUs                       |
+| `wb_root_info(nm_id)`                                  | Resolves `imt_id` (needed for reviews) plus colour variants |
+| `wb_reviews(imt_id, limit, sort)`                      | Review pool, keyed by `imt_id`, not `nm_id`                 |
+| `wb_questions(imt_id, limit, skip, answered_only)`     | Buyer questions with seller answers, also keyed by `imt_id` |
+| `wb_seller(supplier_id)`                               | Registered entity, INN, KPP, OGRN, legal address            |
+| `wb_categories(root, max_depth)`                       | Catalog tree with WB's own shard/query selectors            |
+| `wb_category_products(shard, query, page, sort, dest)` | Products in a category, using those selectors               |
+| `wb_selfcheck()`                                       | Drift canary                                                |
 
 `wb_seller` answers the question a listing hides: who actually ships this? It returns
 the registered legal entity and tax ids, which is how you distinguish an official
@@ -633,11 +637,11 @@ feed at all; the tool says so instead of returning an empty list.
 
 ### Yandex Market — `yandex_*`
 
-| Tool | What it does |
-|---|---|
-| `yandex_search(query, page, limit)` | Search with both prices, ratings, sellers |
+| Tool                                       | What it does                                |
+| ------------------------------------------ | ------------------------------------------- |
+| `yandex_search(query, page, limit)`        | Search with both prices, ratings, sellers   |
 | `yandex_card(product_id, include_reviews)` | Full detail plus star breakdown and reviews |
-| `yandex_selfcheck()` | Drift canary |
+| `yandex_selfcheck()`                       | Drift canary                                |
 
 **Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` needs a
 paid Yandex Plus subscription and runs 25–30% lower. Yandex leads with the subscriber
@@ -648,12 +652,12 @@ That reveals whether a 4.8 average is earned or hides a cluster of complaints.
 
 ### Detsky Mir — `detmir_*`
 
-| Tool | What it does |
-|---|---|
-| `detmir_categories(parent, limit, region)` | Catalog tree, start here |
-| `detmir_category(alias, limit, offset, region)` | Products in a category, with real totals |
-| `detmir_card(product_id, region)` | Price, rating, online and offline store stock |
-| `detmir_selfcheck()` | Drift canary |
+| Tool                                            | What it does                                  |
+| ----------------------------------------------- | --------------------------------------------- |
+| `detmir_categories(parent, limit, region)`      | Catalog tree, start here                      |
+| `detmir_category(alias, limit, offset, region)` | Products in a category, with real totals      |
+| `detmir_card(product_id, region)`               | Price, rating, online and offline store stock |
+| `detmir_selfcheck()`                            | Drift canary                                  |
 
 **Region is per call.** Prices and especially offline availability swing by city —
 one item sat in 152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. The
@@ -667,12 +671,12 @@ wrong products, so discovery goes through categories instead. See
 
 ### Ozon — `ozon_*`
 
-| Tool | What it does |
-|---|---|
-| `ozon_search(query)` | Text search |
-| `ozon_card(sku_or_path)` | Product detail |
-| `ozon_reviews(sku_or_path, limit, sort)` | Reviews |
-| `ozon_selfcheck()` | Drift canary |
+| Tool                                     | What it does   |
+| ---------------------------------------- | -------------- |
+| `ozon_search(query)`                     | Text search    |
+| `ozon_card(sku_or_path)`                 | Product detail |
+| `ozon_reviews(sku_or_path, limit, sort)` | Reviews        |
+| `ozon_selfcheck()`                       | Drift canary   |
 
 Ozon rejects datacenter traffic, so this connector is two-tier: TLS impersonation
 first, then a fetch inside your own logged-in Chrome over the DevTools Protocol when
@@ -683,10 +687,10 @@ From a Russian residential IP the first tier usually works and no browser is nee
 
 ### Cross-marketplace — `compare_*`
 
-| Tool | What it does |
-|---|---|
-| `compare_prices(query, per_source_limit, sources)` | Every marketplace at once, ranked |
-| `compare_sources()` | Which marketplaces this install can query |
+| Tool                                               | What it does                              |
+| -------------------------------------------------- | ----------------------------------------- |
+| `compare_prices(query, per_source_limit, sources)` | Every marketplace at once, ranked         |
+| `compare_sources()`                                | Which marketplaces this install can query |
 
 ```
 compare_prices("кроссовки мужские")
@@ -722,11 +726,11 @@ MPStats account**: auth is a single `mp_auth` cookie (JWT from a logged-in plugi
 session at mpstats.io), set via the `MPSTATS_MP_AUTH` env var. Without it the tools
 return `auth_missing` while the server boots normally — nothing else is affected.
 
-| Tool | What it does |
-|---|---|
+| Tool                                     | What it does                                                                            |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- |
 | `mpstats_item(skus, place, oz_fbs=True)` | 30-day analytics for up to 100 SKUs: orders, price, stock, per-day graphs, seller/brand |
-| `mpstats_warehouses(skus, place)` | Warehouse split: FBS (seller's warehouse) vs FBO (marketplace warehouse), `last_update` |
-| `mpstats_selfcheck()` | Tri-state canary: `success` / `drift_detected` / `inconclusive` |
+| `mpstats_warehouses(skus, place)`        | Warehouse split: FBS (seller's warehouse) vs FBO (marketplace warehouse), `last_update` |
+| `mpstats_selfcheck()`                    | Tri-state canary: `success` / `drift_detected` / `inconclusive`                         |
 
 `place` is `ozon` or `wildberries`. Graphs are length 30, oldest first: the last
 non-zero cell is the current price or stock. The two differ on purpose when the
@@ -745,21 +749,21 @@ servers. A skill is not a restatement of this README: it tells the agent when to
 reach for that source at all, what the source does not have, and which of its
 answers should not be trusted without a second look.
 
-| Skill | Server |
-|---|---|
-| `skills/wb-connector` | `wb-mcp` |
-| `skills/ozon-connector` | `ozon-mcp` |
-| `skills/yandex-connector` | `yandex-mcp` |
-| `skills/detmir-connector` | `detmir-mcp` |
-| `skills/avito-connector` | `avito-mcp` |
-| `skills/taobao-connector` | `taobao-mcp` |
-| `skills/megamarket-connector` | `megamarket-mcp` |
-| `skills/lamoda-connector` | `lamoda-mcp` |
-| `skills/dns-connector` | `dns-mcp` |
-| `skills/citilink-connector` | `citilink-mcp` |
-| `skills/compare-prices` | `compare-mcp` |
-| `skills/mpstats-connector` | `mpstats-mcp` |
-| `skills/marketplace` | `marketplace-mcp` |
+| Skill                         | Server            |
+| ----------------------------- | ----------------- |
+| `skills/wb-connector`         | `wb-mcp`          |
+| `skills/ozon-connector`       | `ozon-mcp`        |
+| `skills/yandex-connector`     | `yandex-mcp`      |
+| `skills/detmir-connector`     | `detmir-mcp`      |
+| `skills/avito-connector`      | `avito-mcp`       |
+| `skills/taobao-connector`     | `taobao-mcp`      |
+| `skills/megamarket-connector` | `megamarket-mcp`  |
+| `skills/lamoda-connector`     | `lamoda-mcp`      |
+| `skills/dns-connector`        | `dns-mcp`         |
+| `skills/citilink-connector`   | `citilink-mcp`    |
+| `skills/compare-prices`       | `compare-mcp`     |
+| `skills/mpstats-connector`    | `mpstats-mcp`     |
+| `skills/marketplace`          | `marketplace-mcp` |
 
 `mcp-core` is the shared runtime rather than a server, so it has no skill.
 
@@ -778,21 +782,21 @@ packages. Installing from PyPI means fetching the skills from the repo separatel
 
 Every setting is an environment variable with a per-connector prefix. All optional.
 
-| Prefix | Common knobs |
-|---|---|
-| `WB_` | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY` |
-| `YANDEX_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `DETMIR_` | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY` |
-| `OZON_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY` |
-| `AVITO_` | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID` |
-| `TAOBAO_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `MEGAMARKET_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
-| `LAMODA_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL` |
-| `CHROME_` | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH` |
-| `COMPARE_` | `SOURCE_TIMEOUT` |
-| `MPSTATS_` | `MP_AUTH` (the only required one — without it the tools return `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
-| `MCP_` | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT` |
+| Prefix               | Common knobs                                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `WB_`                | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY`                                |
+| `YANDEX_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
+| `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY`                                                            |
+| `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                  |
+| `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                   |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
+| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
+| `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
+| `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
+| `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                |
+| `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                           |
+| `MPSTATS_`           | `MP_AUTH` (the only required one — without it the tools return `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
+| `MCP_`               | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT`                                                         |
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
 `HTTPS_PROXY`/`ALL_PROXY` — seven connectors carry one: `WB_`, `YANDEX_`, `DETMIR_`,
@@ -813,14 +817,14 @@ commits.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 948 offline tests
+uv run pytest -q -m "not live and not cdp"    # 980 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
-uv run python scripts/check_versions.py       # one version across all 59 places
+ uv run python scripts/check_versions.py       # one version across all 72 places
 ```
 
 Some tests execute a connector's **real extractor JavaScript** against captured
@@ -871,7 +875,7 @@ request rate.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 948 offline
+are confidently wrong, so the project is arranged around verification: 980 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
