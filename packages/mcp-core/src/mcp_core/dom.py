@@ -91,10 +91,47 @@ def _decoy_regex_literal() -> str:
     return f"/{escaped}/i"
 
 
+# Currency glyphs that attach a number to a price: the rouble sign, the rouble
+# word, and the two yuan signs (full- and half-width) used by Taobao. ONE list,
+# and the JavaScript regex below is generated from it — for the same reason
+# DECOY_MARKERS is: editing a glyph here but not in the JS would read as a
+# mysterious null price on the site that uses it.
+_PRICE_GLYPHS: tuple[str, ...] = ("₽", "руб", "¥", "￥")
+
+
+def _price_glyph_literal() -> str:
+    """The _PRICE_GLYPHS as a JavaScript regex literal, escaped like the decoys."""
+    escaped = "|".join(re.escape(glyph) for glyph in _PRICE_GLYPHS)
+    return f"/{escaped}/i"
+
+
+def _glyph_remainder_literal() -> str:
+    """JavaScript regex for the sibling-text check: what remains next to the
+    digits is only the currency glyph.
+
+    Covers both shapes in _PRICE_GLYPHS: single-character glyphs (``₽ ¥ ￥``)
+    as a character class, and the ``руб``/``руб.`` word with an optional
+    trailing dot. Generated from the same list as HAS_GLYPH so the two cannot
+    silently disagree about what a price is.
+    """
+    single = "".join(glyph for glyph in _PRICE_GLYPHS if len(glyph) == 1)
+    words = [glyph for glyph in _PRICE_GLYPHS if len(glyph) > 1]
+    alternatives: list[str] = []
+    if single:
+        alternatives.append(f"^[{re.escape(single)}\\s.]*$")
+    for word in words:
+        alternatives.append(f"^{re.escape(word)}\\.?$")
+    return "|".join(alternatives)
+
+
 JS_HELPERS = (
     """
     const DECOY_RE = __DECOY_RE__;
+    const HAS_GLYPH = __HAS_GLYPH__;
+    const GLYPHS_REMAINDER = /__GLYPHS_REMAINDER__/i;
 """.replace("__DECOY_RE__", _decoy_regex_literal())
+    .replace("__HAS_GLYPH__", _price_glyph_literal())
+    .replace("__GLYPHS_REMAINDER__", _glyph_remainder_literal())
     + r"""
 
     const cleanText = (el) => {
@@ -102,6 +139,8 @@ JS_HELPERS = (
         const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
         return t || null;
     };
+
+
 
     const cleanTextWithout = (el, dropSelectors) => {
         if (!el) return null;
@@ -154,10 +193,11 @@ JS_HELPERS = (
     // through is how a delivery estimate becomes a product price.
     const priceTextsIn = (root) => {
         if (!root) return {attached: [], other: []};
-        const HAS_GLYPH = /₽|руб/i;
         const attached = [];
         const other = [];
         const nodes = [root, ...root.querySelectorAll('*')];
+
+
         for (const el of nodes) {
             // Leaf-ish nodes only: a container repeats its children's digits and
             // would produce an ambiguous multi-number blob.
@@ -175,7 +215,9 @@ JS_HELPERS = (
                 // Strip this node's text once; whatever remains must be only the
                 // glyph for the pair to count as a single price.
                 const remainder = parentText.replace(raw, '').replace(/\s+/g, ' ').trim();
-                parentGlyph = HAS_GLYPH.test(parentText) && /^[₽\s.]*$|^руб\.?$/i.test(remainder);
+                parentGlyph = HAS_GLYPH.test(parentText) && GLYPHS_REMAINDER.test(remainder);
+
+
             }
             const digits = (raw.match(/\d/g) || []).length;
             if (!ownGlyph && !parentGlyph && digits < 3) continue;

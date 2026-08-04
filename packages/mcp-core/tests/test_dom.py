@@ -65,6 +65,45 @@ def test_the_shared_helpers_read_text_content_not_inner_text() -> None:
     assert "textContent" in code
 
 
+def test_the_price_glyph_regex_is_generated_from_the_python_list() -> None:
+    """One list of currency glyphs feeds HAS_GLYPH and the pixel check alike."""
+    from mcp_core.dom import _PRICE_GLYPHS
+
+    match = re.search(r"const HAS_GLYPH = /(.+?)/i;", JS_HELPERS)
+    assert match, "the shared helpers no longer define HAS_GLYPH"
+    alternatives = match.group(1).split("|")
+    assert len(alternatives) == len(_PRICE_GLYPHS), (
+        f"HAS_GLYPH has {len(alternatives)} alternatives but _PRICE_GLYPHS has {len(_PRICE_GLYPHS)}"
+    )
+    for glyph in _PRICE_GLYPHS:
+        assert re.escape(glyph) in alternatives, f"{glyph!r} is in _PRICE_GLYPHS but not in HAS_GLYPH"
+
+
+def test_the_price_glyph_list_covers_rouble_and_yuan() -> None:
+    """Rouble signs for DNS/Citilink/Lamoda, both yuan glyphs for Taobao."""
+    from mcp_core.dom import _PRICE_GLYPHS
+
+    assert "₽" in _PRICE_GLYPHS
+    assert "руб" in _PRICE_GLYPHS
+    assert "¥" in _PRICE_GLYPHS
+    assert "￥" in _PRICE_GLYPHS
+
+
+def test_yuan_glue_counts_as_a_price() -> None:
+    """Taobao renders "999¥" / "¥129.00" with the glyph glued to the digits."""
+    price, old = prices_from_tile({"price_text": "999¥"})
+    assert price == 999.0
+    assert old is None
+    assert prices_from_tile({"price_text": "¥129.00"})[0] == 129.0
+    assert prices_from_tile({"price_text": "￥1 299"})[0] == 1299.0
+
+
+def test_yuan_glyph_in_a_sibling_element_counts_as_a_price() -> None:
+    """The same split-glyph shape as Citilink: digits and ¥ rendered apart."""
+    price, _old = prices_from_tile({"price_texts": {"attached": ["59.90"], "other": []}})
+    assert price == 59.9
+
+
 # ---------------------------------------------------------------------------
 # Price selection. These are the strings the live sites actually serve.
 # ---------------------------------------------------------------------------
