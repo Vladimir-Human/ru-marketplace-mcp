@@ -56,7 +56,7 @@ repos:
         pass_filenames: false
 
       - id: check-versions
-        # Version strings live in fifty-nine places and are edited by hand at
+        # Version strings live in seventy-two places and are edited by hand at
         # release time; the one that gets missed is silent.
         name: one version, everywhere
         entry: python scripts/check_versions.py
