@@ -103,7 +103,6 @@ def _resolve_jsdom() -> str | None:
         probe = subprocess.run(
             [node, "-e", "process.stdout.write(require.resolve('jsdom'))"],
             capture_output=True,
-            text=True,
             timeout=30,
             env=dict(os.environ),
         )
@@ -111,7 +110,7 @@ def _resolve_jsdom() -> str | None:
         return None
     if probe.returncode != 0 or not probe.stdout.strip():
         return None
-    entry = Path(probe.stdout.strip())
+    entry = Path(probe.stdout.decode("utf-8").strip())
     for parent in entry.parents:
         if parent.name == "node_modules":
             return str(parent)
@@ -161,17 +160,21 @@ def run_extractor(
         extractor.write_text(js_source, encoding="utf-8")
         runner = tmp_path / "runner.js"
         runner.write_text(_RUNNER_JS, encoding="utf-8")
+        # Node emits UTF-8; `text=True` would decode it with the locale codec
+        # (cp1251 on Russian Windows) and choke on the Cyrillic prices. Capture
+        # bytes and decode explicitly so the harness behaves the same everywhere.
         result = subprocess.run(
             [node, str(runner), str(html_path), str(extractor), page_url],
             capture_output=True,
-            text=True,
             timeout=timeout_s,
             env=env,
         )
+        stdout = result.stdout.decode("utf-8", errors="replace")
+        stderr = result.stderr.decode("utf-8", errors="replace")
 
     if result.returncode != 0:  # pragma: no cover - surfaces a broken extractor loudly
-        raise AssertionError(f"extractor JS failed under jsdom:\n{result.stderr[:1500]}")
+        raise AssertionError(f"extractor JS failed under jsdom:\n{stderr[:1500]}")
     try:
-        return json.loads(result.stdout)
+        return json.loads(stdout)
     except json.JSONDecodeError as exc:  # pragma: no cover - malformed extractor output
-        raise AssertionError(f"extractor returned non-JSON output: {result.stdout[:400]!r}") from exc
+        raise AssertionError(f"extractor returned non-JSON output: {stdout[:400]!r}") from exc
