@@ -233,7 +233,9 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
             await ctx.debug(f"Avito tier-1 HTTP {status} (firewall); trying CDP")
     except Exception as exc:
         if ctx:
-            await ctx.debug(f"Avito tier-1 exception: {exc}; trying CDP")
+            # A connect failure quotes the proxy URL, credentials included —
+            # the same redaction every other error path gets, not an exception.
+            await ctx.debug(_redact(f"Avito tier-1 exception: {exc}; trying CDP"))
 
     try:
         status, body = await _cdp_fetch(url, ctx)
