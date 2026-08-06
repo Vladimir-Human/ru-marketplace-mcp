@@ -122,6 +122,7 @@ def test_an_email_in_prose_is_not_mangled():
     ("text", "secret"),
     [
         ("Authorization: Bearer abc123def456ghi789jkl", "abc123def456ghi789jkl"),
+        ("Bearer abc123def456ghi789jkl", "abc123def456ghi789jkl"),
         ("GET /v1?api_key=supersecretvalue123", "supersecretvalue123"),
         ("https://x.test/a?token=zzzzzzzzzzzzzzzzzzzz", "zzzzzzzzzzzzzzzzzzzz"),
         ("key sk-abcdefghijklmnopqrstuvwxyz01", "abcdefghijklmnopqrstuvwxyz01"),

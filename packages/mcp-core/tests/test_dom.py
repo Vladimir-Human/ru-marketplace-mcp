@@ -180,6 +180,39 @@ def test_an_empty_tile_yields_no_price_and_no_crash() -> None:
     assert prices_from_tile({"price_texts": {"attached": [], "other": []}}) == (None, None)
 
 
+def test_meta_attribute_beats_a_numeric_price_rub_field() -> None:
+    """price_meta is the site's own machine-readable number; price_rub is a
+    legacy/cache value. When both are present, meta must win — preferring
+    price_rub would silently publish the stale number."""
+    price, _old = prices_from_tile({"price_meta": "59990", "price_rub": 12345.0})
+    assert price == 59990.0
+
+
+def test_a_strikethrough_equal_to_the_price_is_dropped() -> None:
+    """old == price is a drifted read, not a discount — the same promise as the
+    below-price case. Candidate lists are pre-filtered with a strict '>', so the
+    equal-value case only reaches the guard through the explicit old-price field."""
+    price, old = prices_from_tile({"price_text": "58 999 ₽", "old_price_text": "58 999"})
+    assert price == 58999.0
+    assert old is None
+
+
+def test_the_largest_candidate_above_the_price_is_the_strikethrough() -> None:
+    """With several higher candidates the strikethrough is the LARGEST — picking
+    the smallest would publish a discount that was never on the page."""
+    price, old = prices_from_tile({"price_texts": {"attached": ["59 990₽"], "other": ["66 990", "71 990"]}})
+    assert price == 59990.0
+    assert old == 71990.0
+
+
+def test_a_flat_candidate_list_still_feeds_the_strikethrough() -> None:
+    """Older payloads carry a flat candidate list. Its entries are weak — never
+    the price — but they must still be eligible as strikethrough candidates."""
+    price, old = prices_from_tile({"price_text": "52 999 ₽", "price_texts": ["62 999"]})
+    assert price == 52999.0
+    assert old == 62999.0
+
+
 # ---------------------------------------------------------------------------
 # Titles
 # ---------------------------------------------------------------------------
