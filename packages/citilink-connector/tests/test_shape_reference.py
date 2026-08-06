@@ -5,8 +5,11 @@ extractor's output over the committed captured pages. A field no value
 assertion looks at cannot disappear or retype silently — the shape changes and
 this test names the exact paths that drifted.
 
-Goldens are measured (extractor run over the fixture), never hand-written.
-The DOM half needs Node with jsdom and skips without it.
+The goldens live in ``citilink_connector.shape_reference`` — the same registry
+``citilink_selfcheck`` compares live payloads against — and this file asserts
+the registry still agrees with the fixtures, so it cannot go stale silently.
+Measured (extractor run over the fixture), never hand-written. The DOM half
+needs Node with jsdom and skips without it.
 """
 
 from __future__ import annotations
@@ -14,36 +17,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from citilink_connector import server
+from citilink_connector import server, shape_reference
 from mcp_core.domtest import JsdomUnavailable, run_extractor
 from mcp_core.resilience import shape_signature
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-SEARCH_GOLDEN = [
-    "items[].old_price_text:null",
-    "items[].old_price_text:str",
-    "items[].price_meta:str",
-    "items[].price_text:str",
-    "items[].price_texts.attached[]:str",
-    "items[].price_texts.other:empty_array",
-    "items[].price_texts.other[]:str",
-    "items[].product_id:str",
-    "items[].title:str",
-    "items[].url:str",
-    "title:str",
-]
-
-CARD_GOLDEN = [
-    "is_available:bool",
-    "old_price_text:str",
-    "page_title:str",
-    "price_meta:str",
-    "price_text:str",
-    "price_texts.attached[]:str",
-    "price_texts.other[]:str",
-    "title:str",
-]
 
 
 def _extract(js_source: str, fixture: Path, page_url: str) -> dict:
@@ -59,13 +37,13 @@ def test_search_payload_shape_matches_the_capture() -> None:
         FIXTURES / "search_grid.html",
         page_url="https://www.citilink.ru/catalog/noutbuki/",
     )
-    assert shape_signature(payload) == SEARCH_GOLDEN
+    assert shape_signature(payload) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
 
 
 def test_card_payload_shape_matches_the_capture() -> None:
     payload = _extract(
         server._CARD_EXTRACT_JS,
         FIXTURES / "card.html",
-        page_url="https://www.citilink.ru/product/smartfon-apple-iphone-16-128gb-2038477/",
+        page_url="https://www.citilink.ru/product/noutbuk-lenovo-loq-15irx9-i7-13645hx-16gb-ssd512gb-rtx4050-6gb-15-6-ip-2166619/",
     )
-    assert shape_signature(payload) == CARD_GOLDEN
+    assert shape_signature(payload) == list(shape_reference.CARD_SHAPE_REFERENCE)
