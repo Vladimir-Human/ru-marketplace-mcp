@@ -7,12 +7,11 @@ sorted set of paths and types the extractor emits — via
 disappear or retype silently: the shape changes and this test names the exact
 paths that drifted.
 
-The goldens are measured, not written by hand: each is ``shape_signature`` of
-the real extractor's output over the committed captured fixture, so the only
-way to regenerate one is to run the extractor over that capture again.
-
-The DOM half needs Node with jsdom and skips without it, exactly like the
-value tests it accompanies.
+The goldens live in ``dns_connector.shape_reference`` — the same registry
+``dns_selfcheck`` compares live payloads against — and this file asserts the
+registry still agrees with the fixtures, so it cannot go stale silently.
+Measured (extractor run over the fixture), never hand-written. The DOM half
+needs Node with jsdom and skips without it.
 """
 
 from __future__ import annotations
@@ -20,31 +19,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from dns_connector import server
+from dns_connector import server, shape_reference
 from mcp_core.domtest import JsdomUnavailable, run_extractor
 from mcp_core.resilience import shape_signature
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-SEARCH_GOLDEN = [
-    "items[].availability_text:str",
-    "items[].old_price_text:null",
-    "items[].old_price_text:str",
-    "items[].price_text:str",
-    "items[].product_id:str",
-    "items[].title:str",
-    "items[].url:str",
-    "title:str",
-]
-
-CARD_GOLDEN = [
-    "availability_text:str",
-    "is_available:bool",
-    "old_price_text:null",
-    "page_title:str",
-    "price_text:str",
-    "title:str",
-]
 
 
 def _extract(js_source: str, fixture: Path, page_url: str) -> dict:
@@ -60,7 +39,7 @@ def test_search_payload_shape_matches_the_capture() -> None:
         FIXTURES / "search_grid.html",
         page_url="https://www.dns-shop.ru/search/?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA",
     )
-    assert shape_signature(payload) == SEARCH_GOLDEN
+    assert shape_signature(payload) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
 
 
 def test_card_payload_shape_matches_the_capture() -> None:
@@ -69,4 +48,4 @@ def test_card_payload_shape_matches_the_capture() -> None:
         FIXTURES / "card.html",
         page_url="https://www.dns-shop.ru/product/b7a1667f9b19ed20/noutbuk-huawei/",
     )
-    assert shape_signature(payload) == CARD_GOLDEN
+    assert shape_signature(payload) == list(shape_reference.CARD_SHAPE_REFERENCE)

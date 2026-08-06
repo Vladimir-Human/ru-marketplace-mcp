@@ -56,6 +56,7 @@ from dns_connector.models_output import (
     MetaOut,
 )
 from dns_connector.settings import get_settings
+from dns_connector.shape_reference import SEARCH_REQUIRED_KEYS, SEARCH_SHAPE_REFERENCE
 
 _settings = get_settings()
 
@@ -541,7 +542,7 @@ async def dns_selfcheck(ctx: Context | None = None) -> DnsSelfcheckResponse:
 
 async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
     checks: dict[str, dict] = {}
-    baseline = "cdp-search-tiles-v1"
+    baseline = "cdp-search-shape-v1"
     url = f"{SEARCH_URL}?q={urllib.parse.quote('ноутбук')}"
     try:
         async with asyncio.timeout(90):
@@ -560,9 +561,35 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
     else:
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if items_raw:
-            checks["search"] = R.selfcheck_entry(
-                "healthy", baseline=baseline, notes=[f"{len(items_raw)} tiles extracted"]
-            )
+            # Tiles extract — now ask the second question: did the SHAPE move?
+            # The registry was measured on a captured page; a live payload that
+            # loses a parser-critical path is structural drift even while tiles
+            # still come back. Types may vary with the data (str/null), so the
+            # required check is on key presence, not on the full signature.
+            live_signature = R.shape_signature(payload)
+            drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+            missing_required = [
+                key for key in SEARCH_REQUIRED_KEYS if not any(entry.startswith(f"{key}:") for entry in live_signature)
+            ]
+            if missing_required:
+                checks["search"] = R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    reason="shape_drift",
+                    notes=[
+                        f"{len(items_raw)} tiles extracted",
+                        f"required paths missing: {', '.join(missing_required)}",
+                    ],
+                    shape_missing=drift["missing"],
+                    shape_added=drift["added"],
+                )
+            else:
+                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                if drift["added"]:
+                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                checks["search"] = R.selfcheck_entry(
+                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                )
         else:
             checks["search"] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero tiles"]
