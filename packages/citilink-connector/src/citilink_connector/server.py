@@ -230,14 +230,21 @@ _CARD_EXTRACT_TEMPLATE = """
     // without scoping, querySelector finds a RECOMMENDATION's Snippet__old-price
     // first and publishes another product's strikethrough as this product's old
     // price (verified against the 2026-08-06 capture: read 97 990, correct
-    // 105 990).
-    const scope = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]')
-        || document.body;
-    const metaPriceEl = scope.querySelector('[data-meta-price]') || document.querySelector('[data-meta-price]');
+    // 105 990). A card with NO buy block at all — out of stock — renders no
+    // product price, while its recommendations still carry Snippet__price and
+    // data-meta-price; without an anchor there is nothing to read, so report no
+    // price rather than a neighbour's (verified: such a page read 60 630 from
+    // a recommendation).
+    const buyBlock = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]');
+    const metaPriceEl = buyBlock ? buyBlock.querySelector('[data-meta-price]') : null;
     const metaPrice = metaPriceEl ? metaPriceEl.getAttribute('data-meta-price') : null;
-    const priceEl = scope.querySelector('[data-meta-name="PriceBlock__price"], [data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]');
-    const oldPriceEl = scope.querySelector('[data-meta-name="PriceBlock__additional-price"], [data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]');
-    const priceTexts = priceTextsIn(scope);
+    const priceEl = buyBlock
+        ? buyBlock.querySelector('[data-meta-name="PriceBlock__price"], [data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]')
+        : null;
+    const oldPriceEl = buyBlock
+        ? buyBlock.querySelector('[data-meta-name="PriceBlock__additional-price"], [data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]')
+        : null;
+    const priceTexts = priceTextsIn(buyBlock);
 
     const bodyText = (document.body ? (document.body.textContent || '') : '');
     let available = null;

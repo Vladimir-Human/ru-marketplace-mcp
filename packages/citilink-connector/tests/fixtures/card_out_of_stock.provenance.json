@@ -1,0 +1,16 @@
+{
+  "url": "https://www.citilink.ru/product/noutbuk-acer-gadget-erbook-air-ryzen-7-8745hs-16gb-ssd512gb-780m-14-ip-2147976/",
+  "captured_at": "2026-08-06T21:07:16+00:00",
+  "sha256": "9d4fd4e9f3577d4f60e4a29128db23632d5746e34680b86a46a54602556b710c",
+  "method": "Chrome 151 (operator's chrome-cdp profile, residential RU IP) via CDP, rendered DOM; an out-of-stock card with NO buy block; trimmed to h1, the availability wrapper and one recommendation snippet; svg path data elided and repeated images dropped verbatim otherwise",
+  "ground_truth": {
+    "title_starts_with": "Ноутбук Acer Gadget ERBook Air",
+    "price_rub": null,
+    "old_price_rub": null,
+    "is_available": false,
+    "traps": {
+      "recommendation_price_rub": 60630,
+      "note": "the page carries no product price at all; the only data-meta-price and Snippet__price belong to a recommendation snippet and must never be read as the product's price"
+    }
+  }
+}
