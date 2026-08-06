@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,9 +55,13 @@ class YandexSettings(BaseSettings):
         ge=0,
         description="Seconds to cache upstream reads. 0 disables caching. Higher than other connectors — pages are heavy.",
     )
-    proxy: str = Field(
-        default="",
-        description="Optional proxy URL. Empty means honour the standard HTTPS_PROXY/ALL_PROXY variables.",
+    proxy: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Optional proxy URL. Empty means honour the standard HTTPS_PROXY/ALL_PROXY variables. "
+            "May carry user:pass credentials, so it is a SecretStr: repr/dump show '**********', "
+            "and only the outbound fetch ever unwraps it."
+        ),
     )
     selfcheck_query: str = Field(
         default="телефон",

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from fastmcp.exceptions import ToolError
 from ozon_connector import server
+from pydantic import SecretStr
 
 # Every _sync_call_in_process call in this module boots a brand-new interpreter,
 # and that cost belongs to the host rather than to the code under test: a loaded
@@ -783,7 +784,7 @@ def test_tier1_proxy_is_passed_as_an_argument_not_an_env_var(monkeypatch):
 
     async def scenario():
         monkeypatch.setattr(server, "_min_gap", 0)
-        monkeypatch.setattr(server._settings, "proxy", "http://ozon-proxy:8080")
+        monkeypatch.setattr(server._settings, "proxy", SecretStr("http://ozon-proxy:8080"))
         _patch_tier1(monkeypatch, capturing_get)
 
         await server._fetch_composer("/product/123/", None)
@@ -794,7 +795,7 @@ def test_tier1_proxy_is_passed_as_an_argument_not_an_env_var(monkeypatch):
 
 
 def test_ozon_proxy_falls_back_to_standard_variables(monkeypatch):
-    monkeypatch.setattr(server._settings, "proxy", "")
+    monkeypatch.setattr(server._settings, "proxy", SecretStr(""))
     monkeypatch.delenv("OZON_PROXY", raising=False)
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
     assert server._proxy() == "http://generic:8080"

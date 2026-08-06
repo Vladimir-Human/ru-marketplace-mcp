@@ -113,7 +113,7 @@ _cdp_lock = asyncio.Lock()
 
 
 def _proxy() -> str | None:
-    return _settings.proxy or None
+    return _settings.proxy.get_secret_value() or None
 
 
 async def _polite_wait() -> None:

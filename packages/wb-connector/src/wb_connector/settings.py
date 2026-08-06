@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -66,9 +66,13 @@ class WBSettings(BaseSettings):
         ge=0,
         description="Seconds to cache upstream reads. 0 disables caching. An agent asking price, then reviews, then a comparison hits the same SKU repeatedly.",
     )
-    proxy: str = Field(
-        default="",
-        description="Optional proxy URL. Empty means honour the standard HTTPS_PROXY/ALL_PROXY variables.",
+    proxy: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Optional proxy URL. Empty means honour the standard HTTPS_PROXY/ALL_PROXY variables. "
+            "May carry user:pass credentials, so it is a SecretStr: repr/dump show '**********', "
+            "and only the outbound fetch ever unwraps it."
+        ),
     )
     basket_fallback: str = Field(
         default="basket-28",

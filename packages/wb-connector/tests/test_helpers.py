@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastmcp.exceptions import ToolError
 from mcp_core.cache import TTLCache
+from pydantic import SecretStr
 from wb_connector import server
 
 
@@ -1363,12 +1364,12 @@ def test_cache_can_be_disabled_by_ttl_zero(monkeypatch):
 
 def test_proxy_prefers_the_connector_specific_variable(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
-    monkeypatch.setattr(server._settings, "proxy", "http://explicit:9090")
+    monkeypatch.setattr(server._settings, "proxy", SecretStr("http://explicit:9090"))
     assert server._proxy() == "http://explicit:9090"
 
 
 def test_proxy_falls_back_to_standard_variables(monkeypatch):
-    monkeypatch.setattr(server._settings, "proxy", "")
+    monkeypatch.setattr(server._settings, "proxy", SecretStr(""))
     monkeypatch.delenv("WB_PROXY", raising=False)
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
     assert server._proxy() == "http://generic:8080"

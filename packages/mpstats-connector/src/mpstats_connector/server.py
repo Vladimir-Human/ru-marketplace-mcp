@@ -138,7 +138,7 @@ _cache: TTLCache[tuple[int, str | None, str | None]] = TTLCache(ttl_s=_settings.
 
 def _proxy() -> str | None:
     """Resolve MPStats' proxy: explicit ``MPSTATS_PROXY`` first, then standard vars."""
-    return (_settings.proxy or "").strip() or proxy_from_env("MPSTATS_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("MPSTATS_PROXY")
 
 
 def _client() -> httpx.AsyncClient:

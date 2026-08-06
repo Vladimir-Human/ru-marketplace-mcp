@@ -102,7 +102,7 @@ _cache: TTLCache[Any] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
 
 
 def _proxy() -> str | None:
-    return (_settings.proxy or "").strip() or proxy_from_env("DETMIR_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("DETMIR_PROXY")
 
 
 # Region codes are ISO 3166-2:RU (RU-MOW Moscow, RU-SPE St Petersburg, ...). Validated

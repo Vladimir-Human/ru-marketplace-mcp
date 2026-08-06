@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEFAULT_MAX_BODY_BYTES = 50 * 1024 * 1024
@@ -43,9 +43,13 @@ class OzonSettings(BaseSettings):
         ge=0,
         description="Seconds to cache upstream reads. 0 disables caching.",
     )
-    proxy: str = Field(
-        default="",
-        description="Optional proxy URL for the tier-1 impersonation fetch. Empty honours HTTPS_PROXY/ALL_PROXY.",
+    proxy: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Optional proxy URL for the tier-1 impersonation fetch. Empty honours HTTPS_PROXY/ALL_PROXY. "
+            "May carry user:pass credentials, so it is a SecretStr: repr/dump show '**********', "
+            "and only the outbound fetch ever unwraps it."
+        ),
     )
 
 

@@ -141,7 +141,7 @@ def _proxy() -> str | None:
     the operator started themselves, so its egress is that browser's business —
     routing it from here would silently contradict the user's own browser config.
     """
-    return (_settings.proxy or "").strip() or proxy_from_env("OZON_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("OZON_PROXY")
 
 
 class _SyncCallTimeout(TimeoutError):

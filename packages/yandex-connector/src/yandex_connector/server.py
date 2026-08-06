@@ -100,7 +100,7 @@ _cache: TTLCache[str] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=64)
 
 
 def _proxy() -> str | None:
-    return (_settings.proxy or "").strip() or proxy_from_env("YANDEX_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("YANDEX_PROXY")
 
 
 async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:

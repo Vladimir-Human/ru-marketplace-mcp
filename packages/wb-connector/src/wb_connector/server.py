@@ -213,7 +213,7 @@ def _page_fingerprint(products: list[Any]) -> str | None:
 
 def _proxy() -> str | None:
     """Resolve WB's proxy: explicit ``WB_PROXY`` first, then the standard vars."""
-    return (_settings.proxy or "").strip() or proxy_from_env("WB_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("WB_PROXY")
 
 
 def _wb_client() -> httpx.AsyncClient:
