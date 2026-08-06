@@ -111,6 +111,50 @@ async def test_card_flags_drift_when_neither_title_nor_price(monkeypatch):
         await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/x/")
 
 
+async def test_card_warns_when_in_stock_but_no_price_matched(monkeypatch):
+    """An available card with no price block is suspicious: the buy-block
+    layout most likely moved (anchors no longer match). Say so loudly in
+    meta.warnings instead of silently handing back price_rub=None."""
+    payload = {
+        "title": "Ноутбук Lenovo IdeaPad 3 15ITL6",
+        "price_meta": None,
+        "price_text": None,
+        "old_price_text": None,
+        "price_texts": {"attached": [], "other": []},
+        "is_available": True,
+        "page_title": "Ноутбук — Citilink",
+    }
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/noutbuk-lenovo/")
+
+    assert result.price_rub is None
+    assert result.is_available is True
+    assert any(w.startswith("in_stock_no_price") for w in result.meta.warnings)
+    assert result.meta.healthy is False
+
+
+async def test_card_stays_silent_when_unavailable_and_unpriced(monkeypatch):
+    """No stock and no price is a normal, expected combination (the buy block
+    is simply absent) — it must not raise the in-stock canary."""
+    payload = {
+        "title": "Ноутбук Lenovo IdeaPad 3 15ITL6",
+        "price_meta": None,
+        "price_text": None,
+        "old_price_text": None,
+        "price_texts": {"attached": [], "other": []},
+        "is_available": False,
+        "page_title": "Ноутбук — Citilink",
+    }
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/noutbuk-lenovo/")
+
+    assert result.price_rub is None
+    assert not any(w.startswith("in_stock_no_price") for w in result.meta.warnings)
+    assert result.meta.healthy is True
+
+
 # ------------------------------------------------------------- citilink_selfcheck ----
 
 

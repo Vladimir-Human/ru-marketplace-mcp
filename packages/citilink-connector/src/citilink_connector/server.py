@@ -430,6 +430,16 @@ async def citilink_card(
             raise_tool_error(
                 ParserDriftError("rendered card has neither title nor price — the card shape moved; verify manually")
             )
+        # Canary for the silent-None hole: if the card says it is in stock but no
+        # price block matched any buy-block anchor, the layout most likely moved.
+        # Without this, the tool would hand back price_rub=None with no signal.
+        # (An unavailable card legitimately has no price block, so no warning there.)
+        card_warnings: list[str] = []
+        if payload.get("is_available") and price is None:
+            card_warnings.append(
+                "in_stock_no_price: card is available but no price block matched — "
+                "the buy-block layout may have moved; verify manually"
+            )
         result = CitilinkCardResponse(
             product_id=product_id,
             title=title,
@@ -439,7 +449,9 @@ async def citilink_card(
             url=url,
             tier_used=tier,
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="citilink_card")
+        attached = R.attach_meta(
+            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="citilink_card"
+        )
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:
