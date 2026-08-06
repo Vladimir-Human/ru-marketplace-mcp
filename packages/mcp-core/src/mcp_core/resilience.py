@@ -128,13 +128,20 @@ def coerce_price(value: Any) -> float | None:
         (was inflated x100 by blind digit-concatenation).
       * A multi-number blob / price-range ('1 999 ₽ 2 999 ₽') is AMBIGUOUS and
         returns None (fail loud) rather than the concatenated nonsense 19992999.0.
+
+    Audit 2026-08-06 (found by property tests): a digit run past the float
+    ceiling (~1.8e308) raised OverflowError, breaking totality — one poisoned
+    cell aborted the whole tool. Such values are not prices; they are None.
     """
     if value is None:
         return None
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        v = float(value)
+        try:
+            v = float(value)
+        except OverflowError:
+            return None
         return v if math.isfinite(v) and v > 0 else None
     if isinstance(value, str):
         n = _parse_money_string(value)
@@ -186,7 +193,11 @@ def _parse_money_string(s: str) -> float | None:
     intpart = re.sub(r"[^\d]", "", tok)
     if not intpart:
         return None
-    return float(int(intpart)) + frac
+    try:
+        return float(int(intpart)) + frac
+    except OverflowError:
+        # A digit run past the float ceiling is not a price; degrade, don't raise.
+        return None
 
 
 def coerce_rating(value: Any) -> float | None:
