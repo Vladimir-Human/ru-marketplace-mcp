@@ -49,6 +49,59 @@ def test_redact_url_strips_userinfo_too():
     assert "token=<redacted>" in cleaned
 
 
+def test_proxy_password_with_a_slash_is_fully_stripped():
+    """A '/' in the password terminates the RFC authority, so a regex that
+    stops at '/' leaves the tail of the credential in the log. The scrub must
+    treat everything up to the last '@' of the URL token as userinfo."""
+    cleaned = redact_error_text("ProxyError: failed to connect to http://user:p/ss@host:8080")
+
+    assert "p/ss" not in cleaned
+    assert "user" not in cleaned
+    assert "host:8080" in cleaned
+    assert "<redacted>@" in cleaned
+
+
+def test_proxy_password_with_a_second_at_is_fully_stripped():
+    cleaned = redact_error_text("ProxyError: failed to connect to http://user:pa@ss@proxy.host:3128")
+
+    assert "pa@ss" not in cleaned
+    assert "user" not in cleaned
+    assert "<redacted>@proxy.host:3128" in cleaned
+
+
+def test_redact_url_survives_exotic_userinfo_too():
+    cleaned = redact_url("http://user:p/ss@host:8080/catalog?token=abcdef")
+
+    assert "p/ss" not in cleaned
+    assert "host:8080" in cleaned
+    assert "token=<redacted>" in cleaned
+
+
+def test_an_at_in_the_path_is_not_mistaken_for_userinfo():
+    """The userinfo shape is user:pass — it contains ':'. A path-embedded '@'
+    without it (CDN scaling suffixes) must survive, or redaction starts eating
+    the diagnosis instead of the secret."""
+    text = "GET https://img.example/photo@2x.png returned 404"
+
+    assert redact_error_text(text) == text
+
+
+def test_a_bare_username_without_a_password_is_left_alone():
+    """No ':' means no credential; stripping it would mangle a valid URL."""
+    url = "http://mirror-user@archive.example/pkg.tar.gz"
+
+    assert redact_url(url) == url
+
+
+def test_a_truncated_url_still_loses_its_password():
+    """A connect error can quote the URL cut off at the host: the credential
+    must not survive just because nothing follows the '@'."""
+    cleaned = redact_error_text("Invalid proxy url http://user:pass@")
+
+    assert "pass" not in cleaned
+    assert "<redacted>@" in cleaned
+
+
 def test_a_plain_url_is_left_alone():
     url = "https://www.wildberries.ru/catalog/12345/detail.aspx"
 
