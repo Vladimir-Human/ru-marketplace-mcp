@@ -223,15 +223,19 @@ _CARD_EXTRACT_TEMPLATE = """
         || document.querySelector('[class*="product-card-top__title"]');
     const title = cleanText(titleEl) || document.title || null;
 
-    // Scope the price hunt to the buy block when one is identifiable. Scanning
-    // the whole body sweeps in recommended products, instalment offers and bonus
-    // amounts — every one of them a number smaller than the real price.
-    const scope = document.querySelector('[data-meta-name="ProductHeader"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]')
+    // Scope the price hunt to the product's own buy block. Scanning the whole
+    // body sweeps in recommendation snippets, instalment offers and bonus
+    // amounts. On a live card the buy block is data-meta-name="PriceBlock";
+    // without scoping, querySelector finds a RECOMMENDATION's Snippet__old-price
+    // first and publishes another product's strikethrough as this product's old
+    // price (verified against the 2026-08-06 capture: read 97 990, correct
+    // 105 990).
+    const scope = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]')
         || document.body;
-    const metaPriceEl = document.querySelector('[data-meta-price]');
+    const metaPriceEl = scope.querySelector('[data-meta-price]') || document.querySelector('[data-meta-price]');
     const metaPrice = metaPriceEl ? metaPriceEl.getAttribute('data-meta-price') : null;
-    const priceEl = document.querySelector('[data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]');
-    const oldPriceEl = document.querySelector('[data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]');
+    const priceEl = scope.querySelector('[data-meta-name="PriceBlock__price"], [data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]');
+    const oldPriceEl = scope.querySelector('[data-meta-name="PriceBlock__additional-price"], [data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]');
     const priceTexts = priceTextsIn(scope);
 
     const bodyText = (document.body ? (document.body.textContent || '') : '');
