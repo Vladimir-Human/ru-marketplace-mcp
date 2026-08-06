@@ -40,7 +40,7 @@ SEARCH_GOLDEN = [
 CARD_GOLDEN = [
     "availability_text:str",
     "is_available:bool",
-    "old_price_text:str",
+    "old_price_text:null",
     "page_title:str",
     "price_text:str",
     "title:str",
