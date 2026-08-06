@@ -1,4 +1,12 @@
-"""Regression tests for the DNS card extractor on a real captured DOM.
+"""Regression tests for the DNS card extractor on a modeled fixture.
+
+The fixture below is a hand-modelled card page, not a capture — the audit of
+2026-08-06 established that only the search fixture in this package came from
+a live page. The tests still execute the real extractor JS, so selector and
+price-selection regressions are caught; what a model cannot protect against is
+the live page's shape diverging from the model. Replacing this fixture with a
+captured page is tracked as an operator task (a live dns-shop.ru fetch needs a
+residential RU IP).
 
 The card extractor's availability fallback read ``document.body.innerText``.
 The page's *price* nodes are read via named selectors, but the availability

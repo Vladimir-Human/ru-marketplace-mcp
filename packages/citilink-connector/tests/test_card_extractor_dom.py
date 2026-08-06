@@ -1,10 +1,12 @@
-"""Regression tests for the Citilink card extractor on captured card markup.
+"""Regression tests for the Citilink card extractor on a modeled fixture.
 
 The search extractor got a fixture when the July-2026 audit found the split
 currency glyph; the card extractor reads the same ``data-meta-*`` contract and
 scopes its price hunt to the buy block, but had no DOM-level test — markup
 drift on the product page would have surfaced only live, from the operator's
-Chrome.
+Chrome. The fixture is a hand model of the card page, not a capture (no
+provenance exists for it); replacing it with a captured page is an operator
+task — citilink.ru is reachable from the audit machine.
 
 ``fixtures/card.html`` models the rendered product card: title in ``h1``, the
 current price as digits and glyph in *separate sibling spans* (Citilink's
