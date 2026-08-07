@@ -71,6 +71,9 @@ than an honest absence.
 **Prices are region-specific.** Set `DETMIR_REGION` (default `RU-MOW` = Moscow,
 `RU-SPE` = St Petersburg). Prices and stock differ by region.
 
+**A missing price is `null`, never `0`.** `price_rub: null` means Detsky Mir had
+no usable price — treat it as no data, never as a free item.
+
 **Category listings use `/v4/`.** The old `/v2/products?filter=` path is dead. Any
 guide written before ~2025 is stale.
 

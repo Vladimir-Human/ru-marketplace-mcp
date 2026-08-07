@@ -148,6 +148,34 @@ def test_skill_frontmatter_matches_the_published_spec(package: str) -> None:
     )
 
 
+def _has_nullable_price_field(package: str) -> bool:
+    """True when the package's output models carry a float|None price field —
+    i.e. the 'missing price is null, never 0' boundary applies to its tools."""
+    for path in (PACKAGES / package / "src").rglob("*.py"):
+        if re.search(r"\w*price\w*: float \| None", path.read_text(encoding="utf-8")):
+            return True
+    return False
+
+
+# The boundary must be stated in so many words, or the model has no way to
+# learn it: a null price is "no data", and a zero is never a substitute.
+_NEVER_ZERO_MARKERS = ("never 0", "никогда не 0")
+
+
+@pytest.mark.parametrize("package", CONNECTORS)
+def test_skill_states_the_price_null_boundary(package: str) -> None:
+    """Prices come back as float|None everywhere in this repo. A skill silent
+    about the boundary lets the model read a null as a bug — or a substituted
+    zero as a free item, the exact corruption 'never 0' exists to prevent."""
+    if not _has_nullable_price_field(package):
+        pytest.skip(f"{package} exposes no nullable price field of its own")
+    text = (_skill_dir(package) / "SKILL.md").read_text(encoding="utf-8").lower()
+    text = text.replace("`", "")
+    assert any(marker in text for marker in _NEVER_ZERO_MARKERS), (
+        f"{package}: the skill never states the price boundary — a missing price is null, never 0"
+    )
+
+
 @pytest.mark.parametrize("package", CONNECTORS)
 def test_skill_documents_every_tool_the_server_exposes(package: str) -> None:
     """A tool the skill never mentions is a tool the agent will not reach for."""

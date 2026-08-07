@@ -41,6 +41,8 @@ tier 1 usually answers and Chrome is never touched.
   If `status=error type=parse`, open ozon.ru manually, solve captcha, retry.
 - ETOZ TLS fingerprint check is why we use CDP. Do NOT try curl/httpx directly.
 - Composer-api widget keys vary (webPrice-XXXX). Library scans all webPrice-* keys.
+- A missing price is `null`, never `0`: `price: null` (and `card_price: null`)
+  means Ozon served no usable price — treat it as no data, never as a free item.
 
 ## Sources of truth
 Methodology validated 2026-05-25 against live Ozon catalog data; CDP-via-fetch

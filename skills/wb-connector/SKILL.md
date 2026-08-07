@@ -75,7 +75,8 @@ lookalike name, and to spot several storefronts sharing one legal entity.
 returns the wrong pool. Always resolve through `wb_root_info` first.
 
 **No price means no stock.** A delisted WB item returns `price_rub: null` and
-`in_stock: false` — real data, not a parse failure. If an entire search page has
+`in_stock: false` — real data, not a parse failure. A missing price is `null`,
+never `0` — zero is never substituted. If an entire search page has
 no prices, the connector warns with `no_prices`.
 
 **`wb_search` is 429-prone.** WB rate-limits repeated searches aggressively; the

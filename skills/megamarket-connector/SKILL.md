@@ -27,3 +27,5 @@ enough on its own: an anonymous browser that has cleared it still reads an empty
   transport_down with the fix inline.
 - Run megamarket_selfcheck from your Chrome first: these endpoints were probed
   anonymously, and only a challenge-passed session confirms the in-browser shape.
+- A missing price is `null`, never `0`: `price_rub: null` means Megamarket had
+  no usable price — treat it as no data, never as a free item.

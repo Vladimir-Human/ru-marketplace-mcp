@@ -73,6 +73,10 @@ read "all reviews".
 offer genuinely carries no rating — the tool warns with `no_rating`. Search
 results usually have one, so fall back to the search figure.
 
+**A missing price is `null`, never `0`.** `price_rub: null` /
+`price_with_plus: null` mean Yandex served no usable price — treat it as no
+data, never as a free item.
+
 **Extraction is SSR-coupled.** The `meta.extraction` field says `ssr` normally and
 `ld+json` when the connector had to fall back to schema.org markup — in that mode
 seller and brand are missing and the price is the subscriber one. If you see
