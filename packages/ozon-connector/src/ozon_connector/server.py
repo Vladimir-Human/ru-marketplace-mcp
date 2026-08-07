@@ -1283,6 +1283,50 @@ async def ozon_search(
         raise_tool_error(TransportDownError(_redact(f"ozon_search failed: {exc}")))
 
 
+def _search_items_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Parse ``tileGridDesktop-*`` widgets of a composer payload into tile dicts.
+
+    Split out of the tool so an offline fixture runs the exact parse path —
+    the live capture of 2026-08-07 lives in
+    ``tests/fixtures/search_composer_live.json``.
+    """
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    widgets = payload.get("widgetStates") or {}
+
+    # Nov 2026 schema: tileGridDesktop-* contains items array of product tiles.
+    for key, val in widgets.items():
+        if not key.startswith("tileGridDesktop-"):
+            continue
+        try:
+            data = json.loads(val) if isinstance(val, str) else val
+        except (json.JSONDecodeError, TypeError):
+            continue
+        # widget body or its items may drift to a non-object — must not crash
+        # the slice/loop before per-item guards (audit wave-2 round-2 DRIFT).
+        if not isinstance(data, dict):
+            continue
+        tile_items = data.get("items")
+        if not isinstance(tile_items, list):
+            continue
+        for item in tile_items[:50]:
+            if not isinstance(item, dict):
+                continue  # a null/non-object tile must not crash the search
+            parsed = _parse_search_tile(item)
+            sku = parsed.get("sku")
+            if not isinstance(sku, (str, int)) or isinstance(sku, bool):
+                continue
+            sku_key = str(sku)
+            if not sku_key or sku_key in seen:
+                continue
+            if not parsed.get("title"):
+                continue  # skip non-product tiles (banners, ads)
+            seen.add(sku_key)
+            items.append(parsed)
+
+    return items
+
+
 async def _ozon_search_impl(
     query: str,
     page: int,
@@ -1326,39 +1370,7 @@ async def _ozon_search_impl(
     if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates", {}), dict):
         raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
 
-    items: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    widgets = payload.get("widgetStates") or {}
-
-    # Nov 2026 schema: tileGridDesktop-* contains items array of product tiles.
-    for key, val in widgets.items():
-        if not key.startswith("tileGridDesktop-"):
-            continue
-        try:
-            data = json.loads(val) if isinstance(val, str) else val
-        except (json.JSONDecodeError, TypeError):
-            continue
-        # widget body or its items may drift to a non-object — must not crash
-        # the slice/loop before per-item guards (audit wave-2 round-2 DRIFT).
-        if not isinstance(data, dict):
-            continue
-        tile_items = data.get("items")
-        if not isinstance(tile_items, list):
-            continue
-        for item in tile_items[:50]:
-            if not isinstance(item, dict):
-                continue  # a null/non-object tile must not crash the search
-            parsed = _parse_search_tile(item)
-            sku = parsed.get("sku")
-            if not isinstance(sku, (str, int)) or isinstance(sku, bool):
-                continue
-            sku_key = str(sku)
-            if not sku_key or sku_key in seen:
-                continue
-            if not parsed.get("title"):
-                continue  # skip non-product tiles (banners, ads)
-            seen.add(sku_key)
-            items.append(parsed)
+    items = _search_items_from_payload(payload)
 
     return OzonSearchResponse(
         **R.attach_meta(

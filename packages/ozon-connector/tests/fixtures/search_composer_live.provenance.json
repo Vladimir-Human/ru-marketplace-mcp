@@ -1,0 +1,9 @@
+{
+  "url": "https://www.ozon.ru/api/composer-api.bx/page/json/v2?url=%2Fsearch%2F%3Ftext%3D%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA",
+  "captured_at": "2026-08-07",
+  "sha256": "141c187698fa1bc56a757e202210cfb8511bfe6d145e3fac58e6c500f6c55df2",
+  "method": "captured live on 2026-08-07 via fetch inside the operator's Chrome (raw CDP; the earlier attempt had 403'd on a fab anti-fraud incident, the retry from the warmed session succeeded); trimmed to the single tileGridDesktop-* widget and its first three product tiles; the full raw payload stays outside git in .agent/captures/ozon_search_composer_raw.json",
+  "ground_truth": {
+    "note": "three first product tiles as displayed: sku 3497076095 «Neobihier Ноутбук 15.6\", AMD Ryzen 9 5900HX…» 39 534 ₽ was 66 888 ₽ stock «186 шт осталось»; sku 2796072502 «Ноутбук 15.6\", Intel Celeron N5095A…» 32 296 ₽, no strikethrough, no stock label; sku 4695873085 «Ноутбук для учебы и работы игровой 4 ядра…» 26 838 ₽ was 203 500 ₽ (the anchor price Ozon sellers inflate — parsed verbatim, not judged), stock «477 шт осталось»."
+  }
+}
