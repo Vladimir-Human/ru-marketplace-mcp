@@ -420,7 +420,9 @@ async def taobao_card(
 
     TaobaoCardResponse: {status, item_id, title, price_cny, shop_name, sales,
     description_images, url, tier_used, meta}. price_cny is None when the page
-    hides it or prices by variant — never 0.
+    hides it or prices by variant — never 0. When the description-image count
+    drifts to a non-number, description_images degrades to 0 and meta.warnings
+    names the drift — the card itself still answers.
 
     ## Error Format
 
@@ -472,17 +474,32 @@ async def taobao_card(
                     "rendered card has neither title nor price — the item page shape moved; verify manually"
                 )
             )
+        # A decorative count drifting to a non-number must not kill an otherwise
+        # readable card, and it is not a transport event — degrade to 0 and name
+        # the drift in meta.warnings instead of leaking it to the catch-all,
+        # which would misreport it as transport_down.
+        card_warnings: list[str] = []
+        raw_desc_images = payload.get("description_images")
+        desc_images = R.coerce_int(raw_desc_images)
+        if desc_images is None:
+            desc_images = 0
+            if raw_desc_images not in (None, 0, 0.0, ""):
+                card_warnings.append(
+                    f"description_images: expected a count, got {str(raw_desc_images)[:40]!r}; reported 0"
+                )
         result = TaobaoCardResponse(
             item_id=item_id,
             title=title,
             price_cny=price,
             shop_name=payload.get("shop_name"),
             sales=payload.get("sales"),
-            description_images=int(payload.get("description_images") or 0),
+            description_images=desc_images,
             url=url,
             tier_used=tier,
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="taobao_card")
+        attached = R.attach_meta(
+            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="taobao_card"
+        )
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:

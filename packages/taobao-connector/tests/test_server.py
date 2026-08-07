@@ -172,6 +172,23 @@ async def test_card_flags_drift_when_neither_title_nor_price(monkeypatch):
         await server.taobao_card("123456789012")
 
 
+async def test_card_survives_a_drifted_description_images_with_a_warning(monkeypatch):
+    """A decorative count drifting to a non-number must not kill an otherwise
+    readable card — and it is not a transport event, so it must not surface as
+    TransportDownError either. The count degrades to 0 and the drift is named
+    in meta.warnings, exactly like the other soft-drift canaries."""
+    payload = dict(CARD_EXTRACTED, description_images="about five")
+    _patch_render(monkeypatch, payload)
+
+    result = await server.taobao_card("123456789012")
+
+    assert result.description_images == 0
+    assert result.title == CARD_EXTRACTED["title"]
+    assert result.price_cny == CARD_EXTRACTED["price_cny"]
+    assert any("description_images" in w for w in result.meta.warnings)
+    assert result.meta.healthy is False
+
+
 # ----------------------------------------------------------- taobao_selfcheck ----
 
 
