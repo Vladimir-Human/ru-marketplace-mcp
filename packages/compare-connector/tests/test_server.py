@@ -376,6 +376,15 @@ def test_price_coercion_never_substitutes_zero():
     assert server._as_price(0.0) is None
 
 
+def test_price_coercion_never_returns_a_negative():
+    """A negative is not a price. Ranking one would crown it the cheapest
+    offer, so it must degrade to no-offer exactly like a zero does."""
+    assert server._as_price(-500) is None
+    assert server._as_price(-500.0) is None
+    assert server._as_price("-500 ₽") is None
+    assert server._as_price("-1 234") is None
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
