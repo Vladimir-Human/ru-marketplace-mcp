@@ -57,6 +57,7 @@ from taobao_connector.models_output import (
     TaobaoSelfcheckResponse,
 )
 from taobao_connector.settings import get_settings
+from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
 
 _settings = get_settings()
 
@@ -578,9 +579,32 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
         else:
             items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
             if items_raw:
-                checks["search"] = R.selfcheck_entry(
-                    "healthy", baseline=baseline, notes=[f"{len(items_raw)} items extracted"]
-                )
+                # Items extract — now ask the second question: did the SHAPE
+                # move? The registry was measured on the captured page
+                # (2026-08-07); a live payload that loses a parser-critical
+                # key family is structural drift even while items come back.
+                live_signature = R.shape_signature(payload)
+                drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+                missing = missing_required_families(live_signature)
+                if missing:
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason="shape_drift",
+                        notes=[
+                            f"{len(items_raw)} items extracted",
+                            "required key families missing: " + "; ".join(", ".join(family) for family in missing),
+                        ],
+                        shape_missing=drift["missing"],
+                        shape_added=drift["added"],
+                    )
+                else:
+                    notes = [f"{len(items_raw)} items extracted", "shape matches the captured reference"]
+                    if drift["added"]:
+                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                    checks["search"] = R.selfcheck_entry(
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                    )
             else:
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["rendered page yielded zero items"]

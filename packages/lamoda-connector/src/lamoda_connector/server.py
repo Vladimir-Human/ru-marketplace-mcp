@@ -60,6 +60,7 @@ from lamoda_connector.models_output import (
     MetaOut,
 )
 from lamoda_connector.settings import get_settings
+from lamoda_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
 
 _settings = get_settings()
 
@@ -485,25 +486,49 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
         )
 
     # CDP tier: search tile extraction.
+    baseline = "cdp-search-shape-v1"
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render_search("кроссовки", ctx)
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if items_raw:
-            checks["search"] = R.selfcheck_entry(
-                "healthy", baseline="cdp-search-tiles-v1", notes=[f"{len(items_raw)} tiles extracted"]
-            )
+            # Tiles extract — now ask the second question: did the SHAPE move?
+            # The registry was measured on the captured page (2026-08-07); a
+            # live payload that loses a parser-critical key family is
+            # structural drift even while tiles still come back.
+            live_signature = R.shape_signature(payload)
+            drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+            missing = missing_required_families(live_signature)
+            if missing:
+                checks["search"] = R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    reason="shape_drift",
+                    notes=[
+                        f"{len(items_raw)} tiles extracted",
+                        "required key families missing: " + "; ".join(", ".join(family) for family in missing),
+                    ],
+                    shape_missing=drift["missing"],
+                    shape_added=drift["added"],
+                )
+            else:
+                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                if drift["added"]:
+                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                checks["search"] = R.selfcheck_entry(
+                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                )
         else:
             checks["search"] = R.selfcheck_entry(
-                "drift", baseline="cdp-search-tiles-v1", reason="parse_smoke_failed", notes=["zero SKUs"]
+                "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]
             )
     except ToolError as exc:
         checks["search"] = R.selfcheck_entry(
-            "inconclusive", baseline="cdp-search-tiles-v1", reason="transport_down", notes=[str(exc)[:160]]
+            "inconclusive", baseline=baseline, reason="transport_down", notes=[str(exc)[:160]]
         )
     except Exception as exc:
         checks["search"] = R.selfcheck_entry(
-            "inconclusive", baseline="cdp-search-tiles-v1", reason="transport_down", notes=[f"{type(exc).__name__}"]
+            "inconclusive", baseline=baseline, reason="transport_down", notes=[f"{type(exc).__name__}"]
         )
 
     result_dict = R.selfcheck_result(

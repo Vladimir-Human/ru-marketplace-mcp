@@ -219,6 +219,33 @@ async def test_selfcheck_zero_items_is_drift(monkeypatch):
     assert result.healthy is False
 
 
+async def test_selfcheck_cries_shape_drift_when_the_price_family_vanishes(monkeypatch):
+    """Items still extract, but every key the parser binds a price through is
+    gone — that is structural drift, and it must be said out loud with the
+    missing family named."""
+    _patch_render(
+        monkeypatch,
+        {
+            "title": "手机-淘宝搜索",
+            "items": [
+                {
+                    "item_id": "123456789012",
+                    "title": "Apple iPhone 16 Pro Max 全网通",
+                    "url": "https://item.taobao.com/item.htm?id=123456789012",
+                }
+            ],
+        },
+    )
+
+    result = await server.taobao_selfcheck()
+
+    assert result.status == "drift_detected"
+    search = result.checks["search"]
+    assert search.state == "drift"
+    assert search.reason == "shape_drift"
+    assert any("price" in note for note in search.notes)
+
+
 # ------------------------------------------------------------------- helpers ----
 
 
