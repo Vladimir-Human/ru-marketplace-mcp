@@ -247,23 +247,80 @@ _SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS
 _CARD_EXTRACT_TEMPLATE = """
 () => {
     //__SHARED_HELPERS__
-    // title from the product heading; the generic [class*="title"] fallback
-    // could pick a section heading.
-    const titleEl = document.querySelector('h1')
-        || document.querySelector('[class*="title"], [class*="Title"]');
-    const title = cleanText(titleEl) || document.title || null;
+    // The modern card renders the product name in a mainTitle span (with the
+    // same text in its title attribute); there is no h1. The generic
+    // [class*="title"] fallback is last on purpose: first in document order it
+    // matches the header's image-search widget and reads its placeholder —
+    // that happened on the live capture of 2026-08-07
+    // (tests/fixtures/item_card_live.html).
+    let title = null;
+    const mainTitleEl = document.querySelector('[class*="mainTitle"]');
+    if (mainTitleEl) {
+        title = cleanText(mainTitleEl) || (mainTitleEl.getAttribute('title') || null);
+    }
+    if (!title) {
+        const titleEl = document.querySelector('h1')
+            || document.querySelector('[class*="title"], [class*="Title"]');
+        title = (titleEl ? cleanText(titleEl) : null) || document.title || null;
+    }
 
-    // Price from named candidates, not a body scan: the page carries side
-    // offers and promo amounts that would be Math.min-ed into a wrong number.
-    // priceTextsIn collects glyph-attached candidates (yuan signs included);
-    // Python picks with mcp_core.dom.prices_from_tile.
-    const priceTexts = priceTextsIn(document.body);
+    // Price: the modern card renders symbol + text spans inside
+    // highlightPrice (the amount the buyer pays) and subPrice (the
+    // before-discount figure). A body-wide glyph hunt misses them: the
+    // candidate spans carry digits only, and their parent's text glues Chinese
+    // labels around the glyph, so the glyph-attachment check fails and THE
+    // price lands among the weak candidates. Reassemble the display parts;
+    // Python's coerce_price still does the parsing. Without those blocks, fall
+    // back to the shared glyph hunt (older layouts).
+    const priceRoot = document.querySelector('[class*="priceWrap"], [class*="PriceWrap"]') || document.body;
+    let priceTexts = priceTextsIn(priceRoot);
+    const assembled = [];
+    for (const blockSel of ['[class*="highlightPrice"]', '[class*="subPrice"]']) {
+        for (const block of priceRoot.querySelectorAll(blockSel)) {
+            // The blocks render their parts as sibling spans, and the yuan
+            // sign rides in a symbol-- span OR a bare text-- span depending
+            // on the block (live capture: highlightPrice uses symbol--,
+            // subPrice uses a second text-- span). Concatenate every part in
+            // DOM order and keep results that carry digits.
+            const parts = [];
+            for (const el of block.querySelectorAll('[class*="symbol"], [class*="text"]')) {
+                const t = cleanText(el);
+                if (t) parts.push(t);
+            }
+            const joined = parts.join('');
+            if (joined && /\\d/.test(joined)) assembled.push(joined);
+        }
+    }
+    if (assembled.length) {
+        priceTexts = {attached: assembled.concat(priceTexts.attached), other: priceTexts.other};
+    }
 
     let shop = null, sales = null;
+    // The name rides in a span[class*="shopName"] (with the same text in its
+    // title attribute); the wrapping div matches the same substring and its
+    // text glues the rating and service stats onto the name.
+    const shopEl = document.querySelector('span[class*="shopName"]') || document.querySelector('[class*="shopName"]');
+    if (shopEl) shop = cleanText(shopEl) || (shopEl.getAttribute('title') || null);
     const lines = (document.body.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
     for (const line of lines) {
+        // A glued body blob (no newlines in the live render) must never become
+        // a sales/shop value — cap the candidate length like the price hunt.
+        if (line.length > 40) continue;
         if (/人付款|人收货|已售/.test(line)) sales = sales || line;
         if (/店$/.test(line) && !shop) shop = line;
+    }
+    if (!sales) {
+        // The modern card renders «已售 N+» in an unnamed colored span, and
+        // the body text carries no newlines for the line scan to split. Find
+        // the short text node itself; anything long is glued body text.
+        // (4 === NodeFilter.SHOW_TEXT; the name itself is absent from some
+        // jsdom harnesses, so the constant is spelled out.)
+        const walker = document.createTreeWalker(document.body, 4);
+        let node;
+        while ((node = walker.nextNode())) {
+            const t = (node.textContent || '').trim();
+            if (t.length <= 20 && /^已售/.test(t) && /\\d/.test(t)) { sales = t; break; }
+        }
     }
     const imgs = document.querySelectorAll('[class*="desc"] img, [class*="Desc"] img, #description img');
     return JSON.stringify({
