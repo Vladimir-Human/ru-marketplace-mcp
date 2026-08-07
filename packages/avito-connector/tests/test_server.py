@@ -280,6 +280,50 @@ async def test_selfcheck_flags_drift_when_a_200_fails_the_parse_smoke(monkeypatc
     assert result.healthy is False
 
 
+async def test_selfcheck_accepts_the_captured_live_payload(monkeypatch):
+    """The real captured js/items payload must read as healthy through the
+    whole selfcheck — registry comparison included."""
+    from pathlib import Path
+
+    payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
+
+    async def fake_fetch(url, ctx):
+        if "userId" in url:
+            return _ok(SELLER_PAYLOAD)
+        return _ok(payload)
+
+    monkeypatch.setattr(server, "_fetch", fake_fetch)
+
+    result = await server.avito_selfcheck()
+
+    assert result.checks["search"].state == "healthy"
+
+
+async def test_selfcheck_flags_drift_when_a_key_family_vanishes(monkeypatch):
+    """'id' renamed past every alias while the titles survive: the parse smoke
+    would happily serve id-less items; the shape comparison must cry drift and
+    name the lost family."""
+    from pathlib import Path
+
+    payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
+    for item in payload["items"]:
+        item["idRenamed"] = item.pop("id")
+
+    async def fake_fetch(url, ctx):
+        if "userId" in url:
+            return _ok(SELLER_PAYLOAD)
+        return _ok(payload)
+
+    monkeypatch.setattr(server, "_fetch", fake_fetch)
+
+    result = await server.avito_selfcheck()
+
+    assert result.status == "drift_detected"
+    entry = result.checks["search"]
+    assert entry.state == "drift"
+    assert any("items[].id" in note for note in entry.notes)
+
+
 # ------------------------------------------------------------------- helpers ----
 
 
@@ -345,3 +389,43 @@ def test_a_single_block_does_not_cry_wolf():
 
     assert "standing block" not in str(server._blocked_error("curl_cffi"))
     server._pacer.reset()
+
+
+# ---------------------------------------------------------- debug redaction ----
+#
+# The tier-1 fallback tells the client it is trying CDP and logs the exception
+# that knocked tier 1 out. A connect failure embeds the proxy URL — including
+# credentials — into the exception text, so that debug line must pass through
+# the same redaction as every other error path in this connector.
+
+
+async def test_fetch_debug_never_leaks_tier1_exception_secrets(monkeypatch):
+    async def no_wait():
+        return None
+
+    def exploding_get(url, proxy=None):
+        raise ConnectionError("failed to connect to http://user:p/ss@proxy.example:3128")
+
+    async def fake_cdp_fetch(url, ctx):
+        return 200, '{"items": []}'
+
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(server, "_sync_curl_get", exploding_get)
+    monkeypatch.setattr(server, "_cdp_fetch", fake_cdp_fetch)
+
+    class RecordingCtx:
+        def __init__(self):
+            self.messages: list[str] = []
+
+        async def debug(self, message):
+            self.messages.append(str(message))
+
+        async def info(self, message):
+            self.messages.append(str(message))
+
+    ctx = RecordingCtx()
+    await server._fetch("https://www.avito.ru/web/1/js/items?q=x", ctx)
+
+    debugged = "\n".join(ctx.messages)
+    assert "p/ss" not in debugged, f"proxy password leaked into ctx.debug: {debugged}"
+    assert "proxy.example:3128" in debugged, "redaction ate the host — the diagnosis must survive"

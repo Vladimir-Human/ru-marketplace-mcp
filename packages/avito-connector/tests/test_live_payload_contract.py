@@ -119,6 +119,17 @@ def test_posted_at_refuses_junk() -> None:
     assert _posted_at({"sortTimeStamp": "not a stamp"}) is None
 
 
+def test_posted_at_never_raises_on_non_finite_or_huge_stamps() -> None:
+    """json.loads admits Infinity/NaN and arbitrary-precision ints, so a
+    poisoned sortTimeStamp cell can reach the epoch math: a huge int used to
+    overflow the /1000.0 division before the fromtimestamp try/except could
+    catch it, aborting the whole search. Any unusable stamp degrades to
+    no-date instead of raising."""
+    assert _posted_at({"sortTimeStamp": float("inf")}) is None
+    assert _posted_at({"sortTimeStamp": float("nan")}) is None
+    assert _posted_at({"sortTimeStamp": 10**400}) is None
+
+
 def test_total_count_is_read_from_the_envelope() -> None:
     _raw, total = _parse_search_items(_payload())
     assert total == 51343

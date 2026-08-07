@@ -70,10 +70,11 @@ from avito_connector.models_output import (
     MetaOut,
 )
 from avito_connector.settings import get_settings
+from avito_connector.shape_reference import missing_required_families
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.avito.ru"
@@ -117,7 +118,7 @@ _cdp_lock = asyncio.Lock()
 
 
 def _proxy() -> str | None:
-    return _settings.proxy or None
+    return _settings.proxy.get_secret_value() or None
 
 
 async def _polite_wait() -> None:
@@ -233,7 +234,9 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
             await ctx.debug(f"Avito tier-1 HTTP {status} (firewall); trying CDP")
     except Exception as exc:
         if ctx:
-            await ctx.debug(f"Avito tier-1 exception: {exc}; trying CDP")
+            # A connect failure quotes the proxy URL, credentials included —
+            # the same redaction every other error path gets, not an exception.
+            await ctx.debug(_redact(f"Avito tier-1 exception: {exc}; trying CDP"))
 
     try:
         status, body = await _cdp_fetch(url, ctx)
@@ -317,9 +320,12 @@ def _posted_at(item: dict[str, Any]) -> str | None:
     stamp = R.first_present(item, "sortTimeStamp", "allowTimeStamp")
     if isinstance(stamp, bool) or not isinstance(stamp, (int, float)):
         return None
-    # Milliseconds since epoch; guard against a seconds-based drift upstream.
-    seconds = stamp / 1000.0 if stamp > 1e11 else float(stamp)
     try:
+        # Milliseconds since epoch; guard against a seconds-based drift
+        # upstream. The division stays inside the try: json.loads admits
+        # arbitrary-precision ints, and a huge stamp overflows the float
+        # arithmetic before fromtimestamp is ever reached.
+        seconds = stamp / 1000.0 if stamp > 1e11 else float(stamp)
         moment = datetime.datetime.fromtimestamp(seconds, tz=datetime.UTC)
     except (OverflowError, OSError, ValueError):
         return None
@@ -671,6 +677,12 @@ async def avito_selfcheck(ctx: Context | None = None) -> AvitoSelfcheckResponse:
 
     AvitoSelfcheckResponse: {status, healthy, connector, checks, server_version,
     server_started_at, process_id}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("avito_selfcheck.start")
     try:
@@ -735,6 +747,14 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
         first = items[0]
         if first["item_id"] is None and first["title"] is None:
             raise ValueError("items carry neither id nor title")
+        # The parser binds through alias families, so a rename WITHIN a family
+        # is fine — but the loss of a whole family is drift the parse smoke
+        # cannot see (id renamed away while title survives would serve every
+        # item without an id). Compare against the captured reference.
+        missing = missing_required_families(R.shape_signature(payload))
+        if missing:
+            lost = "; ".join("/".join(family) for family in missing)
+            raise ValueError(f"payload lost parser-critical key families: {lost}")
         return f"{len(items)} items parsed"
 
     def _card_smoke(payload: Any) -> str:

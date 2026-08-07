@@ -49,6 +49,92 @@ def test_redact_url_strips_userinfo_too():
     assert "token=<redacted>" in cleaned
 
 
+def test_proxy_password_with_a_slash_is_fully_stripped():
+    """A '/' in the password terminates the RFC authority, so a regex that
+    stops at '/' leaves the tail of the credential in the log. The scrub must
+    treat everything up to the last '@' of the URL token as userinfo."""
+    cleaned = redact_error_text("ProxyError: failed to connect to http://user:p/ss@host:8080")
+
+    assert "p/ss" not in cleaned
+    assert "user" not in cleaned
+    assert "host:8080" in cleaned
+    assert "<redacted>@" in cleaned
+
+
+def test_proxy_password_with_a_second_at_is_fully_stripped():
+    cleaned = redact_error_text("ProxyError: failed to connect to http://user:pa@ss@proxy.host:3128")
+
+    assert "pa@ss" not in cleaned
+    assert "user" not in cleaned
+    assert "<redacted>@proxy.host:3128" in cleaned
+
+
+def test_redact_url_survives_exotic_userinfo_too():
+    cleaned = redact_url("http://user:p/ss@host:8080/catalog?token=abcdef")
+
+    assert "p/ss" not in cleaned
+    assert "host:8080" in cleaned
+    assert "token=<redacted>" in cleaned
+
+
+def test_a_truncated_proxy_url_with_a_slash_password_is_still_redacted():
+    """A connection failure can truncate the URL at the host, leaving the whole
+    userinfo dangling before a bare '@'. A '/' inside the password must not
+    shield it from redaction — a leaked truncated credential is still a leak."""
+    cleaned = redact_error_text("failed to connect to https://user:p/ss@ then gave up")
+
+    assert "p/ss" not in cleaned
+    assert "<redacted>@" in cleaned
+
+
+def test_a_truncated_credential_without_a_slash_is_redacted_too():
+    cleaned = redact_error_text("failed to connect to https://user:pass@ then gave up")
+
+    assert "pass" not in cleaned.replace("<redacted>", "")
+    assert "<redacted>@" in cleaned
+
+
+def test_a_path_capped_with_at_is_not_mistaken_for_a_credential():
+    """host:port/path@ — the part between the first ':' and the '/' is a
+    numeric port, i.e. a path ending in '@', not a credential: keep it readable
+    instead of eating a diagnostic."""
+    text = "invalid host https://host:8080/a@ rejected"
+
+    assert redact_error_text(text) == text
+
+
+def test_a_bare_username_before_at_is_left_alone():
+    """No ':' in the userinfo — a bare username is not a credential."""
+    text = "see http://mirror-user@ then"
+
+    assert redact_error_text(text) == text
+
+
+def test_an_at_in_the_path_is_not_mistaken_for_userinfo():
+    """The userinfo shape is user:pass — it contains ':'. A path-embedded '@'
+    without it (CDN scaling suffixes) must survive, or redaction starts eating
+    the diagnosis instead of the secret."""
+    text = "GET https://img.example/photo@2x.png returned 404"
+
+    assert redact_error_text(text) == text
+
+
+def test_a_bare_username_without_a_password_is_left_alone():
+    """No ':' means no credential; stripping it would mangle a valid URL."""
+    url = "http://mirror-user@archive.example/pkg.tar.gz"
+
+    assert redact_url(url) == url
+
+
+def test_a_truncated_url_still_loses_its_password():
+    """A connect error can quote the URL cut off at the host: the credential
+    must not survive just because nothing follows the '@'."""
+    cleaned = redact_error_text("Invalid proxy url http://user:pass@")
+
+    assert "pass" not in cleaned
+    assert "<redacted>@" in cleaned
+
+
 def test_a_plain_url_is_left_alone():
     url = "https://www.wildberries.ru/catalog/12345/detail.aspx"
 
@@ -69,6 +155,7 @@ def test_an_email_in_prose_is_not_mangled():
     ("text", "secret"),
     [
         ("Authorization: Bearer abc123def456ghi789jkl", "abc123def456ghi789jkl"),
+        ("Bearer abc123def456ghi789jkl", "abc123def456ghi789jkl"),
         ("GET /v1?api_key=supersecretvalue123", "supersecretvalue123"),
         ("https://x.test/a?token=zzzzzzzzzzzzzzzzzzzz", "zzzzzzzzzzzzzzzzzzzz"),
         ("key sk-abcdefghijklmnopqrstuvwxyz01", "abcdefghijklmnopqrstuvwxyz01"),

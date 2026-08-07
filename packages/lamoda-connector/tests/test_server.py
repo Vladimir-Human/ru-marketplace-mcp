@@ -189,6 +189,28 @@ async def test_selfcheck_cdp_drift_is_flagged(monkeypatch):
     assert result.checks["search"].state == "drift"
 
 
+async def test_selfcheck_cries_shape_drift_when_the_price_family_vanishes(monkeypatch):
+    """Tiles still extract, but every key the parser binds a price through is
+    gone — that is structural drift, and it must be said out loud with the
+    missing family named."""
+    _patch_graphql(monkeypatch, GRAPHQL_PRODUCT)
+    _patch_render(
+        monkeypatch,
+        {
+            "title": "кроссовки — Lamoda",
+            "items": [{"sku": "MP002XM1RMM3", "title": "Кроссовки Nike Air Max", "url": "https://www.lamoda.ru/p/x/"}],
+        },
+    )
+
+    result = await server.lamoda_selfcheck()
+
+    assert result.status == "drift_detected"
+    search = result.checks["search"]
+    assert search.state == "drift"
+    assert search.reason == "shape_drift"
+    assert any("price" in note for note in search.notes)
+
+
 # ------------------------------------------------------------------- helpers ----
 
 

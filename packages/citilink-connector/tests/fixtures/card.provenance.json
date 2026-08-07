@@ -1,0 +1,17 @@
+{
+  "url": "https://www.citilink.ru/product/noutbuk-lenovo-loq-15irx9-i7-13645hx-16gb-ssd512gb-rtx4050-6gb-15-6-ip-2166619/",
+  "captured_at": "2026-08-06T18:06:54+00:00",
+  "sha256": "daeb264636601a610d8427725b7b7c6c165f0f671f9b6c545de2958012860586",
+  "method": "Chrome 151 (operator's chrome-cdp profile) via CDP, rendered DOM; trimmed to the product price block and trap blocks, svg path data and repeated carousel images elided",
+  "ground_truth": {
+    "title_starts_with": "Ноутбук игровой Lenovo LOQ 15IRX9",
+    "price_rub": 89990,
+    "old_price_rub": 105990,
+    "is_available": true,
+    "traps": {
+      "recommendation_old_price_rub": 97990,
+      "credit_instalment_rub": 3531,
+      "bonuses": 1800
+    }
+  }
+}

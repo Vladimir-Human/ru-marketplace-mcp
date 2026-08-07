@@ -1,0 +1,1375 @@
+{
+ "item": {
+  "price": {
+   "price": 699,
+   "currency": "RUB"
+  },
+  "prices": {
+   "sale": 699
+  },
+  "bank_calculations": {
+   "dolyame": [
+    174,
+    174,
+    174,
+    177
+   ],
+   "mokka": [
+    116,
+    116,
+    116,
+    116,
+    116,
+    119
+   ],
+   "vanta": [
+    699
+   ]
+  },
+  "id": "6673568",
+  "sapUid": "1000996075-2",
+  "isSizable": false,
+  "code": "1000996075-2",
+  "type": "product",
+  "parent_id": null,
+  "article": "DF10-093A",
+  "title": "Кукла пупс Demi Star в розовом комбинезоне",
+  "description": "<p>Очаровательный пупс Demi Star в нежном розовом комбинезоне станет для ребёнка первой любимой куклой. На голове — шапочка с кружевной отделкой и милым бантом. Пупс отличается отличной детализаций: черты лица тщательно проработаны, ручки и ножки пухлые, как у настоящего младенца. Голова, ручки и ножки подвижные, что позволяет менять позу: сажать кроху, укачивать и укладывать спать. С пупсом Demi Star дети смогут играть в ролевые игры, развивая фантазию, коммуникативные навыки и эмоциональный интеллект.</p><ul><li>Комплект одежды: кроха одета в розовый комбинезон и красивую шапочку, образ полностью готов к игре.</li><li>Частичная подвижность: голова, ручки и ножки куклы двигаются, позволяя менять позу — сажать, укладывать, качать на руках.</li><li>Размер около 25 см — удобно для маленьких ручек.</li></ul>",
+  "final_price": null,
+  "old_price": null,
+  "box": null,
+  "unit_price": null,
+  "components": [],
+  "promoted": false,
+  "min_order_quantity": null,
+  "max_order_quantity": 10,
+  "sex": [
+   "female"
+  ],
+  "bonus": 6.99,
+  "rating": 5,
+  "review_count": 21,
+  "averageRating": 5,
+  "totalReviewCount": 54,
+  "questions_count": 2,
+  "pictures": [
+   {
+    "id": "",
+    "title": "",
+    "original": "https://catalog-cdn.detmir.st/media/LLUK-FPY9wOwhYqANBgcO59FiBSJUSJLsUbmmB1sHtk=.jpeg",
+    "web": "https://catalog-cdn.detmir.st/media/LLUK-FPY9wOwhYqANBgcO59FiBSJUSJLsUbmmB1sHtk=.webp?preset=site_product_gallery_r450",
+    "thumbnail": "https://catalog-cdn.detmir.st/media/LLUK-FPY9wOwhYqANBgcO59FiBSJUSJLsUbmmB1sHtk=.webp?preset=site_product_gallery_r150",
+    "image": {
+     "desktop": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 700,
+         "height": 700,
+         "webp": "https://img.detmir.st/l71bpWv8Hn7x8zX6ZFoFrFAcRvcUoGPr6Nk_a5WJgZU/rs:fit:700:700/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1224,
+         "height": 1224,
+         "webp": "https://img.detmir.st/jtKae9RMp2h1Je5l9NIwdXEWs0iSVVvmBIT4SMBD46o/rs:fit:1224:1224/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 124,
+         "height": 124,
+         "webp": "https://img.detmir.st/39aN2GNu7ygHHw1vJPnz3F9cE6xW_xhM_DoLRcYhxxs/rs:fit:124:124/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1400,
+         "height": 1400,
+         "webp": "https://img.detmir.st/RPvWGM4L1StTaNIBSJP3-NFZmh_K3YvLVjD7c3phKGQ/rs:fit:1400:1400/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2448,
+         "height": 2448,
+         "webp": "https://img.detmir.st/YNAZpvn_dc0h-GyOOI-MFj81Ajsast64kMe5Jo3sQeA/rs:fit:2448:2448/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 248,
+         "height": 248,
+         "webp": "https://img.detmir.st/uNDHUbW0r0ebnbkSOaeJkWWWiUlUZJuIDegnrIjUIm4/rs:fit:248:248/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "tablet": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/aaatNjExRL_GCg5L8PCShkzn3DcMJ1fK17OgYm4aQXI/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/aaatNjExRL_GCg5L8PCShkzn3DcMJ1fK17OgYm4aQXI/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/A_4yVFUq8jBqoQy3GbpN-Cxc9TbLXvZ26Jk95e6WIcY/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/Mz-v81qGmDIeaDbKLJX6Pj25ZZ-XKZQ_ibeNKAkXPBc/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/Mz-v81qGmDIeaDbKLJX6Pj25ZZ-XKZQ_ibeNKAkXPBc/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/_3QXohdNFxbN7YfKTKK19AWTnlcCpAygTv4EN3LkS8Y/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "mobile": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/-UGCj0KMsOTMUYiHLOPS_ccWYuNAzFbvoIzcNqLbNfo/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/-UGCj0KMsOTMUYiHLOPS_ccWYuNAzFbvoIzcNqLbNfo/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/A_4yVFUq8jBqoQy3GbpN-Cxc9TbLXvZ26Jk95e6WIcY/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/d9FPni1_UPoLJMASW3vM60ecs4qfEyFLNJs6jsLLbRs/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/d9FPni1_UPoLJMASW3vM60ecs4qfEyFLNJs6jsLLbRs/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/_3QXohdNFxbN7YfKTKK19AWTnlcCpAygTv4EN3LkS8Y/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvTExVSy1GUFk5d093aFlxQU5CZ2NPNTlGaUJTSlVTSkxzVWJtbUIxc0h0az0uanBlZw.webp"
+        }
+       ]
+      }
+     }
+    }
+   },
+   {
+    "id": "",
+    "title": "",
+    "original": "https://catalog-cdn.detmir.st/media/T1bXfewUD4SJnKitfR0wZsjqLESjSzETWitCmZvVgwU=.jpeg",
+    "web": "https://catalog-cdn.detmir.st/media/T1bXfewUD4SJnKitfR0wZsjqLESjSzETWitCmZvVgwU=.webp?preset=site_product_gallery_r450",
+    "thumbnail": "https://catalog-cdn.detmir.st/media/T1bXfewUD4SJnKitfR0wZsjqLESjSzETWitCmZvVgwU=.webp?preset=site_product_gallery_r150",
+    "image": {
+     "desktop": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 700,
+         "height": 700,
+         "webp": "https://img.detmir.st/cYlbu9e2VO-nzubPOfmh9lML_hVeOzCTZvbKflinXoE/rs:fit:700:700/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1224,
+         "height": 1224,
+         "webp": "https://img.detmir.st/mTCxNqCJZFMYwinImbhXkM9QLmQ8Ij9QbEf2uMRZVeM/rs:fit:1224:1224/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 124,
+         "height": 124,
+         "webp": "https://img.detmir.st/d-1NpFEGK2gtpXCrFfQZlDOnOJVmLYdrMXichcl4I2k/rs:fit:124:124/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1400,
+         "height": 1400,
+         "webp": "https://img.detmir.st/jcfCD1A22hhyasa82qhWzQokBBjbhjK4GanQpaiIHFw/rs:fit:1400:1400/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2448,
+         "height": 2448,
+         "webp": "https://img.detmir.st/7t_joWbq9Aag3r6rxL-9_lrXhyDO10-cjAjsHsJbbq0/rs:fit:2448:2448/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 248,
+         "height": 248,
+         "webp": "https://img.detmir.st/fP50WifkedhIjdrzzeGL6XG3tWF_H7ttjQRiUyVVQiE/rs:fit:248:248/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "tablet": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/dj-tcUVdlYAlwT6TDiIpm8siexjwvJ30Ph34e_G3ufk/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/dj-tcUVdlYAlwT6TDiIpm8siexjwvJ30Ph34e_G3ufk/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/2pjccatYomfZU6fS5JTB_3v3b022N1wPb2CzOb47w4s/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/xBlozmn-s6nP1i7LvJmIx9nPoRxesIDlJvQbIipQGLM/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/xBlozmn-s6nP1i7LvJmIx9nPoRxesIDlJvQbIipQGLM/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/gqHZN9Gc47nbi1wVNqlcRx-hdeNRKPbjY7AQQf-uIZ4/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "mobile": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/4sC7pOdzFaqlvkeejqh1lcvt_ErpD7pRvvaHOXAMr-8/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/4sC7pOdzFaqlvkeejqh1lcvt_ErpD7pRvvaHOXAMr-8/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/2pjccatYomfZU6fS5JTB_3v3b022N1wPb2CzOb47w4s/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/8HTJk2Z4XXashR_EmHxgo4oB62yXz5p-Z5wSZ0cDgqs/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/8HTJk2Z4XXashR_EmHxgo4oB62yXz5p-Z5wSZ0cDgqs/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/gqHZN9Gc47nbi1wVNqlcRx-hdeNRKPbjY7AQQf-uIZ4/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVDFiWGZld1VENFNKbktpdGZSMHdac2pxTEVTalN6RVRXaXRDbVp2Vmd3VT0uanBlZw.webp"
+        }
+       ]
+      }
+     }
+    }
+   },
+   {
+    "id": "",
+    "title": "",
+    "original": "https://catalog-cdn.detmir.st/media/aiXKZaI-W0ZJiNJYFyVeSer7rx3It0Z0WUlYobR5-to=.jpeg",
+    "web": "https://catalog-cdn.detmir.st/media/aiXKZaI-W0ZJiNJYFyVeSer7rx3It0Z0WUlYobR5-to=.webp?preset=site_product_gallery_r450",
+    "thumbnail": "https://catalog-cdn.detmir.st/media/aiXKZaI-W0ZJiNJYFyVeSer7rx3It0Z0WUlYobR5-to=.webp?preset=site_product_gallery_r150",
+    "image": {
+     "desktop": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 700,
+         "height": 700,
+         "webp": "https://img.detmir.st/rDxrG_wy9WthmVxZF6nncIOexp-1mBfCX-drlxpt5PA/rs:fit:700:700/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1224,
+         "height": 1224,
+         "webp": "https://img.detmir.st/rkrDrRpJ6hHlPjZUm214x9awrZBCMguy-d8fBoSAoXY/rs:fit:1224:1224/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 124,
+         "height": 124,
+         "webp": "https://img.detmir.st/zYK1fT54eCrL-JRqGRyVaQQHAS_64E6BNrlk8U1kjuU/rs:fit:124:124/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1400,
+         "height": 1400,
+         "webp": "https://img.detmir.st/cIH6Wuu5qz1kCsUKVv_msfpFJ6fNkEx2UBkJ22HTljg/rs:fit:1400:1400/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2448,
+         "height": 2448,
+         "webp": "https://img.detmir.st/8_1FyggCQw-yIDe8m1xQoIC61CqDVgJP0cAtwgaFh74/rs:fit:2448:2448/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 248,
+         "height": 248,
+         "webp": "https://img.detmir.st/5M7utfFGcWDSEFCxJ3YpnakBemsIBOKKHLM8yRcTgbA/rs:fit:248:248/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "tablet": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/7fxwThQceLrsWjUVqzyOkmqVpAypLMLdAsMuSkiMwEE/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/7fxwThQceLrsWjUVqzyOkmqVpAypLMLdAsMuSkiMwEE/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/eGyUlqKCdHKk5_y-4I6hX_C8ISPskBf2UJGlAouZa5o/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/fxweWiWcTwxA5O-pKttXEk6UvbbRUTdfCoKGTlUCnBU/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/fxweWiWcTwxA5O-pKttXEk6UvbbRUTdfCoKGTlUCnBU/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/1H8zYIopkI8q8NpsHR04f37-JRw15OkGtnAdg7zVWLU/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "mobile": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/ar3U9uYx8NpEFFz5wbZTrb2g8wgN6ScmaYbWq43lXCI/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/ar3U9uYx8NpEFFz5wbZTrb2g8wgN6ScmaYbWq43lXCI/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/eGyUlqKCdHKk5_y-4I6hX_C8ISPskBf2UJGlAouZa5o/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/KEplJnP6KCftAMCDYJO7Ua43mWxfhs6DSqUdNqWRskw/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/KEplJnP6KCftAMCDYJO7Ua43mWxfhs6DSqUdNqWRskw/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/1H8zYIopkI8q8NpsHR04f37-JRw15OkGtnAdg7zVWLU/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvYWlYS1phSS1XMFpKaU5KWUZ5VmVTZXI3cngzSXQwWjBXVWxZb2JSNS10bz0uanBlZw.webp"
+        }
+       ]
+      }
+     }
+    }
+   },
+   {
+    "id": "",
+    "title": "",
+    "original": "https://catalog-cdn.detmir.st/media/5vCORNuXFuhrQncpMHf1eII9WSmGWYH0eLEpuKsECyY=.jpeg",
+    "web": "https://catalog-cdn.detmir.st/media/5vCORNuXFuhrQncpMHf1eII9WSmGWYH0eLEpuKsECyY=.webp?preset=site_product_gallery_r450",
+    "thumbnail": "https://catalog-cdn.detmir.st/media/5vCORNuXFuhrQncpMHf1eII9WSmGWYH0eLEpuKsECyY=.webp?preset=site_product_gallery_r150",
+    "image": {
+     "desktop": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 700,
+         "height": 700,
+         "webp": "https://img.detmir.st/6u7DPQcCZFZA1_VqX_WVnrhSJS1-VGOAvtmjY3qUc30/rs:fit:700:700/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1224,
+         "height": 1224,
+         "webp": "https://img.detmir.st/k5x_j2EpwC2cgilWMb89uTN7PAeid7ftfv938oeDfWc/rs:fit:1224:1224/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 124,
+         "height": 124,
+         "webp": "https://img.detmir.st/5ZZxEE-YsF4ahp6n6TFZWDPaFNLzyvLGkYw3LpCrFg4/rs:fit:124:124/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1400,
+         "height": 1400,
+         "webp": "https://img.detmir.st/zXqRrG2qaQnrmy6aLO3VwEEWyoW5iUmmr1EmxRtLFo0/rs:fit:1400:1400/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2448,
+         "height": 2448,
+         "webp": "https://img.detmir.st/rh_sd3VqPPrDttfRhAAEGA14HWTsazjm4r-Fd5IJ9NA/rs:fit:2448:2448/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 248,
+         "height": 248,
+         "webp": "https://img.detmir.st/tVrysQysDz3TFEzogo3syo4Ixjx34U5okvbaUtCUKY4/rs:fit:248:248/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "tablet": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/FO5ybK4dpD_1mMF8Wjjt3iPKBmWNd5vuch35GAlneMs/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/FO5ybK4dpD_1mMF8Wjjt3iPKBmWNd5vuch35GAlneMs/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/RpiYHA3DTPFpZM_beeuEq5UOWsijtoGrOuHnFspg5Dk/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/YnmOmZAtciLSXCIt-U6RoUQmT1JNILEexFYSYqqMxUA/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/YnmOmZAtciLSXCIt-U6RoUQmT1JNILEexFYSYqqMxUA/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/r8VGHZr8VRxB28u5UNq6ca1P1ZXEcQcv1g_5SHr-uaQ/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "mobile": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/CVT2wxzSnsNKVCES5owCfWdA9tGnx6KE-M8kbyhFXVI/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/CVT2wxzSnsNKVCES5owCfWdA9tGnx6KE-M8kbyhFXVI/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/RpiYHA3DTPFpZM_beeuEq5UOWsijtoGrOuHnFspg5Dk/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/Bj3osT65zwhLsVgXGLtU-FMuSnsGCYzeONIqD2jyVlc/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/Bj3osT65zwhLsVgXGLtU-FMuSnsGCYzeONIqD2jyVlc/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/r8VGHZr8VRxB28u5UNq6ca1P1ZXEcQcv1g_5SHr-uaQ/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvNXZDT1JOdVhGdWhyUW5jcE1IZjFlSUk5V1NtR1dZSDBlTEVwdUtzRUN5WT0uanBlZw.webp"
+        }
+       ]
+      }
+     }
+    }
+   },
+   {
+    "id": "",
+    "title": "",
+    "original": "https://catalog-cdn.detmir.st/media/F7Fk99CiZAExVp4P6l-fVJZYfoDoV9EH0x-kg7sP57Y=.jpeg",
+    "web": "https://catalog-cdn.detmir.st/media/F7Fk99CiZAExVp4P6l-fVJZYfoDoV9EH0x-kg7sP57Y=.webp?preset=site_product_gallery_r450",
+    "thumbnail": "https://catalog-cdn.detmir.st/media/F7Fk99CiZAExVp4P6l-fVJZYfoDoV9EH0x-kg7sP57Y=.webp?preset=site_product_gallery_r150",
+    "image": {
+     "desktop": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 700,
+         "height": 700,
+         "webp": "https://img.detmir.st/OmhHnCdbIQBuswCT4tddWdbUNFMFjHfqQwSjAM_KAyo/rs:fit:700:700/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1224,
+         "height": 1224,
+         "webp": "https://img.detmir.st/kXTk_1HgtQ8lnOwKi37yNNS_LzUdUkhbiQLV_kdTERc/rs:fit:1224:1224/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 124,
+         "height": 124,
+         "webp": "https://img.detmir.st/WY1snvCp444eLRa7OCB5VPzs8ApBR4HmhdlmOf75XbQ/rs:fit:124:124/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1400,
+         "height": 1400,
+         "webp": "https://img.detmir.st/YnkGphSL0ZfTw9MlmELLseQk1zBa3Hj5V_u8Ro-3IuM/rs:fit:1400:1400/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2448,
+         "height": 2448,
+         "webp": "https://img.detmir.st/imdWPEVg8tZH5uGdpHjjrh9XgYvc7bVHVfWUkFbHhY8/rs:fit:2448:2448/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 248,
+         "height": 248,
+         "webp": "https://img.detmir.st/ZONM5LKTnxcdaKLTSSe8OgRRD-B0q9BfjkrpZ91mHw8/rs:fit:248:248/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "tablet": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/kx0bW-pP1IuExtXqXRqDpWd4zTPNthREw9_tRV_eSa8/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1023,
+         "height": 1023,
+         "webp": "https://img.detmir.st/kx0bW-pP1IuExtXqXRqDpWd4zTPNthREw9_tRV_eSa8/rs:fit:1023:1023/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/ZjVkHMsIb0veYlaUVkWHnV6fchB5ApW-isTpdqlB8IU/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/McnTGtcJgbN12YkYPL337bmykORY5XBj0T0wMQ_0mQU/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 2046,
+         "height": 2046,
+         "webp": "https://img.detmir.st/McnTGtcJgbN12YkYPL337bmykORY5XBj0T0wMQ_0mQU/rs:fit:2046:2046/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/GmAoH89X7fs-Qzp0CKCsCH-kvMmNvklQYQhlN38hxqU/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ]
+      }
+     },
+     "mobile": {
+      "sources": {
+       "x1": [
+        {
+         "role": "default",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/YMpyHrVRRLwRchycMg3g3WBH6Wbi8EQjrxHf_ZYwY8s/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 599,
+         "height": 599,
+         "webp": "https://img.detmir.st/YMpyHrVRRLwRchycMg3g3WBH6Wbi8EQjrxHf_ZYwY8s/rs:fit:599:599/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 72,
+         "height": 72,
+         "webp": "https://img.detmir.st/ZjVkHMsIb0veYlaUVkWHnV6fchB5ApW-isTpdqlB8IU/rs:fit:72:72/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ],
+       "x2": [
+        {
+         "role": "default",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/A3rcsS_f0nIDYqFd3pgZBcKoh0awBni-PiOZuTWyIxM/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "fullscreen",
+         "width": 1198,
+         "height": 1198,
+         "webp": "https://img.detmir.st/A3rcsS_f0nIDYqFd3pgZBcKoh0awBni-PiOZuTWyIxM/rs:fit:1198:1198/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        },
+        {
+         "role": "thumbnail",
+         "width": 144,
+         "height": 144,
+         "webp": "https://img.detmir.st/GmAoH89X7fs-Qzp0CKCsCH-kvMmNvklQYQhlN38hxqU/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvRjdGazk5Q2laQUV4VnA0UDZsLWZWSlpZZm9Eb1Y5RUgweC1rZzdzUDU3WT0uanBlZw.webp"
+        }
+       ]
+      }
+     }
+    }
+   }
+  ],
+  "labels": [
+   {
+    "name": "exclusive",
+    "title": "ТОЛЬКО У НАС",
+    "short_title": "",
+    "value": "",
+    "color": {
+     "background": "#00C2FC",
+     "text": "#FFFFFF"
+    },
+    "view": "round",
+    "standard": false
+   },
+   {
+    "name": "promocode",
+    "title": "Доп 20% по промокоду только онлайн",
+    "short_title": "Доп 20% по промокоду",
+    "value": "https://www.detmir.ru/catalog/index/name/wel20online/",
+    "color": {
+     "text": "#ffffff",
+     "background": "#01a743"
+    },
+    "view": "rectangular",
+    "standard": false
+   }
+  ],
+  "brands": [
+   {
+    "id": "112",
+    "title": "Demi Star",
+    "url": "/catalog/index/name/sortforbrand/brand/112/",
+    "href": "/catalog/index/name/sortforbrand/brand/112/",
+    "type": "VENDOR",
+    "popular": true,
+    "sort_order": 0,
+    "sort_priority": 830,
+    "is_zoozavr": false,
+    "pictures": [
+     {
+      "id": "",
+      "title": "",
+      "original": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+      "web": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+      "thumbnail": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+      "image": {
+       "desktop": {
+        "sources": {
+         "x1": [
+          {
+           "role": "default",
+           "width": 48,
+           "height": 48,
+           "webp": "https://img.detmir.st/ZDKh9dtM8OiMx4uYO5sdv3f67GKQNeUAqEzTaCMM5kA/rs:fit:48:48/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x2": [
+          {
+           "role": "default",
+           "width": 96,
+           "height": 96,
+           "webp": "https://img.detmir.st/eA_PLF5Uc4TMckojyEFv5zQPwoL_FRTwusFRXT3DTg8/rs:fit:96:96/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x3": [
+          {
+           "role": "default",
+           "width": 144,
+           "height": 144,
+           "webp": "https://img.detmir.st/CPckgmck-lxaSncTzBshUAseVNZ0x2wEft1kG6m8MwQ/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ]
+        }
+       },
+       "tablet": {
+        "sources": {
+         "x1": [
+          {
+           "role": "default",
+           "width": 48,
+           "height": 48,
+           "webp": "https://img.detmir.st/ZDKh9dtM8OiMx4uYO5sdv3f67GKQNeUAqEzTaCMM5kA/rs:fit:48:48/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x2": [
+          {
+           "role": "default",
+           "width": 96,
+           "height": 96,
+           "webp": "https://img.detmir.st/eA_PLF5Uc4TMckojyEFv5zQPwoL_FRTwusFRXT3DTg8/rs:fit:96:96/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x3": [
+          {
+           "role": "default",
+           "width": 144,
+           "height": 144,
+           "webp": "https://img.detmir.st/CPckgmck-lxaSncTzBshUAseVNZ0x2wEft1kG6m8MwQ/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ]
+        }
+       },
+       "mobile": {
+        "sources": {
+         "x1": [
+          {
+           "role": "default",
+           "width": 48,
+           "height": 48,
+           "webp": "https://img.detmir.st/ZDKh9dtM8OiMx4uYO5sdv3f67GKQNeUAqEzTaCMM5kA/rs:fit:48:48/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x2": [
+          {
+           "role": "default",
+           "width": 96,
+           "height": 96,
+           "webp": "https://img.detmir.st/eA_PLF5Uc4TMckojyEFv5zQPwoL_FRTwusFRXT3DTg8/rs:fit:96:96/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ],
+         "x3": [
+          {
+           "role": "default",
+           "width": 144,
+           "height": 144,
+           "webp": "https://img.detmir.st/CPckgmck-lxaSncTzBshUAseVNZ0x2wEft1kG6m8MwQ/rs:fit:144:144/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+          }
+         ]
+        }
+       }
+      }
+     }
+    ],
+    "animal_types": [],
+    "has_cumulative_discounts": false,
+    "discount_levels": null,
+    "product_count": 875,
+    "product_available_count": 596
+   }
+  ],
+  "collections": [],
+  "categories_ids": [
+   "45909",
+   "72934494",
+   "72924511",
+   "72934495",
+   "1000021399",
+   "1000021398",
+   "72924502",
+   "1000021397",
+   "72930378",
+   "1000018367",
+   "1000018366",
+   "72933246",
+   "1000018365",
+   "72934527",
+   "72933235",
+   "72933748",
+   "72935264",
+   "116037",
+   "116040",
+   "1000018386",
+   "116043",
+   "1000018385",
+   "72924435",
+   "1000018384",
+   "116044",
+   "72931862",
+   "1000018378",
+   "1000018377",
+   "1000018376",
+   "1000018380",
+   "1000018371",
+   "1000018370",
+   "1000018375",
+   "1000018374",
+   "1000018372",
+   "72933178",
+   "72924463",
+   "72931872",
+   "72935896",
+   "72935897",
+   "72933082",
+   "72935898",
+   "1000018454",
+   "1000021526",
+   "72935895",
+   "114597",
+   "114599",
+   "114600",
+   "72926184",
+   "1000018474",
+   "114611",
+   "1000018472",
+   "1000020776",
+   "1000018476",
+   "1000021036",
+   "72933347",
+   "72933348",
+   "72933349",
+   "72933350",
+   "1000021586",
+   "1000021585",
+   "1000021584",
+   "1000017224",
+   "72934529",
+   "72933255",
+   "72933310",
+   "1000015997",
+   "72933311",
+   "1000015987",
+   "72929713",
+   "72933292",
+   "72933280",
+   "45909",
+   "45097",
+   "49631",
+   "1",
+   "51521",
+   "2"
+  ],
+  "material": "",
+  "hideSizesList": false,
+  "attributes": [
+   {
+    "id": "tip_kukly",
+    "title": "Тип куклы",
+    "values": [
+     {
+      "id": "pups",
+      "title": "пупс"
+     }
+    ]
+   },
+   {
+    "id": "myagkoe_telo_kukly",
+    "title": "Мягкое тело",
+    "values": [
+     {
+      "id": "net",
+      "title": "Нет"
+     }
+    ]
+   },
+   {
+    "id": "age_min",
+    "title": "Возраст (месяцы), от",
+    "values": [
+     {
+      "id": "36"
+     }
+    ]
+   },
+   {
+    "id": "vysota_igr",
+    "title": "Высота игрушки, см",
+    "values": [
+     {
+      "id": "25"
+     }
+    ]
+   },
+   {
+    "id": "material_igr",
+    "title": "Материал",
+    "values": [
+     {
+      "id": "plastik",
+      "title": "пластик",
+      "link": "/catalog/index/name/kukly_i_aksessuary/material_igr-plastik"
+     }
+    ]
+   },
+   {
+    "id": "komplektaciya_kukly",
+    "title": "Комплектация",
+    "values": [
+     {
+      "id": "odejhda",
+      "title": "одежда"
+     }
+    ]
+   },
+   {
+    "id": "funkcii_kukly",
+    "title": "Функции",
+    "values": [
+     {
+      "id": "bez_funkcii",
+      "title": "классический пупс",
+      "link": "/catalog/index/name/pups/funkcii_kukly-bez_funkcii"
+     },
+     {
+      "id": "s_podvizhnymi_chastyami_tela",
+      "title": "с подвижными частями тела",
+      "link": "/catalog/index/name/pups/funkcii_kukly-s_podvizhnymi_chastyami_tela"
+     }
+    ]
+   },
+   {
+    "id": "svetovye_ehffekty",
+    "title": "Световые эффекты",
+    "values": [
+     {
+      "id": "net",
+      "title": "Нет"
+     }
+    ]
+   },
+   {
+    "id": "package_length",
+    "title": "Длина упаковки, см",
+    "values": [
+     {
+      "id": "7.5"
+     }
+    ]
+   },
+   {
+    "id": "packing_width",
+    "title": "Ширина упаковки, см",
+    "values": [
+     {
+      "id": "12"
+     }
+    ]
+   },
+   {
+    "id": "packing_height",
+    "title": "Высота упаковки, см",
+    "values": [
+     {
+      "id": "25"
+     }
+    ]
+   },
+   {
+    "id": "package_weight",
+    "title": "Вес упаковки, кг",
+    "values": [
+     {
+      "id": "0.47"
+     }
+    ]
+   },
+   {
+    "id": "pitanie_igr",
+    "title": "Электропитание",
+    "values": [
+     {
+      "id": "bez_pitaniya",
+      "title": "без питания"
+     }
+    ]
+   },
+   {
+    "id": "strana_proizvodstva",
+    "title": "Страна производства",
+    "values": [
+     {
+      "id": "kitaj",
+      "title": "Китай"
+     }
+    ]
+   }
+  ],
+  "variants": [],
+  "videos": [],
+  "videoCovers": [],
+  "videoCoversShort": [],
+  "documents": [],
+  "link": {
+   "rel": "product",
+   "href": "/product/index/id/6673568/",
+   "id": "6673568",
+   "web_url": "https://www.detmir.ru/product/index/id/6673568/"
+  },
+  "available": {
+   "online": {
+    "warehouse_codes": []
+   },
+   "offline": {
+    "region_iso_codes": [
+     "RU-AD",
+     "RU-AL",
+     "RU-ALT",
+     "RU-ARK",
+     "RU-AST",
+     "RU-BA",
+     "RU-BEL",
+     "RU-CE",
+     "RU-CHE",
+     "RU-CU",
+     "RU-DA",
+     "RU-IN",
+     "RU-IRK",
+     "RU-IVA",
+     "RU-KAM",
+     "RU-KB",
+     "RU-KC",
+     "RU-KDA",
+     "RU-KEM",
+     "RU-KGD",
+     "RU-KGN",
+     "RU-KHA",
+     "RU-KHM",
+     "RU-KIR",
+     "RU-KK",
+     "RU-KL",
+     "RU-KO",
+     "RU-KOS",
+     "RU-KR",
+     "RU-KRS",
+     "RU-KYA",
+     "RU-LIP",
+     "RU-ME",
+     "RU-MO",
+     "RU-MOW",
+     "RU-MUR",
+     "RU-NGR",
+     "RU-NIZ",
+     "RU-NVS",
+     "RU-OMS",
+     "RU-ORE",
+     "RU-ORL",
+     "RU-PER",
+     "RU-PNZ",
+     "RU-PRI",
+     "RU-PSK",
+     "RU-ROS",
+     "RU-RYA",
+     "RU-SA",
+     "RU-SAK",
+     "RU-SAM",
+     "RU-SAR",
+     "RU-SE",
+     "RU-SMO",
+     "RU-SPE",
+     "RU-STA",
+     "RU-SVE",
+     "RU-TA",
+     "RU-TAM",
+     "RU-TOM",
+     "RU-TUL",
+     "RU-TVE",
+     "RU-TY",
+     "RU-TYU",
+     "RU-UD",
+     "RU-ULY",
+     "RU-VGG",
+     "RU-VLA",
+     "RU-VLG",
+     "RU-VOR",
+     "RU-YAN",
+     "RU-YAR",
+     "RU-YEV",
+     "RU-ZAB",
+     "RU-MOS"
+    ],
+    "stores": [
+     "1194",
+     "1261",
+     "1441",
+     "145",
+     "1478",
+     "152",
+     "153",
+     "154",
+     "166",
+     "167",
+     "170",
+     "1741",
+     "176",
+     "177",
+     "178",
+     "1791",
+     "1801",
+     "187",
+     "1911",
+     "2001",
+     "2121",
+     "2323",
+     "2443",
+     "2449",
+     "2473",
+     "2490",
+     "2580",
+     "2591",
+     "2633",
+     "2634",
+     "2692",
+     "2731",
+     "3001",
+     "3141",
+     "3151",
+     "3201",
+     "3287",
+     "3294",
+     "3341",
+     "3453",
+     "3481",
+     "367177",
+     "3701",
+     "3742",
+     "3801",
+     "3978",
+     "4001",
+     "4121",
+     "4211",
+     "4907",
+     "4984",
+     "5037",
+     "601",
+     "771853",
+     "8008",
+     "8915"
+    ]
+   }
+  },
+  "availability": "AVAILABLE",
+  "isAvailableOnline": false,
+  "isAvailableOffline": true,
+  "delivery": {
+   "restricted": [],
+   "nearestDeliveryDate": null
+  },
+  "site": "detmir",
+  "promo": false,
+  "signs": [],
+  "creation_date": "2026-03-27T12:30:01.602Z",
+  "vendor_id": "",
+  "vendor": {
+   "id": "",
+   "code": "",
+   "title": "",
+   "name": "",
+   "description": "",
+   "usersIds": [],
+   "inn": "",
+   "ogrn": "",
+   "phone": "",
+   "address": "",
+   "popular": false,
+   "isFromMarketplace": false,
+   "storeName": "",
+   "isBlocked": false
+  },
+  "size_title": "",
+  "manufacturer_size": "",
+  "linear_size": "",
+  "lowest_price_guarantee": false,
+  "variations": [],
+  "is_sale": false,
+  "is_oio": false,
+  "discount_percentage": 0,
+  "is_personal_price_applied": false,
+  "is_own_trademark": true,
+  "is_from_marketplace": false,
+  "bar_codes": [
+   "4640243528501",
+   "2470001426761"
+  ],
+  "deep_discount": false,
+  "group": {
+   "groupId": "1000996075",
+   "productLabel": "в розовом комбинезоне",
+   "products": [
+    "6673567",
+    "6673568",
+    "6673569"
+   ],
+   "listingView": [
+    {
+     "index": 0,
+     "type": "OTHER",
+     "text": "Ещё 3 варианта"
+    }
+   ],
+   "matrix": [
+    {
+     "label": "Модель",
+     "showPrice": false,
+     "values": [
+      {
+       "label": "в цветном комбинезоне",
+       "includedProductIds": [
+        "6673569"
+       ]
+      },
+      {
+       "label": "в розовом комбинезоне",
+       "includedProductIds": [
+        "6673568"
+       ]
+      },
+      {
+       "label": "в розовом платье",
+       "includedProductIds": [
+        "6673567"
+       ]
+      }
+     ]
+    }
+   ],
+   "media": []
+  },
+  "isStencil": false,
+  "productId": "6673568",
+  "sizetable": [],
+  "dynamicSizetable": {
+   "headers": [],
+   "rows": []
+  }
+ }
+}

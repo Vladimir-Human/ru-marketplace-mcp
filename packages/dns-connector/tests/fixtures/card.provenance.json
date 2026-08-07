@@ -1,0 +1,16 @@
+{
+  "url": "https://www.dns-shop.ru/product/b7a1667f9b19ed20/16-noutbuk-huawei-matebook-d-16-2024-mclf-x-seryj/",
+  "captured_at": "2026-08-06T19:24:38+00:00",
+  "sha256": "cfb9ef7693e6f8fbe704fdea563ada09a02cde1862ae7f763ed483454042b6ab",
+  "method": "Chrome 151 (operator's chrome-cdp profile, residential RU IP) via CDP, rendered DOM; trimmed to h1, the .product-buy container and the availability wrap; svg path data elided and repeated images dropped verbatim otherwise",
+  "ground_truth": {
+    "title_starts_with": "16\" Ноутбук HUAWEI MateBook D 16 2024 MCLF-X",
+    "price_rub": 58999,
+    "old_price_rub": null,
+    "is_available": true,
+    "traps": {
+      "instalment_line": "от 5 751 ₽/ мес.",
+      "note": "no strikethrough on this product at capture time; the instalment sibling of the price is the trap"
+    }
+  }
+}

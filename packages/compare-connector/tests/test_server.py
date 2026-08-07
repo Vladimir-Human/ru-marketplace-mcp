@@ -15,6 +15,7 @@ import pytest
 from compare_connector import server
 from compare_connector.models_output import MarketOffer
 from fastmcp.exceptions import ToolError
+from mcp_core import resilience as R
 from pydantic import ValidationError
 
 
@@ -376,6 +377,60 @@ def test_price_coercion_never_substitutes_zero():
     assert server._as_price(0.0) is None
 
 
+def test_price_coercion_never_returns_a_negative():
+    """A negative is not a price. Ranking one would crown it the cheapest
+    offer, so it must degrade to no-offer exactly like a zero does."""
+    assert server._as_price(-500) is None
+    assert server._as_price(-500.0) is None
+    assert server._as_price("-500 ₽") is None
+    assert server._as_price("-1 234") is None
+
+
+def test_price_coercion_never_returns_a_non_finite_value():
+    """inf is not a price either: ``10**400`` blows up ``float()`` with
+    OverflowError, a float inf compares as greater than every real price
+    (so it would never win the ranking, but it also never belongs in an
+    offer), and mcp_core.coerce_price already guarantees finiteness —
+    the compare connector must not diverge from that doctrine."""
+    assert server._as_price(float("inf")) is None
+    assert server._as_price(float("-inf")) is None
+    assert server._as_price(float("nan")) is None
+    assert server._as_price(10**400) is None
+    assert server._as_price("9" * 400) is None
+
+
+def test_price_coercion_never_concatenates_a_price_range():
+    """Live-captured Ozon filter strings (rendered search page, 2026-08-07,
+    .agent/captures/ozon_search_page_raw.html) carry TWO numbers:
+    '1 000–2 000 ₽'. The old tolerant parser concatenated them into
+    10002000.0 — a plausible-looking fabricated price. The shared doctrine
+    is: more than one number means ambiguous, which means None."""
+    assert server._as_price("1\u2009000–2\u2009000\u2009₽") is None
+    assert server._as_price("2\u2009000–30\u2009000\u2009₽") is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # Thin-space grouped integers exactly as captured from Ozon's rendered
+        # pages on 2026-08-07 (.agent/captures/ozon_*_page_raw.html); the two
+        # comma-decimal forms were not on those pages but are the kopeck
+        # display shape coerce_price is documented to handle — pinned here so
+        # the delegation's decimal parity is explicit, not implied.
+        "158\u2009370\u2009₽",
+        "84\u2009817\u2009₽",
+        "3\u2009266\u2009₽",
+        "1\u2009000\u2009₽",
+        "79\u2009990\u2009₽",
+        "99,50\u2009₽",
+        "1\u2009234,50\u2009₽",
+    ],
+)
+def test_price_coercion_keeps_coerce_price_parity_on_live_ozon_formats(raw):
+    assert server._as_price(raw) == R.coerce_price(raw)
+    assert server._as_price(raw) is not None
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -389,6 +444,24 @@ def test_price_coercion_never_substitutes_zero():
 )
 def test_count_coercion_handles_russian_review_labels(raw, expected):
     assert server._as_count(raw) == expected
+
+
+def test_count_coercion_never_raises_on_non_finite_floats():
+    """json.loads admits NaN/Infinity by default, and int() raises on both.
+    coerce_int guards them with isfinite, and the compare duplicate must keep
+    parity — otherwise one poisoned cell aborts the whole compare_prices tool
+    instead of degrading that field to no-data."""
+    assert server._as_count(float("nan")) is None
+    assert server._as_count(float("inf")) is None
+    assert server._as_count(float("-inf")) is None
+
+
+def test_count_coercion_never_drops_a_sign():
+    """A signed count is ambiguous: dropping the sign and concatenating digits
+    fabricates a plausible-but-wrong number ('-3' -> 3). That is the doctrine
+    coerce_int established — signed means None, not a manufactured count."""
+    assert server._as_count("-3") is None
+    assert server._as_count("+5") is None
 
 
 @pytest.mark.parametrize(
@@ -405,6 +478,17 @@ def test_count_coercion_handles_russian_review_labels(raw, expected):
 )
 def test_stock_label_coercion(raw, expected):
     assert server._stock_from_label(raw) is expected
+
+
+def test_stock_label_never_claims_stock_from_a_non_finite_value():
+    """Only a positive statement counts as in stock. NaN compared > 0 is
+    False and inf compared > 0 is True, so without a finiteness guard a
+    poisoned cell asserts OUT OF STOCK (NaN) or IN STOCK (inf) — two lies
+    where the docstring promises "unknown", because json.loads admits
+    NaN/Infinity by default."""
+    assert server._stock_from_label(float("nan")) is None
+    assert server._stock_from_label(float("inf")) is None
+    assert server._stock_from_label(float("-inf")) is None
 
 
 async def test_ozon_adapter_reads_the_real_model_fields(monkeypatch):

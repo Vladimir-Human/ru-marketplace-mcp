@@ -1,10 +1,12 @@
-"""Regression tests for the Taobao card extractor on a captured DOM.
+"""Regression tests for the Taobao card extractor on a modeled fixture.
 
 The search extractor got fixtures when it moved onto the shared helpers; the
 card extractor ships the same body-scan approach (``priceTextsIn`` over
 ``document.body``, price picked in Python by ``mcp_core.dom.prices_from_tile``)
 and had no DOM-level test at all — markup drift on the item page would have
-surfaced only as a live failure on the operator's machine.
+surfaced only as a live failure on the operator's machine. The fixture is a
+hand model of the item page shape, not a capture; capturing the client-rendered
+real page is an operator task.
 
 ``fixtures/item_card.html`` models the rendered item page shape: title in
 ``h1``, the current price as a glyph+digits span pair (``¥7999``), a

@@ -70,7 +70,7 @@ from yandex_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://market.yandex.ru"
@@ -100,7 +100,7 @@ _cache: TTLCache[str] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=64)
 
 
 def _proxy() -> str | None:
-    return (_settings.proxy or "").strip() or proxy_from_env("YANDEX_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("YANDEX_PROXY")
 
 
 async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
@@ -163,6 +163,30 @@ def _guard_parse_status(status: str, label: str) -> None:
         )
 
 
+def _guard_values_drift(parsed: dict[str, Any], label: str) -> None:
+    """Items that kept their keys but lost their values.
+
+    The SSR parser emits every item key unconditionally, so a key-presence check
+    can never fire here; live drift shows up as empty titles and missing prices
+    while product ids survive (they are collection keys, not state values).
+    Verified against the captured page: renaming the title/price nodes in the
+    SSR state yields items with product_id but title '' and price None. A page
+    where NOTHING carries a title or a price is a moved state, not a result set
+    — serve drift instead of silently degraded items.
+    """
+    items = parsed.get("items")
+    if not isinstance(items, list) or not items:
+        return
+    if all(not (item.get("title") or item.get("price_rub") or item.get("price_with_plus")) for item in items):
+        raise_tool_error(
+            ParserDriftError(
+                f"{label}: {len(items)} items arrived without any title or price — "
+                "the SSR state values have likely moved",
+                provider="yandex",
+            )
+        )
+
+
 def _to_product(raw: dict[str, Any]) -> YandexProduct:
     return YandexProduct(
         product_id=str(raw.get("product_id") or ""),
@@ -219,6 +243,15 @@ async def yandex_search(
     Note `rating_count` counts star ratings, not written reviews; the written
     count is available per product via `yandex_card`.
 
+    ## Return Format
+
+    YandexSearchResponse: {query, page, page_count, total_available,
+    has_next_page, returned, items, meta}. Items carry product_id, sku_id,
+    title, brand, seller, price_rub (everyday — None when absent, never 0),
+    price_with_plus, price_old_rub, currency, rating, rating_count, in_stock,
+    is_express, url, image. Zero results is NOT an error — it is reported via
+    meta.warnings.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -240,6 +273,7 @@ async def yandex_search(
     html = await _fetch_html(url, "yandex_search", ctx)
     parsed = ssr.parse_search(html)
     _guard_parse_status(parsed["status"], "yandex_search")
+    _guard_values_drift(parsed, "yandex_search")
 
     # Dedupe by product_id BEFORE applying the limit. Yandex's SSR payload can
     # carry the same product more than once on a page — the parser keys on
@@ -350,6 +384,15 @@ async def yandex_card(
     Reviews are capped at the ~13 Yandex renders server-side; the remainder load
     through an API this connector deliberately does not touch.
 
+    ## Return Format
+
+    YandexCardResponse: {product_id, sku_id, title, brand, seller,
+    description, image, price_rub, price_with_plus, price_before_discount_rub,
+    discount_percent, currency, offers_count, rating, rating_count,
+    review_count, rating_stars, reviews, url, meta}. price_rub is None when
+    the page has no usable price — never 0. Review items carry author,
+    rating, date, pros, cons, comment, votes_up, votes_down, photos.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -446,6 +489,20 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
 
     This matters more here than for a JSON API: SSR extraction is inherently
     coupled to Yandex's front-end, so drift is a question of when.
+
+    ## Return Format
+
+    YandexSelfcheckResponse: {status, connector, checks, server_version,
+    server_started_at, process_id, config_loaded, tool_count, cache_stats} —
+    checks maps search / card to a per-page verdict
+    (healthy/drift/inconclusive). drift_detected and inconclusive are NOT
+    errors; they are valid canary verdicts returned as a normal response.
+
+    ## Error Format
+
+    Never raises ToolError: each probe catches its own failures — transport
+    blocks, geo restrictions and captchas map to inconclusive entries,
+    reached-but-unparseable pages to drift entries.
     """
     log_event("yandex_selfcheck.start")
     if ctx is not None:

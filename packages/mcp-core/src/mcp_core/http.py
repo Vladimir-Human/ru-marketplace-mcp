@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import email.utils
+import math
 from functools import lru_cache
 
 import httpx
@@ -25,13 +26,25 @@ def get_timeout(
 
 
 def parse_retry_after(value: str | None) -> float | None:
+    """Parse a Retry-After header into a delay in seconds, or None.
+
+    The header is wire-authored, so it gets the coercion doctrine: a value that
+    floats to infinity or NaN (``1e999``, ``inf``) is no delay at all and must
+    never become an infinite or corrupting sleep, and a negative delay is a
+    moment in the past — clamped to 0.0 exactly like the date branch, so both
+    forms agree on "retry now".
+    """
     if not value:
         return None
     value = value.strip()
     try:
-        return float(value)
+        delay = float(value)
     except ValueError:
         pass
+    else:
+        if math.isfinite(delay):
+            return max(0.0, delay)
+        return None
     try:
         dt = email.utils.parsedate_to_datetime(value)
         if dt:

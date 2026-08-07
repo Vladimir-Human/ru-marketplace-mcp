@@ -57,10 +57,11 @@ from taobao_connector.models_output import (
     TaobaoSelfcheckResponse,
 )
 from taobao_connector.settings import get_settings
+from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SEARCH_BASE = "https://s.taobao.com/search"
@@ -156,26 +157,77 @@ _SEARCH_EXTRACT_TEMPLATE = """
         // tileRootFor, not closest(): an anchor whose own class looks like a
         // card must not become the tile. See mcp_core.dom.
         const card = tileRootFor(a, ID_RE) || a;
-        // Prefer a text-bearing anchor; the image/overlay link carries no title.
-        let titleEl = cleanText(a) ? a : null;
-        if (!titleEl) {
-            for (const cand of card.querySelectorAll('[class*="title"], [class*="Title"], a[href*="item.taobao.com"]')) {
+        // A dedicated title node carries the clean name. The tile anchor wraps
+        // the WHOLE tile, and reading its text first glues the price, sales
+        // and shop into the title (live capture 2026-08-07,
+        // tests/fixtures/search_grid_live.html); anchor text is the fallback.
+        let title = null;
+        const titleNode = card.querySelector('[class*="title"], [class*="Title"]');
+        if (titleNode) {
+            title = cleanText(titleNode) || (titleNode.getAttribute('title') || null);
+        }
+        if (!title) {
+            let titleEl = null;
+            for (const cand of card.querySelectorAll('a[href*="item.taobao.com"], [class*="title"], [class*="Title"]')) {
                 if (cleanText(cand)) { titleEl = cand; break; }
             }
+            title = (titleEl ? cleanText(titleEl) : null) || (a.getAttribute('title') || null);
         }
-        const title = cleanText(titleEl) || (a.getAttribute('title') || null);
 
+        // Price: the modern layout splits it into unit (¥) + priceInt +
+        // priceFloat nodes. The whole price block as one text blob glues the
+        // sales count ("200+人付款") onto the digits, which coerce_price
+        // rejects as ambiguous — every priced tile would read as no price.
+        // Reassemble the display parts; Python's coerce_price still does the
+        // parsing. Without a priceInt node, fall back to the shared glyph hunt
+        // (the older layout renders one glyph-attached price node).
+        const priceRoot = card.querySelector('[class*="priceWrapper"], [class*="PriceWrapper"]') || card;
+        let price_texts = priceTextsIn(priceRoot);
+        const intEl = priceRoot.querySelector('[class*="priceInt"]');
+        if (intEl) {
+            const intPart = cleanText(intEl);
+            if (intPart) {
+                const unitEl = priceRoot.querySelector('[class*="unit"]');
+                const floatEl = priceRoot.querySelector('[class*="priceFloat"]');
+                const unit = unitEl && cleanText(unitEl) ? cleanText(unitEl) : '';
+                const floatPart = floatEl && cleanText(floatEl) ? cleanText(floatEl) : '';
+                price_texts = {
+                    attached: [unit + intPart + floatPart].concat(price_texts.attached),
+                    other: price_texts.other
+                };
+            }
+        }
+
+        // Shop / sales / location from their scoped nodes first. The legacy
+        // line scan below stays as the fallback, but it splits on newlines and
+        // the live rendered tile text carries none, so on the modern layout it
+        // only produces glued blobs.
         let shop = null, location = null, sales = null;
-        const lines = (card.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
-        for (const line of lines) {
-            if (/人付款|人收货|已售|约售|付款$/.test(line)) sales = sales || line;
-            else if (/店$/.test(line)) shop = shop || line;
-            else if (/发货地|广东|浙江|江苏|上海|北京/.test(line)) location = location || line;
+        const shopEl = card.querySelector('[class*="shopNameText"], [class*="Shop--shop"], [class*="shop--"]');
+        if (shopEl) shop = cleanText(shopEl);
+        const salesEl = card.querySelector('[class*="realSales"], [class*="sales"]');
+        if (salesEl) sales = cleanText(salesEl);
+        const procityEls = card.querySelectorAll('[class*="procity"]');
+        if (procityEls.length) {
+            const parts = [];
+            for (const p of procityEls) {
+                const t = cleanText(p);
+                if (t) parts.push(t);
+            }
+            if (parts.length) location = parts.join(' ');
+        }
+        if (!shop || !sales || !location) {
+            const lines = (card.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
+            for (const line of lines) {
+                if (!sales && /人付款|人收货|已售|约售|付款$/.test(line)) sales = line;
+                else if (!shop && /店$/.test(line)) shop = line;
+                else if (!location && /发货地|广东|浙江|江苏|上海|北京/.test(line)) location = line;
+            }
         }
         out.push({
             item_id: m[1],
             title: title,
-            price_texts: priceTextsIn(card),
+            price_texts: price_texts,
             shop_name: shop,
             location: location,
             sales: sales,
@@ -195,23 +247,80 @@ _SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS
 _CARD_EXTRACT_TEMPLATE = """
 () => {
     //__SHARED_HELPERS__
-    // title from the product heading; the generic [class*="title"] fallback
-    // could pick a section heading.
-    const titleEl = document.querySelector('h1')
-        || document.querySelector('[class*="title"], [class*="Title"]');
-    const title = cleanText(titleEl) || document.title || null;
+    // The modern card renders the product name in a mainTitle span (with the
+    // same text in its title attribute); there is no h1. The generic
+    // [class*="title"] fallback is last on purpose: first in document order it
+    // matches the header's image-search widget and reads its placeholder —
+    // that happened on the live capture of 2026-08-07
+    // (tests/fixtures/item_card_live.html).
+    let title = null;
+    const mainTitleEl = document.querySelector('[class*="mainTitle"]');
+    if (mainTitleEl) {
+        title = cleanText(mainTitleEl) || (mainTitleEl.getAttribute('title') || null);
+    }
+    if (!title) {
+        const titleEl = document.querySelector('h1')
+            || document.querySelector('[class*="title"], [class*="Title"]');
+        title = (titleEl ? cleanText(titleEl) : null) || document.title || null;
+    }
 
-    // Price from named candidates, not a body scan: the page carries side
-    // offers and promo amounts that would be Math.min-ed into a wrong number.
-    // priceTextsIn collects glyph-attached candidates (yuan signs included);
-    // Python picks with mcp_core.dom.prices_from_tile.
-    const priceTexts = priceTextsIn(document.body);
+    // Price: the modern card renders symbol + text spans inside
+    // highlightPrice (the amount the buyer pays) and subPrice (the
+    // before-discount figure). A body-wide glyph hunt misses them: the
+    // candidate spans carry digits only, and their parent's text glues Chinese
+    // labels around the glyph, so the glyph-attachment check fails and THE
+    // price lands among the weak candidates. Reassemble the display parts;
+    // Python's coerce_price still does the parsing. Without those blocks, fall
+    // back to the shared glyph hunt (older layouts).
+    const priceRoot = document.querySelector('[class*="priceWrap"], [class*="PriceWrap"]') || document.body;
+    let priceTexts = priceTextsIn(priceRoot);
+    const assembled = [];
+    for (const blockSel of ['[class*="highlightPrice"]', '[class*="subPrice"]']) {
+        for (const block of priceRoot.querySelectorAll(blockSel)) {
+            // The blocks render their parts as sibling spans, and the yuan
+            // sign rides in a symbol-- span OR a bare text-- span depending
+            // on the block (live capture: highlightPrice uses symbol--,
+            // subPrice uses a second text-- span). Concatenate every part in
+            // DOM order and keep results that carry digits.
+            const parts = [];
+            for (const el of block.querySelectorAll('[class*="symbol"], [class*="text"]')) {
+                const t = cleanText(el);
+                if (t) parts.push(t);
+            }
+            const joined = parts.join('');
+            if (joined && /\\d/.test(joined)) assembled.push(joined);
+        }
+    }
+    if (assembled.length) {
+        priceTexts = {attached: assembled.concat(priceTexts.attached), other: priceTexts.other};
+    }
 
     let shop = null, sales = null;
+    // The name rides in a span[class*="shopName"] (with the same text in its
+    // title attribute); the wrapping div matches the same substring and its
+    // text glues the rating and service stats onto the name.
+    const shopEl = document.querySelector('span[class*="shopName"]') || document.querySelector('[class*="shopName"]');
+    if (shopEl) shop = cleanText(shopEl) || (shopEl.getAttribute('title') || null);
     const lines = (document.body.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
     for (const line of lines) {
+        // A glued body blob (no newlines in the live render) must never become
+        // a sales/shop value — cap the candidate length like the price hunt.
+        if (line.length > 40) continue;
         if (/人付款|人收货|已售/.test(line)) sales = sales || line;
         if (/店$/.test(line) && !shop) shop = line;
+    }
+    if (!sales) {
+        // The modern card renders «已售 N+» in an unnamed colored span, and
+        // the body text carries no newlines for the line scan to split. Find
+        // the short text node itself; anything long is glued body text.
+        // (4 === NodeFilter.SHOW_TEXT; the name itself is absent from some
+        // jsdom harnesses, so the constant is spelled out.)
+        const walker = document.createTreeWalker(document.body, 4);
+        let node;
+        while ((node = walker.nextNode())) {
+            const t = (node.textContent || '').trim();
+            if (t.length <= 20 && /^已售/.test(t) && /\\d/.test(t)) { sales = t; break; }
+        }
     }
     const imgs = document.querySelectorAll('[class*="desc"] img, [class*="Desc"] img, #description img');
     return JSON.stringify({
@@ -369,7 +478,9 @@ async def taobao_card(
 
     TaobaoCardResponse: {status, item_id, title, price_cny, shop_name, sales,
     description_images, url, tier_used, meta}. price_cny is None when the page
-    hides it or prices by variant — never 0.
+    hides it or prices by variant — never 0. When the description-image count
+    drifts to a non-number, description_images degrades to 0 and meta.warnings
+    names the drift — the card itself still answers.
 
     ## Error Format
 
@@ -421,17 +532,32 @@ async def taobao_card(
                     "rendered card has neither title nor price — the item page shape moved; verify manually"
                 )
             )
+        # A decorative count drifting to a non-number must not kill an otherwise
+        # readable card, and it is not a transport event — degrade to 0 and name
+        # the drift in meta.warnings instead of leaking it to the catch-all,
+        # which would misreport it as transport_down.
+        card_warnings: list[str] = []
+        raw_desc_images = payload.get("description_images")
+        desc_images = R.coerce_int(raw_desc_images)
+        if desc_images is None:
+            desc_images = 0
+            if raw_desc_images not in (None, 0, 0.0, ""):
+                card_warnings.append(
+                    f"description_images: expected a count, got {str(raw_desc_images)[:40]!r}; reported 0"
+                )
         result = TaobaoCardResponse(
             item_id=item_id,
             title=title,
             price_cny=price,
             shop_name=payload.get("shop_name"),
             sales=payload.get("sales"),
-            description_images=int(payload.get("description_images") or 0),
+            description_images=desc_images,
             url=url,
             tier_used=tier,
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="taobao_card")
+        attached = R.attach_meta(
+            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="taobao_card"
+        )
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:
@@ -458,6 +584,12 @@ async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckRespons
 
     TaobaoSelfcheckResponse: {status, healthy, connector, checks, server_version,
     server_started_at, process_id}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("taobao_selfcheck.start")
     try:
@@ -504,9 +636,32 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
         else:
             items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
             if items_raw:
-                checks["search"] = R.selfcheck_entry(
-                    "healthy", baseline=baseline, notes=[f"{len(items_raw)} items extracted"]
-                )
+                # Items extract — now ask the second question: did the SHAPE
+                # move? The registry was measured on the captured page
+                # (2026-08-07); a live payload that loses a parser-critical
+                # key family is structural drift even while items come back.
+                live_signature = R.shape_signature(payload)
+                drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+                missing = missing_required_families(live_signature)
+                if missing:
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason="shape_drift",
+                        notes=[
+                            f"{len(items_raw)} items extracted",
+                            "required key families missing: " + "; ".join(", ".join(family) for family in missing),
+                        ],
+                        shape_missing=drift["missing"],
+                        shape_added=drift["added"],
+                    )
+                else:
+                    notes = [f"{len(items_raw)} items extracted", "shape matches the captured reference"]
+                    if drift["added"]:
+                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                    checks["search"] = R.selfcheck_entry(
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                    )
             else:
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["rendered page yielded zero items"]

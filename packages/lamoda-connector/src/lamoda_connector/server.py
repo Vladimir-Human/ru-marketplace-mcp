@@ -60,10 +60,11 @@ from lamoda_connector.models_output import (
     MetaOut,
 )
 from lamoda_connector.settings import get_settings
+from lamoda_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.lamoda.ru"
@@ -113,7 +114,7 @@ _cdp_lock = asyncio.Lock()
 
 
 def _proxy() -> str | None:
-    return _settings.proxy or None
+    return _settings.proxy.get_secret_value() or None
 
 
 async def _polite_wait() -> None:
@@ -140,6 +141,11 @@ _SEARCH_EXTRACT_TEMPLATE = """
 () => {
     //__SHARED_HELPERS__
     const ID_RE = /\\/p\\/([a-zA-Z]{2}[a-zA-Z0-9]{6,18})/i;
+    // A node whose whole text is a discount percentage ("−49%") is a badge,
+    // never a name. Lamoda renders that badge INSIDE the image anchor, which
+    // is how an anchor-first title read reported the discount as the title
+    // (live capture 2026-08-07, tests/fixtures/search_grid_live.html).
+    const BADGE_RE = /^[−\\-]?\\d+\\s*%$/;
     const out = [];
     const anchors = document.querySelectorAll('a[href*="/p/"]');
     const seen = new Set();
@@ -152,18 +158,31 @@ _SEARCH_EXTRACT_TEMPLATE = """
         // an image/overlay link whose own class contains "card" or "product"
         // becomes the tile and reads as empty. See mcp_core.dom.
         const card = tileRootFor(a, ID_RE);
-        let titleEl = a;
-        if (!cleanText(titleEl)) {
-            for (const cand of card.querySelectorAll('a[href*="/p/"], [class*="name"], [class*="title"], [class*="brand"]')) {
-                if (cleanText(cand)) { titleEl = cand; break; }
+        // The product name first, then weaker name/title/brand candidates, the
+        // anchor text only as a last resort. Selector classes are checked in
+        // priority order, not document order: the badge span sits earliest in
+        // the tile DOM and would win a document-order walk.
+        let titleEl = null;
+        for (const sel of ['[class*="product-name"]', '[class*="name"]', '[class*="title"]', '[class*="brand"]']) {
+            for (const cand of card.querySelectorAll(sel)) {
+                const t = cleanText(cand);
+                if (t && !BADGE_RE.test(t)) { titleEl = cand; break; }
             }
+            if (titleEl) break;
         }
+        if (!titleEl) titleEl = a;
         const title = cleanText(titleEl) || (a.getAttribute('title') || null);
+        // Scope the price hunt to the price block when the layout names one:
+        // the live size grid feeds concatenated digit blobs ("3535,53636,5...")
+        // into the weak candidates, and the largest of them gets promoted to
+        // the strikethrough — a 3.5e16-rouble "old price". Same framing
+        // doctrine as the Citilink PriceBlock scope.
+        const priceRoot = card.querySelector('[class*="price-wrap"]') || card;
         out.push({
             sku: m[1],
             title: title,
             brand: null,
-            price_texts: priceTextsIn(card),
+            price_texts: priceTextsIn(priceRoot),
             url: href
         });
         if (out.length >= 48) break;
@@ -426,6 +445,12 @@ async def lamoda_selfcheck(ctx: Context | None = None) -> LamodaSelfcheckRespons
     ## Return Format
 
     LamodaSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("lamoda_selfcheck.start")
     try:
@@ -461,25 +486,49 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
         )
 
     # CDP tier: search tile extraction.
+    baseline = "cdp-search-shape-v1"
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render_search("кроссовки", ctx)
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if items_raw:
-            checks["search"] = R.selfcheck_entry(
-                "healthy", baseline="cdp-search-tiles-v1", notes=[f"{len(items_raw)} tiles extracted"]
-            )
+            # Tiles extract — now ask the second question: did the SHAPE move?
+            # The registry was measured on the captured page (2026-08-07); a
+            # live payload that loses a parser-critical key family is
+            # structural drift even while tiles still come back.
+            live_signature = R.shape_signature(payload)
+            drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+            missing = missing_required_families(live_signature)
+            if missing:
+                checks["search"] = R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    reason="shape_drift",
+                    notes=[
+                        f"{len(items_raw)} tiles extracted",
+                        "required key families missing: " + "; ".join(", ".join(family) for family in missing),
+                    ],
+                    shape_missing=drift["missing"],
+                    shape_added=drift["added"],
+                )
+            else:
+                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                if drift["added"]:
+                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                checks["search"] = R.selfcheck_entry(
+                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                )
         else:
             checks["search"] = R.selfcheck_entry(
-                "drift", baseline="cdp-search-tiles-v1", reason="parse_smoke_failed", notes=["zero SKUs"]
+                "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]
             )
     except ToolError as exc:
         checks["search"] = R.selfcheck_entry(
-            "inconclusive", baseline="cdp-search-tiles-v1", reason="transport_down", notes=[str(exc)[:160]]
+            "inconclusive", baseline=baseline, reason="transport_down", notes=[str(exc)[:160]]
         )
     except Exception as exc:
         checks["search"] = R.selfcheck_entry(
-            "inconclusive", baseline="cdp-search-tiles-v1", reason="transport_down", notes=[f"{type(exc).__name__}"]
+            "inconclusive", baseline=baseline, reason="transport_down", notes=[f"{type(exc).__name__}"]
         )
 
     result_dict = R.selfcheck_result(

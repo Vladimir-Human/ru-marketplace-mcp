@@ -1,0 +1,9 @@
+{
+  "url": "https://megamarket.ru/api/mobile/v1/catalogService/catalog/search (POST, query «стиральная машина»)",
+  "captured_at": "2026-08-07",
+  "sha256": "2107d3e28485483514a64ad929a5dc841aaed68db7f728867cb99b706ef6d020",
+  "method": "captured live on 2026-08-07 through the operator's Chrome via raw CDP (Playwright 1.61 does not complete connect_over_cdp against Chrome 151), replicating the connector's two-step flow: urlService/url/parse mapped the query to collection 12424, then the search POST carried collectionId/selectedAssumedCollectionId — without them the API answers 200 with listingSize>0 and an EMPTY items array; kept the payload envelope and the first three nested goods/favoriteOffer item nodes verbatim, dropped the other 21 listings; the full raw response stays outside git in .agent/captures/megamarket_search_raw.json",
+  "ground_truth": {
+    "note": "search «стиральная машина» at capture time: total 25 772, first three items — «Стиральная машина LG F10B8LD7 белый» 29 990 ₽ (item 100026555148), «Стиральная машина Hotpoint-Ariston NSB 6039 K VE RU белый» 29 199 ₽ (item 600010713443), «Стиральная машина Samsung WW65AG4S20CXLP серый» 35 180 ₽ (item 100061264823), all available."
+  }
+}

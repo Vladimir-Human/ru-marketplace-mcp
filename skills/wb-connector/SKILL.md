@@ -75,7 +75,8 @@ lookalike name, and to spot several storefronts sharing one legal entity.
 returns the wrong pool. Always resolve through `wb_root_info` first.
 
 **No price means no stock.** A delisted WB item returns `price_rub: null` and
-`in_stock: false` — real data, not a parse failure. If an entire search page has
+`in_stock: false` — real data, not a parse failure. A missing price is `null`,
+never `0` — zero is never substituted. If an entire search page has
 no prices, the connector warns with `no_prices`.
 
 **`wb_search` is 429-prone.** WB rate-limits repeated searches aggressively; the
@@ -83,16 +84,21 @@ error is retryable but needs a genuine wait, not a tight retry loop. For known
 SKUs prefer `wb_card`, which is far more tolerant.
 
 **Search and card can disagree on the price, and the card is the one that matches
-the site.** Measured 2026-07-28 on nmId 824935779 within the same minute:
+the site.** First measured 2026-07-28 on nmId 824935779 within the same minute:
 `wb_card` returned 60 275 — exactly the figure on the product page — while
-`wb_search` returned 60 571. The same ratio (1.0049) showed up on the
-strikethrough pair too, so it is a systematic offset between the two endpoints,
-not price drift between two calls.
+`wb_search` returned 60 571.
+
+Re-measured 2026-08-07 on five «ноутбук» results, same `dest`/`spp`, one
+batched `wb_card` call: the gaps were 1.7 %, 6.7 %, 13.1 %, 34.3 % and 10.2 % —
+four cards priced above their search figure, one below, so the direction is
+not uniform across products. On nmId 824935779 the search price was literally
+unchanged in ten days (60 571 both times) while the card moved 60 275 → 64 613:
+the search index goes stale, it is not a fixed endpoint offset. Treat any
+`wb_search` price as a discovery hint only.
 
 Practical rule: **quote a price from `wb_card`.** Use `wb_search` to discover
-SKUs, then re-read the ones that matter by nmId. This is measured on one product
-only — WB throttles search hard from a datacenter address — so treat the exact
-size of the gap as unconfirmed, but treat the direction as known.
+SKUs, then re-read the ones that matter by nmId — the gap is confirmed large
+enough to flip a "cheapest" ranking, not merely to shift it.
 
 **Past the end, WB repeats page 1 instead of returning nothing.** Measured
 2026-07-28 on «ноутбук»: `page=20` came back with the same 100 products, in the

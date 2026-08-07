@@ -1,20 +1,20 @@
-"""Regression tests for the DNS card extractor on a real captured DOM.
+"""Regression tests for the DNS card extractor on a captured card page.
 
-The card extractor's availability fallback read ``document.body.innerText``.
-The page's *price* nodes are read via named selectors, but the availability
-fallback scanned the whole body — and ``innerText`` depends on layout and CSS,
-differs between a warm tab and a freshly navigated one, and does not exist in
-jsdom. The shared helpers already read ``textContent`` for exactly that reason;
-this test pins the card fallback to the same rule so the jsdom layer can
-assert on it at all.
+Captured 2026-08-06 from the live product page (provenance:
+``card.provenance.json``) through the operator's Chrome over CDP from a
+residential RU IP, trimmed to the h1, the ``.product-buy`` container and the
+availability wrap. This replaced a hand model whose strikethrough and
+recommendation blocks used markup the live page does not have.
 
-``fixtures/card.html`` models a rendered product card page: title in ``h1``,
-current price in ``.product-buy__price`` with a strikethrough sibling and a
-"кредит от 5 751 ₽/мес." instalment line, explicit ``В наличии`` availability,
-and a stray "Дополнительные товары: сумка 1 499 ₽" block that must never be
-read as the product price.
+Ground truth at capture time: 58 999 ₽ now, NO strikethrough on this product,
+in stock (``В наличии``). The trap is live too: the buy block's
+``.product-buy__sub`` sibling carries the instalment line «от 5 751 ₽/ мес.»,
+the smallest number on the card — exactly the value a body-scan minimum once
+returned as the price.
 
-Ground truth on the fixture: 58 999 ₽ (was 62 999), in stock.
+The availability path is pinned as well: the card extractor's fallback must
+read ``textContent``, never ``innerText`` (layout-dependent and unavailable in
+jsdom).
 """
 
 from __future__ import annotations
@@ -39,9 +39,9 @@ def _extract(js_source: str) -> dict:
 
 def test_card_extractor_reads_the_product_card() -> None:
     payload = _extract(server._CARD_EXTRACT_JS)
-    assert payload["title"] == "Ноутбук HUAWEI MateBook D 16 2024 MCLF-X серый"
+    assert payload["title"].startswith('16" Ноутбук HUAWEI MateBook D 16 2024 MCLF-X')
     assert payload["price_text"] == "58 999 ₽"
-    assert payload["old_price_text"] == "62 999"
+    assert payload["old_price_text"] is None
     assert payload["is_available"] is True
 
 
@@ -50,20 +50,20 @@ def test_card_mapping_produces_the_wire_shape() -> None:
     price = server.R.price_from_texts(payload.get("price_text"))
     old_price = server.R.price_from_texts(payload.get("old_price_text"))
     assert price == 58999.0
-    assert old_price == 62999.0
+    assert old_price is None, "the capture carried no strikethrough; inventing one would be a drifted read"
 
 
 def test_the_instalment_line_is_never_the_card_price() -> None:
-    """«кредит от 5 751 ₽/мес.» must not become the price."""
+    """«от 5 751 ₽/ мес.» is the smallest number on the card — a body-scan
+    minimum returns it. The named-node hunt must not."""
     payload = _extract(server._CARD_EXTRACT_JS)
-    assert payload["price_text"] != "кредит от 5 751 ₽/мес."
     assert payload["price_text"] == "58 999 ₽"
+    assert "5 751" not in payload["price_text"]
 
 
-def test_a_stray_price_block_is_not_picked_up() -> None:
-    """«Дополнительные товары: сумка 1 499 ₽» is a recommendation, not the price."""
+def test_availability_is_read_from_the_avail_wrap() -> None:
     payload = _extract(server._CARD_EXTRACT_JS)
-    assert payload["price_text"] != "1 499 ₽"
+    assert payload["availability_text"].startswith("В наличии")
 
 
 def test_availability_fallback_reads_text_content_not_inner_text() -> None:

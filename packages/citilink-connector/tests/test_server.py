@@ -17,15 +17,19 @@ SEARCH_EXTRACTED = {
         {
             "product_id": "5f4dcc3b5aa764d61d8327de",
             "title": "Ноутбук Lenovo IdeaPad 3",
-            "price_rub": 52999.0,
-            "old_price_rub": 62999.0,
+            "price_meta": "52999",
+            "price_text": "52 999₽",
+            "old_price_text": "62 999",
+            "price_texts": {"attached": ["52 999₽"], "other": ["62 999"]},
             "url": "https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/noutbuk-lenovo/",
         },
         {
             "product_id": "5f4dcc3b5aa764d61d8327df",
             "title": "Ноутбук без цены",
-            "price_rub": None,
-            "old_price_rub": None,
+            "price_meta": None,
+            "price_text": None,
+            "old_price_text": None,
+            "price_texts": {"attached": [], "other": []},
             "url": "",
         },
     ],
@@ -107,6 +111,50 @@ async def test_card_flags_drift_when_neither_title_nor_price(monkeypatch):
         await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/x/")
 
 
+async def test_card_warns_when_in_stock_but_no_price_matched(monkeypatch):
+    """An available card with no price block is suspicious: the buy-block
+    layout most likely moved (anchors no longer match). Say so loudly in
+    meta.warnings instead of silently handing back price_rub=None."""
+    payload = {
+        "title": "Ноутбук Lenovo IdeaPad 3 15ITL6",
+        "price_meta": None,
+        "price_text": None,
+        "old_price_text": None,
+        "price_texts": {"attached": [], "other": []},
+        "is_available": True,
+        "page_title": "Ноутбук — Citilink",
+    }
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/noutbuk-lenovo/")
+
+    assert result.price_rub is None
+    assert result.is_available is True
+    assert any(w.startswith("in_stock_no_price") for w in result.meta.warnings)
+    assert result.meta.healthy is False
+
+
+async def test_card_stays_silent_when_unavailable_and_unpriced(monkeypatch):
+    """No stock and no price is a normal, expected combination (the buy block
+    is simply absent) — it must not raise the in-stock canary."""
+    payload = {
+        "title": "Ноутбук Lenovo IdeaPad 3 15ITL6",
+        "price_meta": None,
+        "price_text": None,
+        "old_price_text": None,
+        "price_texts": {"attached": [], "other": []},
+        "is_available": False,
+        "page_title": "Ноутбук — Citilink",
+    }
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_card("https://www.citilink.ru/product/5f4dcc3b5aa764d61d8327de/noutbuk-lenovo/")
+
+    assert result.price_rub is None
+    assert not any(w.startswith("in_stock_no_price") for w in result.meta.warnings)
+    assert result.meta.healthy is True
+
+
 # ------------------------------------------------------------- citilink_selfcheck ----
 
 
@@ -125,6 +173,38 @@ async def test_selfcheck_zero_tiles_is_drift(monkeypatch):
     result = await server.citilink_selfcheck()
 
     assert result.status == "drift_detected"
+
+
+async def test_selfcheck_healthy_tiles_carry_the_shape_reference(monkeypatch):
+    """Tiles extracting is not enough: the shape must still match the captured
+    reference. A matching payload says so explicitly."""
+    _patch_render(monkeypatch, SEARCH_EXTRACTED)
+
+    result = await server.citilink_selfcheck()
+
+    entry = result.checks["search"]
+    assert entry.state == "healthy"
+    assert "shape matches the captured reference" in entry.notes
+
+
+async def test_selfcheck_reports_shape_drift_when_a_required_path_vanishes(monkeypatch):
+    """A page that still yields tiles but lost a parser-critical field is
+    structural drift — loud, with the missing path named."""
+    drifted = {
+        "title": SEARCH_EXTRACTED["title"],
+        "items": [
+            {key: value for key, value in item.items() if key != "price_text"} for item in SEARCH_EXTRACTED["items"]
+        ],
+    }
+    _patch_render(monkeypatch, drifted)
+
+    result = await server.citilink_selfcheck()
+
+    assert result.status == "drift_detected"
+    entry = result.checks["search"]
+    assert entry.state == "drift"
+    assert entry.reason == "shape_drift"
+    assert any("items[].price_text" in note for note in entry.notes)
 
 
 # ------------------------------------------------------------------- helpers ----

@@ -1,0 +1,9 @@
+{
+  "url": "https://www.lamoda.ru/catalogsearch/result/?q=%D0%BA%D1%80%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BA%D0%B8",
+  "captured_at": "2026-08-07",
+  "sha256": "60a8abf9884fdc323876a394f07b9123ab5cbfb78f88dbfad994a823dc67a346",
+  "method": "captured from the live grid on 2026-08-07 via raw CDP through the operator's Chrome (Playwright's connect_over_cdp handshake is incompatible with Chrome 151; plain CDP over websockets works), after the operator passed the Smartcaptcha that blocks both datacenter fetches and fresh tabs; trimmed only of image src/data-src values and svg bodies — badges, size grids, price spans and name nodes are verbatim; the full raw page stays outside git in .agent/captures/lamoda_search_page_raw.html",
+  "ground_truth": {
+    "note": "three first tiles as displayed on the page: RTLAEY634001 adidas Originals «Кеды HANDBALL SPEZIAL J» 6 569 ₽ was 12 999 (second strikethrough 8 999) with a −49% badge INSIDE the image anchor; MP002XB085KJ Fila «Кроссовки SP EVAN SL B» 2 671 ₽ was 4 110, badge −35%; RTLAEQ981601 Reebok «Кроссовки RBK PREMIER ROAD CONTROL» 6 159 ₽ was 13 999 (second strikethrough 6 999), badge −56%. The badge-inside-anchor layout shadows the extractor's anchor-text title fallback, and the size grid's concatenated digits are the live decoy that must never become a price."
+  }
+}

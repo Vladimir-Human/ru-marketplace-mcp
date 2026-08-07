@@ -29,7 +29,7 @@ services:
   # uncomment CHROME_CDP_HOST plus the chrome sidecar to unlock those sources.
   marketplace-mcp:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["marketplace-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -45,7 +45,7 @@ services:
 
   wb:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["wb-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -58,7 +58,7 @@ services:
 
   yandex:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["yandex-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -71,7 +71,7 @@ services:
 
   detmir:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["detmir-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -99,7 +99,7 @@ services:
   #    browser profile, so use a dedicated scraping profile only.
   ozon:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["ozon-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -134,7 +134,7 @@ services:
   # in the Chrome profile the sidecar drives, not on these services.
   avito:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["avito-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -149,7 +149,7 @@ services:
 
   taobao:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["taobao-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -164,7 +164,7 @@ services:
 
   megamarket:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["megamarket-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -179,7 +179,7 @@ services:
 
   lamoda:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["lamoda-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -194,7 +194,7 @@ services:
 
   dns:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["dns-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -209,7 +209,7 @@ services:
 
   citilink:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["citilink-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -226,7 +226,7 @@ services:
   # starts but its tools return auth_missing. No Chrome needed — plain httpx.
   mpstats:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["mpstats-mcp"]
     environment:
       MCP_TRANSPORT: http
@@ -257,7 +257,7 @@ services:
   # container is enough; Ozon inside it inherits the same two caveats.
   compare:
     build: .
-    image: ru-marketplace-mcp:1.3.1
+    image: ru-marketplace-mcp:1.4.0
     command: ["compare-mcp"]
     environment:
       MCP_TRANSPORT: http

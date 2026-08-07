@@ -84,6 +84,10 @@ find the product on one marketplace first, then search its exact model name.
 those offers appear at the end with `price_rub: null`. That is real data, not a
 parse failure.
 
+**A missing price is `null`, never `0`.** Any source's offer can come back with
+`price_rub: null` — that is "no data", never a zero-priced item; comparisons
+must not rank a null-priced offer as the cheapest.
+
 **The WB row comes from WB search, which reads slightly high.** The fan-out calls
 `wb_search`, and that endpoint was measured 2026-07-28 returning 60 571 for a
 product whose card — and whose page — said 60 275, about half a percent above the

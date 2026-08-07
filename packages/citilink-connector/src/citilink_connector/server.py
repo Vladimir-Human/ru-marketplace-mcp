@@ -56,10 +56,11 @@ from citilink_connector.models_output import (
     MetaOut,
 )
 from citilink_connector.settings import get_settings
+from citilink_connector.shape_reference import SEARCH_REQUIRED_KEYS, SEARCH_SHAPE_REFERENCE
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.citilink.ru"
@@ -223,16 +224,27 @@ _CARD_EXTRACT_TEMPLATE = """
         || document.querySelector('[class*="product-card-top__title"]');
     const title = cleanText(titleEl) || document.title || null;
 
-    // Scope the price hunt to the buy block when one is identifiable. Scanning
-    // the whole body sweeps in recommended products, instalment offers and bonus
-    // amounts — every one of them a number smaller than the real price.
-    const scope = document.querySelector('[data-meta-name="ProductHeader"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]')
-        || document.body;
-    const metaPriceEl = document.querySelector('[data-meta-price]');
+    // Scope the price hunt to the product's own buy block. Scanning the whole
+    // body sweeps in recommendation snippets, instalment offers and bonus
+    // amounts. On a live card the buy block is data-meta-name="PriceBlock";
+    // without scoping, querySelector finds a RECOMMENDATION's Snippet__old-price
+    // first and publishes another product's strikethrough as this product's old
+    // price (verified against the 2026-08-06 capture: read 97 990, correct
+    // 105 990). A card with NO buy block at all — out of stock — renders no
+    // product price, while its recommendations still carry Snippet__price and
+    // data-meta-price; without an anchor there is nothing to read, so report no
+    // price rather than a neighbour's (verified: such a page read 60 630 from
+    // a recommendation).
+    const buyBlock = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]');
+    const metaPriceEl = buyBlock ? buyBlock.querySelector('[data-meta-price]') : null;
     const metaPrice = metaPriceEl ? metaPriceEl.getAttribute('data-meta-price') : null;
-    const priceEl = document.querySelector('[data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]');
-    const oldPriceEl = document.querySelector('[data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]');
-    const priceTexts = priceTextsIn(scope);
+    const priceEl = buyBlock
+        ? buyBlock.querySelector('[data-meta-name="PriceBlock__price"], [data-meta-name="Snippet__price"], [data-meta-name="ProductPrice__price"]')
+        : null;
+    const oldPriceEl = buyBlock
+        ? buyBlock.querySelector('[data-meta-name="PriceBlock__additional-price"], [data-meta-name="Snippet__old-price"], [data-meta-name="ProductPrice__old-price"]')
+        : null;
+    const priceTexts = priceTextsIn(buyBlock);
 
     const bodyText = (document.body ? (document.body.textContent || '') : '');
     let available = null;
@@ -418,6 +430,16 @@ async def citilink_card(
             raise_tool_error(
                 ParserDriftError("rendered card has neither title nor price — the card shape moved; verify manually")
             )
+        # Canary for the silent-None hole: if the card says it is in stock but no
+        # price block matched any buy-block anchor, the layout most likely moved.
+        # Without this, the tool would hand back price_rub=None with no signal.
+        # (An unavailable card legitimately has no price block, so no warning there.)
+        card_warnings: list[str] = []
+        if payload.get("is_available") and price is None:
+            card_warnings.append(
+                "in_stock_no_price: card is available but no price block matched — "
+                "the buy-block layout may have moved; verify manually"
+            )
         result = CitilinkCardResponse(
             product_id=product_id,
             title=title,
@@ -427,7 +449,9 @@ async def citilink_card(
             url=url,
             tier_used=tier,
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="citilink_card")
+        attached = R.attach_meta(
+            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="citilink_card"
+        )
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:
@@ -453,6 +477,12 @@ async def citilink_selfcheck(ctx: Context | None = None) -> CitilinkSelfcheckRes
     ## Return Format
 
     CitilinkSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("citilink_selfcheck.start")
     try:
@@ -468,7 +498,7 @@ async def citilink_selfcheck(ctx: Context | None = None) -> CitilinkSelfcheckRes
 
 async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResponse:
     checks: dict[str, dict] = {}
-    baseline = "cdp-search-tiles-v1"
+    baseline = "cdp-search-shape-v1"
     url = f"{SEARCH_URL}?q={urllib.parse.quote('ноутбук')}"
     try:
         async with asyncio.timeout(90):
@@ -487,9 +517,35 @@ async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResp
     else:
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if items_raw:
-            checks["search"] = R.selfcheck_entry(
-                "healthy", baseline=baseline, notes=[f"{len(items_raw)} tiles extracted"]
-            )
+            # Tiles extract — now ask the second question: did the SHAPE move?
+            # The registry was measured on a captured page; a live payload that
+            # loses a parser-critical path is structural drift even while tiles
+            # still come back. Types may vary with the data (str/null), so the
+            # required check is on key presence, not on the full signature.
+            live_signature = R.shape_signature(payload)
+            drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+            missing_required = [
+                key for key in SEARCH_REQUIRED_KEYS if not any(entry.startswith(f"{key}:") for entry in live_signature)
+            ]
+            if missing_required:
+                checks["search"] = R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    reason="shape_drift",
+                    notes=[
+                        f"{len(items_raw)} tiles extracted",
+                        f"required paths missing: {', '.join(missing_required)}",
+                    ],
+                    shape_missing=drift["missing"],
+                    shape_added=drift["added"],
+                )
+            else:
+                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                if drift["added"]:
+                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                checks["search"] = R.selfcheck_entry(
+                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                )
         else:
             checks["search"] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero tiles"]

@@ -128,13 +128,20 @@ def coerce_price(value: Any) -> float | None:
         (was inflated x100 by blind digit-concatenation).
       * A multi-number blob / price-range ('1 999 ₽ 2 999 ₽') is AMBIGUOUS and
         returns None (fail loud) rather than the concatenated nonsense 19992999.0.
+
+    Audit 2026-08-06 (found by property tests): a digit run past the float
+    ceiling (~1.8e308) raised OverflowError, breaking totality — one poisoned
+    cell aborted the whole tool. Such values are not prices; they are None.
     """
     if value is None:
         return None
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        v = float(value)
+        try:
+            v = float(value)
+        except OverflowError:
+            return None
         return v if math.isfinite(v) and v > 0 else None
     if isinstance(value, str):
         n = _parse_money_string(value)
@@ -186,7 +193,11 @@ def _parse_money_string(s: str) -> float | None:
     intpart = re.sub(r"[^\d]", "", tok)
     if not intpart:
         return None
-    return float(int(intpart)) + frac
+    try:
+        return float(int(intpart)) + frac
+    except OverflowError:
+        # A digit run past the float ceiling is not a price; degrade, don't raise.
+        return None
 
 
 def coerce_rating(value: Any) -> float | None:
@@ -198,11 +209,19 @@ def coerce_rating(value: Any) -> float | None:
     wrong-scale rating ('4.9/10' -> 4.9) silently passed as an in-range 0..5
     rating. Now: an explicit denominator other than 5 returns None, a count-like
     blob returns None, and the parsed value must be within 0..5.
+
+    Audit 2026-08-07 (wave of cycles 24-30): json.loads admits
+    arbitrary-precision ints, and float() raises OverflowError past the ceiling;
+    such a value is not a rating — degrade to None like coerce_price does,
+    never abort the tool.
     """
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        v = float(value)
+        try:
+            v = float(value)
+        except OverflowError:
+            return None
         return v if 0 <= v <= 5 else None
     if isinstance(value, str):
         s = value.strip()

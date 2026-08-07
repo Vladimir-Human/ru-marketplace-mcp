@@ -1,0 +1,13 @@
+{
+  "url": "https://www.dns-shop.ru/search/?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA",
+  "captured_at": "2026-07-28",
+  "sha256": "0cd670cb82eb83b290a88cb5c567c24b19ad047ead5c3549a5bcd8545f7a9da4",
+  "method": "captured from the live grid on 2026-07-28 (Moscow), trimmed only of repeated decorative nodes; provenance reconstructed 2026-08-06 from the test docstring that recorded the capture",
+  "revalidated": {
+    "at": "2026-08-06T19:21:04+00:00",
+    "how": "fresh live capture of the same query (.agent/captures/dns_search_raw.html, outside git); the shipped extractor parsed 24/24 tiles with title and price"
+  },
+  "ground_truth": {
+    "note": "per test_search_extractor_dom.py: first tile HUAWEI MateBook D 16 at 58 999 ₽ with NO strikethrough; second tile HONOR MagicBook X16 at 51 999 ₽, was 54 999; both tiles advertise an instalment decoy (5 751 / 5 069) the old Math.min heuristic used to pick"
+  }
+}

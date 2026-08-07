@@ -1,0 +1,9 @@
+{
+  "url": "https://s.taobao.com/search?q=%E8%BF%9E%E8%A1%A3%E8%A3%99&page=1",
+  "captured_at": "2026-08-07",
+  "sha256": "5319be7474a62abf65a8aa549aeaba4682db4436c451e4223c6be503faef274f",
+  "method": "captured from the live rendered grid on 2026-08-07 via raw CDP through the operator's Chrome after logging into Taobao (Playwright's connect_over_cdp handshake is incompatible with Chrome 151; plain CDP over websockets works); three tiles whose anchors are item.taobao.com links, trimmed only of image src/data-src values and svg bodies — title nodes, price parts, shop/sales/location nodes verbatim; tiles linking to detail.tmall.com are not extractable by design and stay out; the full raw page stays outside git in .agent/captures/taobao_search_page_raw.html",
+  "ground_truth": {
+    "note": "three first extractable tiles as displayed: 1048008062319 «大码美式设计感蓝色扎染拼接格纹吊带连衣裙女胖妹妹收腰显瘦长裙» ¥66.8 (priceInt 66 + priceFloat .8), shop 小毒家大码女装, 200+人付款, 广东 广州; 1060336448920 «薄荷绿挂脖连衣裙女夏2026新款度假风雪纺荷叶边气质收腰显瘦长裙» ¥112 (empty priceFloat), shop 黑色玫瑰 rose, 100+人付款, 广东 广州; 709599481146 «性感气质收腰褶皱包臀短裙女夏季新款纯欲辣妹V领紧身短袖连衣裙» ¥16.9, shop 迪丽热九衣橱, 1000+人付款, 广东 揭阳. The tile anchor wraps the whole tile, the price is split across unit/priceInt/priceFloat nodes with the sales count glued beside them, and the rendered text carries no newlines — the three layouts the modeled fixture could not show."
+  }
+}

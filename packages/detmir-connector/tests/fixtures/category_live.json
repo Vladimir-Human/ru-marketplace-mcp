@@ -1,0 +1,3808 @@
+{
+ "meta": {
+  "title": "Пупсы",
+  "length": 665,
+  "category": {
+   "id": "45909",
+   "alias": "pups",
+   "url": "pups",
+   "web_url": "https://www.detmir.ru/catalog/index/name/pups/",
+   "name": "Пупсы",
+   "title": "Пупсы",
+   "full_name": "Пупсы",
+   "level": 3,
+   "hierarchyFilterLevel": 0,
+   "products_count": 665,
+   "exposed": false,
+   "promo": false,
+   "pictures": [],
+   "categories": [],
+   "site": "detmir",
+   "category_seq_number": null,
+   "parentId": "2",
+   "autofilter": false,
+   "filter_level": 0,
+   "show_subcategories": false,
+   "default_sort": "popularity",
+   "default_sort2": "popularity",
+   "show_filter_age": false,
+   "show_filter_gender": false,
+   "type": "core",
+   "is_oio": false,
+   "primary_attributes": null
+  }
+ },
+ "items": [
+  {
+   "attributes": [],
+   "type": "common",
+   "title": "Кукла пупс Demi Star высота 35 см",
+   "min_order_quantity": null,
+   "categories": [],
+   "collections": [],
+   "delivery": {
+    "restricted": [],
+    "nearestDeliveryDate": null
+   },
+   "availability": "AVAILABLE",
+   "isAvailableOnline": true,
+   "isAvailableOffline": true,
+   "available": {
+    "online": {
+     "warehouse_codes": [
+      "1120"
+     ]
+    },
+    "offline": {
+     "region_iso_codes": [
+      "RU-AD",
+      "RU-AL",
+      "RU-ALT",
+      "RU-AMU",
+      "RU-ARK",
+      "RU-AST",
+      "RU-BA",
+      "RU-BEL",
+      "RU-BRY",
+      "RU-BU",
+      "RU-CE",
+      "RU-CHE",
+      "RU-CU",
+      "RU-DA",
+      "RU-IN",
+      "RU-IRK",
+      "RU-IVA",
+      "RU-KB",
+      "RU-KC",
+      "RU-KDA",
+      "RU-KEM",
+      "RU-KGD",
+      "RU-KGN",
+      "RU-KHA",
+      "RU-KHM",
+      "RU-KIR",
+      "RU-KK",
+      "RU-KL",
+      "RU-KLU",
+      "RU-KO",
+      "RU-KOS",
+      "RU-KR",
+      "RU-KRS",
+      "RU-KYA",
+      "RU-LIP",
+      "RU-ME",
+      "RU-MO",
+      "RU-MOW",
+      "RU-MUR",
+      "RU-NGR",
+      "RU-NIZ",
+      "RU-NVS",
+      "RU-OMS",
+      "RU-ORE",
+      "RU-ORL",
+      "RU-PER",
+      "RU-PNZ",
+      "RU-PRI",
+      "RU-PSK",
+      "RU-ROS",
+      "RU-RYA",
+      "RU-SA",
+      "RU-SAK",
+      "RU-SAM",
+      "RU-SAR",
+      "RU-SE",
+      "RU-SMO",
+      "RU-SPE",
+      "RU-STA",
+      "RU-SVE",
+      "RU-TA",
+      "RU-TAM",
+      "RU-TOM",
+      "RU-TUL",
+      "RU-TVE",
+      "RU-TY",
+      "RU-TYU",
+      "RU-UD",
+      "RU-ULY",
+      "RU-VGG",
+      "RU-VLA",
+      "RU-VLG",
+      "RU-VOR",
+      "RU-YAN",
+      "RU-YAR",
+      "RU-ZAB",
+      "RU-MOS",
+      "RU-LEN"
+     ],
+     "stores": [
+      "0150",
+      "1104",
+      "110477",
+      "1144",
+      "1164",
+      "1194",
+      "1272",
+      "1312",
+      "1392",
+      "1416",
+      "1438",
+      "1441",
+      "145",
+      "1461",
+      "149",
+      "150",
+      "151",
+      "152",
+      "1521",
+      "153",
+      "1531",
+      "1539",
+      "153950",
+      "154",
+      "156",
+      "157",
+      "158",
+      "1581",
+      "160",
+      "161",
+      "162",
+      "165",
+      "1657",
+      "166",
+      "167",
+      "168",
+      "1693",
+      "170",
+      "174",
+      "1741",
+      "175",
+      "176",
+      "177",
+      "1771",
+      "178",
+      "1780",
+      "1791",
+      "1801",
+      "182",
+      "1831",
+      "185",
+      "186",
+      "187",
+      "1911",
+      "1922",
+      "2001",
+      "2115",
+      "2121",
+      "2175",
+      "2182",
+      "2227",
+      "2241",
+      "2250",
+      "2255",
+      "2281",
+      "232331",
+      "2368",
+      "2369",
+      "2371",
+      "2381",
+      "2391",
+      "2392",
+      "2393",
+      "2401",
+      "2443",
+      "2449",
+      "2462",
+      "2463",
+      "2467",
+      "2468",
+      "2492",
+      "2521",
+      "2530",
+      "2533",
+      "2534",
+      "2541",
+      "2542",
+      "2561",
+      "2574",
+      "2580",
+      "2581",
+      "2591",
+      "259177",
+      "2608",
+      "2631",
+      "2646",
+      "2761",
+      "2767",
+      "2801",
+      "2852",
+      "2991",
+      "3001",
+      "3024",
+      "3051",
+      "3063",
+      "306477",
+      "3071",
+      "312",
+      "3141",
+      "3151",
+      "3171",
+      "3194",
+      "3201",
+      "3221",
+      "3231",
+      "3251",
+      "3285",
+      "3287",
+      "3294",
+      "3309",
+      "3331",
+      "3341",
+      "3351",
+      "3371",
+      "3391",
+      "3401",
+      "3435",
+      "3441",
+      "3481",
+      "3491",
+      "3501",
+      "3521",
+      "354177",
+      "3560",
+      "3571",
+      "3590",
+      "359177",
+      "3661",
+      "3690",
+      "3699",
+      "3742",
+      "3771",
+      "3801",
+      "3831",
+      "3921",
+      "3939",
+      "3941",
+      "4001",
+      "4091",
+      "4111",
+      "4121",
+      "412177",
+      "4181",
+      "4221",
+      "4261",
+      "4421",
+      "4533",
+      "4704",
+      "4815",
+      "4843",
+      "4907",
+      "4909",
+      "4937",
+      "4981",
+      "4984",
+      "5037",
+      "5062",
+      "5207",
+      "531",
+      "5904",
+      "601",
+      "7051",
+      "7567",
+      "771",
+      "771853",
+      "7721",
+      "8004",
+      "8008",
+      "8311",
+      "8915",
+      "9105",
+      "9109",
+      "958"
+     ]
+    }
+   },
+   "labels": [
+    {
+     "name": "exclusive",
+     "title": "ТОЛЬКО У НАС",
+     "short_title": "",
+     "value": "",
+     "color": {
+      "background": "#00C2FC",
+      "text": "#FFFFFF"
+     },
+     "view": "round",
+     "standard": false
+    }
+   ],
+   "prices": {
+    "old": null,
+    "base": null,
+    "sale": 2499
+   },
+   "old_price": null,
+   "price": {
+    "price": 2499,
+    "currency": "RUB"
+   },
+   "box": null,
+   "is_sale": false,
+   "discount_percentage": 0,
+   "is_personal_price_applied": false,
+   "bank_calculations": {
+    "dolyame": [
+     624,
+     624,
+     624,
+     627
+    ],
+    "mokka": [
+     416,
+     416,
+     416,
+     416,
+     416,
+     419
+    ],
+    "vanta": [
+     2499
+    ]
+   },
+   "bonus": 24.99,
+   "isStencil": false,
+   "priceWithBestVoucher": null,
+   "id": "3710649",
+   "sapUid": "1000186568",
+   "isSizable": false,
+   "code": "1000186568",
+   "parent_id": null,
+   "article": "OTM0043030",
+   "description": "<h3>Игровой набор Demi Star Пупс с пледом</h3><p>Пупс Demi Star выглядит, как новорождённый младенец! Его приятно держать на руках, укачивать и брать с сбой на прогулку. Очаровательные аксессуары помогут заботиться о нём.</p><ul><li>Пупс похож на настоящего малыша и детально проработан – вплоть до складочек на коже.</li><li>Можно купать.</li><li>Одет в костюмчик и шапочку, малыша можно укрыть мягким пледом.</li><li>В комплект входит пустышка с клипсой-держателем и игрушка.</li><li>Тарелочка и приборы помогут покормить пупса.</li><li>Рост куклы: 35 см.</li></ul><h3>В комплекте:</h3><ul><li>Тарелка, ложка и вилка</li><li>Пустышка на цепочке</li><li>Игрушка</li><li>Плед</li></ul> <p>Видеообложка товара сгенерирована нейросетью для визуальной демонстрации</p>",
+   "final_price": null,
+   "unit_price": null,
+   "components": [],
+   "max_order_quantity": 10,
+   "sex": [
+    "female"
+   ],
+   "rating": 4.9,
+   "review_count": 196,
+   "averageRating": 4.9,
+   "totalReviewCount": 196,
+   "questions_count": 9,
+   "brands": [
+    {
+     "id": "112",
+     "title": "Demi Star",
+     "url": "/catalog/index/name/sortforbrand/brand/112/",
+     "href": "/catalog/index/name/sortforbrand/brand/112/",
+     "type": "VENDOR",
+     "popular": true,
+     "sort_order": 0,
+     "sort_priority": 830,
+     "is_zoozavr": false,
+     "pictures": [
+      {
+       "id": "",
+       "title": "",
+       "original": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "web": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "thumbnail": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "image": {
+        "desktop": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "tablet": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "mobile": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        }
+       }
+      }
+     ],
+     "animal_types": [],
+     "has_cumulative_discounts": false,
+     "discount_levels": null,
+     "product_count": 875,
+     "product_available_count": 596
+    }
+   ],
+   "categories_ids": [
+    "45909",
+    "72934494",
+    "72934495",
+    "1000015763",
+    "1000021399",
+    "1000021398",
+    "1000021397",
+    "72924502",
+    "1000014731",
+    "72930378",
+    "1000018367",
+    "1000018366",
+    "72933246",
+    "1000018365",
+    "72934527",
+    "72933235",
+    "72933748",
+    "72935264",
+    "1000015777",
+    "116037",
+    "72924447",
+    "116040",
+    "72932369",
+    "1000018386",
+    "116043",
+    "1000018385",
+    "72924435",
+    "1000018384",
+    "116044",
+    "72931862",
+    "1000018378",
+    "1000018377",
+    "1000018376",
+    "1000018380",
+    "1000018371",
+    "1000018370",
+    "1000018375",
+    "1000018374",
+    "1000018372",
+    "72933178",
+    "72931872",
+    "72935896",
+    "72935897",
+    "1000014617",
+    "72933082",
+    "72935898",
+    "1000018454",
+    "1000021526",
+    "72935895",
+    "114597",
+    "114599",
+    "114600",
+    "72933352",
+    "72926184",
+    "72934376",
+    "1000018474",
+    "114611",
+    "1000018472",
+    "1000020776",
+    "1000018476",
+    "1000021036",
+    "72933347",
+    "72933348",
+    "72933349",
+    "72933350",
+    "72933351",
+    "1000021586",
+    "1000021585",
+    "1000021584",
+    "1000017224",
+    "115668",
+    "72934529",
+    "72933255",
+    "1000015738",
+    "72933310",
+    "1000015997",
+    "72933311",
+    "1000015987",
+    "72929713",
+    "115691",
+    "72933292",
+    "72933280",
+    "2",
+    "1",
+    "45909",
+    "45097",
+    "49631",
+    "51521"
+   ],
+   "material": "",
+   "hideSizesList": false,
+   "link": {
+    "rel": "product",
+    "href": "/product/index/id/3710649/",
+    "id": "3710649",
+    "web_url": "https://www.detmir.ru/product/index/id/3710649/"
+   },
+   "site": "detmir",
+   "promo": false,
+   "signs": [],
+   "creation_date": "2025-09-09T12:56:34.551Z",
+   "vendor_id": "",
+   "vendor": {
+    "id": "",
+    "code": "",
+    "title": "",
+    "name": "",
+    "description": "",
+    "usersIds": [],
+    "inn": "",
+    "ogrn": "",
+    "phone": "",
+    "address": "",
+    "popular": false,
+    "isFromMarketplace": false,
+    "storeName": "",
+    "isBlocked": false
+   },
+   "size_title": "",
+   "manufacturer_size": "",
+   "linear_size": "",
+   "lowest_price_guarantee": false,
+   "variations": [],
+   "is_oio": false,
+   "is_own_trademark": true,
+   "is_from_marketplace": false,
+   "bar_codes": [
+    "4610037276246"
+   ],
+   "deep_discount": false,
+   "productId": "3710649",
+   "categories_for_data_layer": [
+    {
+     "id": "1",
+     "name": "Игрушки и игры",
+     "level": 1
+    },
+    {
+     "id": "2",
+     "name": "Куклы и аксессуары",
+     "level": 2
+    },
+    {
+     "id": "45909",
+     "name": "Пупсы",
+     "level": 3
+    }
+   ],
+   "pictures": [
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/dtqVnQ0rGKnMm5ZW8JFVXzJjlzQJbz2YbXvlvfkJS_E=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/dtqVnQ0rGKnMm5ZW8JFVXzJjlzQJbz2YbXvlvfkJS_E=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/dtqVnQ0rGKnMm5ZW8JFVXzJjlzQJbz2YbXvlvfkJS_E=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/CXIno297l3ZgFRuOFii3AX9I0bw8iSTTclFUp-u_J5Y/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/o2ee60l9jg0VklGuQAq9RIlXesBjqM4ZInzkhgsNzdk/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/ofupZ_irQINhN-z_Cl0Y_WX-dwGCwVImEtQshv9-3bA/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/4jes3fXyqt_vqtM7lK57V_GTdrGnC2-KFn7rqGwEIV0/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/0rGyfajMRpEJtGYubInx4isgu_XU2osV70PNguljwqo/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/qsFuTgo2oX659TsOAzZkiWjbtzLh54bQVeOVA4g8Gds/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/gwa8mRtSKA5VmF_GRkEuFFV9wiOUVNDqLh3GxX_p-Pw/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/VX5ytyi5u4JRaHqgkb36A_KdT_HqGWUmB-QTXqy7HpM/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/T2fc2Bn4BmiR7g-A3wi2owbX_xTLrl4AP8ppLS4z9pM/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvZHRxVm5RMHJHS25NbTVaVzhKRlZYekpqbHpRSmJ6MlliWHZsdmZrSlNfRT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/RavaOX2o0m6LVQvZcChiNdg7UQTxYK-v7sw9tWKPSHI=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/RavaOX2o0m6LVQvZcChiNdg7UQTxYK-v7sw9tWKPSHI=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/RavaOX2o0m6LVQvZcChiNdg7UQTxYK-v7sw9tWKPSHI=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/WhBK2pGbe-2h4oBFe3_oCVnrJlinldZYU5PVB4Zf4QQ/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/djcF7G2yL3_ulip7vjjk3bM46waB4XMxsWBrpqm1RkE/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/SrDBCYeSBcJrnzvmN5pqF84U8kO0oeGFOE7K2zDPb6k/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/HXRfh5dK34DyJA1rFv5UqWZXW8FdJ2w8KqFl3JqQQ1Y/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/FVAuM3dIigg42aJkrn--OP6Kx4VkzMVNis20Xc0IcgI/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/ZZ5DlwkxCYezboi5dt-m6Sqg5B-ic_sPwgT4lurOIqE/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/se8pmg06KqUV8Y28at1tW6nbkI4kqoRJXwoo7V1uAMA/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/m_MVxnAQYWGE2q16LwpzvBctgXpzOoU716MPJZ15mio/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/l1GYorZPLVQW6HKgJAr3N2a2NkfDTNLvSBu98BSKzeI/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUmF2YU9YMm8wbTZMVlF2WmNDaGlOZGc3VVFUeFlLLXY3c3c5dFdLUFNIST0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/K-e93aPjQw6K8nAKNEfIaiaS0kOOVo_ZGiax-bWstCE=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/K-e93aPjQw6K8nAKNEfIaiaS0kOOVo_ZGiax-bWstCE=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/K-e93aPjQw6K8nAKNEfIaiaS0kOOVo_ZGiax-bWstCE=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/oIUjFjJp_Hig89s2k8sRuWdSRGlGPhbJjyDUnJWNtqo/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/NAlXcMozjgwDlCeNTn4EYrpUMDLZLAE7L7k1IilPaa4/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/h4PpIFo--pHz5j-zScF4K5SMtSfUQ33GfwJQNTwp278/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/-Ph_b41YBDrhL6Bi6_RUcIogztpB9L18xS9t0tDWpZk/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/wF3t9n_nOBCYr-OcJ7Wj0mnGhuNG0ktsbG5jriURcCA/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/1fae9YiPP7Mf3IGchTRexvimlnK3w8aiobvm0HnUmDU/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/IuoM4jUCTWNn62Sgu44wBAn0UWiXo9u1a-D2STyWYUw/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/HIPZkSkwlSTrbGieLwfDLLPDM4_7EUTGHAcfBa0BoAI/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/QXLju4SD7vIMpbvgqcpXybJDh0MELdIPaTf2FknOdXs/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSy1lOTNhUGpRdzZLOG5BS05FZklhaWFTMGtPT1ZvX1pHaWF4LWJXc3RDRT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/Zop12s12F5Gu0__rpPdWL44HAKl63ckDaVjvBJbXzn0=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/Zop12s12F5Gu0__rpPdWL44HAKl63ckDaVjvBJbXzn0=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/Zop12s12F5Gu0__rpPdWL44HAKl63ckDaVjvBJbXzn0=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/FkqcmTvTgbwPskpR2sC8p4mrtSByGZbisKUatMCOQFk/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/ANYmabhbr-q0gPnXwMTB_oOdrtbvSYUHmRojyHmwRe4/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/9TSLbVKC5Oly1fwsWv836dJLob5uOw7SftouIVjfU9c/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/BtgCZQk_LrdbM7k2-shVfykP1vAUWbZz6fgLBYkEKss/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/xFdMrpMKktagXl6ByDxIiigNTaN5Z1l9fcCEhThsSRA/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/vvV9ff7vwYAbgR7wVrWkt_EoyyahBtEZR8p52w2jdbg/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/gUC84DfutUuaMESXovLYFo8VH-3yfzalev_LY7SAlbY/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/csD0TiwPiZlzr8vbROHUGCIYjFXiT4M-3kePoctWlUA/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/yi8Ty361wtoEyUKJM5sypMVw67UsWF26Sz82wH037_E/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvWm9wMTJzMTJGNUd1MF9fcnBQZFdMNDRIQUtsNjNja0RhVmp2QkpiWHpuMD0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/qG9j8QEL_OxDkD5ljyK5jySAoxxSsgfAiHpW8TlnX-8=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/qG9j8QEL_OxDkD5ljyK5jySAoxxSsgfAiHpW8TlnX-8=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/qG9j8QEL_OxDkD5ljyK5jySAoxxSsgfAiHpW8TlnX-8=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/eYddPUIwRMNipCD94Rbb-kqUo-1_MWH3TaHm8dZHdkg/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/y-jFH2-4NZVt7kefYbiLUCBBvRFVSTJZLVbduvgVpZM/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/94Mok-DheZaX9dbLW52iop8T-G5A9F-qLB9Gk0liikM/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/PFEITAlYBaA2_qo9WR0QVlqRNz0-XIufsuU2UJoIgds/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/36IgV0Vi1V9au0vILGSmZ2Cb_bWu7rcmQJHWlDwovYM/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/-jjVd6wE_T5wnhQ0yOc7Dr7WWKqNRaUB0fRO5fBaOvQ/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/Ld7NGTG9ropeh6mNGWd7DVVud5G1uDYOuLF7o1QmcmI/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/aMlXUOzXjpUEMoMw-uouOLvoJaAz57Ni8tgyQFuV8DY/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/aDCqWtZLLYV23ychch9Za_USPtz8CLrtgRB5MvjuAQI/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvcUc5ajhRRUxfT3hEa0Q1bGp5SzVqeVNBb3h4U3NnZkFpSHBXOFRsblgtOD0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "documents": [],
+   "videos": [],
+   "videoCovers": [
+    {
+     "id": "null",
+     "type": "default",
+     "url": "https://video.detmir.st/product_covers/gDxpEjGzucdYD1QCpuJRFQQvgX9Kk0f5FkBVPu0tC2I="
+    }
+   ],
+   "videoCoversShort": [
+    {
+     "id": "null",
+     "type": "default",
+     "url": "https://video.detmir.st/product_covers/ts7ij7ntg7Kva34SidE6SRjc5uz0lcI3-N-YHvL7eXM="
+    }
+   ],
+   "group": null,
+   "variants": [
+    {
+     "id": "3710649",
+     "skuId": "3710649",
+     "sapUid": "1000186568",
+     "parent_id": "3710649",
+     "code": "1000186568",
+     "title": "",
+     "size": "",
+     "type": "default",
+     "manufacturer_size": "",
+     "linear_size": "",
+     "isOutOfStock": false,
+     "availability": "AVAILABLE",
+     "available": {
+      "online": {
+       "warehouse_codes": [
+        "1120"
+       ]
+      },
+      "offline": {
+       "region_iso_codes": [],
+       "stores": [
+        "0150",
+        "1104",
+        "110477",
+        "1144",
+        "1164",
+        "1194",
+        "1272",
+        "1312",
+        "1392",
+        "1416",
+        "1438",
+        "1441",
+        "145",
+        "1461",
+        "149",
+        "150",
+        "151",
+        "152",
+        "1521",
+        "153",
+        "1531",
+        "1539",
+        "153950",
+        "154",
+        "156",
+        "157",
+        "158",
+        "1581",
+        "160",
+        "161",
+        "162",
+        "165",
+        "1657",
+        "166",
+        "167",
+        "168",
+        "1693",
+        "170",
+        "174",
+        "1741",
+        "175",
+        "176",
+        "177",
+        "1771",
+        "178",
+        "1780",
+        "1791",
+        "1801",
+        "182",
+        "1831",
+        "185",
+        "186",
+        "187",
+        "1911",
+        "1922",
+        "2001",
+        "2115",
+        "2121",
+        "2175",
+        "2182",
+        "2227",
+        "2241",
+        "2250",
+        "2255",
+        "2281",
+        "232331",
+        "2368",
+        "2369",
+        "2371",
+        "2381",
+        "2391",
+        "2392",
+        "2393",
+        "2401",
+        "2443",
+        "2449",
+        "2462",
+        "2463",
+        "2467",
+        "2468",
+        "2492",
+        "2521",
+        "2530",
+        "2533",
+        "2534",
+        "2541",
+        "2542",
+        "2561",
+        "2574",
+        "2580",
+        "2581",
+        "2591",
+        "259177",
+        "2608",
+        "2631",
+        "2646",
+        "2761",
+        "2767",
+        "2801",
+        "2852",
+        "2991",
+        "3001",
+        "3024",
+        "3051",
+        "3063",
+        "306477",
+        "3071",
+        "312",
+        "3141",
+        "3151",
+        "3171",
+        "3194",
+        "3201",
+        "3221",
+        "3231",
+        "3251",
+        "3285",
+        "3287",
+        "3294",
+        "3309",
+        "3331",
+        "3341",
+        "3351",
+        "3371",
+        "3391",
+        "3401",
+        "3435",
+        "3441",
+        "3481",
+        "3491",
+        "3501",
+        "3521",
+        "354177",
+        "3560",
+        "3571",
+        "3590",
+        "359177",
+        "3661",
+        "3690",
+        "3699",
+        "3742",
+        "3771",
+        "3801",
+        "3831",
+        "3921",
+        "3939",
+        "3941",
+        "4001",
+        "4091",
+        "4111",
+        "4121",
+        "412177",
+        "4181",
+        "4221",
+        "4261",
+        "4421",
+        "4533",
+        "4704",
+        "4815",
+        "4843",
+        "4907",
+        "4909",
+        "4937",
+        "4981",
+        "4984",
+        "5037",
+        "5062",
+        "5207",
+        "531",
+        "5904",
+        "601",
+        "7051",
+        "7567",
+        "771",
+        "771853",
+        "7721",
+        "8004",
+        "8008",
+        "8311",
+        "8915",
+        "9105",
+        "9109",
+        "958"
+       ]
+      }
+     },
+     "min_order_quantity": null,
+     "max_order_quantity": 10,
+     "prices": {
+      "sale": 2499
+     },
+     "price": {
+      "price": 2499,
+      "currency": "RUB"
+     },
+     "old_price": null
+    }
+   ],
+   "sizetable": [],
+   "dynamicSizetable": {
+    "headers": [],
+    "rows": []
+   }
+  },
+  {
+   "attributes": [],
+   "type": "common",
+   "title": "Кукла пупс CRY BABIES Кэти",
+   "min_order_quantity": null,
+   "categories": [],
+   "collections": [],
+   "delivery": {
+    "restricted": [],
+    "nearestDeliveryDate": null
+   },
+   "availability": "AVAILABLE",
+   "isAvailableOnline": true,
+   "isAvailableOffline": true,
+   "available": {
+    "online": {
+     "warehouse_codes": [
+      "1120"
+     ]
+    },
+    "offline": {
+     "region_iso_codes": [
+      "RU-AD",
+      "RU-AL",
+      "RU-ALT",
+      "RU-AMU",
+      "RU-ARK",
+      "RU-AST",
+      "RU-BA",
+      "RU-BEL",
+      "RU-BRY",
+      "RU-BU",
+      "RU-CE",
+      "RU-CHE",
+      "RU-CU",
+      "RU-DA",
+      "RU-IN",
+      "RU-IRK",
+      "RU-IVA",
+      "RU-KAM",
+      "RU-KB",
+      "RU-KC",
+      "RU-KDA",
+      "RU-KEM",
+      "RU-KGD",
+      "RU-KGN",
+      "RU-KHA",
+      "RU-KHM",
+      "RU-KIR",
+      "RU-KK",
+      "RU-KL",
+      "RU-KLU",
+      "RU-KO",
+      "RU-KOS",
+      "RU-KR",
+      "RU-KRS",
+      "RU-KYA",
+      "RU-LIP",
+      "RU-MAG",
+      "RU-ME",
+      "RU-MO",
+      "RU-MOW",
+      "RU-MUR",
+      "RU-NGR",
+      "RU-NIZ",
+      "RU-NVS",
+      "RU-OMS",
+      "RU-ORE",
+      "RU-ORL",
+      "RU-PER",
+      "RU-PNZ",
+      "RU-PRI",
+      "RU-PSK",
+      "RU-ROS",
+      "RU-RYA",
+      "RU-SA",
+      "RU-SAK",
+      "RU-SAM",
+      "RU-SAR",
+      "RU-SE",
+      "RU-SMO",
+      "RU-SPE",
+      "RU-STA",
+      "RU-SVE",
+      "RU-TA",
+      "RU-TAM",
+      "RU-TOM",
+      "RU-TUL",
+      "RU-TVE",
+      "RU-TY",
+      "RU-TYU",
+      "RU-UD",
+      "RU-ULY",
+      "RU-VGG",
+      "RU-VLA",
+      "RU-VLG",
+      "RU-VOR",
+      "RU-YAN",
+      "RU-YAR",
+      "RU-YEV",
+      "RU-ZAB",
+      "RU-MOS",
+      "RU-LEN"
+     ],
+     "stores": [
+      "1104",
+      "110477",
+      "1144",
+      "1164",
+      "1194",
+      "1261",
+      "1272",
+      "1312",
+      "1392",
+      "1416",
+      "1438",
+      "1441",
+      "145",
+      "1461",
+      "149",
+      "150",
+      "151",
+      "152",
+      "1521",
+      "153",
+      "1531",
+      "1539",
+      "153950",
+      "154",
+      "156",
+      "157",
+      "158",
+      "1581",
+      "160",
+      "161",
+      "162",
+      "165",
+      "1657",
+      "166",
+      "167",
+      "168",
+      "170",
+      "171",
+      "174",
+      "1741",
+      "175",
+      "176",
+      "177",
+      "1771",
+      "178",
+      "1780",
+      "1791",
+      "1801",
+      "182",
+      "1831",
+      "185",
+      "186",
+      "187",
+      "1911",
+      "1922",
+      "2001",
+      "2115",
+      "2121",
+      "2168",
+      "2175",
+      "2182",
+      "2227",
+      "2241",
+      "2250",
+      "2255",
+      "2281",
+      "232331",
+      "2368",
+      "2369",
+      "2371",
+      "237150",
+      "2381",
+      "2391",
+      "2392",
+      "2393",
+      "2401",
+      "2443",
+      "2449",
+      "2462",
+      "2463",
+      "2468",
+      "2492",
+      "2521",
+      "2522",
+      "2533",
+      "2534",
+      "2541",
+      "2542",
+      "2561",
+      "2574",
+      "2580",
+      "2581",
+      "2591",
+      "259177",
+      "2608",
+      "2631",
+      "2646",
+      "2692",
+      "2761",
+      "2767",
+      "2801",
+      "2811",
+      "2852",
+      "3001",
+      "3024",
+      "3051",
+      "3063",
+      "306477",
+      "3071",
+      "312",
+      "3131",
+      "3141",
+      "3151",
+      "3152",
+      "3171",
+      "3194",
+      "3211",
+      "3221",
+      "3231",
+      "3235",
+      "3241",
+      "3251",
+      "3285",
+      "3291",
+      "3294",
+      "3309",
+      "3331",
+      "3341",
+      "3351",
+      "3371",
+      "3381",
+      "3391",
+      "3401",
+      "3435",
+      "3441",
+      "3481",
+      "3491",
+      "3501",
+      "3521",
+      "354177",
+      "3560",
+      "3571",
+      "3590",
+      "359177",
+      "3661",
+      "367177",
+      "3690",
+      "3699",
+      "3742",
+      "3771",
+      "3801",
+      "3831",
+      "3921",
+      "3941",
+      "4091",
+      "4121",
+      "412177",
+      "4181",
+      "4221",
+      "4261",
+      "4421",
+      "4533",
+      "4608",
+      "4704",
+      "4815",
+      "4835",
+      "4843",
+      "4909",
+      "4937",
+      "4981",
+      "4984",
+      "5037",
+      "531",
+      "601",
+      "771",
+      "771853",
+      "958"
+     ]
+    }
+   },
+   "labels": [],
+   "prices": {
+    "old": 5999,
+    "base": null,
+    "sale": 4999
+   },
+   "old_price": {
+    "price": 5999,
+    "currency": "RUB"
+   },
+   "price": {
+    "price": 4999,
+    "currency": "RUB"
+   },
+   "box": null,
+   "is_sale": true,
+   "discount_percentage": 16,
+   "is_personal_price_applied": false,
+   "bank_calculations": {
+    "dolyame": [
+     1249,
+     1249,
+     1249,
+     1252
+    ],
+    "mokka": [
+     833,
+     833,
+     833,
+     833,
+     833,
+     834
+    ],
+    "vanta": [
+     4999
+    ]
+   },
+   "bonus": 49.99,
+   "isStencil": false,
+   "priceWithBestVoucher": null,
+   "id": "6024844",
+   "sapUid": "1000680067",
+   "isSizable": false,
+   "code": "1000680067",
+   "parent_id": null,
+   "article": "40889",
+   "description": "<h3>Кукла Cry Babies Dressy Кэти интерактивная 40889</h3><p>Познакомься с куколками Край Бебис - персонажами популярного мультсериала!</p><p>Край Бебис – милые девочки, которые живут в мире Волшебных Слез.</p><p>Модница Кэти нуждается в твоей заботе! Она обожает, когда с ней играют, одевают, а еще больше, когда обнимают. Но не стоит расстраивать обворожительную малышку! Она начнет грустно всхлипывать и плакать настоящими слезами, если ты заберешь у нее пустышку. Нужно успокоить милую Кэти! Обними и положи ее на спинку или дай пустышку: и Модница Кэти снова станет счастливой! Смеяться и плакать — это не все, что она умеет: Кэти будет реагировать различными звуками на твои действия (10+ звуков и реакций).</p><p>Кэти очень любит природу: у нее есть свой сад, полный цветов. Чтобы поднять настроение своим подружкам Край Бебис, она часто дарит им цветы. </p><p>У очаровательной Кэти модный съемный наряд кошечки и стильная обувь. Она любит двигать ручками, ножками и головой. </p><p>Поиграй с Кэти и окунись в мир Волшебных Слез! </p><p>Кукла Кэти Dressy интерактивная плачущая Край Бебис высотой 30 см с подвижными ручками и ножками, с яркими волосами, съемными нарядом и обувью. </p><p>Кукла плачет слезами, состоящими из воды (необходимо залить воду в специальный отсек на голове куклы согласно инструкции). </p><p>В серии Модницы Край Бебис есть и другие персонажи: Кони, Дотти, Леди, Фэнси, Дейзи и Лала.  </p><p>Материал: полимерные материалы, элементы из металла и текстиля. </p><p>Для работы игрушки требуются 2 щелочные батарейки ААА типа на 1,5В (в комплекте демонстрационные батарейки). </p><p>Товар сертифицирован и безопасен для детского использования. </p><p><strong>Характеристики:</strong></p><ul><li>Тип: Игрушка</li><li>Вес: 0,800 кг</li><li>Для детей 1,5+</li><li>Упаковка: открытая коробка 13,00 см х 20,00 см х 30,00 см</li></ul><p>ВНИМАНИЕ! Для работы требуются 2 батарейки <a href=\"https://www.detmir.ru/catalog/index/name/batteries1/\">AAA</a></p>",
+   "final_price": null,
+   "unit_price": null,
+   "components": [],
+   "max_order_quantity": 10,
+   "sex": [
+    "female"
+   ],
+   "rating": 4.4,
+   "review_count": 79,
+   "averageRating": 4.4,
+   "totalReviewCount": 79,
+   "questions_count": 7,
+   "brands": [
+    {
+     "id": "70607",
+     "title": "CRY BABIES",
+     "url": "/catalog/index/name/sortforbrand/brand/70607/",
+     "href": "/catalog/index/name/sortforbrand/brand/70607/",
+     "type": "VENDOR",
+     "popular": false,
+     "sort_order": 0,
+     "sort_priority": 0,
+     "is_zoozavr": false,
+     "pictures": [
+      {
+       "id": "",
+       "title": "",
+       "original": "https://catalog-cdn.detmir.st/media/VxfKqxg6ZuzUig6q7fgL-oBam0H4ddcObw2YDFuyLwo=.jpeg",
+       "web": "https://catalog-cdn.detmir.st/media/VxfKqxg6ZuzUig6q7fgL-oBam0H4ddcObw2YDFuyLwo=.jpeg",
+       "thumbnail": "https://catalog-cdn.detmir.st/media/VxfKqxg6ZuzUig6q7fgL-oBam0H4ddcObw2YDFuyLwo=.jpeg",
+       "image": {
+        "desktop": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/WimJCrClqLSHSeVvLSArup9AvCBtpPZ_9lY2L114dt0/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/550rwMY2vBXWq8URZkCjBLRLj7S-fEoVlRoneM_yUEg/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/n4i6yBi4szX-NXnU4Lmx4nIeqohZMLUhzwl3_MLN2MI/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "tablet": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/WimJCrClqLSHSeVvLSArup9AvCBtpPZ_9lY2L114dt0/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/550rwMY2vBXWq8URZkCjBLRLj7S-fEoVlRoneM_yUEg/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/n4i6yBi4szX-NXnU4Lmx4nIeqohZMLUhzwl3_MLN2MI/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "mobile": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/WimJCrClqLSHSeVvLSArup9AvCBtpPZ_9lY2L114dt0/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/550rwMY2vBXWq8URZkCjBLRLj7S-fEoVlRoneM_yUEg/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/n4i6yBi4szX-NXnU4Lmx4nIeqohZMLUhzwl3_MLN2MI/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVnhmS3F4ZzZadXpVaWc2cTdmZ0wtb0JhbTBINGRkY09idzJZREZ1eUx3bz0uanBlZw.webp"
+           }
+          ]
+         }
+        }
+       }
+      }
+     ],
+     "animal_types": [],
+     "has_cumulative_discounts": false,
+     "discount_levels": null,
+     "product_count": 93,
+     "product_available_count": 56
+    }
+   ],
+   "categories_ids": [
+    "45909",
+    "72935897",
+    "72933082",
+    "1000021398",
+    "1000021526",
+    "72924502",
+    "1000021397",
+    "72930378",
+    "114597",
+    "114599",
+    "72933246",
+    "72934527",
+    "114600",
+    "72933235",
+    "72933748",
+    "72926184",
+    "72934376",
+    "114611",
+    "1000020776",
+    "1000021036",
+    "72935264",
+    "116037",
+    "72924447",
+    "116040",
+    "72932369",
+    "1000021586",
+    "116043",
+    "72924435",
+    "116044",
+    "72933255",
+    "72933310",
+    "72933311",
+    "72929713",
+    "45909",
+    "49631",
+    "45097",
+    "1",
+    "51521",
+    "2"
+   ],
+   "material": "",
+   "hideSizesList": false,
+   "link": {
+    "rel": "product",
+    "href": "/product/index/id/6024844/",
+    "id": "6024844",
+    "web_url": "https://www.detmir.ru/product/index/id/6024844/"
+   },
+   "site": "detmir",
+   "promo": true,
+   "signs": [],
+   "creation_date": "2025-09-09T12:56:34.551Z",
+   "vendor_id": "",
+   "vendor": {
+    "id": "",
+    "code": "",
+    "title": "",
+    "name": "",
+    "description": "",
+    "usersIds": [],
+    "inn": "",
+    "ogrn": "",
+    "phone": "",
+    "address": "",
+    "popular": false,
+    "isFromMarketplace": false,
+    "storeName": "",
+    "isBlocked": false
+   },
+   "size_title": "",
+   "manufacturer_size": "",
+   "linear_size": "",
+   "lowest_price_guarantee": false,
+   "variations": [],
+   "is_oio": false,
+   "is_own_trademark": false,
+   "is_from_marketplace": false,
+   "bar_codes": [
+    "8421134086609",
+    "4640243802236"
+   ],
+   "deep_discount": false,
+   "productId": "6024844",
+   "categories_for_data_layer": [
+    {
+     "id": "1",
+     "name": "Игрушки и игры",
+     "level": 1
+    },
+    {
+     "id": "2",
+     "name": "Куклы и аксессуары",
+     "level": 2
+    },
+    {
+     "id": "45909",
+     "name": "Пупсы",
+     "level": 3
+    }
+   ],
+   "pictures": [
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/_zJ_DL_vpmu6M54YeIfhhex05HVwdsJjjdYdmuquqvQ=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/_zJ_DL_vpmu6M54YeIfhhex05HVwdsJjjdYdmuquqvQ=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/_zJ_DL_vpmu6M54YeIfhhex05HVwdsJjjdYdmuquqvQ=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/XxRwZ43d0kYXjFKI6vEpR9JmjTTcyR9-wVGUk56Ujxs/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/gFknJd_81PB5mjG8T3GIqybCs3WASiK_8XpGMZXNN60/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/jhdJwbY0Q1IvIJ4YG0pQFJbUCZdLnH1vqAUuVkcXLWQ/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/g2g0XukXn3vhISEyuQo1lCmY2h_GHlbRd4xNf1JAw2U/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/cb9IHNxEapBo_TbpH_Rb7ftNecQTGR2o37BoPsUalj0/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/bVZQe8sQYR08hcWPZDD8iot_oQcJ4unhHqdMi0up3C4/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/_QBkfyDx8Jc1OP96mLMzcAXzdYhc5Khd14pDFOcwwsI/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/K1whqUw8yfHL8GetQx8BYMcm9_vSzRc0mSzMscb_IbU/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/A5BuHBwTfOa1iiU3CbCpvJuKnR7_S_afLj22dnRfTMk/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvX3pKX0RMX3ZwbXU2TTU0WWVJZmhoZXgwNUhWd2RzSmpqZFlkbXVxdXF2UT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/mHWMvxYpprBNjQG6iZZ-NbxmGhaU1ljYGeL_YZIC2U0=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/mHWMvxYpprBNjQG6iZZ-NbxmGhaU1ljYGeL_YZIC2U0=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/mHWMvxYpprBNjQG6iZZ-NbxmGhaU1ljYGeL_YZIC2U0=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/6BuKV5Sfy8ZBOUPGSzmZF8xJ-YaOIhutaW_aYLbVkLw/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/YvLMtm1fRajIIbvUfOgEWKlRlluE0DvzLVg-EurcyJ4/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/1wuT0xMv1AhBAm4oBCRVpMpcmU0bCBkqQ3VoWhF_uBw/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/ZYptgAPpkPgDMSalrAQAIgKnTRAjZjpdoDt9MRMAuB8/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/QD7BmZcHVAH4EtwQRT2Qc1sl_UBr7sWNczA-rttHMHM/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/7cfcmfM1Vx3IGRu3KaVaVVY_jieo-POxaeylX3GoMTs/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/Q5eyrORfEibKA9Zu8fVRyi9HRcI2jzh__zcc_25010s/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/hmZ0o4qRto7dPiubnqRm-NfKbgRM6u9z8-YmixwI9Cc/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/NlfJPc3UwD3SxDNc2-UQADbPIVubBB61-eWIC61sI98/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbUhXTXZ4WXBwckJOalFHNmlaWi1OYnhtR2hhVTFsallHZUxfWVpJQzJVMD0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/IsuMm9AnHe4Azy5siLQEbps0Iqd0fgxmcBLRHW7_kLY=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/IsuMm9AnHe4Azy5siLQEbps0Iqd0fgxmcBLRHW7_kLY=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/IsuMm9AnHe4Azy5siLQEbps0Iqd0fgxmcBLRHW7_kLY=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/xyg-fH8zL4zOVV09FU16ih_klNwHRgtujRSatMy032w/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/fDhgE4Ncu8Evj2jMmWYmx7iCGtDj9iv_zYDpugopxd0/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/cSMpYbMUOxo972nealuVlMZOgsTRffckAlWLZoaGxfs/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/pnQXEGVxof8xINff18g45ZwrcnL4YnTn7YL08qOC68I/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/fIf7JP18xSr_hvWcVgijGg0puVQyzXz10kWnHGMoxxA/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/xMfJ4mytLmyHPJflbm2ezc4-bJzW77x4ozfngnIDJ1k/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/u8qQO06HwrkQ0ovZOfEaLW5Gf_8wR4zRkfJrPbgXp9E/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/NWeXdpUSk2sJ8LXI6IpAelifsXP4i-Vadnz19kbnwzE/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/AwM63RAxdVPaXuSntMDj7XliLLtjtL9KOb9yvPxxPG4/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSXN1TW05QW5IZTRBenk1c2lMUUVicHMwSXFkMGZneG1jQkxSSFc3X2tMWT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/JzKTJkHeNOctk_1fJVwnH04_tShirtxRAKwQRkcyZlw=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/JzKTJkHeNOctk_1fJVwnH04_tShirtxRAKwQRkcyZlw=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/JzKTJkHeNOctk_1fJVwnH04_tShirtxRAKwQRkcyZlw=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/-plCQr9VKJQX-HXTgh9ysPtpTJyI4se4BVelPh8W8VE/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/p2ay2AgQbn9MYFXHPJ6SsEs8gM2MfrsS0216YdMZzUA/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/5V-PIbzGOeVcWbZ7iB6rSAPVDEkkZ5ShtGc0VktPaHg/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/9FkskAwSokvv80dOXVH1w7Ep5HY8IT5ZFjFYROAbLO4/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/SWQk4h86GbdfmMBNSOnRpdXQPIhFmnPafaXc2gp5d0Y/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/q7w4jVxLpcDeZjtIdb-vuquLHeqe-4FHUkyy5zmzkWg/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/Q2HeX6WPMOTDJN-WmtPIX696dP4WsdqqXmUmyYxfzyo/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/O__oHMr7y9YRT2kYSApzDWuJqAXT2hp62iY1mIMqtn8/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/bZx1r5Z01LNPZeNDH-U9ywIQms3LSqWxgMvLslKgUcc/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSnpLVEprSGVOT2N0a18xZkpWd25IMDRfdFNoaXJ0eFJBS3dRUmtjeVpsdz0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/7AcJK1LqauhXzGdgT4P2Ww0ydmSvUEPK9SXIxOr09fg=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/7AcJK1LqauhXzGdgT4P2Ww0ydmSvUEPK9SXIxOr09fg=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/7AcJK1LqauhXzGdgT4P2Ww0ydmSvUEPK9SXIxOr09fg=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/ffuZCkjJXHIO5iPQgCobgu7lsSoGImoh5Ex_NVFKNY4/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/1maRB_zjX9of91AI9g4RU9lNceCrFXPoxNMvdGpZpP8/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/wgNnadlzIBaZMEXRIaZvhz3Il8qUUcdbmZGvyxs58iE/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/eiJlJQEMZSaDWFMR1b1zuozkwSFGeyWPoXam-71iUVI/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/uYN5XQHjgc1cIA0z34bTIHXb1QpDyoW0vTpzvyWIpIE/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/tAX-EeYZCbXQ4k1675qJ1l4j_q1OrIzhZAZpSRMtC-I/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/b4bMUYJqYFk_2KVcVdIuHcXw3TAbOHTGGb9md0ihOT8/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/ANKlbs69jneV8zWFXWVlv8TBdwSGFFUPj-liPPldsFs/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/f8i3M9A8OxHnj3IVH-4iUExo8UkHGtAfsWhprll1FQM/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvN0FjSksxTHFhdWhYekdkZ1Q0UDJXdzB5ZG1TdlVFUEs5U1hJeE9yMDlmZz0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "documents": [
+    {
+     "title": "Маркировка",
+     "format": "pdf",
+     "url": "https://catalog-cdn.detmir.st/media/2u3K4LzUDb7b03X-2Y1DDuhGAjnzY5kjBRrYvLH8xKI=.pdf"
+    }
+   ],
+   "videos": [],
+   "videoCovers": [],
+   "videoCoversShort": [],
+   "group": null,
+   "variants": [
+    {
+     "id": "6024844",
+     "skuId": "50074778",
+     "sapUid": "1000680067",
+     "parent_id": "6024844",
+     "code": "1000680067",
+     "title": "",
+     "size": "",
+     "type": "default",
+     "manufacturer_size": "",
+     "linear_size": "",
+     "isOutOfStock": false,
+     "availability": "AVAILABLE",
+     "available": {
+      "online": {
+       "warehouse_codes": [
+        "1120"
+       ]
+      },
+      "offline": {
+       "region_iso_codes": [],
+       "stores": [
+        "1104",
+        "110477",
+        "1144",
+        "1164",
+        "1194",
+        "1261",
+        "1272",
+        "1312",
+        "1392",
+        "1416",
+        "1438",
+        "1441",
+        "145",
+        "1461",
+        "149",
+        "150",
+        "151",
+        "152",
+        "1521",
+        "153",
+        "1531",
+        "1539",
+        "153950",
+        "154",
+        "156",
+        "157",
+        "158",
+        "1581",
+        "160",
+        "161",
+        "162",
+        "165",
+        "1657",
+        "166",
+        "167",
+        "168",
+        "170",
+        "171",
+        "174",
+        "1741",
+        "175",
+        "176",
+        "177",
+        "1771",
+        "178",
+        "1780",
+        "1791",
+        "1801",
+        "182",
+        "1831",
+        "185",
+        "186",
+        "187",
+        "1911",
+        "1922",
+        "2001",
+        "2115",
+        "2121",
+        "2168",
+        "2175",
+        "2182",
+        "2227",
+        "2241",
+        "2250",
+        "2255",
+        "2281",
+        "232331",
+        "2368",
+        "2369",
+        "2371",
+        "237150",
+        "2381",
+        "2391",
+        "2392",
+        "2393",
+        "2401",
+        "2443",
+        "2449",
+        "2462",
+        "2463",
+        "2468",
+        "2492",
+        "2521",
+        "2522",
+        "2533",
+        "2534",
+        "2541",
+        "2542",
+        "2561",
+        "2574",
+        "2580",
+        "2581",
+        "2591",
+        "259177",
+        "2608",
+        "2631",
+        "2646",
+        "2692",
+        "2761",
+        "2767",
+        "2801",
+        "2811",
+        "2852",
+        "3001",
+        "3024",
+        "3051",
+        "3063",
+        "306477",
+        "3071",
+        "312",
+        "3131",
+        "3141",
+        "3151",
+        "3152",
+        "3171",
+        "3194",
+        "3211",
+        "3221",
+        "3231",
+        "3235",
+        "3241",
+        "3251",
+        "3285",
+        "3291",
+        "3294",
+        "3309",
+        "3331",
+        "3341",
+        "3351",
+        "3371",
+        "3381",
+        "3391",
+        "3401",
+        "3435",
+        "3441",
+        "3481",
+        "3491",
+        "3501",
+        "3521",
+        "354177",
+        "3560",
+        "3571",
+        "3590",
+        "359177",
+        "3661",
+        "367177",
+        "3690",
+        "3699",
+        "3742",
+        "3771",
+        "3801",
+        "3831",
+        "3921",
+        "3941",
+        "4091",
+        "4121",
+        "412177",
+        "4181",
+        "4221",
+        "4261",
+        "4421",
+        "4533",
+        "4608",
+        "4704",
+        "4815",
+        "4835",
+        "4843",
+        "4909",
+        "4937",
+        "4981",
+        "4984",
+        "5037",
+        "531",
+        "601",
+        "771",
+        "771853",
+        "958"
+       ]
+      }
+     },
+     "min_order_quantity": null,
+     "max_order_quantity": 10,
+     "prices": {
+      "old": 5999,
+      "sale": 4999
+     },
+     "price": {
+      "price": 4999,
+      "currency": "RUB"
+     },
+     "old_price": {
+      "price": 5999,
+      "currency": "RUB"
+     }
+    }
+   ],
+   "sizetable": [],
+   "dynamicSizetable": {
+    "headers": [],
+    "rows": []
+   }
+  },
+  {
+   "attributes": [],
+   "type": "common",
+   "title": "Кукла пупс Demi Star с аксессуарами высота 35 см",
+   "min_order_quantity": null,
+   "categories": [],
+   "collections": [],
+   "delivery": {
+    "restricted": [],
+    "nearestDeliveryDate": null
+   },
+   "availability": "AVAILABLE",
+   "isAvailableOnline": true,
+   "isAvailableOffline": true,
+   "available": {
+    "online": {
+     "warehouse_codes": [
+      "1120"
+     ]
+    },
+    "offline": {
+     "region_iso_codes": [
+      "RU-AD",
+      "RU-AL",
+      "RU-ALT",
+      "RU-AMU",
+      "RU-ARK",
+      "RU-AST",
+      "RU-BA",
+      "RU-BEL",
+      "RU-BRY",
+      "RU-BU",
+      "RU-CE",
+      "RU-CHE",
+      "RU-CU",
+      "RU-DA",
+      "RU-IN",
+      "RU-IRK",
+      "RU-IVA",
+      "RU-KAM",
+      "RU-KB",
+      "RU-KC",
+      "RU-KDA",
+      "RU-KEM",
+      "RU-KGD",
+      "RU-KGN",
+      "RU-KHA",
+      "RU-KHM",
+      "RU-KIR",
+      "RU-KK",
+      "RU-KL",
+      "RU-KLU",
+      "RU-KO",
+      "RU-KOS",
+      "RU-KR",
+      "RU-KRS",
+      "RU-KYA",
+      "RU-LIP",
+      "RU-MAG",
+      "RU-ME",
+      "RU-MO",
+      "RU-MOW",
+      "RU-MUR",
+      "RU-NGR",
+      "RU-NIZ",
+      "RU-NVS",
+      "RU-OMS",
+      "RU-ORE",
+      "RU-ORL",
+      "RU-PER",
+      "RU-PNZ",
+      "RU-PRI",
+      "RU-PSK",
+      "RU-ROS",
+      "RU-RYA",
+      "RU-SA",
+      "RU-SAK",
+      "RU-SAM",
+      "RU-SAR",
+      "RU-SE",
+      "RU-SMO",
+      "RU-SPE",
+      "RU-STA",
+      "RU-SVE",
+      "RU-TA",
+      "RU-TAM",
+      "RU-TOM",
+      "RU-TUL",
+      "RU-TVE",
+      "RU-TY",
+      "RU-TYU",
+      "RU-UD",
+      "RU-ULY",
+      "RU-VGG",
+      "RU-VLA",
+      "RU-VLG",
+      "RU-VOR",
+      "RU-YAN",
+      "RU-YAR",
+      "RU-YEV",
+      "RU-ZAB",
+      "RU-MOS",
+      "RU-LEN"
+     ],
+     "stores": [
+      "0150",
+      "0964",
+      "1104",
+      "110477",
+      "1144",
+      "1164",
+      "1194",
+      "1232",
+      "1261",
+      "1272",
+      "1312",
+      "1332",
+      "1392",
+      "1416",
+      "1438",
+      "1441",
+      "145",
+      "1461",
+      "1478",
+      "149",
+      "150",
+      "151",
+      "152",
+      "153",
+      "1531",
+      "1533",
+      "1539",
+      "153950",
+      "154",
+      "156",
+      "157",
+      "158",
+      "1581",
+      "160",
+      "161",
+      "162",
+      "163",
+      "165",
+      "1657",
+      "166",
+      "167",
+      "1678",
+      "168",
+      "1693",
+      "170",
+      "171",
+      "174",
+      "175",
+      "176",
+      "177",
+      "1771",
+      "178",
+      "1780",
+      "179",
+      "1791",
+      "1801",
+      "182",
+      "1831",
+      "1844",
+      "185",
+      "186",
+      "187",
+      "1872",
+      "1883",
+      "1911",
+      "1922",
+      "2001",
+      "2041",
+      "211177",
+      "2121",
+      "2131",
+      "2168",
+      "216850",
+      "2169",
+      "2175",
+      "2179",
+      "2182",
+      "2216",
+      "2227",
+      "2241",
+      "2250",
+      "2255",
+      "2281",
+      "2301",
+      "2323",
+      "232331",
+      "2368",
+      "2369",
+      "2371",
+      "237150",
+      "2381",
+      "2391",
+      "2392",
+      "2393",
+      "2401",
+      "2443",
+      "2444",
+      "2448",
+      "2449",
+      "2462",
+      "2463",
+      "2467",
+      "2468",
+      "2473",
+      "2488",
+      "2490",
+      "2492",
+      "2521",
+      "2522",
+      "2530",
+      "2531",
+      "2533",
+      "2534",
+      "2541",
+      "2542",
+      "2551",
+      "2561",
+      "2574",
+      "2580",
+      "2581",
+      "2591",
+      "259177",
+      "2608",
+      "2616",
+      "2631",
+      "2633",
+      "2634",
+      "2646",
+      "2658",
+      "2664",
+      "2692",
+      "2731",
+      "2761",
+      "2767",
+      "2801",
+      "2811",
+      "2845",
+      "285150",
+      "2852",
+      "2864",
+      "2875",
+      "2976",
+      "2991",
+      "3001",
+      "3024",
+      "3051",
+      "3063",
+      "306477",
+      "3071",
+      "3111",
+      "312",
+      "3131",
+      "3141",
+      "3151",
+      "3171",
+      "3194",
+      "3201",
+      "3211",
+      "3221",
+      "3231",
+      "3235",
+      "3241",
+      "3251",
+      "3285",
+      "3294",
+      "3309",
+      "3331",
+      "3341",
+      "3351",
+      "3371",
+      "3391",
+      "3400",
+      "3401",
+      "3435",
+      "3441",
+      "3453",
+      "3481",
+      "3490",
+      "3491",
+      "349150",
+      "3501",
+      "3521",
+      "353150",
+      "354177",
+      "3560",
+      "3571",
+      "3590",
+      "359177",
+      "3603",
+      "3611",
+      "3621",
+      "3661",
+      "367177",
+      "3672",
+      "3690",
+      "3691",
+      "3699",
+      "3701",
+      "3742",
+      "3757",
+      "3771",
+      "3801",
+      "3831",
+      "3861",
+      "3921",
+      "3941",
+      "3978",
+      "4001",
+      "4012",
+      "403177",
+      "4091",
+      "4111",
+      "4120",
+      "4121",
+      "412177",
+      "4151",
+      "4161",
+      "4181",
+      "4211",
+      "4221",
+      "4261",
+      "4421",
+      "451",
+      "4533",
+      "4608",
+      "4704",
+      "4800",
+      "4815",
+      "4835",
+      "4843",
+      "4907",
+      "4909",
+      "4937",
+      "4981",
+      "4984",
+      "5012",
+      "5036",
+      "5062",
+      "5207",
+      "531",
+      "5904",
+      "601",
+      "7051",
+      "7104",
+      "7567",
+      "771",
+      "771853",
+      "7721",
+      "8004",
+      "8260",
+      "8311",
+      "8915",
+      "9105",
+      "9109",
+      "958",
+      "981"
+     ]
+    }
+   },
+   "labels": [
+    {
+     "name": "exclusive",
+     "title": "ТОЛЬКО У НАС",
+     "short_title": "",
+     "value": "",
+     "color": {
+      "background": "#00C2FC",
+      "text": "#FFFFFF"
+     },
+     "view": "round",
+     "standard": false
+    }
+   ],
+   "prices": {
+    "old": null,
+    "base": null,
+    "sale": 2499
+   },
+   "old_price": null,
+   "price": {
+    "price": 2499,
+    "currency": "RUB"
+   },
+   "box": null,
+   "is_sale": false,
+   "discount_percentage": 0,
+   "is_personal_price_applied": false,
+   "bank_calculations": {
+    "dolyame": [
+     624,
+     624,
+     624,
+     627
+    ],
+    "mokka": [
+     416,
+     416,
+     416,
+     416,
+     416,
+     419
+    ],
+    "vanta": [
+     2499
+    ]
+   },
+   "bonus": 24.99,
+   "isStencil": false,
+   "priceWithBestVoucher": null,
+   "id": "3710650",
+   "sapUid": "1000186569",
+   "isSizable": false,
+   "code": "1000186569",
+   "parent_id": null,
+   "article": "OTM0044721",
+   "description": "<h3>Игровой набор Demi Star пупс с аксессуарами</h3><p>Пупс Demi Star невероятно похож на новорожденного малыша. А благодаря набору аксессуаров заботиться о нём - легко и приятно.</p><ul><li>Реалистичное личико и тело: на ручках даже есть складочки.</li><li>Ручки и ножки двигаются.</li><li>Костюмчик сшит из вязаного трикотажного полотна.</li><li>Пупса можно купать и переодевать.</li><li>Рост пупса - 35 см.</li></ul><h3>В комплекте:</h3><ul><li>Мягкая игрушка</li><li>Пустышка</li><li>Бутылочка</li><li>Погремушка</li></ul>",
+   "final_price": null,
+   "unit_price": null,
+   "components": [],
+   "max_order_quantity": 10,
+   "sex": [
+    "female"
+   ],
+   "rating": 4.8,
+   "review_count": 297,
+   "averageRating": 4.8,
+   "totalReviewCount": 297,
+   "questions_count": 16,
+   "brands": [
+    {
+     "id": "112",
+     "title": "Demi Star",
+     "url": "/catalog/index/name/sortforbrand/brand/112/",
+     "href": "/catalog/index/name/sortforbrand/brand/112/",
+     "type": "VENDOR",
+     "popular": true,
+     "sort_order": 0,
+     "sort_priority": 830,
+     "is_zoozavr": false,
+     "pictures": [
+      {
+       "id": "",
+       "title": "",
+       "original": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "web": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "thumbnail": "https://catalog-cdn.detmir.st/media/mhVxkg1_87ugLFinMHc5hrrCTxDxK72L--pqXOcyODI=.jpeg",
+       "image": {
+        "desktop": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "tablet": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        },
+        "mobile": {
+         "sources": {
+          "x1": [
+           {
+            "role": "default",
+            "width": 52,
+            "height": 52,
+            "webp": "https://img.detmir.st/GGXDVUQ1d0jCRtYF0oO4z6OCqqrtoNvL9hlh3k9vzi4/rs:fit:52:52/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x2": [
+           {
+            "role": "default",
+            "width": 104,
+            "height": 104,
+            "webp": "https://img.detmir.st/7HGgP2AzmicUPjh8j_UDyeP0buaPgSAO9H9ewzBxJvY/rs:fit:104:104/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ],
+          "x3": [
+           {
+            "role": "default",
+            "width": 156,
+            "height": 156,
+            "webp": "https://img.detmir.st/C2Nca2bEFlmmAz2hiHkwBp4tvkY8NpaQtoLhq2Y7mXM/rs:fit:156:156/g:sm/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvbWhWeGtnMV84N3VnTEZpbk1IYzVocnJDVHhEeEs3MkwtLXBxWE9jeU9EST0uanBlZw.webp"
+           }
+          ]
+         }
+        }
+       }
+      }
+     ],
+     "animal_types": [],
+     "has_cumulative_discounts": false,
+     "discount_levels": null,
+     "product_count": 875,
+     "product_available_count": 596
+    }
+   ],
+   "categories_ids": [
+    "45909",
+    "72934494",
+    "72924511",
+    "72934495",
+    "1000021399",
+    "1000021398",
+    "72924502",
+    "1000021397",
+    "72930378",
+    "1000018367",
+    "1000018366",
+    "72933246",
+    "1000018365",
+    "72934527",
+    "72933235",
+    "72933748",
+    "72935264",
+    "116037",
+    "116040",
+    "72932369",
+    "1000018386",
+    "116043",
+    "1000018385",
+    "72924435",
+    "1000018384",
+    "116044",
+    "72931862",
+    "1000018378",
+    "1000018377",
+    "1000018376",
+    "1000018380",
+    "1000018371",
+    "1000018370",
+    "1000018375",
+    "1000018374",
+    "1000018372",
+    "72933178",
+    "72924463",
+    "72931872",
+    "72935896",
+    "72935897",
+    "72933082",
+    "72935898",
+    "1000014617",
+    "1000018454",
+    "1000021526",
+    "72935895",
+    "114597",
+    "114599",
+    "72926184",
+    "72933352",
+    "1000018474",
+    "114611",
+    "1000018472",
+    "1000020776",
+    "1000018476",
+    "1000021036",
+    "72933347",
+    "72933348",
+    "72933349",
+    "72933350",
+    "72933351",
+    "1000021586",
+    "1000021585",
+    "1000021584",
+    "1000017224",
+    "115668",
+    "72934529",
+    "72933255",
+    "72933310",
+    "1000015997",
+    "72933311",
+    "1000015987",
+    "72929713",
+    "115691",
+    "72933292",
+    "72933280",
+    "2",
+    "1",
+    "45909",
+    "45097",
+    "49631",
+    "51521"
+   ],
+   "material": "",
+   "hideSizesList": false,
+   "link": {
+    "rel": "product",
+    "href": "/product/index/id/3710650/",
+    "id": "3710650",
+    "web_url": "https://www.detmir.ru/product/index/id/3710650/"
+   },
+   "site": "detmir",
+   "promo": false,
+   "signs": [],
+   "creation_date": "2025-09-09T12:56:34.551Z",
+   "vendor_id": "",
+   "vendor": {
+    "id": "",
+    "code": "",
+    "title": "",
+    "name": "",
+    "description": "",
+    "usersIds": [],
+    "inn": "",
+    "ogrn": "",
+    "phone": "",
+    "address": "",
+    "popular": false,
+    "isFromMarketplace": false,
+    "storeName": "",
+    "isBlocked": false
+   },
+   "size_title": "",
+   "manufacturer_size": "",
+   "linear_size": "",
+   "lowest_price_guarantee": false,
+   "variations": [],
+   "is_oio": false,
+   "is_own_trademark": true,
+   "is_from_marketplace": false,
+   "bar_codes": [
+    "4610037276253"
+   ],
+   "deep_discount": false,
+   "productId": "3710650",
+   "categories_for_data_layer": [
+    {
+     "id": "1",
+     "name": "Игрушки и игры",
+     "level": 1
+    },
+    {
+     "id": "2",
+     "name": "Куклы и аксессуары",
+     "level": 2
+    },
+    {
+     "id": "45909",
+     "name": "Пупсы",
+     "level": 3
+    }
+   ],
+   "pictures": [
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/K45FEbHU_mhbzcUXE5i_PQvlMN0-xPzMvNvhHuw8Q0A=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/K45FEbHU_mhbzcUXE5i_PQvlMN0-xPzMvNvhHuw8Q0A=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/K45FEbHU_mhbzcUXE5i_PQvlMN0-xPzMvNvhHuw8Q0A=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/-FXsCwOX8eU9C8i_yev36WkFW8rAquo06YQz3YFwCWs/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/Bwpsibazox4J94OlTmyRBFvtJ91pGRhMHWcIzk_tPGk/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/g8yz_J_RTBs6EH1MkTvnZ4aH1Cb3s7VMt9ecOozYSac/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/XqSgcR4wlRa9DQnP5ojfFZrvzsCTc69ZG5CnEDUxTxM/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/ERaVvgfUC48v6fHFzdQFwUks2b7ZVQsgetUcnpEt7dc/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/f-XSiDDbeoCJkz4VV-ORgCQE5IVKOjJQGZqC5rkokaw/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/gK1OFIMnXu-kDXDzN2jo20JO0j_uHt0C2dYNcQZzL90/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/ktHjmaQ66VuJBrKIuw-MlZI1y9oJ0vtJ4mbRk14BI-g/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/NnpeN7C7XdZI5rbwA_UA13xVZwYvZ2-Mc_bH3O7DH3U/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvSzQ1RkViSFVfbWhiemNVWEU1aV9QUXZsTU4wLXhQek12TnZoSHV3OFEwQT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/ASK1YsvG8ursJfahIlNT-YxjBDe55vjcQ730KQcCz_I=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/ASK1YsvG8ursJfahIlNT-YxjBDe55vjcQ730KQcCz_I=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/ASK1YsvG8ursJfahIlNT-YxjBDe55vjcQ730KQcCz_I=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/JYea4S6JLOfK7hhw3SgkS7LWurq59evZQdjoZSADlUw/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/kwSPsYlLi5BZ1FxrlpisH-XRzab6YeTlesxJDlH502U/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/RYD-HcrAyHk0XTjmXdqRBZXmf_9CtdUFNV-NnNqgfRw/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/3KJrwhgWEwozu42pnJ8IvatRx-ZDxSysRos4PGyBQwQ/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/GIRx4NIlXNAjBtHMznW2X_5oQcwhoDGEzm_7WiSxthQ/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/7Oa7TkR_qLR-aHRBEaDYJUYP-4hOHkbZMmgn42WIJVM/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/IDhQim9JrqQtkQQBvGQGtnEEVmoEoo-eVNyCpI-PPK8/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/rDny0lzf_MDurUP04gekdTamJzX6TTu9G_YgEZQKpok/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/e38poEqNLQ82fw4oYqDgnZLUUUuoPG8HO5eO7Rpulys/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVNLMVlzdkc4dXJzSmZhaElsTlQtWXhqQkRlNTV2amNRNzMwS1FjQ3pfST0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/AR3nRul7Uc3ZXxCoi6QL_B9U7X8jzcJJ5MEZv95-pzU=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/AR3nRul7Uc3ZXxCoi6QL_B9U7X8jzcJJ5MEZv95-pzU=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/AR3nRul7Uc3ZXxCoi6QL_B9U7X8jzcJJ5MEZv95-pzU=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/g7evdA0F3Tzsy0nBpQVKvaoMWeCE2Yyx8-msAxRDcH4/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/ENgs11r1YZbHqLXgRqLSI6hOdPItqCop35vxzbYfPj8/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/tY2qYnZZfmAENqs0Y3eIsp3xkAMrYrr2MHfiouy4QZE/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/SY_2AXjt82JGspsTK-bmlonjpMeuXYcjDqLHa-6Ckfk/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/903LpW53yOOQC7p247typ-Mxo3pcLbz2r5dV3NWzT24/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/twI43-DNsvkhRH-RB9vZE3CNYc7-m6SwPiHCN_5TWUM/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/w784B_7Q2frbkfpKZYs23B1gDT2-V0ThCkcytC0pj5o/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/vM6DQL3ZGZzbt-7J02B1ql7Bv8sogwZCSEA4Fx0XoaM/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/X39DafSe5xPZ5-PA3fkxXOdgqYQeYZe32R3EwOjDteQ/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvQVIzblJ1bDdVYzNaWHhDb2k2UUxfQjlVN1g4anpjSko1TUVadjk1LXB6VT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/VBW72cyBhi3s4272d3m5Go--g9OIhvrupbwSsX5hsGo=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/VBW72cyBhi3s4272d3m5Go--g9OIhvrupbwSsX5hsGo=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/VBW72cyBhi3s4272d3m5Go--g9OIhvrupbwSsX5hsGo=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/zBugXEyGPaHTbAKwhN0_Nck7KBFnGmHX6uXxnyBj7pg/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/hAbxixYJQVqEy54Hk0UzkjrgcqcX40XRffFiVbIGRuw/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/7egjmpIuw3UVu1e4vjH0JXkj_c-Kw45AvBNHXpQPS5g/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/putJmbn1W6NihlLRfseZKLVYXNq0McAOduKMx2Np-iQ/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/bUn02rs2FFdGK5V0m9kz2FBdBaN_BiXTPO5YtO3qA88/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/Ky73hg6nCWVcatHlYXXBXpKd7GRkztJNzgGwC84cMA8/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/RS2f55erudAmzLebQ3eUSoafOEZRvU28aGtphF73rvQ/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/tv7LmYyufdAFpl_hpujifXvsfpUfLS9MDvLEOH9gCFs/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/iyc_b90Iebz2zz3EExau92ydo04__y4uXVQZeY-vl9Q/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvVkJXNzJjeUJoaTNzNDI3MmQzbTVHby0tZzlPSWh2cnVwYndTc1g1aHNHbz0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "id": "",
+     "title": "",
+     "original": "https://catalog-cdn.detmir.st/media/RYP-D8UPQTfXOIsmTXJ3D0zqFeUj0sHTpfOAdElXVcU=.jpeg",
+     "web": "https://catalog-cdn.detmir.st/media/RYP-D8UPQTfXOIsmTXJ3D0zqFeUj0sHTpfOAdElXVcU=.webp?preset=site_product_gallery_r450",
+     "thumbnail": "https://catalog-cdn.detmir.st/media/RYP-D8UPQTfXOIsmTXJ3D0zqFeUj0sHTpfOAdElXVcU=.webp?preset=site_product_gallery_r150",
+     "image": {
+      "desktop": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 240,
+          "height": 300,
+          "webp": "https://img.detmir.st/a3xlfiZ0rZNDXcEU8_jndQ59XehYyLTZXqq9lqtKaIM/rs:fit:240:300/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 480,
+          "height": 600,
+          "webp": "https://img.detmir.st/wkUujyJvWcErzjP8JxwdiKfG-4pmYZ2xqx1Be1DnUeE/rs:fit:480:600/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 720,
+          "height": 900,
+          "webp": "https://img.detmir.st/7kmgvHjfdJU2U8m0Tc7ch6M6rEVpzUfwBcluS7S7P3I/rs:fit:720:900/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "tablet": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 330,
+          "height": 413,
+          "webp": "https://img.detmir.st/PvdG2faVtXx1d6C9npQJzSQzbewz1q707lyGwwhXGCY/rs:fit:330:413/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 660,
+          "height": 825,
+          "webp": "https://img.detmir.st/7nMdPe56_Mkog33_oJdLwro78rdGUViWOIjTgtr21Fg/rs:fit:660:825/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 990,
+          "height": 1238,
+          "webp": "https://img.detmir.st/zkoK_138aJojxymm8TpXb3St53P2er0oCsBBO42IAE8/rs:fit:990:1238/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ]
+       }
+      },
+      "mobile": {
+       "sources": {
+        "x1": [
+         {
+          "role": "default",
+          "width": 300,
+          "height": 375,
+          "webp": "https://img.detmir.st/dOZPy8HqGpEK5kRwYTndYA6WYIec2DrMaogrpYihUAI/rs:fit:300:375/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x2": [
+         {
+          "role": "default",
+          "width": 600,
+          "height": 750,
+          "webp": "https://img.detmir.st/4bGUHr9MWN7Cnk_WyVtrA6xeOLul_m7NpR-ExN84kmI/rs:fit:600:750/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ],
+        "x3": [
+         {
+          "role": "default",
+          "width": 900,
+          "height": 1125,
+          "webp": "https://img.detmir.st/tQTKF6QOBQaGmjx1Uu7Dv3Ruo1t5UHvi8C8tiDglq8E/rs:fit:900:1125/g:sm/ex:1/bg:FFFFFF/aHR0cHM6Ly9jYXRhbG9nLWNkbi5kZXRtaXIuc3QvbWVkaWEvUllQLUQ4VVBRVGZYT0lzbVRYSjNEMHpxRmVVajBzSFRwZk9BZEVsWFZjVT0uanBlZw.webp"
+         }
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "documents": [
+    {
+     "title": "Маркировка",
+     "format": "pdf",
+     "url": "https://catalog-cdn.detmir.st/media/_OHt6qdorz8m7XDOweHJWArLd8wtaejFMbD6P95yQBo=.pdf"
+    }
+   ],
+   "videos": [
+    {
+     "id": "0382369866b0ff11fae9236de4ff0de9",
+     "type": "rutube",
+     "url": "https://rutube.ru/video/0382369866b0ff11fae9236de4ff0de9/"
+    }
+   ],
+   "videoCovers": [],
+   "videoCoversShort": [],
+   "group": null,
+   "sizetable": [],
+   "dynamicSizetable": {
+    "headers": [],
+    "rows": []
+   }
+  }
+ ]
+}

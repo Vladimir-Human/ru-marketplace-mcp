@@ -29,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import math
 import os
 import re
 import string
@@ -76,7 +77,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -213,7 +214,7 @@ def _page_fingerprint(products: list[Any]) -> str | None:
 
 def _proxy() -> str | None:
     """Resolve WB's proxy: explicit ``WB_PROXY`` first, then the standard vars."""
-    return (_settings.proxy or "").strip() or proxy_from_env("WB_PROXY")
+    return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("WB_PROXY")
 
 
 def _wb_client() -> httpx.AsyncClient:
@@ -431,11 +432,18 @@ def _extract_price_rub(p: dict) -> tuple[float | None, float | None]:
 
 def _kopeck_to_rub(v: object) -> float | None:
     """WB integer kopecks -> float rubles, tolerant of a number->string drift.
-    Returns None for null/<=0/unparseable (never crashes the /100 math)."""
+    Returns None for null/<=0/non-finite/unparseable (never crashes the /100
+    math). json.loads admits Infinity by default and a huge int makes the
+    division raise OverflowError, so a poisoned priceU cell degrades to
+    no-price instead of corrupting a ranking or aborting the tool."""
     if isinstance(v, bool) or v is None:
         return None
     if isinstance(v, (int, float)):
-        return v / 100 if v > 0 else None
+        try:
+            rubles = v / 100
+        except OverflowError:
+            return None
+        return rubles if rubles > 0 and math.isfinite(rubles) else None
     if isinstance(v, str):
         stripped = v.strip()
         if not stripped or any(c not in string.digits for c in stripped):
@@ -444,7 +452,11 @@ def _kopeck_to_rub(v: object) -> float | None:
             amount = int(stripped)
         except ValueError:
             return None
-        return (amount / 100) if amount > 0 else None
+        try:
+            rubles = amount / 100
+        except OverflowError:
+            return None
+        return rubles if rubles > 0 and math.isfinite(rubles) else None
     return None
 
 
@@ -528,15 +540,25 @@ async def wb_card(
     Returns prices in rubles, brand, supplier, supplier_rating, review_rating,
     feedbacks count, total_quantity for up to 100 SKUs.
 
+    ## Return Format
+
+    WbCardResponse: {dest, count, items, meta}. Items carry nm_id, name, brand,
+    supplier, supplier_id, supplier_rating, review_rating, feedbacks,
+    total_quantity, in_stock, price_rub, price_original_rub. price_rub is None
+    when the SKU has no sellable price — never 0. Unknown SKUs are NOT an
+    error — they simply do not appear in items.
+
+    ## Error Format
+
+    ToolError: BadRequestError on malformed nm_ids; RateLimitedError on HTTP
+    429; TransportDownError on network failures, non-200 responses, Cloudflare
+    HTML pages and unexpected internal errors; ParserDriftError on a non-JSON
+    or mis-shaped body.
+
     Args:
         nm_ids: 1..100 nmId integers.
         dest: Region ID (default Moscow -1257786). Required for valid prices.
               Other examples: -1257786 Moscow, -1029256 Saint Petersburg.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
     """
     log_event("wb_card.start", nm_count=len(nm_ids), dest=dest)
     if ctx is not None:
@@ -648,6 +670,12 @@ async def wb_root_info(
     """Fetch full card metadata from basket CDN. Returns imt_id (root_id) for review pool.
 
     All variants of one product share imt_id. Reviews indexed by imt_id, NOT by nmId.
+
+    ## Return Format
+
+    WbRootInfoResponse: {imt_id, subj_name, subj_root_name, colors,
+    compositions, options, host_used, meta}. imt_id is the root product id
+    shared by every variant — wb_reviews is indexed by it, not by nmId.
 
     ## Error Format
 
@@ -819,6 +847,19 @@ async def wb_reviews(
     `sort` is applied CLIENT-SIDE over that pool. To surface complaints, "worst"
     reorders the returned pool by lowest rating first.
 
+    ## Return Format
+
+    WbReviewsResponse: {imt_id, sort, pool_size, feedback_count, valuation,
+    valuation_distribution, feedbacks, host_used, meta}. Review items carry
+    rating, text, pros, cons, user, date. An empty pool is NOT an error — it
+    returns a healthy response with zero feedbacks.
+
+    ## Error Format
+
+    ToolError: BadRequestError on a bad limit or sort; ParserDriftError when
+    a 200 body has no feedbacks list; TransportDownError when every review
+    host fails and on unexpected internal errors.
+
     Args:
         imt_id: Root ID from wb_root_info.
         limit: Max review texts to return (1..100). Counts always full.
@@ -826,11 +867,6 @@ async def wb_reviews(
               "best"/"highest" (highest rating first),
               "worst"/"lowest"/"complaints" (LOWEST rating first — finds downsides).
               Note: reorders the ~1000-review pool WB returns, not all feedbacks.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
     """
     log_event("wb_reviews.start", imt_id=imt_id, limit=limit, sort=sort)
     if ctx is not None:
@@ -1008,17 +1044,26 @@ async def wb_questions(
     shares one question pool. Passing an nmId returns an empty pool with no error,
     so resolve the root id via ``wb_root_info`` first.
 
+    ## Return Format
+
+    WbQuestionsResponse: {imt_id, total_available, returned, skip,
+    answered_count, has_more, questions, meta}. Question items carry
+    question_id, text, date, user, answered, answer_text, answer_date, nm_id.
+    An empty pool is NOT an error — it means nobody has asked yet.
+
+    ## Error Format
+
+    ToolError: BadRequestError on a bad limit or skip; RateLimitedError on
+    HTTP 429; TransportDownError on network failures, non-200 responses and
+    unexpected internal errors; ParserDriftError when a 200 body loses the
+    count key or the questions shape.
+
     Args:
         imt_id: Root ID from wb_root_info.
         limit: Max questions to return (1..100).
         skip: Offset into the pool, for pagination.
         answered_only: Keep only questions that have a seller answer.
         ctx: MCP context, when called as a tool.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
     """
     log_event("wb_questions.start", imt_id=imt_id, limit=limit, skip=skip, answered_only=answered_only)
     if ctx is not None:
@@ -1203,16 +1248,24 @@ async def wb_search(
     returns just product IDs (no PoW protection, very high rate limit). Then
     enriches via `wb_card` for full details.
 
+    ## Return Format
+
+    WbSearchResponse: {query, page, page_size, total_ids, count, items, meta},
+    with items in the same shape as wb_card. Zero matches — or a page past the
+    end — returns WbNoResultsResponse {status: "no_results", query, page,
+    total_ids} instead. That is NOT an error.
+
+    ## Error Format
+
+    ToolError: BadRequestError on a page outside 1..20; RateLimitedError on
+    HTTP 429 from the v9 search endpoint; TransportDownError on unexpected
+    internal errors. Plain transport failures of both search paths degrade to
+    a no_results response rather than an error.
+
     Args:
         query: Russian text.
         dest: Region. Default Moscow.
         page: 1..20 (each page returns ~30 IDs from the long list).
-
-    ## Return Format
-
-    On a match, returns WbSearchResponse. When the catalog has no ids for the
-    query (or the page is past the end), returns WbNoResultsResponse — this is
-    NOT an error. On validation/transport/parse failure, raises ToolError.
     """
     log_event("wb_search.start", query=query[:100], page=page, dest=dest)
     if ctx is not None:
@@ -1558,6 +1611,13 @@ async def wb_seller(
 
     Chain from `wb_card`: its `supplier_id` field feeds straight into this tool.
 
+    ## Return Format
+
+    WbSellerResponse: {supplier_id, name, full_name, trademark, inn, kpp,
+    ogrn, legal_address, taxpayer_code, foreign_codes, host_used, meta}.
+    foreign_codes carries non-RU registration codes (unp/bin/unn) for EAEU
+    sellers.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -1708,6 +1768,13 @@ async def wb_categories(
     The live menu is ~800 KB, so responses are always a bounded slice — start at
     'top', then expand the branch you care about.
 
+    ## Return Format
+
+    WbCategoriesResponse: {root, max_depth, total_returned, truncated, items,
+    host_used, meta}. Nodes carry id, name, url, shard, query, depth,
+    children_count, children; shard+query are the selectors
+    wb_category_products needs to list a category feed.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -1835,6 +1902,20 @@ async def wb_category_products(
     returning an empty list, because an empty list here would read as "this
     category has no products", which is false.
 
+    ## Return Format
+
+    WbCategoryProductsResponse: {shard, query, page, sort, dest, count,
+    has_more, items, meta}, with items in the same shape as wb_card. has_more
+    is inferred from a full page — WB reports no total here.
+
+    ## Error Format
+
+    ToolError: BadRequestError on malformed selectors or the unlistable
+    'blackhole' shard; NotFoundError on a 404 (stale shard/query pair);
+    RateLimitedError on HTTP 429; TransportDownError on network failures,
+    non-200 responses, Cloudflare HTML pages and unexpected internal errors;
+    ParserDriftError on a non-JSON or mis-shaped body.
+
     Args:
         shard: Catalog shard from wb_categories.
         query: Catalog selector from wb_categories (`cat=` or `subject=`).
@@ -1842,11 +1923,6 @@ async def wb_category_products(
         sort: Upstream ordering.
         dest: WB region id; defaults to WB_DEFAULT_DEST.
         ctx: MCP context, when called as a tool.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
     """
     shard_norm = (shard or "").strip()
     query_norm = (query or "").strip().lstrip("?&")
@@ -2006,6 +2082,20 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     `inconclusive` (transport/baseline rot), NEVER drift. Only a reached-200 body
     whose parser-critical anchor is gone is `drift`. Run on demand before trusting
     a batch.
+
+    ## Return Format
+
+    WbSelfCheckResponse: {status, healthy, connector, checks, server_version,
+    server_started_at, process_id, config_loaded, tool_count} — checks maps
+    card / reviews / search_goods / root_basket to a per-subcheck verdict
+    (healthy/drift/inconclusive). drift_detected and inconclusive are NOT
+    errors; they are valid canary verdicts returned as a normal response.
+
+    ## Error Format
+
+    Never raises ToolError: transport/timeout failures of individual
+    subchecks map to inconclusive entries, reached-200 shape failures to
+    drift entries — both are verdicts, not errors.
     """
     log_event("wb_selfcheck.start")
     if ctx is not None:

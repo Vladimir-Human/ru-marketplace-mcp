@@ -1,9 +1,12 @@
-"""Regression tests for the Lamoda search extractor on a real captured DOM.
+"""Regression tests for the Lamoda search extractor on a modeled fixture.
 
 Lamoda is the last CDP search source without a jsdom fixture. This closes the
 same hole DNS and Citilink already plug: the extractor JS runs against the
-actual tile markup, not against a mocked render call, so a broken selector
-reads as a failing assertion instead of a silent ``price_rub: null``.
+modelled grid markup, not against a mocked render call, so a broken selector
+reads as a failing assertion instead of a silent ``price_rub: null``. The
+fixture is hand-modelled, not a capture — the audit of 2026-08-06 found no
+provenance for it, and lamoda.ru answers a datacenter fetch with a captcha, so
+a live capture is an operator task.
 
 ``fixtures/search_grid.html`` models a rendered search grid: two cards, each
 with an empty image/overlay link first and a text-bearing product link next, a

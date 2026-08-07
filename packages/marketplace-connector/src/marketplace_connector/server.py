@@ -35,7 +35,7 @@ class MarketplaceSourcesResponse(BaseModel):
     server_version: str = Field(default="", description="Unified server version.")
 
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 
 mcp = FastMCP(
     "marketplace",
@@ -121,6 +121,11 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
     server_version}. ``skipped`` maps source name to the import error that
     removed it, which is usually a missing optional dependency.
+
+    ## Error Format
+
+    Never raises ToolError: pure introspection of the mounted connectors — a
+    failed import is recorded in ``skipped`` instead of being raised.
     """
     return MarketplaceSourcesResponse(
         mounted=sorted(_MOUNTED),

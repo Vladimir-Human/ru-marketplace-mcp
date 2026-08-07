@@ -1,0 +1,9 @@
+{
+  "url": "https://item.taobao.com/item.htm?id=1048008062319",
+  "captured_at": "2026-08-07",
+  "sha256": "b0e0bd5005620f09ce6196a5676c1c2f481378d80287d234838a136b4b118ef1",
+  "method": "captured live on 2026-08-07 via raw CDP through the operator's logged-in Chrome (the same item that led the search capture of that day); trimmed only of <script>/<style>/<noscript> blocks and HTML comments — the nodes the extractor reads (mainTitle span, priceWrap blocks, shopName span, the 已售 text node, description images) stay verbatim; the full raw page stays outside git in .agent/captures/taobao_card_raw.html",
+  "ground_truth": {
+    "note": "as displayed when captured: title «大码美式设计感蓝色扎染拼接格纹吊带连衣裙女胖妹妹收腰显瘦长裙», price ￥83.6 (店铺优惠后, the amount the buyer pays), strikethrough ￥95 (优惠前), shop 小毒家大码女装, sales 已售 300+, 20 description images. The capture exposed three extractor defects fixed the same day: the title read the header image-search placeholder «按图片搜索» (no h1 on the modern page), the price hunt missed the split symbol/text spans of highlightPrice/subPrice so priced cards read as no price, and the sales/shop line scan glued whole-page blobs."
+  }
+}

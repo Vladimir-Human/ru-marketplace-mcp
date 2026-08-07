@@ -25,6 +25,8 @@ from mcp_core.resilience import (
     first_present,
     flatten_text,
     price_from_texts,
+    selfcheck_entry,
+    selfcheck_result,
 )
 
 # --------------------------------------------------------------------------- #
@@ -50,6 +52,14 @@ def test_coerce_price_survives_non_finite_floats(value):
 @pytest.mark.parametrize("value", NON_FINITE)
 def test_coerce_rating_survives_non_finite_floats(value):
     assert coerce_rating(value) is None
+
+
+def test_coerce_rating_survives_an_int_past_the_float_ceiling():
+    """`json.loads` returns arbitrary-precision ints, so a rating cell past the
+    float ceiling makes `float()` raise OverflowError. coerce_price already
+    degrades such values to None; coerce_rating must match — a poisoned cell
+    strips the field to no-data, never aborts the tool."""
+    assert coerce_rating(10**400) is None
 
 
 # --------------------------------------------------------------------------- #
@@ -195,3 +205,63 @@ def test_first_present_treats_none_as_absent():
 
 def test_first_present_uses_the_default_when_nothing_binds():
     assert first_present({}, "price", "cost", default="unset") == "unset"
+
+
+# --------------------------------------------------------------------------- #
+# Tri-state selfcheck contract — ok flag and aggregation precedence
+# --------------------------------------------------------------------------- #
+
+
+def test_selfcheck_entry_ok_flag_is_tri_state():
+    """ok=True only for healthy; False for drift; None for inconclusive, so a
+    caller can tell 'proved broken' from 'could not be judged'."""
+    assert selfcheck_entry("healthy")["ok"] is True
+    assert selfcheck_entry("drift")["ok"] is False
+    assert selfcheck_entry("inconclusive")["ok"] is None
+
+
+def test_selfcheck_entry_unknown_state_is_inconclusive_never_ok():
+    entry = selfcheck_entry("exploded")
+    assert entry["state"] == "inconclusive"
+    assert entry["ok"] is None
+
+
+def test_selfcheck_result_drift_dominates():
+    checks = {
+        "search": selfcheck_entry("healthy"),
+        "card": selfcheck_entry("drift"),
+        "other": selfcheck_entry("inconclusive"),
+    }
+    result = selfcheck_result("x", checks)
+    assert result["status"] == "drift_detected"
+    assert result["healthy"] is False
+
+
+def test_selfcheck_result_inconclusive_beats_all_healthy():
+    checks = {"search": selfcheck_entry("healthy"), "card": selfcheck_entry("inconclusive")}
+    result = selfcheck_result("x", checks)
+    assert result["status"] == "inconclusive"
+    assert result["healthy"] is None
+
+
+def test_selfcheck_result_all_healthy_is_success():
+    checks = {"search": selfcheck_entry("healthy"), "card": selfcheck_entry("healthy")}
+    result = selfcheck_result("x", checks)
+    assert result["status"] == "success"
+    assert result["healthy"] is True
+
+
+def test_selfcheck_result_no_checks_is_inconclusive_not_vacuous_success():
+    result = selfcheck_result("x", {})
+    assert result["status"] == "inconclusive"
+    assert result["healthy"] is None
+
+
+def test_selfcheck_result_missing_required_check_is_injected_inconclusive():
+    """A required sub-check the caller forgot to populate must not be silently
+    dropped — it is injected as inconclusive so it can never aggregate to a
+    false success."""
+    result = selfcheck_result("x", {"search": selfcheck_entry("healthy")}, required=("search", "card"))
+    assert "card" in result["checks"]
+    assert result["checks"]["card"]["state"] == "inconclusive"
+    assert result["status"] == "inconclusive"

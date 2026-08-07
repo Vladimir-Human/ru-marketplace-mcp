@@ -1,11 +1,13 @@
-"""Regression tests for the Taobao search extractor on a real captured DOM.
+"""Regression tests for the Taobao search extractor on a modeled fixture.
 
 Taobao's grids are client-side React rendered over the signed mtop API; the
 extractor was the only layer of the connector no offline test touched, and it
 still carried the July-2026 legacy heuristics that DNS and Citilink abandoned:
 ``closest()`` tile resolution, ``innerText`` line scans, ``parseFloat`` on
 digit-concatenated text and a DIY yuan regex. ``fixtures/search_grid.html`` is
-the tile markup shape Taobao serves, trimmed to two cards: one with a real
+a hand model of the tile markup shape Taobao serves (not a capture — a real
+grid is client-rendered, so capturing one needs a browser and is an operator
+task), trimmed to two cards: one with a real
 yuan-glued price (``999¥``), one with a hidden price (``面议``, "price on
 request") that must read as None — never 0.
 """

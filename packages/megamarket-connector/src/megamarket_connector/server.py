@@ -59,7 +59,7 @@ from megamarket_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://megamarket.ru"
@@ -688,6 +688,12 @@ async def megamarket_selfcheck(ctx: Context | None = None) -> MegamarketSelfchec
     ## Return Format
 
     MegamarketSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("megamarket_selfcheck.start")
     try:

@@ -34,6 +34,7 @@ browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import shutil
 import socket
@@ -43,8 +44,34 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any, Protocol
+from urllib.parse import urlsplit, urlunsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
+
+# websockets ships with the cdp extra; stay importable without it (the raw-CDP
+# fallback raises a clear error instead).
+_websockets: Any = None
+try:
+    import websockets as _websockets_module
+
+    _websockets = _websockets_module
+except ImportError:  # pragma: no cover - exercised only without the cdp extra
+    _websockets = None
+
+
+class PageLike(Protocol):
+    """What the connectors actually use from an opened tab.
+
+    Both a Playwright ``Page`` and the raw-CDP fallback page satisfy it, which
+    is what lets ``open_page`` fall back transparently.
+    """
+
+    @property
+    def url(self) -> str: ...
+
+    async def evaluate(self, expression: str, arg: object = None) -> Any: ...
 
 
 def _port_from_env() -> int:
@@ -327,6 +354,17 @@ def cdp_setup_hint() -> str:
     return "run scripts/start_chrome_cdp.sh"
 
 
+class _CdpConnectTimeout(RuntimeError):
+    """Chrome listens on the CDP port, but Playwright cannot finish the attach.
+
+    Chrome >= 151 stopped answering Playwright's connect_over_cdp handshake:
+    the websocket connects, then the driver's attach sequence hangs until
+    timeout while plain CDP commands over the same socket answer fine. Callers
+    that see this should fall back to the raw-CDP path instead of blaming the
+    marketplace.
+    """
+
+
 @asynccontextmanager
 async def get_browser() -> AsyncIterator[Browser]:
     """Connect to the operator's Chrome over CDP, auto-starting it if needed."""
@@ -340,7 +378,13 @@ async def get_browser() -> AsyncIterator[Browser]:
             )
 
     async with async_playwright() as p:
-        browser = await p.chromium.connect_over_cdp(CDP_URL, timeout=10_000)
+        try:
+            browser = await p.chromium.connect_over_cdp(CDP_URL, timeout=10_000)
+        except _PlaywrightTimeoutError as exc:
+            raise _CdpConnectTimeout(
+                f"Playwright could not attach to Chrome on {CDP_HOST}:{CDP_PORT} "
+                "(Chrome newer than Playwright's CDP handshake supports)"
+            ) from exc
         try:
             yield browser
         finally:
@@ -382,13 +426,17 @@ class NavBlocked(RuntimeError):
         super().__init__(f"navigation blocked: HTTP {status}")
 
 
-async def probe_session(*, timeout_s: float = 6.0) -> dict[str, object]:
+async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
     """Health-check the CDP session itself, for operator-facing diagnostics.
 
     Answers the questions a ``doctor`` command or a connector's blocked error
     wants answered before it blames the marketplace: is Chrome reachable, does
     it have a live context, and which host/port were dialed. Never raises — a
     failed probe is the answer, returned as ``reachable: False`` with a reason.
+
+    The default ceiling is deliberately above Playwright's 10 s attach timeout:
+    on a Chrome that Playwright cannot handshake, the attach must fail first so
+    the raw-CDP reachability verdict can be reported instead of a bare timeout.
     """
     result: dict[str, object] = {"host": CDP_HOST, "port": CDP_PORT, "is_loopback": CDP_IS_LOOPBACK}
     if not _cdp_port_open():
@@ -403,30 +451,233 @@ async def probe_session(*, timeout_s: float = 6.0) -> dict[str, object]:
                 result["reachable"] = True
                 result["contexts"] = len(browser.contexts)
                 result["reason"] = None
+    except _CdpConnectTimeout:
+        # Playwright cannot attach, but Chrome answers plain CDP — the session
+        # is usable through the raw path, say so instead of claiming it is down.
+        pages = _raw_page_count()
+        result["reachable"] = True
+        result["contexts"] = pages
+        result["reason"] = "playwright attach unsupported by this Chrome; raw CDP answers"
     except Exception as exc:
         result["reachable"] = False
         result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
     return result
 
 
-@asynccontextmanager
-async def open_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
-    """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
+# ---------------------------------------------------------------------------
+# Raw-CDP fallback
+#
+# Chrome >= 151 no longer completes Playwright's connect_over_cdp handshake,
+# but the same browser answers plain CDP over the websocket without trouble.
+# Everything below drives one tab over that raw protocol, exposing exactly the
+# two things the connectors use from a Playwright Page: ``evaluate`` and
+# ``url``. It only ever runs when the Playwright attach timed out.
+# ---------------------------------------------------------------------------
 
-    Guarantees:
-      * non-http(s) schemes are refused outright (scheme guard);
-      * a block/auth/5xx main document raises ``NavBlocked`` rather than
-        yielding a page that only looks like content;
-      * tab creation, navigation and teardown are individually bounded, so a
-        wedged CDP session cannot hang a tool call indefinitely.
+_RAW_CONNECT_TIMEOUT_S = 8.0
+_RAW_NAV_TIMEOUT_S = 20.0
 
-    Host allowlisting stays the caller's responsibility — each connector knows
-    which paths are legitimate for its marketplace.
+
+def _raw_page_count() -> int:
+    """Count page targets via the CDP HTTP endpoint (no websocket needed)."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
+            targets = json.loads(resp.read())
+        return sum(1 for t in targets if isinstance(t, dict) and t.get("type") == "page")
+    except Exception:
+        return 0
+
+
+def _browser_ws_url() -> str | None:
+    """The browser websocket URL, rewritten to the host we actually dial."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"{CDP_URL}/json/version", timeout=3) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        return None
+    ws = data.get("webSocketDebuggerUrl")
+    if not isinstance(ws, str) or not ws.startswith("ws"):
+        return None
+    # The endpoint advertises its own loopback address even when we reached it
+    # through CHROME_CDP_HOST — redial the host we know answers.
+    parts = urlsplit(ws)
+    return urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+
+
+def _evaluate_expression(expression: str, arg: object) -> str:
+    """Wrap an expression the way Playwright's evaluate would run it.
+
+    A string that parses to a function is invoked with ``arg``; anything else
+    is evaluated as-is. The wrapper returns a promise either way, so the CDP
+    call always runs with ``awaitPromise``.
     """
-    low = (url or "").strip().lower()
-    if not (low.startswith("http://") or low.startswith("https://")):
-        raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
+    arg_literal = json.dumps(arg, ensure_ascii=False) if arg is not None else "undefined"
+    return (
+        "(async () => { const __pw_fn = (" + expression + "); "
+        "return typeof __pw_fn === 'function' ? await __pw_fn(" + arg_literal + ") : __pw_fn; })()"
+    )
 
+
+class _WsLike(Protocol):
+    """The slice of a websockets client connection the raw page drives."""
+
+    async def send(self, message: str) -> None: ...
+
+    async def recv(self) -> str: ...
+
+
+class _RawCdpPage:
+    """A Playwright-Page-alike over one raw CDP websocket."""
+
+    def __init__(self, ws: _WsLike, target_id: str) -> None:
+        self._ws = ws
+        self._target_id = target_id
+        self._next_id = 0
+        self._url = "about:blank"
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    async def _send(self, method: str, params: dict | None = None, timeout: float = 30.0) -> dict:
+        self._next_id += 1
+        msg_id = self._next_id
+        await self._ws.send(json.dumps({"id": msg_id, "method": method, "params": params or {}}))
+        while True:
+            raw = await asyncio.wait_for(self._ws.recv(), timeout=timeout)
+            msg = json.loads(raw)
+            if msg.get("id") != msg_id:
+                self._note_event(msg)
+                continue
+            if "error" in msg:
+                raise RuntimeError(f"CDP {method}: {msg['error']}")
+            return msg.get("result") or {}
+
+    def _note_event(self, msg: dict) -> None:
+        if msg.get("method") == "Page.frameNavigated":
+            frame = msg.get("params", {}).get("frame", {})
+            if isinstance(frame, dict) and not frame.get("parentId"):
+                self._url = frame.get("url") or self._url
+
+    async def evaluate(self, expression: str, arg: object = None) -> Any:
+        result = await self._send(
+            "Runtime.evaluate",
+            {
+                "expression": _evaluate_expression(expression, arg),
+                "awaitPromise": True,
+                "returnByValue": True,
+            },
+            timeout=60.0,
+        )
+        if result.get("exceptionDetails"):
+            detail = result["exceptionDetails"]
+            text = (detail.get("exception") or {}).get("description") or detail.get("text") or "JS error"
+            raise RuntimeError(f"page.evaluate failed: {str(text)[:300]}")
+        return (result.get("result") or {}).get("value")
+
+    async def goto_and_status(self, url: str) -> int | None:
+        """Navigate and return the last main-document HTTP status seen."""
+        self._next_id += 1
+        msg_id = self._next_id
+        await self._ws.send(json.dumps({"id": msg_id, "method": "Page.navigate", "params": {"url": url}}))
+        statuses: list[int] = []
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _RAW_NAV_TIMEOUT_S
+        nav_error: object = None
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
+            try:
+                raw = await asyncio.wait_for(self._ws.recv(), timeout=remaining)
+            except TimeoutError:
+                break
+            msg = json.loads(raw)
+            if msg.get("id") == msg_id and "error" in msg:
+                nav_error = msg["error"]
+            method = msg.get("method", "")
+            params = msg.get("params", {})
+            if method == "Network.responseReceived" and params.get("type") == "Document":
+                response = params.get("response", {})
+                status = response.get("status")
+                if isinstance(status, int):
+                    statuses.append(status)
+                    self._url = response.get("url") or self._url
+            elif method == "Page.frameNavigated":
+                self._note_event(msg)
+            elif method == "Page.loadEventFired":
+                break
+        if nav_error is not None:
+            raise RuntimeError(f"CDP Page.navigate: {nav_error}")
+        return statuses[-1] if statuses else None
+
+    async def close(self) -> None:
+        try:
+            await self._send("Target.closeTarget", {"targetId": self._target_id}, timeout=10.0)
+        except Exception:
+            pass
+
+
+@asynccontextmanager
+async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
+    """Open a tab over raw CDP, mirroring open_page's guarantees."""
+    if _websockets is None:
+        raise RuntimeError("the raw-CDP fallback needs the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+
+    async with _websockets.connect(browser_ws, max_size=None, open_timeout=_RAW_CONNECT_TIMEOUT_S) as bws:
+        created = await _RawCdpPage(bws, "")._send(
+            "Target.createTarget", {"url": "about:blank"}, timeout=_RAW_CONNECT_TIMEOUT_S
+        )
+        target_id = created.get("targetId")
+        if not isinstance(target_id, str) or not target_id:
+            raise RuntimeError("CDP Target.createTarget returned no targetId")
+
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
+            targets = json.loads(resp.read())
+    except Exception as exc:
+        raise RuntimeError(f"CDP target list unavailable: {exc}") from exc
+    page_ws = next(
+        (t.get("webSocketDebuggerUrl") for t in targets if isinstance(t, dict) and t.get("id") == target_id),
+        None,
+    )
+    if not isinstance(page_ws, str) or not page_ws.startswith("ws"):
+        raise RuntimeError("CDP target has no websocket URL")
+    parts = urlsplit(page_ws)
+    page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+
+    async with _websockets.connect(page_ws, max_size=None, open_timeout=_RAW_CONNECT_TIMEOUT_S) as pws:
+        page = _RawCdpPage(pws, target_id)
+        try:
+            await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+            await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+            await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+            status = await page.goto_and_status(url)
+            if status in _NAV_FAIL_STATUSES:
+                raise NavBlocked(status, page.url)
+            if wait_ms > 0:
+                await asyncio.sleep(wait_ms / 1000)
+            if STEALTH and sys.platform == "win32":
+                await asyncio.to_thread(_hide_chrome_windows)
+            yield page
+        finally:
+            try:
+                await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
+            except Exception:
+                pass
+
+
+@asynccontextmanager
+async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
     async with get_context() as ctx:
         page = await asyncio.wait_for(ctx.new_page(), timeout=_TAB_OP_TIMEOUT_S)
         try:
@@ -449,3 +700,31 @@ async def open_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
                 await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
             except Exception:
                 pass
+
+
+@asynccontextmanager
+async def open_page(url: str, wait_ms: int = 5000) -> AsyncIterator[PageLike]:
+    """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
+
+    Guarantees:
+      * non-http(s) schemes are refused outright (scheme guard);
+      * a block/auth/5xx main document raises ``NavBlocked`` rather than
+        yielding a page that only looks like content;
+      * tab creation, navigation and teardown are individually bounded, so a
+        wedged CDP session cannot hang a tool call indefinitely;
+      * when Playwright cannot finish its attach handshake (Chrome >= 151),
+        the same tab lifecycle runs over raw CDP instead.
+
+    Host allowlisting stays the caller's responsibility — each connector knows
+    which paths are legitimate for its marketplace.
+    """
+    low = (url or "").strip().lower()
+    if not (low.startswith("http://") or low.startswith("https://")):
+        raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
+
+    try:
+        async with _playwright_page(url, wait_ms) as page:
+            yield page
+    except _CdpConnectTimeout:
+        async with _raw_cdp_page(url, wait_ms) as page:
+            yield page

@@ -1,6 +1,6 @@
 [project]
 name = "mcp-core"
-version = "1.3.1"
+version = "1.4.0"
 description = "Shared runtime for ru-marketplace-mcp connectors — error taxonomy, transports, tolerant-reader helpers"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -13,10 +13,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# transport/chrome_cdp.py drives Chrome through Playwright's connect_over_cdp,
-# not a raw websocket. This extra used to pull websockets, which installed the
-# wrong library and still left playwright missing.
-cdp = ["playwright>=1.40"]
+# transport/chrome_cdp.py drives Chrome through Playwright's connect_over_cdp.
+# Chrome >= 151 stops answering that handshake, so the transport also carries a
+# raw-CDP fallback that speaks the websocket protocol directly — that path
+# needs `websockets` (already present transitively via fastmcp, declared here
+# so the fallback never depends on an undeclared transitive).
+cdp = ["playwright>=1.40", "websockets>=12"]
 impersonate = ["curl-cffi>=0.7"]
 
 [build-system]

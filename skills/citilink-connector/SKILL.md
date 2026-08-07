@@ -67,3 +67,5 @@ title comes from the `Snippet__title` anchor.
   page in the same Chrome and compare.
 - From a datacenter address the domain answers 429, so nothing can be verified
   there. This connector only means anything from the operator's own machine.
+- A missing price is `null`, never `0`: `price_rub: null` means Citilink had no
+  usable price for the tile — treat it as no data, never as a free item.

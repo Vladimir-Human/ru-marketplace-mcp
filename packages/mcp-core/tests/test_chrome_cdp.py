@@ -407,3 +407,188 @@ def test_probe_session_never_raises(monkeypatch):
 
     assert result["reachable"] is False
     assert "wedged" in str(result["reason"])
+
+
+def test_probe_session_reports_reachable_when_only_the_playwright_attach_fails(monkeypatch):
+    """Chrome >= 151: Playwright cannot attach, but raw CDP answers — the probe
+    must say reachable (the transport falls back), not 'down'."""
+
+    class _AttachFails:
+        async def __aenter__(self):
+            raise chrome_cdp._CdpConnectTimeout("handshake unsupported")
+
+        async def __aexit__(self, *a):
+            return False
+
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: True)
+    monkeypatch.setattr(chrome_cdp, "get_browser", lambda: _AttachFails())
+    monkeypatch.setattr(chrome_cdp, "_raw_page_count", lambda: 7)
+    import asyncio
+
+    result = asyncio.run(chrome_cdp.probe_session())
+
+    assert result["reachable"] is True
+    assert result["contexts"] == 7
+    assert "raw CDP" in str(result["reason"])
+
+
+# ------------------------------------------------- raw-CDP fallback (Chrome >=151) ----
+#
+# Chrome >= 151 no longer answers Playwright's connect_over_cdp handshake, so
+# open_page falls back to driving one tab over raw CDP. The wrapper JS and the
+# page shim are testable offline; the websocket below is a fake that replays
+# canned CDP messages.
+
+
+def _run_js_expression(expression: str) -> object:
+    """Execute a JS expression in Node and return its awaited JSON value."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    node = shutil.which("node")
+    if node is None:  # pragma: no cover - node is present wherever jsdom tests run
+        pytest.skip("node not available")
+    with tempfile.TemporaryDirectory() as tmp:
+        script = Path(tmp) / "probe.js"
+        script.write_text(
+            "const out = (" + expression + ");\n"
+            "Promise.resolve(out).then((v) => process.stdout.write(JSON.stringify({v: v === undefined ? null : v})));\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run([node, str(script)], capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")[:400]
+    import json as _json
+
+    return _json.loads(result.stdout.decode("utf-8"))["v"]
+
+
+def test_evaluate_wrapper_invokes_a_function_with_the_arg():
+    wrapper = chrome_cdp._evaluate_expression("(args) => args.a + 1", {"a": 41})
+    assert _run_js_expression(wrapper) == 42
+
+
+def test_evaluate_wrapper_awaits_async_functions():
+    """The connectors' fetch-in-page scripts are async arrow functions."""
+    wrapper = chrome_cdp._evaluate_expression("async (args) => { return args.x * 2; }", {"x": 21})
+    assert _run_js_expression(wrapper) == 42
+
+
+def test_evaluate_wrapper_calls_no_arg_functions():
+    wrapper = chrome_cdp._evaluate_expression("() => 'привет'", None)
+    assert _run_js_expression(wrapper) == "привет"
+
+
+def test_evaluate_wrapper_passes_plain_expressions_through():
+    wrapper = chrome_cdp._evaluate_expression("1 + 2", None)
+    assert _run_js_expression(wrapper) == 3
+
+
+def test_evaluate_wrapper_escapes_json_in_the_arg():
+    """Args travel as a JSON literal spliced into JS — quotes and backslashes
+    in string values must survive verbatim."""
+    wrapper = chrome_cdp._evaluate_expression("(args) => args.text", {"text": 'he said "hi" \\ and <t>'})
+    assert _run_js_expression(wrapper) == 'he said "hi" \\ and <t>'
+
+
+class _FakeWs:
+    """Replays canned CDP messages; records everything sent."""
+
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.sent: list[dict] = []
+
+    async def send(self, message):
+        import json as _json
+
+        self.sent.append(_json.loads(message))
+
+    async def recv(self):
+        import asyncio as _asyncio
+        import json as _json
+
+        await _asyncio.sleep(0)
+        return _json.dumps(self._responses.pop(0))
+
+
+def test_raw_page_evaluate_sends_runtime_evaluate_and_returns_the_value():
+    import asyncio
+
+    ws = _FakeWs([{"id": 1, "result": {"result": {"type": "string", "value": "ok"}}}])
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    assert asyncio.run(page.evaluate("() => 'ok'")) == "ok"
+    sent = ws.sent[0]
+    assert sent["method"] == "Runtime.evaluate"
+    assert sent["params"]["awaitPromise"] is True
+    assert sent["params"]["returnByValue"] is True
+
+
+def test_raw_page_evaluate_raises_on_exception_details():
+    import asyncio
+
+    ws = _FakeWs(
+        [{"id": 1, "result": {"exceptionDetails": {"text": "Uncaught", "exception": {"description": "Error: boom"}}}}]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(page.evaluate("() => { throw new Error('boom'); }"))
+
+
+def test_raw_page_tracks_the_main_frame_url_and_ignores_subframes():
+    page = chrome_cdp._RawCdpPage(_FakeWs([]), "T1")
+
+    page._note_event(
+        {"method": "Page.frameNavigated", "params": {"frame": {"url": "https://x/child", "parentId": "F0"}}}
+    )
+    assert page.url == "about:blank"
+
+    page._note_event({"method": "Page.frameNavigated", "params": {"frame": {"url": "https://x/main"}}})
+    assert page.url == "https://x/main"
+
+
+def test_goto_and_status_returns_the_last_document_status_and_stops_on_load():
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"frameId": "F"}},
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "response": {"status": 307, "url": "https://x/hop"}},
+            },
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Script", "response": {"status": 500, "url": "https://x/app.js"}},
+            },
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "response": {"status": 200, "url": "https://x/final"}},
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    assert asyncio.run(page.goto_and_status("https://x/")) == 200
+    assert page.url == "https://x/final"
+
+
+def test_goto_and_status_reports_a_block_page():
+    """A 403 main document is a verdict open_page turns into NavBlocked."""
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"frameId": "F"}},
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "response": {"status": 403, "url": "https://x/blocked"}},
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    assert asyncio.run(page.goto_and_status("https://x/")) == 403

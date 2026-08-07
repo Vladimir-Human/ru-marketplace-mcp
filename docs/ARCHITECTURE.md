@@ -196,7 +196,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-980 offline tests, no network required. Three flavours:
+1146 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.
@@ -211,6 +211,12 @@ surface.
 Live tests are marked (`-m "not live and not cdp"`) and excluded from CI,
 which has neither a Russian-friendly IP nor a logged-in browser. Including them
 would produce noise instead of signal.
+
+Coverage is branch-measured over the fourteen packages' source and enforced at
+a 70 % floor. `scripts/check_coverage_floor.py` measures the offline suite and
+compares it against that floor — the coverage analogue of
+`check_test_count.py`, so a quiet regression surfaces where the change was made
+rather than only in a distant CI run.
 
 ## Adding a marketplace
 

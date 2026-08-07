@@ -1,6 +1,6 @@
 [project]
 name = "compare-connector"
-version = "1.3.1"
+version = "1.4.0"
 description = "Cross-marketplace price comparison MCP server — queries every configured marketplace at once"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -10,7 +10,7 @@ dependencies = [
     # unrelated project. Unpinned, a wheel installed straight from a GitHub
     # Release resolves to that stranger's package and the server dies on
     # import. A pin turns a silent wrong install into a loud resolve failure.
-    "mcp-core==1.3.1",
+    "mcp-core==1.4.0",
     "wb-connector",
     "detmir-connector",
     "yandex-connector",

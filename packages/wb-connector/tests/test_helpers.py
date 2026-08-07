@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastmcp.exceptions import ToolError
 from mcp_core.cache import TTLCache
+from pydantic import SecretStr
 from wb_connector import server
 
 
@@ -338,6 +339,19 @@ def test_kopeck_to_rub_rejects_non_ascii_digit():
     assert server._kopeck_to_rub("12abc00") is None
     assert server._kopeck_to_rub("12.00") is None
     assert server._kopeck_to_rub("12300") == 123.0
+
+
+def test_kopeck_to_rub_never_returns_or_raises_on_non_finite_values():
+    """json.loads admits Infinity by default, so a poisoned priceU cell can
+    reach the numeric branch: inf passed the old `v > 0` filter and was paid
+    out as an inf price, and a huge int made the /100 division raise
+    OverflowError, aborting the whole tool. Same doctrine as coerce_price:
+    never 0, never negative, never non-finite, never raises."""
+    assert server._kopeck_to_rub(float("inf")) is None
+    assert server._kopeck_to_rub(float("-inf")) is None
+    assert server._kopeck_to_rub(float("nan")) is None
+    assert server._kopeck_to_rub(10**400) is None
+    assert server._kopeck_to_rub("9" * 400) is None
 
 
 def test_wb_card_rejects_missing_products_container(monkeypatch):
@@ -1363,12 +1377,12 @@ def test_cache_can_be_disabled_by_ttl_zero(monkeypatch):
 
 def test_proxy_prefers_the_connector_specific_variable(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
-    monkeypatch.setattr(server._settings, "proxy", "http://explicit:9090")
+    monkeypatch.setattr(server._settings, "proxy", SecretStr("http://explicit:9090"))
     assert server._proxy() == "http://explicit:9090"
 
 
 def test_proxy_falls_back_to_standard_variables(monkeypatch):
-    monkeypatch.setattr(server._settings, "proxy", "")
+    monkeypatch.setattr(server._settings, "proxy", SecretStr(""))
     monkeypatch.delenv("WB_PROXY", raising=False)
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
     assert server._proxy() == "http://generic:8080"

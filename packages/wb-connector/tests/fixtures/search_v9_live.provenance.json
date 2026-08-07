@@ -1,0 +1,9 @@
+{
+  "url": "https://search.wb.ru/exactmatch/ru/common/v9/search?appType=1&curr=rub&dest=-1257786&locale=ru&query=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA&resultset=catalog&page=1&spp=30",
+  "captured_at": "2026-08-07",
+  "sha256": "725626bd8bc39f085b204da30b0ec6cee18a1cb529bf4a7c369415a712cd27cd",
+  "method": "captured live on 2026-08-07 via tier-1 httpx with the connector's own WB_HEADERS once the search.wb.ru rate limit lifted; trimmed to the first three products (of 100) with the metadata and total envelope kept; the full raw response stays outside git in .agent/captures/wb_search_v9_raw.json",
+  "ground_truth": {
+    "note": "first three products as parsed by _card_item_dict at capture time: nm 1280469586 «Ноутбук 16 дюймов Ryzen 5-7535HS…» TECNO 55 621 ₽ was 74 460 ₽ qty 23 in stock rating 5 (1 feedback); nm 824935779 «Ноутбук MateBook D16 (53014MUA)» Huawei 60 571 ₽ was 81 087 ₽ qty 10 in stock rating 4.9 (46); nm 497398643 «Ноутбук Crosshair A16 D8WGKG 16\" Ryzen 7 32Gb SSD1Tb RTX5070» MSI 149 851 ₽ was 200 604 ₽ qty 67 in stock rating 4.9 (45). This same nm 1280469586 priced 54 676 ₽ on the card endpoint the same minute — the documented search-vs-card gap is real in the fixture pair."
+  }
+}

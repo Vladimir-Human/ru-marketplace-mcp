@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import math
 import os
 import re
 import time
@@ -38,6 +39,7 @@ from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from mcp_core import resilience as R
 from mcp_core.errors import BadRequestError, raise_tool_error
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text as _redact
@@ -49,7 +51,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -329,52 +331,41 @@ def _wb_product_url(nm_id: object) -> str:
 # Ozon's search tiles carry display text, not numbers: "1 234 ₽" for a price and
 # "4,8" for a rating, with non-breaking and narrow no-break spaces as thousands
 # separators and a comma decimal mark.
-_NUMERIC_JUNK_RE = re.compile(r"[^\d,.\-]")
-
-
 def _as_price(value: object) -> float | None:
     """Coerce a marketplace price into a float, or ``None`` when there isn't one.
 
-    Never returns 0.0 as a stand-in. A zero would rank a listing with no live
-    offer as the cheapest result, which is the one outcome a price comparison must
-    never produce.
+    Delegates to the shared ``mcp_core.coerce_price`` — the single source of the
+    doctrine "never 0, never negative, never non-finite, never raises, never
+    fabricates". A private duplicate once lived here and silently drifted away
+    from that doctrine (cycles 24-25); the audit that followed ended here.
 
-    Handles Ozon's rouble display strings — "1 234 ₽", "1 234,50 ₽" — where the
-    separators include U+00A0 and U+202F. ``MarketOffer.price_rub`` is typed
-    ``float | None``, so passing the raw string through would raise a pydantic
-    validation error and take down the whole Ozon source.
+    Live evidence for the delegation (Ozon rendered search + card pages captured
+    2026-08-07 through the operator's Chrome, raw HTML in
+    ``.agent/captures/``): all 144 distinct price-like strings on the pages
+    parse identically through ``coerce_price``, except range strings like
+    "1 000–2 000 ₽", which the old duplicate concatenated into a fabricated
+    price and the shared parser correctly rejects as ambiguous.
     """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value) or None
-    if not isinstance(value, str):
-        return None
-    cleaned = _NUMERIC_JUNK_RE.sub("", value)
-    if not cleaned:
-        return None
-    # A comma is a decimal mark here, not a thousands separator: Ozon writes
-    # "1 234,50", never "1,234.50".
-    cleaned = cleaned.replace(",", ".")
-    if cleaned.count(".") > 1:
-        head, _, tail = cleaned.rpartition(".")
-        cleaned = head.replace(".", "") + "." + tail
-    try:
-        parsed = float(cleaned)
-    except ValueError:
-        return None
-    return parsed or None
+    return R.coerce_price(value)
 
 
 def _as_count(value: object) -> int | None:
-    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text."""
+    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text.
+
+    Parity with mcp_core.coerce_int where the formats overlap: non-finite
+    floats (json.loads admits NaN/Infinity by default) degrade to None instead
+    of letting int() raise and abort the whole tool, and a signed string is
+    ambiguous — dropping the sign would fabricate a plausible-but-wrong count.
+    """
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        return int(value)
+        return int(value) if math.isfinite(value) else None
     if not isinstance(value, str):
+        return None
+    if re.search(r"[-+]\s*\d", value):
         return None
     digits = re.sub(r"[^\d]", "", value)
     return int(digits) if digits else None
@@ -385,12 +376,14 @@ def _stock_from_label(value: object) -> bool | None:
 
     Only a positive statement counts as in stock. Absence of a label means Ozon
     said nothing, which is ``None`` — not ``False``, because "unknown" and "out of
-    stock" are different answers to a shopper.
+    stock" are different answers to a shopper. A non-finite number is likewise
+    no statement at all: NaN would compare as not-in-stock and inf as in-stock,
+    two lies where the answer must stay unknown.
     """
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
-        return value > 0
+        return value > 0 if math.isfinite(value) else None
     if not isinstance(value, str) or not value.strip():
         return None
     digits = re.sub(r"[^\d]", "", value)
@@ -766,6 +759,14 @@ async def compare_prices(
     Titles are matched loosely: marketplaces name things differently, so scan the
     results rather than assuming every row is the identical model.
 
+    ## Return Format
+
+    CompareResponse: {query, sources_queried, sources_ok, complete,
+    total_offers, cheapest, price_spread_rub, offers, source_outcomes,
+    warnings, server_version}. offers is ranked by everyday price_rub —
+    cheapest first, offers without a rouble price after the ranked ones.
+    warnings carries validation/completeness warnings.
+
     ## Error Format
 
     On validation failure, raises ToolError with a JSON message describing the
@@ -897,6 +898,18 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     Call this first when a comparison comes back partial: it distinguishes "the
     connector isn't installed" from "the marketplace refused us", which need
     completely different fixes.
+
+    ## Return Format
+
+    Plain object: {installed, searchable, not_installed, notes,
+    source_timeout_s, server_version, server_started_at, process_id}. notes
+    explains per-source access quirks (CDP-only sources, currencies, missing
+    text search).
+
+    ## Error Format
+
+    Never raises ToolError: pure introspection of which connector packages
+    are installed — nothing here touches the network.
     """
     log_event("compare_sources.start")
     if ctx is not None:

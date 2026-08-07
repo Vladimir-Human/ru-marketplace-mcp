@@ -58,7 +58,9 @@ from typing import Any
 from mcp_core.resilience import coerce_price, flatten_text
 
 # Text markers for a node that holds a number which is NOT the price: monthly
-# instalments, loyalty bonuses, discount badges, delivery-point counts, ratings.
+# instalments, loyalty bonuses, discount badges, delivery-point counts, ratings,
+# and (Taobao) sales counts like «200+人付款» — the number of buyers, which a
+# naive read promotes into a plausible-looking strikethrough price.
 #
 # ONE list, and the JavaScript regex below is generated from it. Writing the
 # words twice — once here, once inline in the JS — is how the two quietly stop
@@ -78,6 +80,10 @@ DECOY_MARKERS: tuple[str, ...] = (
     "пункт",
     "отзыв",
     "%",
+    "付款",
+    "收货",
+    "已售",
+    "约售",
 )
 
 
@@ -199,9 +205,19 @@ JS_HELPERS = (
 
 
         for (const el of nodes) {
-            // Leaf-ish nodes only: a container repeats its children's digits and
-            // would produce an ambiguous multi-number blob.
-            if (el.children.length > 2) continue;
+            // Leaf nodes only — a container repeats its children's digits and
+            // produces an ambiguous multi-number blob. The exception is a
+            // container that carries its OWN direct text beside the glyph
+            // ("5 990 <span>₽</span>" with the digits as a bare text node):
+            // dropping those would lose a real price, and the blob they can
+            // form is a single number, not several.
+            if (el.children.length > 0) {
+                let ownText = '';
+                for (const child of el.childNodes) {
+                    if (child.nodeType === 3) ownText += child.textContent;
+                }
+                if (!ownText.replace(/\s+/g, '')) continue;
+            }
             const raw = (el.textContent || '').replace(/\s+/g, ' ').trim();
             if (!raw || raw.length > 40) continue;
             if (!/\d/.test(raw)) continue;

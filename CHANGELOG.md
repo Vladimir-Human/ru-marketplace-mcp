@@ -7,6 +7,116 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.4.0] — 2026-08-08
+
+Релиз паритета доктрины и живых доказательств. Полтора десятка локальных
+парсеров цен и счётчиков приведены к одной гарантии — «никогда 0, никогда
+отрицательная, никогда не-конечная, никогда не бросает» — и зафиксированы
+тестами на байтах, реально снятых с маркетплейсов. Плюс транспорт теперь
+переживает Chrome новее, чем понимает Playwright. Контракт инструментов не
+менялся; все изменения — в устойчивости чтений и в честности вердиктов.
+
+### Исправлено
+
+- **Каждый локальный парсер цены/счётчика закрыт от не-цен.** `compare._as_price`
+  (отрицательные, inf, OverflowError), `compare._as_count` (NaN/Infinity,
+  тихий сброс знака «-3» → 3), `yandex.ssr._to_number/_to_int` (inf и
+  OverflowError огромных чисел), `wb._kopeck_to_rub` (inf и OverflowError на
+  гигантских копейках), `avito._posted_at` (OverflowError огромного
+  timestamp'а), `mcp_core.coerce_rating` и `parse_retry_after` (OverflowError,
+  inf/nan). Одна отравленная ячейка больше не обрывает вызов инструмента.
+- **`compare._as_price` делегирован в `mcp_core.coerce_price`.** Дублирующая
+  реализация фабрикующе склеивала range-строки («1 000–2 000 ₽» → 10 002 000).
+  Перевод доказан живьём: 144 ценовые строки, снятые с поиска и карточки Ozon,
+  парсятся обеими реализациями одинаково, кроме range-строк, где дубликат
+  фабриковал, а общий парсер честно отказывает.
+- **Три живых дрейфа карточного экстрактора Taobao**, пойманные съёмом живой
+  карточки: заголовок читал плейсхолдер «按图片搜索» (на современной странице
+  нет h1, имя — в mainTitle-спане), цена не находилась вовсе (современная
+  раскладка рендерит её спанами symbol/text внутри highlightPrice/subPrice, а
+  не одним глиф-узлом), shop/sales склеивали текст всей страницы. Экстрактор
+  читает и старую, и новую раскладку; обе зафиксированы фикстурами.
+- **Два дрейфа поискового экстрактора Lamoda**, пойманные живым съёмом: бейдж
+  скидки «−49%» внутри image-anchor'а читался как заголовок, а конкатенированные
+  размеры плитки уходили в зачёркнутую цену (3.5e16 ₽). Заголовок теперь берётся
+  из product-name-узла, ценовой hunt скоуплен в ценовой блок.
+- **Разрыв цен WB search-vs-card переизмерен живьём** и описан честно: на пяти
+  товарах 1.7–34.3 %, направление не униформно по товарам, поисковая цена
+  протухает (не менялась 10 дней при движении карточной). Правило «цитируй
+  `wb_card`, сверяй до победителя» встроено в скилл; ранжирование не тронуто.
+
+### Добавлено
+
+- **Raw-CDP fallback в `mcp-core`.** Chrome 151 перестал отвечать на
+  connect_over_cdp-рукопожатие Playwright (проверено на Playwright 1.61 и 1.62:
+  websocket соединяется, attach висит; сырые CDP-команды по тому же сокету
+  отвечают). Транспорт при таймауте attach'а ведёт вкладку по сырому протоколу:
+  scheme-guard, NavBlocked-вердикты по статусу главного документа и
+  evaluate-семантика Playwright сохранены. На старых Chrome ничего не меняется —
+  Playwright-путь байт-в-байт прежний. Это вернуло к работе все CDP-источники
+  на свежем Chrome: `doctor` показывает 6 healthy вместо 3.
+- **Живые фикстуры с провенансом** (sha256 LF-байтов, метод съёма, ground
+  truth): поиск Ozon (composer JSON, снят из прогретой сессии — в лоб
+  composer-API отвечает 403 анти-фрода), карточка Taobao, поиск Lamoda, поиск и
+  карточка WB (v9/card v4), карточка и категория Детского Мира, поиск
+  Мегамаркета. Парсеры исполняются на этих байтах в офлайн-тестах.
+- **Сверка живой сигнатуры в selfcheck Lamoda и Taobao** (shape_reference):
+  selfcheck сравнивает форму живого ответа с эталоном, снятым с этих фикстур, и
+  именует пропавшие семейства ключей. Все четыре CDP-источника с DOM-поиском
+  теперь под сверкой.
+- **Секции `## Return Format` и `## Error Format` у всех 45 инструментов.**
+  Выяснилось, что griffe обрезает описание инструмента после `Args:` — секции,
+  стоявшие ниже, не попадали в живой маунт. Секции перенесены перед `Args:`;
+  структурный тест пинит наличие обеих секций у каждого смонтированного
+  инструмента.
+- `RELEASE_NOTES_v1.4.0.md` с таблицей, какие источники проверены живо и как,
+  а какие не проверены и почему.
+
+### Прочее
+
+- Офлайн-тесты: 980 → 1146 (+166). Покрытие ветвей 78.83 % (порог 70 %).
+- Версия согласована в 72 местах (`check_versions.py`), счётчик тестов в 7
+  местах сверяет `check_test_count.py`, e2e_stdio_check — 13/13 серверов.
+- Живой `doctor` на момент выпуска: wildberries, ozon, yandex, detmir, taobao,
+  citilink — healthy; avito (анти-бот), dns (401 сессии), megamarket
+  (ServicePipe), mpstats (нет платного токена) — честные inconclusive.
+- Бюджет живых запросов прогона: 25 из 40 (см. `.agent/LIVE-BUDGET.md`).
+
+English summary:
+
+### Fixed
+
+- Every local price/count parser is closed against non-prices: compare
+  `_as_price`/`_as_count`, yandex `_to_number`/`_to_int`, wb `_kopeck_to_rub`,
+  avito `_posted_at`, mcp-core `coerce_rating`/`parse_retry_after` — negatives,
+  inf/NaN, OverflowError. One poisoned cell no longer aborts a tool call.
+- compare's `_as_price` now delegates to `mcp_core.coerce_price`; the duplicate
+  fabricated prices out of range strings (proved on 144 live Ozon strings).
+- Three live drifts in the Taobao card extractor and two in the Lamoda search
+  extractor, caught by capturing the live pages; both layouts stay supported.
+- The WB search-vs-card gap re-measured live (1.7–34.3 %, direction not uniform,
+  search index goes stale); the skill now says quote `wb_card`.
+
+### Added
+
+- Raw-CDP fallback in mcp-core: Chrome 151 no longer answers Playwright's
+  connect_over_cdp handshake, so the transport drives the tab over raw CDP when
+  the attach times out. Restores every CDP source on modern Chrome (doctor: 6
+  healthy instead of 3); behaviour on older Chrome is unchanged.
+- Live fixtures with provenance (sha256, capture method, ground truth) for Ozon
+  search, Taobao card, Lamoda search, WB search/card, Detsky Mir card/category,
+  Megamarket search; parsers run on those bytes offline.
+- Live shape-signature checks in the Lamoda and Taobao selfchecks.
+- `## Return Format` / `## Error Format` on all 45 tools (moved before `Args:`
+  because griffe truncates descriptions after it), pinned by a structural test.
+- `RELEASE_NOTES_v1.4.0.md` with the verified/unverified source table.
+
+### Other
+
+- Offline tests 980 → 1146 (+166); branch coverage 78.83 % (floor 70 %).
+- Version agreed in 72 places; live doctor: 6 healthy, 4 honestly inconclusive
+  (avito anti-bot, dns 401, megamarket ServicePipe, mpstats needs a paid token).
+
 ## [1.3.1] — 2026-08-04
 
 Hardening-правки по итогам независимого аудита. Поведение инструментов не

@@ -1,6 +1,6 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.3.1"
+version = "1.4.0"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -66,6 +66,10 @@ dev = [
     "mypy>=1.13",
     "truststore>=0.10.4",
     "pytest-cov>=7.1.0",
+    # Property tests for the coercion helpers: the "never 0, None on ambiguity"
+    # contract is a promise about EVERY input, which example tests can only
+    # sample. hypothesis exercises the whole space.
+    "hypothesis>=6.100",
     # The hooks are documented as `uv run pre-commit run --all-files`, and that
     # command only works if pre-commit is in the environment the docs tell people
     # to create. Leaving it out made the documented command fail on a clean
