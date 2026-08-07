@@ -199,9 +199,19 @@ JS_HELPERS = (
 
 
         for (const el of nodes) {
-            // Leaf-ish nodes only: a container repeats its children's digits and
-            // would produce an ambiguous multi-number blob.
-            if (el.children.length > 2) continue;
+            // Leaf nodes only — a container repeats its children's digits and
+            // produces an ambiguous multi-number blob. The exception is a
+            // container that carries its OWN direct text beside the glyph
+            // ("5 990 <span>₽</span>" with the digits as a bare text node):
+            // dropping those would lose a real price, and the blob they can
+            // form is a single number, not several.
+            if (el.children.length > 0) {
+                let ownText = '';
+                for (const child of el.childNodes) {
+                    if (child.nodeType === 3) ownText += child.textContent;
+                }
+                if (!ownText.replace(/\s+/g, '')) continue;
+            }
             const raw = (el.textContent || '').replace(/\s+/g, ' ').trim();
             if (!raw || raw.length > 40) continue;
             if (!/\d/.test(raw)) continue;

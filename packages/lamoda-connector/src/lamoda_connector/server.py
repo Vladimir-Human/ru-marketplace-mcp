@@ -140,6 +140,11 @@ _SEARCH_EXTRACT_TEMPLATE = """
 () => {
     //__SHARED_HELPERS__
     const ID_RE = /\\/p\\/([a-zA-Z]{2}[a-zA-Z0-9]{6,18})/i;
+    // A node whose whole text is a discount percentage ("−49%") is a badge,
+    // never a name. Lamoda renders that badge INSIDE the image anchor, which
+    // is how an anchor-first title read reported the discount as the title
+    // (live capture 2026-08-07, tests/fixtures/search_grid_live.html).
+    const BADGE_RE = /^[−\\-]?\\d+\\s*%$/;
     const out = [];
     const anchors = document.querySelectorAll('a[href*="/p/"]');
     const seen = new Set();
@@ -152,18 +157,31 @@ _SEARCH_EXTRACT_TEMPLATE = """
         // an image/overlay link whose own class contains "card" or "product"
         // becomes the tile and reads as empty. See mcp_core.dom.
         const card = tileRootFor(a, ID_RE);
-        let titleEl = a;
-        if (!cleanText(titleEl)) {
-            for (const cand of card.querySelectorAll('a[href*="/p/"], [class*="name"], [class*="title"], [class*="brand"]')) {
-                if (cleanText(cand)) { titleEl = cand; break; }
+        // The product name first, then weaker name/title/brand candidates, the
+        // anchor text only as a last resort. Selector classes are checked in
+        // priority order, not document order: the badge span sits earliest in
+        // the tile DOM and would win a document-order walk.
+        let titleEl = null;
+        for (const sel of ['[class*="product-name"]', '[class*="name"]', '[class*="title"]', '[class*="brand"]']) {
+            for (const cand of card.querySelectorAll(sel)) {
+                const t = cleanText(cand);
+                if (t && !BADGE_RE.test(t)) { titleEl = cand; break; }
             }
+            if (titleEl) break;
         }
+        if (!titleEl) titleEl = a;
         const title = cleanText(titleEl) || (a.getAttribute('title') || null);
+        // Scope the price hunt to the price block when the layout names one:
+        // the live size grid feeds concatenated digit blobs ("3535,53636,5...")
+        // into the weak candidates, and the largest of them gets promoted to
+        // the strikethrough — a 3.5e16-rouble "old price". Same framing
+        // doctrine as the Citilink PriceBlock scope.
+        const priceRoot = card.querySelector('[class*="price-wrap"]') || card;
         out.push({
             sku: m[1],
             title: title,
             brand: null,
-            price_texts: priceTextsIn(card),
+            price_texts: priceTextsIn(priceRoot),
             url: href
         });
         if (out.length >= 48) break;
