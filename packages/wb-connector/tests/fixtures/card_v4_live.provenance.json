@@ -1,0 +1,9 @@
+{
+  "url": "https://card.wb.ru/cards/v4/detail?appType=1&curr=rub&dest=-1257786&locale=ru&spp=30&nm=1280469586",
+  "captured_at": "2026-08-07",
+  "sha256": "85389b5b27a71d966c3b22c7c2ae70119c052fdc415b66cd5cb57d2d083ad415",
+  "method": "captured live on 2026-08-07 via tier-1 httpx with the connector's own WB_HEADERS once the rate limit lifted; single-nm card response kept whole (it already holds one product); the full raw response stays outside git in .agent/captures/wb_card_v4_raw.json",
+  "ground_truth": {
+    "note": "nm 1280469586 «Ноутбук 16 дюймов Ryzen 5-7535HS…» TECNO as parsed by _card_item_dict at capture time: 54 676 ₽ was 70 824 ₽, qty 26, in stock. The search endpoint returned 55 621 ₽ for the same SKU the same minute (see search_v9_live.json) — the pair of fixtures freezes the live search-vs-card discrepancy the release notes cite."
+  }
+}

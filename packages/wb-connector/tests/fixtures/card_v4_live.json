@@ -1,0 +1,108 @@
+{
+ "products": [
+  {
+   "id": 1280469586,
+   "root": 476602545,
+   "kindId": 0,
+   "brand": "TECNO",
+   "brandId": 23233,
+   "siteBrandId": 0,
+   "colors": [
+    {
+     "name": "серый",
+     "id": 8421504
+    }
+   ],
+   "subjectId": 2290,
+   "subjectParentId": 6238,
+   "name": "Ноутбук 16 дюймов Ryzen 5-7535HS 16Гб 1ТБ WUXGA Win11 K16SFA",
+   "entity": "",
+   "matchId": 0,
+   "supplier": "Tech&home",
+   "supplierId": 250000199,
+   "supplierRating": 4.8,
+   "supplierFlags": 12240,
+   "pics": 21,
+   "picsUpdate": 0,
+   "rating": 5,
+   "reviewRating": 5,
+   "feedbacks": 3,
+   "panelPromoId": 1051829,
+   "volume": 128,
+   "weight": 3,
+   "viewFlags": 1335434,
+   "isNew": true,
+   "promotions": [
+    1005085,
+    1006716,
+    1006826,
+    1007212,
+    1008961,
+    1013122,
+    1013974,
+    1016713,
+    1017350,
+    1021313,
+    1022260,
+    1023915,
+    1024295,
+    1025175,
+    1026338,
+    1026456,
+    1032505,
+    1032539,
+    1050336,
+    1050345,
+    1050346,
+    1050348,
+    1050954,
+    1051070,
+    1051829,
+    1051986,
+    1052231
+   ],
+   "sizes": [
+    {
+     "name": "",
+     "origName": "0",
+     "rank": 0,
+     "optionId": 1886865920,
+     "stocks": [
+      {
+       "wh": 218804,
+       "dtype": 6614249635841,
+       "ndtype": 197121,
+       "dist": 65,
+       "qty": 21,
+       "priority": 64573,
+       "time1": 24,
+       "time2": 43
+      }
+     ],
+     "time1": 24,
+     "time2": 43,
+     "wh": 218804,
+     "dtype": 6614249635841,
+     "ndtype": 197121,
+     "dist": 65,
+     "price": {
+      "basic": 7082400,
+      "product": 5467600,
+      "logistics": 0,
+      "return": 0,
+      "cashback": 0
+     },
+     "saleConditions": 2281701376,
+     "payload": "A5KXu+qlq6phBoBqx6j7Yvsu91+19xjKs3VvK04+VLHJp816NMNXwnfwMkMtEBHMsltf4SAz0zMcyFyt6h31EVamAXvv+dRgknPRKrJYqlYRQ3ccI3TvxBpztpDQoX3l4bnFDJwWpV8hYdhTpvVMyqvoU+Al0lHKA7kfb/M95xIGuv2xauqRMEIPNstUlOTutzUPllnmeZsKxfBE1gb16OkFxS/aFCdoV31POXMrsWRkOO9TibT/pe22INB0EgGhYf8BaIrQV13+FaxNgdy7TTFFBvBFxdCqeC2EVK4mfGeOim8EqGbtNqwl"
+    }
+   ],
+   "totalQuantity": 26,
+   "time1": 24,
+   "time2": 43,
+   "wh": 218804,
+   "dtype": 6614249635841,
+   "ndtype": 197121,
+   "dist": 65
+  }
+ ]
+}

@@ -1,0 +1,256 @@
+{
+ "metadata": {
+  "catalog_type": "preset",
+  "catalog_value": "preset=500050039",
+  "normquery": "ноутбуки",
+  "search_result": {},
+  "name": "ноутбук",
+  "rmi": "1",
+  "title": "ноутбук",
+  "rs": 100,
+  "context": [
+   "электроника",
+   "uv_reranking",
+   "comparison",
+   "ai_chat"
+  ],
+  "qv": "AQEFAQIAASt2os6wQ7BfLb2sZqmlNO4y7KuHM6UsR7AaH1ipCLD-rsct3x3JqqMvwKyXsGiqdqXyo0eus7ExJtCt6aswKQ-vp67hrasuNyyzMMKxpyqbrRAxN68fsT2peSp5Li6sXalNJ8gxL6ZzHUOq0KedKnCvrCCPrnwToq0Sp2Qqs64brogqKC0JK8-xdCO2rfQoS6cKq8OoEKyzLegonChUrdkwlK1JKwut3hszJdEtJCgtLBwov6zTL2crJ6sqrzAkIifMLHKm1xngqCkjeyi-pAesry4SJC8spyt6naYqnC9gKCetc6oDItapu6QeJ74sEC1HL9aaMLCqLuqpSSCnJ7U",
+  "kcl": "Mgt8F5iR7Rfwqxvc2fqIJI3r3LjZ2ZxWT/EVi/9i3L6dVOG4DfwPCyE9SJ+GdrKh6ac",
+  "preset_normquery_map": {
+   "500050039": "ноутбуки"
+  }
+ },
+ "products": [
+  {
+   "id": 1280469586,
+   "__sort": 23140,
+   "ksort": 0,
+   "root": 476602545,
+   "kindId": 0,
+   "brand": "TECNO",
+   "brandId": 23233,
+   "siteBrandId": 0,
+   "colors": [
+    {
+     "name": "серый",
+     "id": 8421504
+    }
+   ],
+   "subjectId": 2290,
+   "subjectParentId": 6238,
+   "semanticId": [
+    90,
+    52,
+    87,
+    208,
+    36,
+    538,
+    157
+   ],
+   "name": "Ноутбук 16 дюймов Ryzen 5-7535HS 16Гб 1ТБ WUXGA Win11 K16SFA",
+   "entity": "",
+   "matchId": 0,
+   "supplier": "Tech&home",
+   "supplierId": 250000199,
+   "supplierRating": 4.8,
+   "supplierFlags": 12240,
+   "pics": 21,
+   "picsUpdate": 0,
+   "rating": 5,
+   "reviewRating": 5,
+   "nmReviewRating": 5,
+   "feedbacks": 1,
+   "nmFeedbacks": 1,
+   "volume": 128,
+   "weight": 3,
+   "viewFlags": 1335434,
+   "isNew": true,
+   "sizes": [
+    {
+     "name": "",
+     "origName": "0",
+     "rank": 0,
+     "optionId": 1886865920,
+     "wh": 218804,
+     "time1": 20,
+     "time2": 44,
+     "dtype": 6614249635841,
+     "price": {
+      "basic": 7446000,
+      "product": 5562100,
+      "logistics": 0,
+      "return": 0,
+      "cashback": 0
+     },
+     "saleConditions": 2281701376,
+     "payload": "A8CQ4ho3dguQMD+0f+nr/NSIuzEB05Yv+fg4Y2cyJBZqXhbd7vI2VgS/jKQXyNQZOsm5Y1ZNueC+AXOs5evi/IVxc+KQn7SAwSIO2AuhIczTnXzqe5Erg9CsyAMZ2Rr1INBfFgMx5NdGfnOUsmNQlsehUkVIDdDRQnFjiJ5tqtw77QJr1s2BumY15555vdV4BgG04Lu8RN267VrMwwDWgk8WThGQw5ENs4ml/kkvzCajXwIfIzyuGddNI4GElzrDXlDc7tvOgpFc4pWULRahUscNPUMvzsWhha8wZoJXk+ck"
+    }
+   ],
+   "totalQuantity": 23,
+   "time1": 20,
+   "time2": 44,
+   "wh": 218804,
+   "dtype": 6614249635841,
+   "dist": 108,
+   "meta": {
+    "tokens": [],
+    "presetId": 500050039
+   }
+  },
+  {
+   "id": 824935779,
+   "__sort": 22115,
+   "ksort": 0,
+   "root": 910166445,
+   "kindId": 0,
+   "brand": "Huawei",
+   "brandId": 6667,
+   "siteBrandId": 0,
+   "colors": [
+    {
+     "name": "серый",
+     "id": 8421504
+    }
+   ],
+   "subjectId": 2290,
+   "subjectParentId": 6238,
+   "semanticId": [
+    90,
+    52,
+    87,
+    208,
+    346,
+    537,
+    158
+   ],
+   "name": "Ноутбук MateBook D16 (53014MUA)",
+   "entity": "",
+   "matchId": 525475892,
+   "supplier": "Modern Device",
+   "supplierId": 768659,
+   "supplierRating": 4.8,
+   "supplierFlags": 12240,
+   "pics": 12,
+   "picsUpdate": 0,
+   "rating": 5,
+   "reviewRating": 4.9,
+   "nmReviewRating": 4.9,
+   "feedbacks": 46,
+   "nmFeedbacks": 46,
+   "panelPromoId": 1051829,
+   "volume": 116,
+   "weight": 2.44,
+   "viewFlags": 135553161,
+   "mtype": 5,
+   "sizes": [
+    {
+     "name": "",
+     "origName": "0",
+     "rank": 0,
+     "optionId": 1238030718,
+     "wh": 208782,
+     "time1": 19,
+     "time2": 43,
+     "dtype": 6614249635841,
+     "price": {
+      "basic": 8108700,
+      "product": 6057100,
+      "logistics": 0,
+      "return": 0,
+      "cashback": 0
+     },
+     "saleConditions": 2281701376,
+     "payload": "A8rFisjbibsgLkHsZV5XEnKN5Ktwv8Gs+sb5MTfr/p5PSz/tII3uO7jE+pNZcG7R5i1L0Zi9iD97N6d9Ql3lY0L7fQEaiULuLD2gAShhfHX1EazUm0xNTJQBuXnfiKsfuI7h2D5gK+uqIbwkKmQBZvSHGE4aLfdtr1tD/lmaAZSvNb4ahEouCc9cEs8Rxz34AgePEXLttyaooMM0bjUnO6TGRFcW2VrqARi8BKOccKbVS2oHMtoe7BXLUP8IGAluL3RyxG31hgdJfhdALHH+/st2fLjZCmg/1s+zQPY8WRTA"
+    }
+   ],
+   "totalQuantity": 10,
+   "time1": 19,
+   "time2": 43,
+   "wh": 208782,
+   "dtype": 6614249635841,
+   "dist": 144,
+   "meta": {
+    "tokens": [],
+    "presetId": 500050039
+   }
+  },
+  {
+   "id": 497398643,
+   "__sort": 18793,
+   "ksort": 0,
+   "root": 505187167,
+   "kindId": 0,
+   "brand": "MSI",
+   "brandId": 27445,
+   "siteBrandId": 0,
+   "colors": [
+    {
+     "name": "серый",
+     "id": 8421504
+    }
+   ],
+   "subjectId": 2290,
+   "subjectParentId": 6238,
+   "semanticId": [
+    90,
+    52,
+    87,
+    196,
+    351,
+    854,
+    40
+   ],
+   "name": "Ноутбук Crosshair A16 D8WGKG 16\" Ryzen 7 32Gb SSD1Tb RTX5070",
+   "entity": "",
+   "matchId": 317273191,
+   "supplier": "Modern Device",
+   "supplierId": 768659,
+   "supplierRating": 4.8,
+   "supplierFlags": 12240,
+   "pics": 12,
+   "picsUpdate": 0,
+   "rating": 5,
+   "reviewRating": 4.9,
+   "nmReviewRating": 4.9,
+   "feedbacks": 45,
+   "nmFeedbacks": 45,
+   "panelPromoId": 1051829,
+   "volume": 182,
+   "weight": 4.5,
+   "viewFlags": 135553161,
+   "mtype": 5,
+   "sizes": [
+    {
+     "name": "",
+     "origName": "0",
+     "rank": 0,
+     "optionId": 691515447,
+     "wh": 208782,
+     "time1": 19,
+     "time2": 43,
+     "dtype": 6614249635841,
+     "price": {
+      "basic": 20060400,
+      "product": 14985100,
+      "logistics": 0,
+      "return": 0,
+      "cashback": 0
+     },
+     "saleConditions": 2281701376,
+     "payload": "Az7QAX13S/kkZvqMnxXgQgYttGSZ4xDmCODVZ1HJ6V3lrliA/9QlMrU/wZzF0HxCBxWL8NgqtptNcf2+ZIwvXcgWUN6kqu304L8jov8lih4z43gLGPE0uqXqJ2ExYT6tj7zoGR7WiyYekPTUIgjm1iPignyticj4eC33y8d9VnTqJallyB78NFEFhndx71CaJ2yWnGB6nSnidw96xZmHzM+eNg8D3MF/coWpPHKkbnlWAjjzxkts0XWs16T3ABdWskhimuS8tHY1opPD/ouwTJodpxf8Auo6Y9XfYU52aIfN"
+    }
+   ],
+   "totalQuantity": 67,
+   "time1": 19,
+   "time2": 43,
+   "wh": 208782,
+   "dtype": 6614249635841,
+   "dist": 144,
+   "meta": {
+    "tokens": [],
+    "presetId": 500050039
+   }
+  }
+ ],
+ "total": 60672
+}
