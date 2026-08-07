@@ -15,6 +15,7 @@ import pytest
 from compare_connector import server
 from compare_connector.models_output import MarketOffer
 from fastmcp.exceptions import ToolError
+from mcp_core import resilience as R
 from pydantic import ValidationError
 
 
@@ -396,6 +397,38 @@ def test_price_coercion_never_returns_a_non_finite_value():
     assert server._as_price(float("nan")) is None
     assert server._as_price(10**400) is None
     assert server._as_price("9" * 400) is None
+
+
+def test_price_coercion_never_concatenates_a_price_range():
+    """Live-captured Ozon filter strings (rendered search page, 2026-08-07,
+    .agent/captures/ozon_search_page_raw.html) carry TWO numbers:
+    '1 000–2 000 ₽'. The old tolerant parser concatenated them into
+    10002000.0 — a plausible-looking fabricated price. The shared doctrine
+    is: more than one number means ambiguous, which means None."""
+    assert server._as_price("1\u2009000–2\u2009000\u2009₽") is None
+    assert server._as_price("2\u2009000–30\u2009000\u2009₽") is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # Thin-space grouped integers exactly as captured from Ozon's rendered
+        # pages on 2026-08-07 (.agent/captures/ozon_*_page_raw.html); the two
+        # comma-decimal forms were not on those pages but are the kopeck
+        # display shape coerce_price is documented to handle — pinned here so
+        # the delegation's decimal parity is explicit, not implied.
+        "158\u2009370\u2009₽",
+        "84\u2009817\u2009₽",
+        "3\u2009266\u2009₽",
+        "1\u2009000\u2009₽",
+        "79\u2009990\u2009₽",
+        "99,50\u2009₽",
+        "1\u2009234,50\u2009₽",
+    ],
+)
+def test_price_coercion_keeps_coerce_price_parity_on_live_ozon_formats(raw):
+    assert server._as_price(raw) == R.coerce_price(raw)
+    assert server._as_price(raw) is not None
 
 
 @pytest.mark.parametrize(

@@ -39,6 +39,7 @@ from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from mcp_core import resilience as R
 from mcp_core.errors import BadRequestError, raise_tool_error
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text as _redact
@@ -330,45 +331,22 @@ def _wb_product_url(nm_id: object) -> str:
 # Ozon's search tiles carry display text, not numbers: "1 234 ₽" for a price and
 # "4,8" for a rating, with non-breaking and narrow no-break spaces as thousands
 # separators and a comma decimal mark.
-_NUMERIC_JUNK_RE = re.compile(r"[^\d,.\-]")
-
-
 def _as_price(value: object) -> float | None:
     """Coerce a marketplace price into a float, or ``None`` when there isn't one.
 
-    Never returns 0.0, a negative, or a non-finite value as a stand-in. Any of
-    those would rank a listing with no live offer as the cheapest result, which
-    is the one outcome a price comparison must never produce.
+    Delegates to the shared ``mcp_core.coerce_price`` — the single source of the
+    doctrine "never 0, never negative, never non-finite, never raises, never
+    fabricates". A private duplicate once lived here and silently drifted away
+    from that doctrine (cycles 24-25); the audit that followed ended here.
 
-    Handles Ozon's rouble display strings — "1 234 ₽", "1 234,50 ₽" — where the
-    separators include U+00A0 and U+202F. ``MarketOffer.price_rub`` is typed
-    ``float | None``, so passing the raw string through would raise a pydantic
-    validation error and take down the whole Ozon source.
+    Live evidence for the delegation (Ozon rendered search + card pages captured
+    2026-08-07 through the operator's Chrome, raw HTML in
+    ``.agent/captures/``): all 144 distinct price-like strings on the pages
+    parse identically through ``coerce_price``, except range strings like
+    "1 000–2 000 ₽", which the old duplicate concatenated into a fabricated
+    price and the shared parser correctly rejects as ambiguous.
     """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        try:
-            number = float(value)
-        except OverflowError:
-            return None  # a huge int is not a price
-        return number if number > 0 and math.isfinite(number) else None
-    if not isinstance(value, str):
-        return None
-    cleaned = _NUMERIC_JUNK_RE.sub("", value)
-    if not cleaned:
-        return None
-    # A comma is a decimal mark here, not a thousands separator: Ozon writes
-    # "1 234,50", never "1,234.50".
-    cleaned = cleaned.replace(",", ".")
-    if cleaned.count(".") > 1:
-        head, _, tail = cleaned.rpartition(".")
-        cleaned = head.replace(".", "") + "." + tail
-    try:
-        parsed = float(cleaned)
-    except (ValueError, OverflowError):
-        return None
-    return parsed if parsed > 0 and math.isfinite(parsed) else None
+    return R.coerce_price(value)
 
 
 def _as_count(value: object) -> int | None:
