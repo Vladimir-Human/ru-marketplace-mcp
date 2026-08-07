@@ -156,26 +156,77 @@ _SEARCH_EXTRACT_TEMPLATE = """
         // tileRootFor, not closest(): an anchor whose own class looks like a
         // card must not become the tile. See mcp_core.dom.
         const card = tileRootFor(a, ID_RE) || a;
-        // Prefer a text-bearing anchor; the image/overlay link carries no title.
-        let titleEl = cleanText(a) ? a : null;
-        if (!titleEl) {
-            for (const cand of card.querySelectorAll('[class*="title"], [class*="Title"], a[href*="item.taobao.com"]')) {
+        // A dedicated title node carries the clean name. The tile anchor wraps
+        // the WHOLE tile, and reading its text first glues the price, sales
+        // and shop into the title (live capture 2026-08-07,
+        // tests/fixtures/search_grid_live.html); anchor text is the fallback.
+        let title = null;
+        const titleNode = card.querySelector('[class*="title"], [class*="Title"]');
+        if (titleNode) {
+            title = cleanText(titleNode) || (titleNode.getAttribute('title') || null);
+        }
+        if (!title) {
+            let titleEl = null;
+            for (const cand of card.querySelectorAll('a[href*="item.taobao.com"], [class*="title"], [class*="Title"]')) {
                 if (cleanText(cand)) { titleEl = cand; break; }
             }
+            title = (titleEl ? cleanText(titleEl) : null) || (a.getAttribute('title') || null);
         }
-        const title = cleanText(titleEl) || (a.getAttribute('title') || null);
 
+        // Price: the modern layout splits it into unit (¥) + priceInt +
+        // priceFloat nodes. The whole price block as one text blob glues the
+        // sales count ("200+人付款") onto the digits, which coerce_price
+        // rejects as ambiguous — every priced tile would read as no price.
+        // Reassemble the display parts; Python's coerce_price still does the
+        // parsing. Without a priceInt node, fall back to the shared glyph hunt
+        // (the older layout renders one glyph-attached price node).
+        const priceRoot = card.querySelector('[class*="priceWrapper"], [class*="PriceWrapper"]') || card;
+        let price_texts = priceTextsIn(priceRoot);
+        const intEl = priceRoot.querySelector('[class*="priceInt"]');
+        if (intEl) {
+            const intPart = cleanText(intEl);
+            if (intPart) {
+                const unitEl = priceRoot.querySelector('[class*="unit"]');
+                const floatEl = priceRoot.querySelector('[class*="priceFloat"]');
+                const unit = unitEl && cleanText(unitEl) ? cleanText(unitEl) : '';
+                const floatPart = floatEl && cleanText(floatEl) ? cleanText(floatEl) : '';
+                price_texts = {
+                    attached: [unit + intPart + floatPart].concat(price_texts.attached),
+                    other: price_texts.other
+                };
+            }
+        }
+
+        // Shop / sales / location from their scoped nodes first. The legacy
+        // line scan below stays as the fallback, but it splits on newlines and
+        // the live rendered tile text carries none, so on the modern layout it
+        // only produces glued blobs.
         let shop = null, location = null, sales = null;
-        const lines = (card.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
-        for (const line of lines) {
-            if (/人付款|人收货|已售|约售|付款$/.test(line)) sales = sales || line;
-            else if (/店$/.test(line)) shop = shop || line;
-            else if (/发货地|广东|浙江|江苏|上海|北京/.test(line)) location = location || line;
+        const shopEl = card.querySelector('[class*="shopNameText"], [class*="Shop--shop"], [class*="shop--"]');
+        if (shopEl) shop = cleanText(shopEl);
+        const salesEl = card.querySelector('[class*="realSales"], [class*="sales"]');
+        if (salesEl) sales = cleanText(salesEl);
+        const procityEls = card.querySelectorAll('[class*="procity"]');
+        if (procityEls.length) {
+            const parts = [];
+            for (const p of procityEls) {
+                const t = cleanText(p);
+                if (t) parts.push(t);
+            }
+            if (parts.length) location = parts.join(' ');
+        }
+        if (!shop || !sales || !location) {
+            const lines = (card.textContent || '').split('\\n').map(s => s.trim()).filter(Boolean);
+            for (const line of lines) {
+                if (!sales && /人付款|人收货|已售|约售|付款$/.test(line)) sales = line;
+                else if (!shop && /店$/.test(line)) shop = line;
+                else if (!location && /发货地|广东|浙江|江苏|上海|北京/.test(line)) location = line;
+            }
         }
         out.push({
             item_id: m[1],
             title: title,
-            price_texts: priceTextsIn(card),
+            price_texts: price_texts,
             shop_name: shop,
             location: location,
             sales: sales,

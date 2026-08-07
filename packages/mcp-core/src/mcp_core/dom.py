@@ -58,7 +58,9 @@ from typing import Any
 from mcp_core.resilience import coerce_price, flatten_text
 
 # Text markers for a node that holds a number which is NOT the price: monthly
-# instalments, loyalty bonuses, discount badges, delivery-point counts, ratings.
+# instalments, loyalty bonuses, discount badges, delivery-point counts, ratings,
+# and (Taobao) sales counts like «200+人付款» — the number of buyers, which a
+# naive read promotes into a plausible-looking strikethrough price.
 #
 # ONE list, and the JavaScript regex below is generated from it. Writing the
 # words twice — once here, once inline in the JS — is how the two quietly stop
@@ -78,6 +80,10 @@ DECOY_MARKERS: tuple[str, ...] = (
     "пункт",
     "отзыв",
     "%",
+    "付款",
+    "收货",
+    "已售",
+    "约售",
 )
 
 
