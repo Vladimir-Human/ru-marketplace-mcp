@@ -1,0 +1,9 @@
+{
+  "url": "https://api.detmir.ru/v4/products?filter=categories%5B%5D.alias%3A<selfcheck-category>%3Bwithregion%3A...&limit=3&offset=0&meta=%2A",
+  "captured_at": "2026-08-07",
+  "sha256": "13fb9ac9790632a0084299b49076df621a96dcb300bd3bbaa34b1861128ec630",
+  "method": "captured live on 2026-08-07 with the connector's own httpx client and headers (tier-1, the configured selfcheck category); kept the three captured product nodes with every key _parse_product reads verbatim (same 2 KB rule for unread keys as the card fixture) and the meta keys the parser uses (title/length/category) — meta.filter alone carries ~640 KB of facets the parser never reads; the full raw response stays outside git in .agent/captures/detmir_category_raw.json",
+  "ground_truth": {
+    "note": "category «Пупсы» (length 665) at capture time, first three products: «Кукла пупс Demi Star высота 35 см» 2 499 ₽, «Кукла пупс CRY BABIES Кэти» 4 999 ₽, «Кукла пупс Demi Star с аксессуарами…» 2 499 ₽."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "url": "https://api.detmir.ru/v2/products/6673568?filter=withregion%3A...",
+  "captured_at": "2026-08-07",
+  "sha256": "1653903be838fcd77477dedf0c5996ffc41e7b102157f844bf9accc3e4a2fc89",
+  "method": "captured live on 2026-08-07 with the connector's own httpx client and headers (tier-1, the region travels in the filter expression); kept the payload's item node with every key _parse_product reads verbatim and, of the keys it does not read, only those under 2 KB — heavy decorative payloads (description, attribute lists, size tables) dropped; the full raw response stays outside git in .agent/captures/detmir_card_raw.json",
+  "ground_truth": {
+    "note": "product 6673568 «Кукла пупс Demi Star в розовом комбинезоне» at capture time: price 699.0 ₽, no old price, available online, canonical url https://www.detmir.ru/product/index/id/6673568/."
+  }
+}
