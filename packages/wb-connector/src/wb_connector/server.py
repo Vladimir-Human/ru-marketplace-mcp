@@ -29,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import math
 import os
 import re
 import string
@@ -431,11 +432,18 @@ def _extract_price_rub(p: dict) -> tuple[float | None, float | None]:
 
 def _kopeck_to_rub(v: object) -> float | None:
     """WB integer kopecks -> float rubles, tolerant of a number->string drift.
-    Returns None for null/<=0/unparseable (never crashes the /100 math)."""
+    Returns None for null/<=0/non-finite/unparseable (never crashes the /100
+    math). json.loads admits Infinity by default and a huge int makes the
+    division raise OverflowError, so a poisoned priceU cell degrades to
+    no-price instead of corrupting a ranking or aborting the tool."""
     if isinstance(v, bool) or v is None:
         return None
     if isinstance(v, (int, float)):
-        return v / 100 if v > 0 else None
+        try:
+            rubles = v / 100
+        except OverflowError:
+            return None
+        return rubles if rubles > 0 and math.isfinite(rubles) else None
     if isinstance(v, str):
         stripped = v.strip()
         if not stripped or any(c not in string.digits for c in stripped):
@@ -444,7 +452,11 @@ def _kopeck_to_rub(v: object) -> float | None:
             amount = int(stripped)
         except ValueError:
             return None
-        return (amount / 100) if amount > 0 else None
+        try:
+            rubles = amount / 100
+        except OverflowError:
+            return None
+        return rubles if rubles > 0 and math.isfinite(rubles) else None
     return None
 
 

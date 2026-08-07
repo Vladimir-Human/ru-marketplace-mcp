@@ -341,6 +341,19 @@ def test_kopeck_to_rub_rejects_non_ascii_digit():
     assert server._kopeck_to_rub("12300") == 123.0
 
 
+def test_kopeck_to_rub_never_returns_or_raises_on_non_finite_values():
+    """json.loads admits Infinity by default, so a poisoned priceU cell can
+    reach the numeric branch: inf passed the old `v > 0` filter and was paid
+    out as an inf price, and a huge int made the /100 division raise
+    OverflowError, aborting the whole tool. Same doctrine as coerce_price:
+    never 0, never negative, never non-finite, never raises."""
+    assert server._kopeck_to_rub(float("inf")) is None
+    assert server._kopeck_to_rub(float("-inf")) is None
+    assert server._kopeck_to_rub(float("nan")) is None
+    assert server._kopeck_to_rub(10**400) is None
+    assert server._kopeck_to_rub("9" * 400) is None
+
+
 def test_wb_card_rejects_missing_products_container(monkeypatch):
     async def fake_safe_get_text(client, url):
         return 200, json.dumps({"data": {}}), None
