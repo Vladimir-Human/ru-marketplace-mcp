@@ -385,6 +385,19 @@ def test_price_coercion_never_returns_a_negative():
     assert server._as_price("-1 234") is None
 
 
+def test_price_coercion_never_returns_a_non_finite_value():
+    """inf is not a price either: ``10**400`` blows up ``float()`` with
+    OverflowError, a float inf compares as greater than every real price
+    (so it would never win the ranking, but it also never belongs in an
+    offer), and mcp_core.coerce_price already guarantees finiteness —
+    the compare connector must not diverge from that doctrine."""
+    assert server._as_price(float("inf")) is None
+    assert server._as_price(float("-inf")) is None
+    assert server._as_price(float("nan")) is None
+    assert server._as_price(10**400) is None
+    assert server._as_price("9" * 400) is None
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [

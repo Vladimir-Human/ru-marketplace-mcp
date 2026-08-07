@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import math
 import os
 import re
 import time
@@ -335,9 +336,9 @@ _NUMERIC_JUNK_RE = re.compile(r"[^\d,.\-]")
 def _as_price(value: object) -> float | None:
     """Coerce a marketplace price into a float, or ``None`` when there isn't one.
 
-    Never returns 0.0 or a negative as a stand-in. Either would rank a listing
-    with no live offer as the cheapest result, which is the one outcome a price
-    comparison must never produce.
+    Never returns 0.0, a negative, or a non-finite value as a stand-in. Any of
+    those would rank a listing with no live offer as the cheapest result, which
+    is the one outcome a price comparison must never produce.
 
     Handles Ozon's rouble display strings — "1 234 ₽", "1 234,50 ₽" — where the
     separators include U+00A0 and U+202F. ``MarketOffer.price_rub`` is typed
@@ -347,8 +348,11 @@ def _as_price(value: object) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        number = float(value)
-        return number if number > 0 else None
+        try:
+            number = float(value)
+        except OverflowError:
+            return None  # a huge int is not a price
+        return number if number > 0 and math.isfinite(number) else None
     if not isinstance(value, str):
         return None
     cleaned = _NUMERIC_JUNK_RE.sub("", value)
@@ -362,9 +366,9 @@ def _as_price(value: object) -> float | None:
         cleaned = head.replace(".", "") + "." + tail
     try:
         parsed = float(cleaned)
-    except ValueError:
+    except (ValueError, OverflowError):
         return None
-    return parsed if parsed > 0 else None
+    return parsed if parsed > 0 and math.isfinite(parsed) else None
 
 
 def _as_count(value: object) -> int | None:
