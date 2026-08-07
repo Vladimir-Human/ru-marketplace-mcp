@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 import re
 
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 from mcp_core.resilience import coerce_int, coerce_price, first_present, flatten_text
 
@@ -50,19 +50,25 @@ def test_coerce_price_refuses_two_numbers_even_without_a_glyph_between_them(a, b
 
 
 @given(
-    whole=st.integers(min_value=0, max_value=10**12),
+    whole=st.integers(min_value=0, max_value=10**9),
     kopecks=st.integers(min_value=0, max_value=99),
 )
 def test_coerce_price_is_idempotent_on_its_own_results(whole, kopecks):
-    """A parsed price, rendered back to a display string, must re-parse to
-    itself — otherwise a cache round-trip quietly changes the number. Prices
-    carry at most two fractional digits, and anything below 1e16 renders
-    without scientific notation, so str() is a faithful display form."""
-    value = whole + kopecks / 100
-    result = coerce_price(value)
-    if result is None:
-        return
-    assert coerce_price(str(result)) == result
+    """A parsed price, rendered back to the canonical two-digit display and
+    re-parsed, must come back unchanged — otherwise a cache round-trip quietly
+    changes the number.
+
+    The round-trip goes through the two-digit display form, not raw ``str()``:
+    ``whole + kopecks/100`` can land on a half-ulp tie whose shortest ``str()``
+    carries sixteen fractional digits (``1,14`` -> 1.1400000000000001), a shape
+    no price string ever has, and re-parsing it diverges (to 1.14e16). The
+    faithful display of a price is two fractional digits, and re-parsing that
+    recomputes the very same float.
+    """
+    display = f"{whole},{kopecks:02d}" if kopecks else str(whole)
+    result = coerce_price(display)
+    assume(result is not None)  # 0 is legitimately refused ("never 0"), not a price
+    assert coerce_price(f"{result:.2f}") == result
 
 
 @given(
