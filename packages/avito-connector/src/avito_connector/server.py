@@ -320,9 +320,12 @@ def _posted_at(item: dict[str, Any]) -> str | None:
     stamp = R.first_present(item, "sortTimeStamp", "allowTimeStamp")
     if isinstance(stamp, bool) or not isinstance(stamp, (int, float)):
         return None
-    # Milliseconds since epoch; guard against a seconds-based drift upstream.
-    seconds = stamp / 1000.0 if stamp > 1e11 else float(stamp)
     try:
+        # Milliseconds since epoch; guard against a seconds-based drift
+        # upstream. The division stays inside the try: json.loads admits
+        # arbitrary-precision ints, and a huge stamp overflows the float
+        # arithmetic before fromtimestamp is ever reached.
+        seconds = stamp / 1000.0 if stamp > 1e11 else float(stamp)
         moment = datetime.datetime.fromtimestamp(seconds, tz=datetime.UTC)
     except (OverflowError, OSError, ValueError):
         return None
