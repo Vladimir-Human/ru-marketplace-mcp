@@ -163,6 +163,30 @@ def _guard_parse_status(status: str, label: str) -> None:
         )
 
 
+def _guard_values_drift(parsed: dict[str, Any], label: str) -> None:
+    """Items that kept their keys but lost their values.
+
+    The SSR parser emits every item key unconditionally, so a key-presence check
+    can never fire here; live drift shows up as empty titles and missing prices
+    while product ids survive (they are collection keys, not state values).
+    Verified against the captured page: renaming the title/price nodes in the
+    SSR state yields items with product_id but title '' and price None. A page
+    where NOTHING carries a title or a price is a moved state, not a result set
+    — serve drift instead of silently degraded items.
+    """
+    items = parsed.get("items")
+    if not isinstance(items, list) or not items:
+        return
+    if all(not (item.get("title") or item.get("price_rub") or item.get("price_with_plus")) for item in items):
+        raise_tool_error(
+            ParserDriftError(
+                f"{label}: {len(items)} items arrived without any title or price — "
+                "the SSR state values have likely moved",
+                provider="yandex",
+            )
+        )
+
+
 def _to_product(raw: dict[str, Any]) -> YandexProduct:
     return YandexProduct(
         product_id=str(raw.get("product_id") or ""),
@@ -240,6 +264,7 @@ async def yandex_search(
     html = await _fetch_html(url, "yandex_search", ctx)
     parsed = ssr.parse_search(html)
     _guard_parse_status(parsed["status"], "yandex_search")
+    _guard_values_drift(parsed, "yandex_search")
 
     # Dedupe by product_id BEFORE applying the limit. Yandex's SSR payload can
     # carry the same product more than once on a page — the parser keys on

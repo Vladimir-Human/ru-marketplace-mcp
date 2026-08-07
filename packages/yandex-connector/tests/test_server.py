@@ -292,6 +292,44 @@ async def test_selfcheck_skips_card_when_search_yields_no_id(monkeypatch):
     assert "skipped" in result.checks["card"].detail
 
 
+def _drifted_values_search_html() -> str:
+    """The washer capture with its title/price nodes renamed in the SSR state.
+
+    This is what a live re-layout looks like: items keep their product ids
+    (collection keys) but lose every title and price (state values). The real
+    parser returns them as title '' / price None — verified, not assumed.
+    """
+    html = load("search_washer.html")
+    return (
+        html.replace('"titles"', '"titlesZ"')
+        .replace('"title"', '"titleZ"')
+        .replace('"actualPrice"', '"actualPriceZ"')
+        .replace('"initialPrice"', '"initialPriceZ"')
+        .replace('"oldPrice"', '"oldPriceZ"')
+        .replace('"price"', '"priceZ"')
+    )
+
+
+async def test_search_flags_drift_when_items_lose_their_values(monkeypatch):
+    """Items with ids but no title/price anywhere is a moved SSR state, not a
+    result set — serve drift instead of silently degraded items."""
+    stub_html(monkeypatch, {"/search": _drifted_values_search_html()})
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.yandex_search(query="стиральная машина")
+
+    assert "without any title or price" in str(excinfo.value)
+
+
+async def test_selfcheck_reports_value_drift(monkeypatch):
+    stub_html(monkeypatch, {"/search": _drifted_values_search_html()})
+
+    result = await server.yandex_selfcheck()
+
+    assert result.status == "drift_detected"
+    assert result.checks["search"].state == "drift"
+
+
 # --------------------------------------------------------------- transport ----
 
 
