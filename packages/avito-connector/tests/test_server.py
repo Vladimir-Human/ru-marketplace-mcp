@@ -280,6 +280,50 @@ async def test_selfcheck_flags_drift_when_a_200_fails_the_parse_smoke(monkeypatc
     assert result.healthy is False
 
 
+async def test_selfcheck_accepts_the_captured_live_payload(monkeypatch):
+    """The real captured js/items payload must read as healthy through the
+    whole selfcheck — registry comparison included."""
+    from pathlib import Path
+
+    payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
+
+    async def fake_fetch(url, ctx):
+        if "userId" in url:
+            return _ok(SELLER_PAYLOAD)
+        return _ok(payload)
+
+    monkeypatch.setattr(server, "_fetch", fake_fetch)
+
+    result = await server.avito_selfcheck()
+
+    assert result.checks["search"].state == "healthy"
+
+
+async def test_selfcheck_flags_drift_when_a_key_family_vanishes(monkeypatch):
+    """'id' renamed past every alias while the titles survive: the parse smoke
+    would happily serve id-less items; the shape comparison must cry drift and
+    name the lost family."""
+    from pathlib import Path
+
+    payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
+    for item in payload["items"]:
+        item["idRenamed"] = item.pop("id")
+
+    async def fake_fetch(url, ctx):
+        if "userId" in url:
+            return _ok(SELLER_PAYLOAD)
+        return _ok(payload)
+
+    monkeypatch.setattr(server, "_fetch", fake_fetch)
+
+    result = await server.avito_selfcheck()
+
+    assert result.status == "drift_detected"
+    entry = result.checks["search"]
+    assert entry.state == "drift"
+    assert any("items[].id" in note for note in entry.notes)
+
+
 # ------------------------------------------------------------------- helpers ----
 
 

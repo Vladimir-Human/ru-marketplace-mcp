@@ -6,9 +6,12 @@ contract — via ``resilience.shape_signature``. When Avito renames, retypes or
 re-nests a field, the drift shows up here as a named path diff before it ever
 reaches a silent-wrong page of listings.
 
-The golden is measured — ``shape_signature`` of the committed fixture, captured
-2026-07-28 from a residential session (provenance in the fixture's contract
-test) — so it can only be regenerated from a real capture, never written up.
+The golden lives in ``avito_connector.shape_reference`` — the same registry
+``avito_selfcheck`` diffs live payloads against — and this file asserts the
+registry still agrees with the fixture, so it cannot go stale silently.
+Measured on the committed fixture (captured 2026-07-28 from a residential
+session, provenance in the fixture's contract test); regenerate only from a
+fresh capture.
 
 Pure Python: no Node, no network, always runs.
 """
@@ -18,6 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from avito_connector import shape_reference
 from mcp_core.resilience import shape_signature
 
 FIXTURE = Path(__file__).parent / "fixtures" / "js_items_live.json"
@@ -25,62 +29,12 @@ FIXTURE = Path(__file__).parent / "fixtures" / "js_items_live.json"
 # Union shapes are expected where the capture itself varies: some items carry
 # a location object while others carry null, and rating.score is int on some
 # rows and float on others. That variation is data, not drift.
-PAYLOAD_GOLDEN = [
-    "count:int",
-    "itemsOnPage:int",
-    "items[].addressDetailed.locationName:str",
-    "items[].allowTimeStamp:int",
-    "items[].category.compare:bool",
-    "items[].category.id:int",
-    "items[].category.name:str",
-    "items[].category.pageRootId:int",
-    "items[].category.rootId:int",
-    "items[].category.slug:str",
-    "items[].description:str",
-    "items[].geo.geoReferences:empty_array",
-    "items[].geo.geoReferences[].content:<truncated>",
-    "items[].id:int",
-    "items[].imagesCount:int",
-    "items[].images[].208x208:str",
-    "items[].images[].236x236:str",
-    "items[].images[].416x416:str",
-    "items[].images[].472x472:str",
-    "items[].isMarketplace:bool",
-    "items[].location.id:int",
-    "items[].location.isCurrent:bool",
-    "items[].location.isRegion:bool",
-    "items[].location.name:str",
-    "items[].location.namePrepositional:str",
-    "items[].location:null",
-    "items[].locationId:int",
-    "items[].priceDetailed.enabled:bool",
-    "items[].priceDetailed.exponent:str",
-    "items[].priceDetailed.fullString:str",
-    "items[].priceDetailed.hasValue:bool",
-    "items[].priceDetailed.postfix:str",
-    "items[].priceDetailed.string:str",
-    "items[].priceDetailed.stringWithoutDiscount:null",
-    "items[].priceDetailed.title.full:str",
-    "items[].priceDetailed.title.short:str",
-    "items[].priceDetailed.titleDative:str",
-    "items[].priceDetailed.value:int",
-    "items[].priceDetailed.wasLowered:bool",
-    "items[].rating.score:float",
-    "items[].rating.score:int",
-    "items[].rating.showChevronEnd:bool",
-    "items[].rating.summary:str",
-    "items[].sortTimeStamp:int",
-    "items[].title:str",
-    "items[].urlPath:str",
-    "totalCount:int",
-    "totalElements:int",
-]
 
 
 def test_live_payload_shape_matches_the_capture() -> None:
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
-    assert shape_signature(payload) == PAYLOAD_GOLDEN
+    assert shape_signature(payload) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
 
 
 def test_the_parser_bindings_survive_in_the_reference_shape() -> None:
@@ -95,7 +49,7 @@ def test_the_parser_bindings_survive_in_the_reference_shape() -> None:
     raw, _total = _parse_search_items(json.loads(FIXTURE.read_text(encoding="utf-8")))
     assert raw, "the live fixture produced no items — the reference proves nothing"
 
-    signature = set(PAYLOAD_GOLDEN)
+    signature = set(shape_reference.SEARCH_SHAPE_REFERENCE)
     for path in (
         "items[].id:int",
         "items[].title:str",
@@ -104,3 +58,17 @@ def test_the_parser_bindings_survive_in_the_reference_shape() -> None:
         "items[].sortTimeStamp:int",
     ):
         assert path in signature, f"parser-critical path {path} vanished from the reference shape"
+
+
+def test_missing_required_families_reports_only_absent_families() -> None:
+    """A rename WITHIN an alias family is tolerated; the loss of a whole family
+    is what the selfcheck must cry about."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+    assert shape_reference.missing_required_families(shape_signature(payload)) == []
+
+    for item in payload["items"]:
+        item["idRenamed"] = item.pop("id")
+
+    missing = shape_reference.missing_required_families(shape_signature(payload))
+    assert ("items[].id", "items[].itemId", "items[].item_id") in missing

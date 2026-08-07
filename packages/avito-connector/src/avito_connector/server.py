@@ -70,6 +70,7 @@ from avito_connector.models_output import (
     MetaOut,
 )
 from avito_connector.settings import get_settings
+from avito_connector.shape_reference import missing_required_families
 
 _settings = get_settings()
 
@@ -737,6 +738,14 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
         first = items[0]
         if first["item_id"] is None and first["title"] is None:
             raise ValueError("items carry neither id nor title")
+        # The parser binds through alias families, so a rename WITHIN a family
+        # is fine — but the loss of a whole family is drift the parse smoke
+        # cannot see (id renamed away while title survives would serve every
+        # item without an id). Compare against the captured reference.
+        missing = missing_required_families(R.shape_signature(payload))
+        if missing:
+            lost = "; ".join("/".join(family) for family in missing)
+            raise ValueError(f"payload lost parser-critical key families: {lost}")
         return f"{len(items)} items parsed"
 
     def _card_smoke(payload: Any) -> str:
