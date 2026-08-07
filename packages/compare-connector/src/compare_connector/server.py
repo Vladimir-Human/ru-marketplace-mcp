@@ -372,14 +372,22 @@ def _as_price(value: object) -> float | None:
 
 
 def _as_count(value: object) -> int | None:
-    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text."""
+    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text.
+
+    Parity with mcp_core.coerce_int where the formats overlap: non-finite
+    floats (json.loads admits NaN/Infinity by default) degrade to None instead
+    of letting int() raise and abort the whole tool, and a signed string is
+    ambiguous — dropping the sign would fabricate a plausible-but-wrong count.
+    """
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        return int(value)
+        return int(value) if math.isfinite(value) else None
     if not isinstance(value, str):
+        return None
+    if re.search(r"[-+]\s*\d", value):
         return None
     digits = re.sub(r"[^\d]", "", value)
     return int(digits) if digits else None

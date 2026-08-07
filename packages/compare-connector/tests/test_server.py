@@ -413,6 +413,24 @@ def test_count_coercion_handles_russian_review_labels(raw, expected):
     assert server._as_count(raw) == expected
 
 
+def test_count_coercion_never_raises_on_non_finite_floats():
+    """json.loads admits NaN/Infinity by default, and int() raises on both.
+    coerce_int guards them with isfinite, and the compare duplicate must keep
+    parity — otherwise one poisoned cell aborts the whole compare_prices tool
+    instead of degrading that field to no-data."""
+    assert server._as_count(float("nan")) is None
+    assert server._as_count(float("inf")) is None
+    assert server._as_count(float("-inf")) is None
+
+
+def test_count_coercion_never_drops_a_sign():
+    """A signed count is ambiguous: dropping the sign and concatenating digits
+    fabricates a plausible-but-wrong number ('-3' -> 3). That is the doctrine
+    coerce_int established — signed means None, not a manufactured count."""
+    assert server._as_count("-3") is None
+    assert server._as_count("+5") is None
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
