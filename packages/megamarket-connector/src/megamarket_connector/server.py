@@ -688,6 +688,12 @@ async def megamarket_selfcheck(ctx: Context | None = None) -> MegamarketSelfchec
     ## Return Format
 
     MegamarketSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("megamarket_selfcheck.start")
     try:

@@ -635,22 +635,22 @@ async def ozon_card(
     9222) when Tier-1 hits Cloudflare 403. Tier-2 requires the operator running Chrome
     via scripts/start_chrome_cdp.ps1 (Windows) or scripts/start_chrome_cdp.sh (Linux/macOS) first.
 
-    Args:
-        sku_or_path: SKU integer-as-string, full Ozon URL, or /product/<digits>/ path.
-                     Other paths are rejected (SSRF prevention).
-
     ## Return Format
 
     OzonCardResponse: {status, price, card_price, price_original, is_available,
     rating_score, rating_count, title, seller, characteristics, url, tier_used,
-    meta} on success.
+    meta} on success. Fields are None when the page does not carry them.
 
     ## Error Format
 
     Raises ToolError on validation (BadRequestError), transport/block
-    (TransportDownError), or parser drift (ParserDriftError). No-results is NOT
-    an error — an empty widgetStates payload returns a healthy response with
-    null fields.
+    (TransportDownError — including the catch-all for unexpected internal
+    errors), or parser drift (ParserDriftError). No-results is NOT an error —
+    an empty widgetStates payload returns a healthy response with null fields.
+
+    Args:
+        sku_or_path: SKU integer-as-string, full Ozon URL, or /product/<digits>/ path.
+                     Other paths are rejected (SSRF prevention).
     """
     log_event("ozon_card.start", sku=str(sku_or_path)[:120])
     try:

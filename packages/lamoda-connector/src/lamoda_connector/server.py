@@ -444,6 +444,12 @@ async def lamoda_selfcheck(ctx: Context | None = None) -> LamodaSelfcheckRespons
     ## Return Format
 
     LamodaSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("lamoda_selfcheck.start")
     try:

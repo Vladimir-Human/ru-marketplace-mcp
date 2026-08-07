@@ -527,6 +527,12 @@ async def dns_selfcheck(ctx: Context | None = None) -> DnsSelfcheckResponse:
     ## Return Format
 
     DnsSelfcheckResponse: {status, healthy, connector, checks, ...}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("dns_selfcheck.start")
     try:

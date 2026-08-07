@@ -526,6 +526,12 @@ async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckRespons
 
     TaobaoSelfcheckResponse: {status, healthy, connector, checks, server_version,
     server_started_at, process_id}.
+
+    ## Error Format
+
+    Raises ToolError (TransportDownError) ONLY on an unexpected internal bug
+    that prevents the canary from producing any verdict. Transport/block
+    failures of individual sub-checks map to inconclusive entries, not errors.
     """
     log_event("taobao_selfcheck.start")
     try:

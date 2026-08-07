@@ -243,6 +243,15 @@ async def yandex_search(
     Note `rating_count` counts star ratings, not written reviews; the written
     count is available per product via `yandex_card`.
 
+    ## Return Format
+
+    YandexSearchResponse: {query, page, page_count, total_available,
+    has_next_page, returned, items, meta}. Items carry product_id, sku_id,
+    title, brand, seller, price_rub (everyday — None when absent, never 0),
+    price_with_plus, price_old_rub, currency, rating, rating_count, in_stock,
+    is_express, url, image. Zero results is NOT an error — it is reported via
+    meta.warnings.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -375,6 +384,15 @@ async def yandex_card(
     Reviews are capped at the ~13 Yandex renders server-side; the remainder load
     through an API this connector deliberately does not touch.
 
+    ## Return Format
+
+    YandexCardResponse: {product_id, sku_id, title, brand, seller,
+    description, image, price_rub, price_with_plus, price_before_discount_rub,
+    discount_percent, currency, offers_count, rating, rating_count,
+    review_count, rating_stars, reviews, url, meta}. price_rub is None when
+    the page has no usable price — never 0. Review items carry author,
+    rating, date, pros, cons, comment, votes_up, votes_down, photos.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -471,6 +489,20 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
 
     This matters more here than for a JSON API: SSR extraction is inherently
     coupled to Yandex's front-end, so drift is a question of when.
+
+    ## Return Format
+
+    YandexSelfcheckResponse: {status, connector, checks, server_version,
+    server_started_at, process_id, config_loaded, tool_count, cache_stats} —
+    checks maps search / card to a per-page verdict
+    (healthy/drift/inconclusive). drift_detected and inconclusive are NOT
+    errors; they are valid canary verdicts returned as a normal response.
+
+    ## Error Format
+
+    Never raises ToolError: each probe catches its own failures — transport
+    blocks, geo restrictions and captchas map to inconclusive entries,
+    reached-but-unparseable pages to drift entries.
     """
     log_event("yandex_selfcheck.start")
     if ctx is not None:

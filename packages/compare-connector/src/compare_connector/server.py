@@ -759,6 +759,14 @@ async def compare_prices(
     Titles are matched loosely: marketplaces name things differently, so scan the
     results rather than assuming every row is the identical model.
 
+    ## Return Format
+
+    CompareResponse: {query, sources_queried, sources_ok, complete,
+    total_offers, cheapest, price_spread_rub, offers, source_outcomes,
+    warnings, server_version}. offers is ranked by everyday price_rub —
+    cheapest first, offers without a rouble price after the ranked ones.
+    warnings carries validation/completeness warnings.
+
     ## Error Format
 
     On validation failure, raises ToolError with a JSON message describing the
@@ -890,6 +898,18 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     Call this first when a comparison comes back partial: it distinguishes "the
     connector isn't installed" from "the marketplace refused us", which need
     completely different fixes.
+
+    ## Return Format
+
+    Plain object: {installed, searchable, not_installed, notes,
+    source_timeout_s, server_version, server_started_at, process_id}. notes
+    explains per-source access quirks (CDP-only sources, currencies, missing
+    text search).
+
+    ## Error Format
+
+    Never raises ToolError: pure introspection of which connector packages
+    are installed — nothing here touches the network.
     """
     log_event("compare_sources.start")
     if ctx is not None:

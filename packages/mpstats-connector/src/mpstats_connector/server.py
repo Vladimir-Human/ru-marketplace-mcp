@@ -554,15 +554,26 @@ async def mpstats_item(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
+    ## Return Format
+
+    MpStatsItemResponse: {place, days, count, items, meta}. Each item carries
+    sku, place, seller, seller_id, brand, stock_now, price_avg_rub,
+    orders_per_day, days_on_stocks, totals {orders, sum, sum_prev} and four
+    per-day graphs (orders, prices, count, rubrics), oldest-first. Missing
+    values are None, never 0; a zero graph cell means "no data for that day".
+
+    ## Error Format
+
+    ToolError: BadRequestError on malformed skus or place; AuthMissingError
+    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
+    429; TransportDownError on network failures, non-200 responses and HTML
+    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
+    when no requested SKU has analytics.
+
     Args:
         skus: 1..100 positive SKU integers.
         place: 'ozon' or 'wildberries'.
         oz_fbs: Ozon FBS mode flag (default true).
-
-    ## Error Format
-
-    On validation, auth, transport or parse failure, raises ToolError with a
-    JSON message describing the error code and whether it is retryable.
     """
     log_event("mpstats_item.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -652,14 +663,23 @@ async def mpstats_warehouses(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
-    Args:
-        skus: 1..100 positive SKU integers.
-        place: 'ozon' or 'wildberries'.
+    ## Return Format
+
+    MpStatsWarehousesResponse: {place, days, count, items, meta}. Each item
+    carries sku and stocks {fbs, fbo, fbo_warehouses, last_update}. Missing
+    stock counts are None, never 0.
 
     ## Error Format
 
-    On validation, auth, transport or parse failure, raises ToolError with a
-    JSON message describing the error code and whether it is retryable.
+    ToolError: BadRequestError on malformed skus or place; AuthMissingError
+    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
+    429; TransportDownError on network failures, non-200 responses and HTML
+    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
+    when no requested SKU has stock data.
+
+    Args:
+        skus: 1..100 positive SKU integers.
+        place: 'ozon' or 'wildberries'.
     """
     log_event("mpstats_warehouses.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -768,6 +788,20 @@ async def mpstats_selfcheck(ctx: Context | None = None) -> MpStatsSelfCheckRespo
 
     The probe uses a live Ozon SKU (verified Jul 2026) rather than a hardcoded
     short-lived fixture, so a delisted baseline never reads as parser drift.
+
+    ## Return Format
+
+    MpStatsSelfCheckResponse: {status, healthy, connector, checks,
+    server_version, server_started_at, process_id, config_loaded,
+    tool_count} — checks maps auth / item to a per-subcheck verdict
+    (healthy/drift/inconclusive). drift_detected and inconclusive are NOT
+    errors; they are valid canary verdicts returned as a normal response.
+
+    ## Error Format
+
+    Never raises ToolError: missing or rejected auth and transport failures
+    map to inconclusive entries, a reachable-but-unparseable analytics shape
+    to a drift entry.
     """
     log_event("mpstats_selfcheck.start")
     checks: dict[str, dict[str, Any]] = {}

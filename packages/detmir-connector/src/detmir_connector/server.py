@@ -330,6 +330,14 @@ async def detmir_card(
     ask about a specific city; it overrides ``DETMIR_REGION`` for this call only,
     so one session can compare cities.
 
+    ## Return Format
+
+    DetmirCardResponse: {product, region, meta}. product carries product_id,
+    title, article, brand, price_rub (None when absent — never 0),
+    old_price_rub, discount_percent, rating, review_count, questions_count,
+    availability, available_online, available_offline, store_count,
+    is_marketplace, vendor, url, picture.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -420,6 +428,13 @@ async def detmir_category(
     This is the reliable way to enumerate the catalog: unlike text search, it is a
     real JSON endpoint with proper pagination and an upstream total, so it
     supports "what's available and how much does it cost" without scraping.
+
+    ## Return Format
+
+    DetmirListResponse: {query, mode, total_available, category_title,
+    returned, offset, items, region, meta}. Items carry the same product
+    shape as detmir_card. An empty page is NOT an error — it is reported via
+    meta.warnings.
 
     ## Error Format
 
@@ -532,6 +547,13 @@ async def detmir_categories(
     list a category. Each node carries its `alias` and a `products_count`, so you
     can see where the inventory actually is before fetching a listing.
 
+    ## Return Format
+
+    DetmirCategoriesResponse: {parent, returned, total_available, items,
+    region, meta}. Items carry category_id, alias, title, full_name, level,
+    products_count, parent_id, url; alias is what detmir_category needs to
+    list a category.
+
     ## Error Format
 
     On validation or transport/parse failure, raises ToolError with a JSON
@@ -632,6 +654,20 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
     prevented a verdict, which says nothing about the parsers.
 
     Run it after install and whenever results look wrong.
+
+    ## Return Format
+
+    DetmirSelfcheckResponse: {status, connector, checks, server_version,
+    server_started_at, process_id, config_loaded, tool_count, cache_stats} —
+    checks maps card / category / categories to a per-endpoint verdict
+    (healthy/drift/inconclusive). drift_detected and inconclusive are NOT
+    errors; they are valid canary verdicts returned as a normal response.
+
+    ## Error Format
+
+    Never raises ToolError: every probe catches its own failures — transport
+    and geo blocks map to inconclusive entries, reached-but-unparseable
+    payloads to drift entries.
     """
     log_event("detmir_selfcheck.start")
     if ctx is not None:
