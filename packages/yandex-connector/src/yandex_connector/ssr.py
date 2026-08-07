@@ -31,6 +31,7 @@ results, pagination, A/B duplicates).
 from __future__ import annotations
 
 import json
+import math
 import re
 from typing import Any
 
@@ -214,19 +215,25 @@ def ldjson_item_list(html: str) -> list[dict[str, Any]]:
 
 
 def _to_number(value: Any) -> float | None:
-    """Coerce to a positive float, or None. Never 0 as a stand-in for missing.
+    """Coerce to a positive finite float, or None. Never 0 as a stand-in for
+    missing, never a non-finite value.
 
     Rounded to two decimals because Yandex serialises some values as float32,
     which surfaces as ``4.900000095367432`` for a rating of 4.9 — accurate but
-    absurd to hand to a reader.
+    absurd to hand to a reader. The isfinite guard matches the coerce_price
+    doctrine: json.loads admits NaN/Infinity and float() inflates huge
+    magnitudes to inf; either would corrupt a price or let ``_to_int`` crash
+    on int(inf), so a poisoned cell degrades to no-data instead.
     """
     if value is None or isinstance(value, bool):
         return None
     try:
-        number = float(str(value).replace(" ", "").replace(" ", "").replace(",", "."))
+        number = float(str(value).replace("\xa0", "").replace(" ", "").replace(",", "."))
     except (TypeError, ValueError):
         return None
-    return round(number, 2) if number > 0 else None
+    if number <= 0 or not math.isfinite(number):
+        return None
+    return round(number, 2)
 
 
 def _to_int(value: Any) -> int | None:

@@ -275,3 +275,19 @@ def test_search_collections_prefers_the_richest_bundle():
 )
 def test_number_coercion(raw, expected):
     assert ssr._to_number(raw) == expected
+
+
+def test_number_coercion_never_returns_or_raises_on_non_finite_values():
+    """Yandex SSR embeds raw JSON-LD, and json.loads admits NaN/Infinity by
+    default, so non-finite values reach this helper from the wire. Without a
+    finiteness guard ``_to_number`` hands inf straight back (round(inf, 2) is
+    still inf), and ``_to_int`` then crashes on int(inf) with OverflowError —
+    one poisoned cell must degrade to no-data, not corrupt a price/rating or
+    abort the whole tool. Same doctrine as coerce_price: never 0, never
+    negative, never non-finite."""
+    assert ssr._to_number(float("inf")) is None
+    assert ssr._to_number(float("-inf")) is None
+    assert ssr._to_number(float("nan")) is None
+    assert ssr._to_number("1e400") is None
+    assert ssr._to_number("9" * 400) is None
+    assert ssr._to_int(float("inf")) is None
