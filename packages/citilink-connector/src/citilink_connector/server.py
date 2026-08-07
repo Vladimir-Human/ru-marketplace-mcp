@@ -60,7 +60,7 @@ from citilink_connector.shape_reference import SEARCH_REQUIRED_KEYS, SEARCH_SHAP
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.3.1"
+SERVER_VERSION = "1.4.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.citilink.ru"

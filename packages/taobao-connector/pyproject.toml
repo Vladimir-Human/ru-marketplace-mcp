@@ -1,6 +1,6 @@
 [project]
 name = "taobao-connector"
-version = "1.3.1"
+version = "1.4.0"
 description = "Taobao MCP connector — search and item cards rendered in the operator's own Chrome over CDP"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -10,7 +10,7 @@ dependencies = [
     # unrelated project. Unpinned, a wheel installed straight from a GitHub
     # Release resolves to that stranger's package and the server dies on
     # import. A pin turns a silent wrong install into a loud resolve failure.
-    "mcp-core==1.3.1",
+    "mcp-core==1.4.0",
     "fastmcp>=3.4.5",
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
