@@ -77,6 +77,39 @@ def test_redact_url_survives_exotic_userinfo_too():
     assert "token=<redacted>" in cleaned
 
 
+def test_a_truncated_proxy_url_with_a_slash_password_is_still_redacted():
+    """A connection failure can truncate the URL at the host, leaving the whole
+    userinfo dangling before a bare '@'. A '/' inside the password must not
+    shield it from redaction — a leaked truncated credential is still a leak."""
+    cleaned = redact_error_text("failed to connect to https://user:p/ss@ then gave up")
+
+    assert "p/ss" not in cleaned
+    assert "<redacted>@" in cleaned
+
+
+def test_a_truncated_credential_without_a_slash_is_redacted_too():
+    cleaned = redact_error_text("failed to connect to https://user:pass@ then gave up")
+
+    assert "pass" not in cleaned.replace("<redacted>", "")
+    assert "<redacted>@" in cleaned
+
+
+def test_a_path_capped_with_at_is_not_mistaken_for_a_credential():
+    """host:port/path@ — the part between the first ':' and the '/' is a
+    numeric port, i.e. a path ending in '@', not a credential: keep it readable
+    instead of eating a diagnostic."""
+    text = "invalid host https://host:8080/a@ rejected"
+
+    assert redact_error_text(text) == text
+
+
+def test_a_bare_username_before_at_is_left_alone():
+    """No ':' in the userinfo — a bare username is not a credential."""
+    text = "see http://mirror-user@ then"
+
+    assert redact_error_text(text) == text
+
+
 def test_an_at_in_the_path_is_not_mistaken_for_userinfo():
     """The userinfo shape is user:pass — it contains ':'. A path-embedded '@'
     without it (CDN scaling suffixes) must survive, or redaction starts eating

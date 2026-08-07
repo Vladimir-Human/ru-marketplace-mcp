@@ -31,8 +31,15 @@ def _strip_userinfo(url: str) -> str:
     if ":" not in userinfo:
         return url
     if not hostish and "/" in userinfo:
-        # '@' capping off a path ("https://host:8080/a@") is not a userinfo tail.
-        return url
+        # Two shapes look alike here: a path capped with '@'
+        # (https://host:8080/a@) and a credential truncated at the host
+        # (https://user:p/ss@). The segment between the first ':' and the '/'
+        # tells them apart: a numeric port means a path, anything else means a
+        # password carrying '/' — and a leaked truncated credential is still a
+        # leak, so only the port shape is kept readable.
+        _, _, after_colon = userinfo.partition(":")
+        if after_colon.split("/", 1)[0].isdigit():
+            return url
     return f"{scheme}{sep}<redacted>@{hostish}"
 
 
