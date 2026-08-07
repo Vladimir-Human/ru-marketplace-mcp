@@ -209,11 +209,19 @@ def coerce_rating(value: Any) -> float | None:
     wrong-scale rating ('4.9/10' -> 4.9) silently passed as an in-range 0..5
     rating. Now: an explicit denominator other than 5 returns None, a count-like
     blob returns None, and the parsed value must be within 0..5.
+
+    Audit 2026-08-07 (wave of cycles 24-30): json.loads admits
+    arbitrary-precision ints, and float() raises OverflowError past the ceiling;
+    such a value is not a rating — degrade to None like coerce_price does,
+    never abort the tool.
     """
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        v = float(value)
+        try:
+            v = float(value)
+        except OverflowError:
+            return None
         return v if 0 <= v <= 5 else None
     if isinstance(value, str):
         s = value.strip()

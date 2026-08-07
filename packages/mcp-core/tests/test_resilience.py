@@ -54,6 +54,14 @@ def test_coerce_rating_survives_non_finite_floats(value):
     assert coerce_rating(value) is None
 
 
+def test_coerce_rating_survives_an_int_past_the_float_ceiling():
+    """`json.loads` returns arbitrary-precision ints, so a rating cell past the
+    float ceiling makes `float()` raise OverflowError. coerce_price already
+    degrades such values to None; coerce_rating must match — a poisoned cell
+    strips the field to no-data, never aborts the tool."""
+    assert coerce_rating(10**400) is None
+
+
 # --------------------------------------------------------------------------- #
 # coerce_price — never 0.0, never negative
 # --------------------------------------------------------------------------- #
