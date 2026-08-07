@@ -398,12 +398,14 @@ def _stock_from_label(value: object) -> bool | None:
 
     Only a positive statement counts as in stock. Absence of a label means Ozon
     said nothing, which is ``None`` — not ``False``, because "unknown" and "out of
-    stock" are different answers to a shopper.
+    stock" are different answers to a shopper. A non-finite number is likewise
+    no statement at all: NaN would compare as not-in-stock and inf as in-stock,
+    two lies where the answer must stay unknown.
     """
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
-        return value > 0
+        return value > 0 if math.isfinite(value) else None
     if not isinstance(value, str) or not value.strip():
         return None
     digits = re.sub(r"[^\d]", "", value)

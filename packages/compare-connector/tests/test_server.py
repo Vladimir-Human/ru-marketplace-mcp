@@ -447,6 +447,17 @@ def test_stock_label_coercion(raw, expected):
     assert server._stock_from_label(raw) is expected
 
 
+def test_stock_label_never_claims_stock_from_a_non_finite_value():
+    """Only a positive statement counts as in stock. NaN compared > 0 is
+    False and inf compared > 0 is True, so without a finiteness guard a
+    poisoned cell asserts OUT OF STOCK (NaN) or IN STOCK (inf) — two lies
+    where the docstring promises "unknown", because json.loads admits
+    NaN/Infinity by default."""
+    assert server._stock_from_label(float("nan")) is None
+    assert server._stock_from_label(float("inf")) is None
+    assert server._stock_from_label(float("-inf")) is None
+
+
 async def test_ozon_adapter_reads_the_real_model_fields(monkeypatch):
     """The old adapter guessed keys OzonSearchItemOut does not declare.
 
