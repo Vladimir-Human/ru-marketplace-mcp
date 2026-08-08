@@ -134,6 +134,24 @@ def test_bools_are_not_counts(value):
     assert coerce_int(value) is None
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1 000–2 000 ₽",  # range with a unicode en dash
+        "1 000—2 000",  # range with a unicode em dash
+        "5–10",  # compact unicode range
+        "−5",  # unicode minus — dropping the sign would lie
+        "-3",  # ascii sign already rejected; pinned here for parity
+    ],
+)
+def test_counts_with_signs_or_ranges_are_ambiguous_and_none(value):
+    """A sign or a dash-separated range is ambiguous. Digit-concatenation would
+    fabricate a plausible-but-wrong count ('1 000–2 000' -> 10002000, '−5' -> 5),
+    exactly the bug coerce_price rejects for prices — counters inherit it. The
+    guard must cover the unicode minus/en-dash/em-dash, not only ASCII -/+."""
+    assert coerce_int(value) is None
+
+
 # --------------------------------------------------------------------------- #
 # flatten_text — upstream ships a field as either a string or an object
 # --------------------------------------------------------------------------- #

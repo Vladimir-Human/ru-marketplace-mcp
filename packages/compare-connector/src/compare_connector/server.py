@@ -356,6 +356,10 @@ def _as_count(value: object) -> int | None:
     floats (json.loads admits NaN/Infinity by default) degrade to None instead
     of letting int() raise and abort the whole tool, and a signed string is
     ambiguous — dropping the sign would fabricate a plausible-but-wrong count.
+    The sign guard covers the unicode minus (U+2212) and the en/em dashes
+    (U+2013/U+2014) a marketplace renders ranges with: ASCII-only [-+] let a
+    range like '1 000–2 000' digit-concatenate into 10002000. Letters stay
+    tolerated (they are the 'отзывов' label, not ambiguity).
     """
     if isinstance(value, bool):
         return None
@@ -365,7 +369,7 @@ def _as_count(value: object) -> int | None:
         return int(value) if math.isfinite(value) else None
     if not isinstance(value, str):
         return None
-    if re.search(r"[-+]\s*\d", value):
+    if re.search(r"[-+\u2212\u2013\u2014]\s*\d", value):
         return None
     digits = re.sub(r"[^\d]", "", value)
     return int(digits) if digits else None
