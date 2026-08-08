@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/web/1/js/items?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA&locationId=637640",
+  "captured_at": "2026-07-28",
+  "sha256": "682500bedcb0bda58a228f5e96d7d8e5d96c13cccec445ad3c5afb65a71f3c85",
+  "method": "a genuine Avito search response captured from a residential session (query «ноутбук», locationId 637640); only the image lists, the geo block and the description text were trimmed for size — every field the parser reads is byte-for-byte as Avito sent it",
+  "ground_truth": {
+    "note": "the live js/items payload; the contract test pins: location object -> «Москва» (third item has none and reads None), prices [15500.0, 15990.0, 8700.0] from priceDetailed.value (there is no top-level price key), url from urlPath (every item), posted_at derived from the epoch-ms sortTimeStamp."
+  }
+}

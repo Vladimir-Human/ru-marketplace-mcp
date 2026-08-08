@@ -1,0 +1,9 @@
+{
+  "url": "https://market.yandex.ru/",
+  "captured_at": "2026-07-28",
+  "sha256": "bd95f692f29c4340739ba86e0460d671f8c5f6668d3ef1899a95228b47dc17c4",
+  "method": "real SSR page captured live Jul 2026 from a query that returns no products; same trimming rules as the other search fixtures (2 MB -> ~60 KB, exact nesting preserved); the exact no-result query was not recorded in the test docstring, so the base domain is given",
+  "ground_truth": {
+    "note": "a genuine empty result set, pinned by test_ssr.py::test_search_distinguishes_empty_results_from_drift: the extractor separates 'no results' (empty items, not drift) from a real captcha page."
+  }
+}

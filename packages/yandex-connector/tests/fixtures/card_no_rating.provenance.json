@@ -1,0 +1,9 @@
+{
+  "url": "https://market.yandex.ru/",
+  "captured_at": "2026-07-28",
+  "sha256": "618297f16cf2a2844c1b301ace01cedbc9e93fc1d0c131468d2323174f53d51e",
+  "method": "real SSR product page captured live Jul 2026 for a product that has no ratings/reviews; same trimming rules as the other card fixtures (2 MB -> ~60 KB, exact nesting preserved); the exact product URL was not recorded in the test docstring, so the base domain is given and the product is identified by the pinned assertions",
+  "ground_truth": {
+    "note": "a resale/clearance offer genuinely has no rating, pinned by test_ssr.py::test_card_without_ratings_returns_none_not_zero: rating comes back as None (never 0), rating_stars as {} and reviews as [] while title and price_rub still extract."
+  }
+}

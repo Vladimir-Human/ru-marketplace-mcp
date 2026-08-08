@@ -1,0 +1,9 @@
+{
+  "url": "https://market.yandex.ru/search?text=%D1%81%D1%82%D0%B8%D1%80%D0%B0%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F%20%D0%BC%D0%B0%D1%88%D0%B8%D0%BD%D0%B0",
+  "captured_at": "2026-07-28",
+  "sha256": "2cfccc580c1f536b8b603bc66e41ff57f943c6ff8412c26034a07db608d4a732",
+  "method": "real SSR page captured live Jul 2026, trimmed to a few products and two reviews each so it stays reviewable in a diff (2 MB -> ~60 KB); trimming preserves exact nesting so an upstream structural change still shows up",
+  "ground_truth": {
+    "note": "search «стиральная машина»: total 1434, 3 products; first item brand Tuvio, seller «Яндекс Фабрика», price_rub 22600.0 with price_with_plus 16222.0 (both reported separately)."
+  }
+}
