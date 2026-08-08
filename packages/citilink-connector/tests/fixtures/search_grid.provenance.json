@@ -1,0 +1,9 @@
+{
+  "url": "https://www.citilink.ru/catalog/noutbuki/",
+  "captured_at": "2026-07-28",
+  "sha256": "69a58549b6e6a40d81667a0ad34f177da28fcfaf49da757e977cb521ddaf842f",
+  "method": "captured live through the rendering browser; trimmed only of icon <svg> path data and repeated carousel <img> tags — every attribute the extractor reads is verbatim",
+  "ground_truth": {
+    "note": "search «ноутбуки» at capture time: «Ноутбук Acer Gadget ERBook Air …» 59 990 ₽ was 66 990; «Ноутбук iRU Strato 16ALMR …» 55 170 ₽ with no strikethrough. The capture pins the three traps the extractor was fixed for: the first product anchor is an empty overlay link, the ₽ glyph renders in a sibling element to the digits, and the strikethrough price precedes the current price in DOM order next to a '-10%' badge and a 'в 1356 пунктов' delivery count."
+  }
+}

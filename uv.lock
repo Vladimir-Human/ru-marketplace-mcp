@@ -127,7 +127,7 @@ wheels = [
 
 [[package]]
 name = "avito-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/avito-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -294,7 +294,7 @@ wheels = [
 
 [[package]]
 name = "citilink-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/citilink-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -336,7 +336,7 @@ wheels = [
 
 [[package]]
 name = "compare-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/compare-connector" }
 dependencies = [
     { name = "detmir-connector" },
@@ -575,7 +575,7 @@ wheels = [
 
 [[package]]
 name = "detmir-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/detmir-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -605,7 +605,7 @@ wheels = [
 
 [[package]]
 name = "dns-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/dns-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1065,7 +1065,7 @@ wheels = [
 
 [[package]]
 name = "lamoda-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/lamoda-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1162,7 +1162,7 @@ wheels = [
 
 [[package]]
 name = "marketplace-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/marketplace-connector" }
 dependencies = [
     { name = "avito-connector" },
@@ -1228,7 +1228,7 @@ wheels = [
 
 [[package]]
 name = "mcp-core"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/mcp-core" }
 dependencies = [
     { name = "fastmcp" },
@@ -1269,7 +1269,7 @@ wheels = [
 
 [[package]]
 name = "megamarket-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/megamarket-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1299,7 +1299,7 @@ wheels = [
 
 [[package]]
 name = "mpstats-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/mpstats-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1407,7 +1407,7 @@ wheels = [
 
 [[package]]
 name = "ozon-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/ozon-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -1983,7 +1983,7 @@ wheels = [
 
 [[package]]
 name = "ru-marketplace-mcp"
-version = "1.4.0"
+version = "1.4.1"
 source = { virtual = "." }
 dependencies = [
     { name = "avito-connector" },
@@ -2119,7 +2119,7 @@ wheels = [
 
 [[package]]
 name = "taobao-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/taobao-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -2293,7 +2293,7 @@ wheels = [
 
 [[package]]
 name = "wb-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/wb-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -2391,7 +2391,7 @@ wheels = [
 
 [[package]]
 name = "yandex-connector"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "packages/yandex-connector" }
 dependencies = [
     { name = "fastmcp" },

@@ -464,6 +464,18 @@ def test_count_coercion_never_drops_a_sign():
     assert server._as_count("+5") is None
 
 
+def test_count_coercion_rejects_unicode_signs_and_ranges():
+    """The sign guard must cover the unicode minus/en-dash/em-dash, not only
+    ASCII -/+: a marketplace renders a range as '1 000–2 000', and concatenating
+    those digits fabricates 10002000 — the same hole coerce_int had and the
+    compare duplicate inherits. '−5' must not read as 5 either."""
+    assert server._as_count("1 000–2 000") is None
+    assert server._as_count("5–10") is None
+    assert server._as_count("−5") is None
+    # the tolerant review-label form must still parse — letters are not the hole
+    assert server._as_count("24 086 отзывов") == 24086
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [

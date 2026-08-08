@@ -7,6 +7,47 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.4.1] — 2026-08-08
+
+Патч по итогам четырёх независимых аудитов, проведённых сразу после v1.4.0.
+Две находки закрыты; контракт инструментов и гейт не менялись.
+
+### Исправлено
+
+- **`coerce_int` и его дубль `compare._as_count` больше не фабрикуют счётчики
+  из юникодных знаков и range-строк.** Гард знаков покрывал только ASCII
+  `[-+]`, поэтому юникодный минус (U+2212) и тире (U+2013/U+2014), которыми
+  маркетплейсы рендерят диапазоны, проходили насквозь: «1 000–2 000»
+  конкатенировалось в 10002000, «−5» читалось как 5. Теперь и то и другое —
+  `None` (fail loud), в паритете с `coerce_price`. Целочисленные и float-входы
+  не тронуты — property-тест pass-through целых остался зелёным. Обнаружено
+  независимым аудитом доктрины, 5 красных тестов до фикса.
+
+### Добавлено
+
+- **Провенансы для 7 живых фикстур**, у которых их не было (citilink
+  `search_grid`, avito `js_items_live`, 5 фикстур yandex). Закрыто нарушение
+  правила «фикстура без `.provenance.json` считается выдуманной»; теперь каждая
+  живая фикстура имеет url/дату/sha256/метод съёма/ground truth.
+
+English summary:
+
+### Fixed
+
+- `coerce_int` and its `compare._as_count` duplicate no longer fabricate counts
+  from unicode signs and ranges. The sign guard only covered ASCII `[-+]`, so a
+  unicode minus (U+2212) or dash (U+2013/U+2014) slipped through —
+  «1 000–2 000» concatenated to 10002000, «−5» read as 5. Both now return
+  `None` (fail loud), matching `coerce_price`. Integer/float inputs are
+  unchanged (the integer pass-through property test stays green). Found by an
+  independent doctrine audit; 5 red tests before the fix.
+
+### Added
+
+- Provenance files for 7 live fixtures that lacked them (citilink
+  `search_grid`, avito `js_items_live`, 5 yandex fixtures). No live fixture is
+  left without url/date/sha256/capture-method/ground-truth provenance.
+
 ## [1.4.0] — 2026-08-08
 
 Релиз паритета доктрины и живых доказательств. Полтора десятка локальных

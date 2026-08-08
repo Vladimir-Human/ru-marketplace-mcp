@@ -61,7 +61,7 @@ from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_req
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.4.0"
+SERVER_VERSION = "1.4.1"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SEARCH_BASE = "https://s.taobao.com/search"

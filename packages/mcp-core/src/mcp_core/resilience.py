@@ -105,7 +105,12 @@ def coerce_int(value: Any) -> int | None:
         # separator between digits, or a magnitude letter (K/M/тыс/k/тыс.).
         if re.search(r"[A-Za-zА-Яа-я]", s):  # any letter → unit/suffix → ambiguous
             return None
-        if re.search(r"[-+]\s*\d", s):  # signed → drop-sign would lie
+        # signed → drop-sign would lie. Must cover the unicode minus (U+2212)
+        # and the en/em dashes (U+2013/U+2014) a marketplace renders ranges
+        # with ('1 000–2 000'): ASCII-only [-+] let a range digit-concatenate
+        # into a fabricated count (10002000) — the very bug this guard exists
+        # to prevent, inherited from coerce_price's range rejection.
+        if re.search(r"[-+\u2212\u2013\u2014]\s*\d", s):
             return None
         if re.search(r"\d[.,]\d", s):  # decimal between digits → not an int
             return None
