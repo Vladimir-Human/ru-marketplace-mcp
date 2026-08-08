@@ -54,6 +54,13 @@ scratch/
 # Operational note for the release run, not part of the project.
 PUBLISH_PROMPT.md
 
+# Agent scaffolding from the autonomous improvement run — not part of the project.
+.agent/
+.qwen/
+MISSION.md
+QWEN.md
+start-run.sh
+
 # Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
 *.zip
 
