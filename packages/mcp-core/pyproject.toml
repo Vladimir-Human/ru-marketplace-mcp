@@ -18,7 +18,7 @@ dependencies = [
 # raw-CDP fallback that speaks the websocket protocol directly — that path
 # needs `websockets` (already present transitively via fastmcp, declared here
 # so the fallback never depends on an undeclared transitive).
-cdp = ["playwright>=1.40", "websockets>=12"]
+cdp = ["playwright>=1.40", "websockets>=17.0.1"]
 impersonate = ["curl-cffi>=0.7"]
 
 [build-system]
