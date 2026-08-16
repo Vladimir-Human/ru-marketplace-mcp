@@ -22,21 +22,24 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-# script name -> how many tools it must expose
+# script name -> how many model-facing tools it must expose. Operator-only
+# *_selfcheck canaries are no longer MCP tools (they run via
+# `marketplace-mcp doctor`), which is why every figure is one lower than the
+# pre-dsh contract and the marketplace server is 34, not 45.
 EXPECTED_TOOLS = {
-    "wb-mcp": 9,
-    "ozon-mcp": 4,
-    "detmir-mcp": 4,
-    "yandex-mcp": 3,
+    "wb-mcp": 8,
+    "ozon-mcp": 3,
+    "detmir-mcp": 3,
+    "yandex-mcp": 2,
     "compare-mcp": 2,
-    "avito-mcp": 4,
-    "taobao-mcp": 3,
-    "megamarket-mcp": 3,
-    "lamoda-mcp": 3,
-    "dns-mcp": 3,
-    "citilink-mcp": 3,
-    "mpstats-mcp": 3,
-    "marketplace-mcp": 45,  # 44 mounted + marketplace_sources
+    "avito-mcp": 3,
+    "taobao-mcp": 2,
+    "megamarket-mcp": 2,
+    "lamoda-mcp": 2,
+    "dns-mcp": 2,
+    "citilink-mcp": 2,
+    "mpstats-mcp": 2,
+    "marketplace-mcp": 34,  # 33 mounted + marketplace_sources
 }
 
 TIMEOUT_S = 60.0
