@@ -54,10 +54,18 @@ def _skill_dir(package: str) -> Path:
 
 
 def _tool_names_in_source(package: str) -> set[str]:
-    """Tool names as registered with @mcp.tool(name="...") across the package."""
+    """Names the skill may legitimately reference.
+
+    MCP tool names come from registrations; operator selfchecks are now
+    CLI-only functions (called by ``marketplace-mcp doctor``, not advertised to
+    a client), but skills still document them in their operator sections, so
+    the checker must know they are real rather than ghosts.
+    """
     names: set[str] = set()
     for path in (PACKAGES / package / "src").rglob("*.py"):
-        names.update(re.findall(r'@mcp\.tool\(\s*\n?\s*name="([a-z0-9_]+)"', path.read_text(encoding="utf-8")))
+        text = path.read_text(encoding="utf-8")
+        names.update(re.findall(r'@mcp\.tool\(\s*\n?\s*name="([a-z0-9_]+)"', text))
+        names.update(re.findall(r"\nasync def ([a-z][a-z0-9_]+_selfcheck)\(", text))
     return names
 
 

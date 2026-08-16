@@ -33,6 +33,44 @@ def test_config_block_covers_all_servers():
     assert "/path/to/" not in note
 
 
+def test_dsh_install_emits_a_cordis_patch_instead_of_mcp_servers(capsys):
+    """dsh does not read claude_desktop_config.json; print its patch format."""
+    rc = cli.cmd_install(["dsh"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "- insert:" in out
+    assert "@deepseek-ai/dsh-mcp-client" in out
+    assert "serverName: rumarket" in out
+    assert "compare-mcp" in out
+    assert "marketplace-mcp" in out
+    assert "mcpServers" not in out
+
+
+def test_dsh_install_rows_are_disabled_until_the_env_gate_is_set(capsys):
+    rc = cli.cmd_install(["dsh"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert cli.DSH_ENV_DIR in out
+    assert cli.DSH_ENV_FULL in out
+    assert 'disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR' in out
+    assert out.count("disabled: !!js") == 2
+
+
+def test_dsh_patch_block_falls_back_to_console_scripts_outside_a_checkout(monkeypatch):
+    monkeypatch.setattr(cli, "_workspace_root", lambda: None)
+    monkeypatch.setattr(cli.shutil, "which", lambda script: f"/usr/local/bin/{script}")
+
+    block, note = cli._dsh_patch_block()
+
+    assert 'command: "/usr/local/bin/compare-mcp"' in block
+    assert 'command: "/usr/local/bin/marketplace-mcp"' in block
+    assert "enable switch" in note
+    assert "console script compare-mcp" in note
+    assert "console script marketplace-mcp" in note
+
+
 def test_doctor_reports_per_source_status(monkeypatch, capsys):
     async def fake_selfcheck(name, module_path, tool_name):
         table = {

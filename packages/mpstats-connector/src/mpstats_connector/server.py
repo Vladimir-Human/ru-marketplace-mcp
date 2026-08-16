@@ -58,6 +58,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport import proxy_from_env
@@ -765,16 +766,10 @@ async def _finalize_selfcheck(checks: dict[str, dict[str, Any]]) -> MpStatsSelfC
     return MpStatsSelfCheckResponse.model_validate(result)
 
 
-@mcp.tool(
-    name="mpstats_selfcheck",
-    annotations=ToolAnnotations(
-        title="MPStats Self-Check",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+# CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls mpstats_selfcheck()
+# directly. It is deliberately NOT registered as an MCP tool — selfchecks are
+# operator diagnostics, and their input/output schemas would be billed in every
+# client request.
 async def mpstats_selfcheck(ctx: Context | None = None) -> MpStatsSelfCheckResponse:
     """Health canary for the MPStats connector.
 
@@ -870,3 +865,9 @@ async def mpstats_selfcheck(ctx: Context | None = None) -> MpStatsSelfCheckRespo
                 )
 
     return await _finalize_selfcheck(checks)
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)

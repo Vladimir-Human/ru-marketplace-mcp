@@ -179,19 +179,22 @@ jobs:
           uv run python - <<'PY'
           import asyncio
 
+          # Operator-only *_selfcheck diagnostics are no longer registered as
+          # MCP tools (they run via `marketplace-mcp doctor`), so every
+          # connector count is one lower than the pre-dsh-packaging contract.
           EXPECTED = {
-              "wb": 9,
-              "ozon": 4,
-              "detmir": 4,
-              "yandex": 3,
+              "wb": 8,
+              "ozon": 3,
+              "detmir": 3,
+              "yandex": 2,
               "compare": 2,
-              "avito": 4,
-              "taobao": 3,
-              "megamarket": 3,
-              "lamoda": 3,
-              "dns": 3,
-              "citilink": 3,
-              "mpstats": 3,
+              "avito": 3,
+              "taobao": 2,
+              "megamarket": 2,
+              "lamoda": 2,
+              "dns": 2,
+              "citilink": 2,
+              "mpstats": 2,
           }
 
           async def main() -> None:

@@ -46,6 +46,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.process import (
     safe_child_env,
@@ -1388,16 +1389,10 @@ async def _ozon_search_impl(
     )
 
 
-@mcp.tool(
-    name="ozon_selfcheck",
-    annotations=ToolAnnotations(
-        title="Ozon Self-check",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+# CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls ozon_selfcheck()
+# directly. It is deliberately NOT registered as an MCP tool — selfchecks are
+# operator diagnostics, and their input/output schemas would be billed in every
+# client request.
 async def ozon_selfcheck(ctx: Context | None = None) -> OzonSelfcheckResponse:
     """Structural drift canary for Ozon (tri-state: success / drift_detected /
     inconclusive). Fetches live search/card/reviews + a non-default reviews sort
@@ -1602,6 +1597,12 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
     result["config_loaded"] = config_loaded
     result["tool_count"] = tool_count
     return OzonSelfcheckResponse(**result)
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)
 
 
 if __name__ == "__main__":

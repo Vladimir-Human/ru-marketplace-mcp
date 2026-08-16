@@ -1,6 +1,6 @@
 ---
 name: mpstats-connector
-description: Use this skill when the operator needs MPStats sales/stock analytics for a specific Ozon or Wildberries item — per-day sales graphs, current price and stock, warehouse stock split (FBS vs FBO), seller/brand identity, and a rolling orders-per-day average. Trigger on Russian queries like "продажи товара на озон", "аналитика ozon sku", "остатки на складе ozone", "mpstats по артикулу", "продажи за 30 дней", or English equivalents. Requires a paid MPStats account (MPSTATS_MP_AUTH env). Skip for raw catalog price/availability checks (use wb_/ozon_ connectors instead — they need no account).
+description: Use this skill for MPStats sales/stock analytics on a specific Ozon or Wildberries item — per-day sales, current price and stock, FBS/FBO warehouse split, seller/brand identity, and a rolling orders-per-day average. Trigger on "продажи товара на озон", "аналитика ozon sku", "mpstats по артикулу", "продажи за 30 дней", or English equivalents. Requires a paid MPStats account (MPSTATS_MP_AUTH env). Skip raw catalog price checks — use wb_/ozon_ connectors (no account needed).
 ---
 
 # MPStats Connector

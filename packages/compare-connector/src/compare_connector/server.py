@@ -42,6 +42,7 @@ from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.errors import BadRequestError, raise_tool_error
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
 from pydantic import Field
 
@@ -946,6 +947,12 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
         "server_started_at": SERVER_STARTED_AT,
         "process_id": os.getpid(),
     }
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)
 
 
 if __name__ == "__main__":
