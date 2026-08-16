@@ -52,9 +52,12 @@ paid, quota-billed account. Never log it, never commit it.
 - `mpstats_warehouses(skus, place)` — per-SKU warehouse stock split: `fbs`
   count, `fbo` total (collapsed from the upstream per-warehouse list), the raw
   `fbo_warehouses` list, and the upstream `last_update` timestamp.
-- `mpstats_selfcheck()` — tri-state health canary: `success`, `drift_detected`
-  (reachable but unparseable — code change needed), or `inconclusive` (transport
-  failure / missing auth — says nothing about the parsers).
+
+**Not an MCP tool:** `mpstats_selfcheck()` is a tri-state health canary:
+`success`, `drift_detected` (reachable but unparseable — code change needed), or
+`inconclusive` (transport failure / missing auth — says nothing about the
+parsers). It is CLI-only — `marketplace-mcp doctor` runs every connector's canary
+at once.
 
 ## Marketplace parameter
 

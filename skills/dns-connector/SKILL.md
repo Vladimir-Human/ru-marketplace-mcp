@@ -18,7 +18,9 @@ connector renders the page and reads the DOM.
 - `dns_search(query)` — tiles from the rendered search page
 - `dns_card(product_url)` — one card. The URL carries `/product/<id>/`, where the
   id is a 16-hex string: `/product/b7a1667f9b19ed20/`. A bare id also works.
-- `dns_selfcheck()` — tri-state canary
+
+**Not an MCP tool:** `dns_selfcheck()` is a tri-state canary. It is CLI-only —
+`marketplace-mcp doctor` runs every connector's canary at once.
 
 ## A green selfcheck does NOT mean the data is right
 

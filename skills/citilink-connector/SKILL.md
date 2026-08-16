@@ -18,7 +18,9 @@ renders the pages, so the connector reads the DOM instead.
 - `citilink_search(query)` — tiles from the rendered search page
 - `citilink_card(product_url)` — one card. The URL carries `/product/<slug>/`,
   where the slug ends in a numeric id: `/product/noutbuk-lenovo-2169270/`.
-- `citilink_selfcheck()` — tri-state canary
+
+**Not an MCP tool:** `citilink_selfcheck()` is a tri-state canary. It is
+CLI-only — `marketplace-mcp doctor` runs every connector's canary at once.
 
 ## Why the price used to come back null
 

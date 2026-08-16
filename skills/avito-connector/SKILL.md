@@ -21,7 +21,9 @@ Chrome over CDP — same pattern as Ozon.
   price_rub is None for ads with no price (free/exchange) — never 0.
 - `avito_card(item_id_or_url)` — one listing: price, description, views, seller
 - `avito_seller(seller_id_or_url)` — seller rating, review count, active listings
-- `avito_selfcheck()` — tri-state drift canary
+
+**Not an MCP tool:** `avito_selfcheck()` is a tri-state drift canary. It is
+CLI-only — `marketplace-mcp doctor` runs every connector's canary at once.
 
 ## What a search row does and does not carry
 

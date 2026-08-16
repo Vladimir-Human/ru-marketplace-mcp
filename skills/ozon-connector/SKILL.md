@@ -26,7 +26,11 @@ tier 1 usually answers and Chrome is never touched.
 - `ozon_card(sku_or_path)` — fetch full product card via composer-api.bx
 - `ozon_search(query, page)` — search Ozon catalog; `page` is 1..10, one page per call
 - `ozon_reviews(sku_or_path, limit, sort)` — product reviews
-- `ozon_selfcheck()` — drift canary; `success` means both tiers answered, `inconclusive` means Chrome was unreachable, `drift_detected` means the payload shape moved
+
+**Not an MCP tool:** `ozon_selfcheck()` is a drift canary: `success` means both
+tiers answered, `inconclusive` means Chrome was unreachable, `drift_detected`
+means the payload shape moved. It is CLI-only — `marketplace-mcp doctor` runs
+every connector's canary at once.
 
 ## Workflow
 1. `ozon_search("query")` → get list of SKUs

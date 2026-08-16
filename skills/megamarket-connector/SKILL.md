@@ -19,8 +19,10 @@ enough on its own: an anonymous browser that has cleared it still reads an empty
 ## Tools available
 - `megamarket_search(query)` — items + total count. price_rub None when absent.
 - `megamarket_card(item_id_or_url)` — one product card
-- `megamarket_selfcheck()` — tri-state canary; a code-7 refusal is
-  inconclusive (transport), never drift
+
+**Not an MCP tool:** `megamarket_selfcheck()` is a tri-state canary, where a
+code-7 refusal is inconclusive (transport), never drift. It is CLI-only —
+`marketplace-mcp doctor` runs every connector's canary at once.
 
 ## Gotchas
 - A code-7 / VPN-error body is an IP block, not data — the connector maps it to

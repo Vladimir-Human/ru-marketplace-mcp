@@ -19,7 +19,9 @@ Chrome over CDP.
 - `lamoda_search(query)` — tiles from the rendered search page (CDP)
 - `lamoda_card(sku_or_url)` — GraphQL enrichment. SKU looks like MP002XM1RMM3;
   URLs carry it lowercased, the connector normalises.
-- `lamoda_selfcheck()` — probes both tiers
+
+**Not an MCP tool:** `lamoda_selfcheck()` probes both tiers. It is CLI-only —
+`marketplace-mcp doctor` runs every connector's canary at once.
 
 ## Gotchas
 - Lamoda exposes NO ratings anywhere — `rating` is not in the GraphQL schema.

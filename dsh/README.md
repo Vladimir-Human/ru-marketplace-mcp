@@ -30,10 +30,12 @@ published over MCP.
 
 ## Install (three steps)
 
-1. Add the bundle to a profile (replace `default` with your profile name):
+1. Add the bundle to a profile (`web` is the profile dsh ships with a UI; use
+   whichever profile you actually run — a bare profile that dsh auto-creates on
+   first use carries no app and cannot be launched):
 
    ```console
-   dsh plugin --profile default add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
+   dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
    ```
 
    The 13 skills appear immediately. No MCP server starts yet.
@@ -84,7 +86,7 @@ time.
 Remove the bundle from the profile and restart it:
 
 ```console
-dsh plugin --profile default remove ru-marketplace-mcp-dsh
+dsh plugin --profile web remove ru-marketplace-mcp-dsh
 ```
 
 No MCP process survives profile restart without `RU_MARKETPLACE_MCP_DIR`.

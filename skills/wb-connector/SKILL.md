@@ -38,7 +38,10 @@ from a residential IP without proxies.
   it fit a 60cm opening", "is the cable included". Often the seller's reply is the
   only public statement of a spec. **Keyed by imt_id like `wb_reviews`**: pass an
   nmId and you get an empty pool with no error, so resolve through `wb_root_info`.
-- `wb_selfcheck()` — tri-state drift canary across every endpoint family
+
+**Not an MCP tool:** `wb_selfcheck()` is a tri-state drift canary across every
+endpoint family. It is CLI-only — `marketplace-mcp doctor` runs every
+connector's canary at once.
 
 ## Workflow patterns
 

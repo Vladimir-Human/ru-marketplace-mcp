@@ -20,7 +20,10 @@ requests natively in a real browser.
   converted: price_cny is None when hidden — never 0.
 - `taobao_card(item_id_or_url)` — one item card. item ids are 9-13 digit
   strings; pass a bare id or an item.taobao.com URL.
-- `taobao_selfcheck()` — tri-state canary; renders one live search page.
+
+**Not an MCP tool:** `taobao_selfcheck()` is a tri-state canary that renders one
+live search page. It is CLI-only — `marketplace-mcp doctor` runs every
+connector's canary at once.
 
 ## Gotchas
 - Prices stay in yuan. Comparing against ruble sources needs an explicit rate;

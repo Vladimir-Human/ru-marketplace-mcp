@@ -26,8 +26,9 @@ source for "what does this actually cost right now" — and it lists categories
   both prices, ratings, sellers and stock.
 - `yandex_card(product_id, include_reviews=True)` — full detail: prices, offer
   count, star breakdown, and the reviews.
-- `yandex_selfcheck()` — drift canary. Run it after install and whenever results
-  look wrong.
+
+**Not an MCP tool:** `yandex_selfcheck()` is a drift canary. It is CLI-only —
+run `marketplace-mcp doctor` after install and whenever results look wrong.
 
 ## The price field that matters most
 
@@ -81,7 +82,7 @@ data, never as a free item.
 `ld+json` when the connector had to fall back to schema.org markup — in that mode
 seller and brand are missing and the price is the subscriber one. If you see
 `parser_drift`, Yandex changed its front-end and the connector needs updating;
-`yandex_selfcheck()` confirms it.
+the CLI's `marketplace-mcp doctor` confirms it.
 
 **Pace yourself.** Pages are ~2 MB and the connector enforces a 1.5s gap. Bursts
 invite SmartCaptcha, which surfaces as a retryable rate-limit error.

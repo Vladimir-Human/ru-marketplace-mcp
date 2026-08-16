@@ -45,17 +45,17 @@
 если не частить запросами. Запросы к CDP-источникам идут вразрядку: очередь
 подряд без пауз роняет их (DNS и Taobao в проверке так и деградировали), поэтому
 коннекторы держат паузу между вызовами сами. Точное состояние из вашей сессии
-покажет `*_selfcheck`.
+покажет `marketplace-mcp doctor`.
 
 MPStats стоит особняком: это единственный **платный** источник. Без
 `MPSTATS_MP_AUTH` сервер запускается, но инструменты отвечают `auth_missing` —
 поэтому он опционален и подключается по желанию, на остальные двенадцать
 серверов он не влияет никак.
 
-Всего 44 инструмента в 12 серверах на общем рантайме `mcp-core`. Плюс объединённый
+Всего 33 инструмента в 12 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
 вместо двенадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что в нём 45 инструментов: 44
+поднялись, а какие отвалились и почему), так что в нём 34 инструмента: 33
 смонтированных плюс этот.
 
 ## Быстрый старт
@@ -66,7 +66,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1167 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1182 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -108,7 +108,7 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 готовый блок для вставки. Путь к вашему checkout там уже подставлен: заглушку
 `/path/to/ru-marketplace-mcp` править руками не придётся. При установке из wheel
 вместо путей печатаются консольные команды на PATH. Неизвестное имя клиента
-(допустимы `claude`, `claude-code`, `cursor`) команда отклоняет с пояснением и
+(допустимы `claude`, `claude-code`, `cursor`, `dsh`) команда отклоняет с пояснением и
 кодом возврата 2 — молча подставить блок для Claude она не может. Минимальный
 вариант вручную:
 
@@ -177,11 +177,34 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 
 </details>
 
-После подключения перезапустите клиент и попросите агента вызвать `wb_selfcheck`. Он
-проверит все семейства эндпоинтов и ответит `success`, `drift_detected` или
+<details>
+<summary><b>DeepSeek Harness (dsh)</b> — плагин-бандл</summary>
+
+В dsh это не запись `mcpServers`, а слой профиля. Бандл лежит в подкаталоге
+[`dsh/`](dsh/README.md) и ставится штатным менеджером плагинов (`pnpm` нужен на PATH):
+
+```console
+dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
+```
+
+Сразу после установки появляются 13 навыков и **ни одного** MCP-инструмента: обе
+строки MCP выключены, пока не задана переменная `RU_MARKETPLACE_MCP_DIR` с путём к
+клону. Так сделано потому, что смонтированный сервер платится в каждом запросе:
+рекомендуемый режим сравнения цен стоит ~0,9 тыс. токенов, полный набор — ~13 тыс.
+Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
+
+</details>
+
+После подключения перезапустите клиент и прогоните `marketplace-mcp doctor`. Он
+запускает канарейку каждого коннектора и отвечает `success`, `drift_detected` или
 `inconclusive`.
 
 ## Инструменты
+
+Канарейки `*_selfcheck` в этом перечне не значатся намеренно: они не публикуются
+по MCP, потому что диагностика оператора стоила бы модели ~7,5 тыс. токенов в
+каждом запросе. Запускает их `marketplace-mcp doctor` — все разом, из командной
+строки.
 
 ### Wildberries — `wb_*`
 
@@ -195,7 +218,6 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 | `wb_seller(supplier_id)`                               | Юрлицо, ИНН, КПП, ОГРН, юридический адрес                        |
 | `wb_categories(root, max_depth)`                       | Дерево каталога с шардами и запросами самого WB                  |
 | `wb_category_products(shard, query, page, sort, dest)` | Товары категории по `shard` и `query` из `wb_categories`         |
-| `wb_selfcheck()`                                       | Канарейка на дрейф формата                                       |
 
 `wb_seller` отвечает на вопрос, который карточка товара скрывает: кто на самом деле
 продаёт? Возвращает зарегистрированное юрлицо и налоговые номера. Так отличают
@@ -218,7 +240,6 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 | ------------------------------------------ | ---------------------------------------------- |
 | `yandex_search(query, page, limit)`        | Поиск с обеими ценами, рейтингами, продавцами  |
 | `yandex_card(product_id, include_reviews)` | Карточка целиком: разбивка по звёздам и отзывы |
-| `yandex_selfcheck()`                       | Канарейка на дрейф формата                     |
 
 **Две цены, всегда.** `price_rub` платит любой покупатель. `price_with_plus`
 требует подписку Яндекс Плюс и обычно на 25–30% ниже. Интерфейс Яндекса показывает
@@ -235,7 +256,6 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 | `detmir_categories(parent, limit, region)`      | Дерево каталога. Начинать отсюда            |
 | `detmir_category(alias, limit, offset, region)` | Товары категории с настоящим счётчиком      |
 | `detmir_card(product_id, region)`               | Цена, рейтинг, наличие онлайн и в магазинах |
-| `detmir_selfcheck()`                            | Канарейка на дрейф формата                  |
 
 **Регион задаётся на каждый вызов.** Цены и особенно наличие в офлайн-магазинах
 сильно зависят от города: один и тот же товар лежал в 152 магазинах Москвы, 37
@@ -255,7 +275,6 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 | `ozon_search(query)`                     | Поиск по тексту            |
 | `ozon_card(sku_or_path)`                 | Карточка товара            |
 | `ozon_reviews(sku_or_path, limit, sort)` | Отзывы                     |
-| `ozon_selfcheck()`                       | Канарейка на дрейф формата |
 
 Ozon отклоняет датацентровый трафик, поэтому коннектор двухуровневый. Сначала
 TLS-имперсонация. Если Cloudflare выдаёт челлендж, запрос выполняется внутри вашего
@@ -272,7 +291,6 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API     |
 | `avito_card(item_id_or_url)`                          | Одно объявление: цена, описание, просмотры, продавец |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов, активные объявления |
-| `avito_selfcheck()`                                   | Канарейка на дрейф формата                           |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
 продавца и есть сигнал доверия. Бесплатное/обменное объявление приходит с
@@ -286,7 +304,6 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | ----------------------------- | -------------------------- |
 | `taobao_search(query, page)`  | Поиск по каталогу Taobao   |
 | `taobao_card(item_id_or_url)` | Карточка товара            |
-| `taobao_selfcheck()`          | Канарейка на дрейф формата |
 
 Поиск Taobao — клиентское React-приложение с подписанным mtop API: каждый запрос
 требует `sign`, вычисленный из cookie-токена, поэтому анонимного пути нет.
@@ -306,7 +323,7 @@ Lamoda.
 
 Всего через CDP ходят семь источников — эти плюс Ozon и Авито, где Chrome лишь
 запасной уровень: их tier 1 обычно отвечает, а браузер включается, когда анонимный
-уровень упёрся в челлендж. Проверка `*_selfcheck` из вашего браузера скажет, какие
+уровень упёрся в челлендж. `marketplace-mcp doctor` из вашего браузера скажет, какие
 эндпоинты подтверждены.
 
 ### Сравнение цен — `compare_*`
@@ -356,7 +373,6 @@ compare_prices("кроссовки мужские")
 | ---------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `mpstats_item(skus, place, oz_fbs=True)` | Аналитика за 30 дней по до 100 SKU: заказы, цена, остатки, графики по дням, продавец/бренд |
 | `mpstats_warehouses(skus, place)`        | Остатки по складам: FBS (склад продавца) и FBO (склад маркетплейса), `last_update`         |
-| `mpstats_selfcheck()`                    | Канарейка: `success` / `drift_detected` / `inconclusive`                                   |
 
 `place` — `ozon` или `wildberries`. Графики длиной 30, от старых к новым:
 последняя ненулевая ячейка — текущая цена или остаток. Цена и остаток при
@@ -451,7 +467,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1167 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1182 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -511,7 +527,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1167 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1182 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -567,17 +583,17 @@ Megamarket returns an empty result. Avito also blocks by IP: from a datacenter
 address it is a flat refusal, from a Russian residential one it works as long as
 you do not burst requests. Requests to the CDP sources are paced apart — a run of
 back-to-back calls degrades them (DNS and Taobao both dropped that way in testing),
-so the connectors hold a gap between calls themselves. Run `*_selfcheck` from your
-own session for the current state.
+so the connectors hold a gap between calls themselves. Run `marketplace-mcp doctor`
+from your own session for the current state.
 
 MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
 server boots but its tools answer `auth_missing`. It is therefore optional —
 plug it in if you have an account; the other twelve servers never notice.
 
-44 tools across 12 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+33 tools across 12 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds its
 own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 45 tools: the 44 mounted plus that one. stdio is the default;
+why — so it exposes 34 tools: the 33 mounted plus that one. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -589,7 +605,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1167 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1182 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -597,14 +613,32 @@ script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`) launche
 through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
 runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
 account; without it the tools return `auth_missing`). `marketplace-mcp install
-[claude|claude-code|cursor]` prints the block with your checkout's real path filled
+[claude|claude-code|cursor|dsh]` prints the block with your checkout's real path filled
 in — no placeholder to hand-edit — or the console-script paths on PATH when installed
-as a wheel; an unknown client name is rejected.
+as a wheel; an unknown client name is rejected. The `dsh` target prints a
+`cordis.patch.yml` row instead of `mcpServers` JSON — see [dsh/README.md](dsh/README.md).
 
-After connecting, ask your agent to run `wb_selfcheck`. It probes every endpoint
-family and reports `success`, `drift_detected`, or `inconclusive`.
+**DeepSeek Harness (dsh)** installs as a plugin bundle rather than an `mcpServers`
+entry, from the [`dsh/`](dsh/README.md) subdirectory (`pnpm` must be on PATH):
+
+```console
+dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
+```
+
+That gives you 13 skills immediately and **no** MCP tools: both MCP rows stay
+disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone. A mounted server is paid
+on every request — ~0.9k tokens for the recommended price-comparison mode, ~13k for
+the full set — so opting in is left to you. [dsh/README.md](dsh/README.md) covers
+enabling it and the full mode.
+
+After connecting, run `marketplace-mcp doctor`. It runs every connector's canary and
+reports `success`, `drift_detected`, or `inconclusive` for each.
 
 ## The tools
+
+The `*_selfcheck` canaries are deliberately absent from these tables: they are not
+published over MCP, because operator diagnostics would cost the model ~7.5k tokens
+on every request. `marketplace-mcp doctor` runs them all from the command line.
 
 ### Wildberries — `wb_*`
 
@@ -618,7 +652,6 @@ family and reports `success`, `drift_detected`, or `inconclusive`.
 | `wb_seller(supplier_id)`                               | Registered entity, INN, KPP, OGRN, legal address            |
 | `wb_categories(root, max_depth)`                       | Catalog tree with WB's own shard/query selectors            |
 | `wb_category_products(shard, query, page, sort, dest)` | Products in a category, using those selectors               |
-| `wb_selfcheck()`                                       | Drift canary                                                |
 
 `wb_seller` answers the question a listing hides: who actually ships this? It returns
 the registered legal entity and tax ids, which is how you distinguish an official
@@ -641,7 +674,6 @@ feed at all; the tool says so instead of returning an empty list.
 | ------------------------------------------ | ------------------------------------------- |
 | `yandex_search(query, page, limit)`        | Search with both prices, ratings, sellers   |
 | `yandex_card(product_id, include_reviews)` | Full detail plus star breakdown and reviews |
-| `yandex_selfcheck()`                       | Drift canary                                |
 
 **Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` needs a
 paid Yandex Plus subscription and runs 25–30% lower. Yandex leads with the subscriber
@@ -657,7 +689,6 @@ That reveals whether a 4.8 average is earned or hides a cluster of complaints.
 | `detmir_categories(parent, limit, region)`      | Catalog tree, start here                      |
 | `detmir_category(alias, limit, offset, region)` | Products in a category, with real totals      |
 | `detmir_card(product_id, region)`               | Price, rating, online and offline store stock |
-| `detmir_selfcheck()`                            | Drift canary                                  |
 
 **Region is per call.** Prices and especially offline availability swing by city —
 one item sat in 152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. The
@@ -676,7 +707,6 @@ wrong products, so discovery goes through categories instead. See
 | `ozon_search(query)`                     | Text search    |
 | `ozon_card(sku_or_path)`                 | Product detail |
 | `ozon_reviews(sku_or_path, limit, sort)` | Reviews        |
-| `ozon_selfcheck()`                       | Drift canary   |
 
 Ozon rejects datacenter traffic, so this connector is two-tier: TLS impersonation
 first, then a fetch inside your own logged-in Chrome over the DevTools Protocol when
@@ -730,7 +760,6 @@ return `auth_missing` while the server boots normally — nothing else is affect
 | ---------------------------------------- | --------------------------------------------------------------------------------------- |
 | `mpstats_item(skus, place, oz_fbs=True)` | 30-day analytics for up to 100 SKUs: orders, price, stock, per-day graphs, seller/brand |
 | `mpstats_warehouses(skus, place)`        | Warehouse split: FBS (seller's warehouse) vs FBO (marketplace warehouse), `last_update` |
-| `mpstats_selfcheck()`                    | Tri-state canary: `success` / `drift_detected` / `inconclusive`                         |
 
 `place` is `ozon` or `wildberries`. Graphs are length 30, oldest first: the last
 non-zero cell is the current price or stock. The two differ on purpose when the
@@ -817,7 +846,7 @@ commits.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1167 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1182 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -875,7 +904,7 @@ request rate.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1167 offline
+are confidently wrong, so the project is arranged around verification: 1182 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

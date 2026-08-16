@@ -33,7 +33,9 @@ availability and how many physical stores carry an item.
 - `detmir_category(alias, limit=20, offset=0)` — products in a category, with the
   upstream total and proper pagination.
 - `detmir_card(product_id)` — one product: price, rating, review count, stock.
-- `detmir_selfcheck()` — drift canary.
+
+**Not an MCP tool:** `detmir_selfcheck()` is a drift canary. It is CLI-only —
+`marketplace-mcp doctor` runs every connector's canary at once.
 
 ## There is no text search — this is important
 

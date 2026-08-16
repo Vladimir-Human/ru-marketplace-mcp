@@ -361,3 +361,67 @@ jobs:
             0|1) : ;;
             *) echo "Canary did not run cleanly (exit $RC); failing the job — see the step summary."; exit 1 ;;
           esac
+
+  dsh-bundle:
+    name: dsh bundle installs and activates
+    runs-on: ubuntu-latest
+    # The pytest suite owns the bundle's *contents* (test_dsh_bundle.py). Nothing
+    # owned its *installation*: that is performed by dsh's plugin manager, not by
+    # Python, so a broken bundle or a breaking dsh release would only surface when
+    # a user hit it. dsh is a developer preview with breaking changes promised.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        # dsh does not vendor pnpm: it calls spawnSync("pnpm", ...) and prints
+        # "pnpm not found on PATH" without it.
+        run: npm install -g pnpm@10
+
+      - name: Install dsh
+        run: |
+          npm install -g @deepseek-ai/dsh@0.1.0-rc.6
+          echo "dsh $(dsh --version), pnpm $(pnpm --version)"
+
+      - name: Bundle installs into a clean profile
+        run: dsh plugin --profile smoke add "$GITHUB_WORKSPACE/dsh"
+
+      - name: The bundle became a profile layer
+        # Exit code 0 is not proof of anything here. Measured 2026-08-16 on the
+        # sibling humanizer-ru bundle: `add "github:owner/repo#v3.13.0&path:/dsh"`
+        # exited 0 while pnpm silently dropped `&path:/dsh`, installed the whole
+        # repository as a plain dependency and left the profile with no layer at
+        # all. So assert the composition, not the exit code.
+        run: |
+          set -euo pipefail
+          profile="$HOME/.dsh/profiles/smoke"
+          python3 -c "import json,sys; d=json.load(open(sys.argv[1],encoding='utf-8')); b=d['dsh']['profile']['bundles']; print('bundles:', b); sys.exit(0 if sys.argv[2] in b else 1)" "$profile/package.json" ru-marketplace-mcp-dsh
+          installed="$profile/node_modules/ru-marketplace-mcp-dsh"
+          test -f "$installed/cordis.patch.yml"
+          skills=$(find "$installed/skills" -name SKILL.md | wc -l)
+          echo "vendored skills: $skills"
+          test "$skills" -eq 13
+
+      - name: Both MCP rows are still disabled by default
+        # The safety promise of this bundle: skills are free, MCP tools are opt-in.
+        # If a row ever ships enabled it would spend the user's context on every
+        # request without consent, so the guard is asserted rather than trusted.
+        run: |
+          set -euo pipefail
+          patch="$GITHUB_WORKSPACE/dsh/cordis.patch.yml"
+          rows=$(grep -c "name: '@deepseek-ai/dsh-mcp-client'" "$patch")
+          guards=$(grep -c 'disabled: !!js' "$patch")
+          echo "mcp rows: $rows, disabled guards: $guards"
+          test "$rows" -eq 2
+          test "$guards" -eq 2
+          grep -q 'RU_MARKETPLACE_MCP_DIR' "$patch"
+
+      - name: Removal restores the profile
+        run: |
+          set -euo pipefail
+          dsh plugin --profile smoke remove ru-marketplace-mcp-dsh
+          profile="$HOME/.dsh/profiles/smoke"
+          if grep -q ru-marketplace-mcp-dsh "$profile/package.json"; then
+            echo "the bundle survived removal"
+            exit 1
+          fi
+          echo "profile restored"
