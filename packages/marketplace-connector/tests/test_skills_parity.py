@@ -54,10 +54,18 @@ def _skill_dir(package: str) -> Path:
 
 
 def _tool_names_in_source(package: str) -> set[str]:
-    """Tool names as registered with @mcp.tool(name="...") across the package."""
+    """Names the skill may legitimately reference.
+
+    MCP tool names come from registrations; operator selfchecks are now
+    CLI-only functions (called by ``marketplace-mcp doctor``, not advertised to
+    a client), but skills still document them in their operator sections, so
+    the checker must know they are real rather than ghosts.
+    """
     names: set[str] = set()
     for path in (PACKAGES / package / "src").rglob("*.py"):
-        names.update(re.findall(r'@mcp\.tool\(\s*\n?\s*name="([a-z0-9_]+)"', path.read_text(encoding="utf-8")))
+        text = path.read_text(encoding="utf-8")
+        names.update(re.findall(r'@mcp\.tool\(\s*\n?\s*name="([a-z0-9_]+)"', text))
+        names.update(re.findall(r"\nasync def ([a-z][a-z0-9_]+_selfcheck)\(", text))
     return names
 
 
@@ -204,6 +212,77 @@ def test_skill_invents_no_tools(package: str) -> None:
     mentioned = set(re.findall(rf"\b{prefix}_[a-z0-9_]+\b", text))
     ghosts = sorted(name for name in mentioned if name not in own_tools)
     assert not ghosts, f"{package}: skill names tools that do not exist: {ghosts}"
+
+
+# A name being *real* is not enough: it must be *callable by the agent*. The
+# operator selfchecks are real Python functions that ``marketplace-mcp doctor``
+# runs, and `_tool_names_in_source` accepts them for that reason — which is
+# exactly why they slipped into eleven "Tools available" lists after they were
+# unpublished from MCP. An agent reading such a list calls the name and gets
+# nothing back. The rule below is therefore about the section, not the name:
+# whatever a tools list offers must be MCP-registered.
+_TOOLS_SECTION_RX = re.compile(r"^#{1,6}\s+tools\b", re.I)
+_BULLET_NAME_RX = re.compile(r"^\s*[-*]\s+`?([a-z][a-z0-9_]*)\s*\(")
+
+
+def _mcp_registered_tools(package: str) -> set[str]:
+    """Only ``@mcp.tool`` registrations — no selfcheck fallback."""
+    names: set[str] = set()
+    for path in (PACKAGES / package / "src").rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        names.update(re.findall(r'@mcp\.tool\(\s*\n?\s*name="([a-z0-9_]+)"', text))
+    return names
+
+
+def _names_offered_by_tool_sections(text: str) -> set[str]:
+    """Bullet-list names that sit under a heading titled "Tools…"."""
+    offered: set[str] = set()
+    inside = False
+    for line in text.split("\n"):
+        if line.startswith("#"):
+            inside = bool(_TOOLS_SECTION_RX.match(line))
+            continue
+        if not inside:
+            continue
+        match = _BULLET_NAME_RX.match(line)
+        if match:
+            offered.add(match.group(1))
+    return offered
+
+
+@pytest.mark.parametrize("package", CONNECTORS)
+def test_tool_sections_offer_only_mcp_callable_names(package: str) -> None:
+    registered = _mcp_registered_tools(package)
+    if not registered:
+        pytest.skip(f"{package} registers no @mcp.tool of its own")
+    prefix = sorted(registered)[0].split("_")[0]
+    text = (_skill_dir(package) / "SKILL.md").read_text(encoding="utf-8")
+    offered = {name for name in _names_offered_by_tool_sections(text) if name.startswith(f"{prefix}_")}
+    unreachable = sorted(offered - registered)
+    assert not unreachable, (
+        f"{package}: a tools list offers names the agent cannot call over MCP: {unreachable}. "
+        "Operator diagnostics belong outside the tools list, with the CLI entry point named."
+    )
+
+
+def test_the_tool_section_rule_can_fail() -> None:
+    """A gate that cannot fail is worse than no gate at all."""
+    honest = "## Tools available\n- `wb_search(query)` — search\n\n**Not an MCP tool:** `wb_selfcheck()` is CLI-only.\n"
+    assert _names_offered_by_tool_sections(honest) == {"wb_search"}
+
+    regressed = "## Tools available\n- `wb_search(query)` — search\n- `wb_selfcheck()` — canary\n"
+    assert _names_offered_by_tool_sections(regressed) == {"wb_search", "wb_selfcheck"}
+
+    # The heading must actually be a tools heading, and prose must not count.
+    other = "## Gotchas\n- `wb_selfcheck()` — mentioned in prose about drift\n"
+    assert _names_offered_by_tool_sections(other) == set()
+
+
+def test_selfchecks_are_absent_from_every_mcp_surface() -> None:
+    """The token lever from the dsh port: 11 operator tools left the wire."""
+    for package in CONNECTORS:
+        leaked = sorted(name for name in _mcp_registered_tools(package) if name.endswith("_selfcheck"))
+        assert not leaked, f"{package}: operator selfcheck is registered as an MCP tool again: {leaked}"
 
 
 def test_no_skill_still_documents_the_removed_24_hex_url_shape() -> None:

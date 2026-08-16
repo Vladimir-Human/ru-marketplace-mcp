@@ -26,7 +26,13 @@ from mcp_core.logging import log_event
 
 # Clients whose config format this block is known to fit. A typo like
 # "cursour" should say so rather than silently printing a Claude block.
-KNOWN_CLIENTS = {"claude", "claude-code", "cursor"}
+# dsh has its own emitter below: the harness patch format is not mcpServers JSON.
+KNOWN_CLIENTS = {"claude", "claude-code", "cursor", "dsh"}
+
+# Gate variable for the emitted dsh rows. It doubles as the checkout path used
+# by `uv run --directory`, so one user action both enables and locates a server.
+DSH_ENV_DIR = "RU_MARKETPLACE_MCP_DIR"
+DSH_ENV_FULL = "RU_MARKETPLACE_MCP_FULL"
 
 # (config key, console script, human note)
 SERVERS: list[tuple[str, str, str]] = [
@@ -104,6 +110,115 @@ def _config_block() -> tuple[dict[str, Any], str]:
     return block, note
 
 
+def _yaml_double(value: str) -> str:
+    """Quote a scalar for double-quoted YAML (backslashes and quotes escaped)."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _dsh_row(catalog_id: str, command: str, disabled: str, args_lines: list[str]) -> str:
+    """One ``dsh-mcp-client`` row for ``cordis.patch.yml``.
+
+    The output is already indented as the second item of a top-level
+    ``- insert:`` patch list, matching FINAL-SPEC's bundle layout.
+    """
+    lines = [
+        f"    - id: {catalog_id}",
+        "      name: '@deepseek-ai/dsh-mcp-client'",
+        f'      disabled: !!js "{disabled}"',
+        "      config:",
+        "        serverName: rumarket",
+        "        transport: stdio",
+        f"        command: {command}",
+    ]
+    if args_lines:
+        lines.append("        args:")
+        lines.extend(args_lines)
+    else:
+        lines.append("        args: []")
+    lines.append("        failOnStartupError: false")
+    return "\n".join(lines)
+
+
+def _dsh_command(script: str, root: pathlib.Path | None) -> tuple[str, list[str], str | None]:
+    """Command fragments for one emitted dsh row.
+
+    From a source checkout, ``uv run --frozen --directory`` is the supported
+    native start and the gate variable is the directory value. From a wheel,
+    the console script on PATH is the command and the gate variable is only the
+    enable switch (any value works).
+    """
+    if root is not None:
+        args = [
+            "          - run",
+            "          - --frozen",
+            "          - --directory",
+            f'          - !!js "process.env.{DSH_ENV_DIR}"',
+            f"          - {script}",
+        ]
+        return '"uv"', args, None
+
+    resolved = shutil.which(script) or script
+    note = f"#   - console script {script}: resolved to {resolved}"
+    if shutil.which(script) is None:
+        note += " (NOT FOUND on PATH, left unresolved)"
+    return _yaml_double(resolved), [], note
+
+
+def _dsh_patch_block() -> tuple[str, str]:
+    """The dsh ``cordis.patch.yml`` rows for the two supported mounts.
+
+    Unlike Claude/Cursor, DeepSeek Harness does not consume an ``mcpServers``
+    JSON block: a plugin patch inserts ``@deepseek-ai/dsh-mcp-client`` rows.
+    Both rows ship disabled at zero context cost until the operator opts in
+    (measured cost of the enabled rows is paid on EVERY client request).
+
+    The two rows deliberately share one ``serverName``. Their ``disabled``
+    expressions are mutually exclusive, so only one instance is ever alive:
+    ``RU_MARKETPLACE_MCP_FULL`` unset selects the cheap ``compare-mcp`` row,
+    and set selects the unified row in its place.
+    """
+    root = _workspace_root()
+    compare_cmd, compare_args, compare_note = _dsh_command("compare-mcp", root)
+    compare_row = _dsh_row(
+        "ru-marketplace-compare",
+        compare_cmd,
+        f"!process.env.{DSH_ENV_DIR} || !!process.env.{DSH_ENV_FULL}",
+        compare_args,
+    )
+    full_cmd, full_args, full_note = _dsh_command("marketplace-mcp", root)
+    full_row = _dsh_row(
+        "ru-marketplace-full",
+        full_cmd,
+        f"!process.env.{DSH_ENV_DIR} || !process.env.{DSH_ENV_FULL}",
+        full_args,
+    )
+
+    block = (
+        "# Add these rows to the `- insert:` list of your cordis.patch.yml (dsh).\n"
+        "# Both rows start disabled (zero tool-schema cost until the env gates are\n"
+        "# set) and their conditions are mutually exclusive.\n"
+        "- insert:\n" + compare_row + "\n" + full_row
+    )
+
+    if root is not None:
+        note = (
+            f"# Set {DSH_ENV_DIR} to this checkout (or another clone): {root}\n"
+            f"# Full set: also set {DSH_ENV_FULL}=1. Compare-only: leave {DSH_ENV_FULL} unset."
+        )
+    else:
+        lines = [
+            "# Installed as a package: commands are the console scripts on PATH, and",
+            f"# {DSH_ENV_DIR} is only the enable switch (set it to any value).",
+            f"# Full set: also set {DSH_ENV_FULL}=1. Compare-only: leave {DSH_ENV_FULL} unset.",
+        ]
+        if compare_note:
+            lines.append(compare_note)
+        if full_note:
+            lines.append(full_note)
+        note = "\n".join(lines)
+    return block, note
+
+
 def cmd_install(argv: list[str]) -> int:
     """Print the client config block to paste."""
     client = argv[0] if argv else "claude"
@@ -113,14 +228,22 @@ def cmd_install(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 2
+    if client == "dsh":
+        patch_block, patch_note = _dsh_patch_block()
+        print(patch_block)
+        print()
+        print(patch_note)
+        return 0
     block, note = _config_block()
     print(f"# Add to your mcpServers block ({client}).")
     print(note)
     print(json.dumps(block, indent=2, ensure_ascii=False))
-    print("\n# Notes:")
+    print()
+    print("# Notes:")
     for _, _, note_line in SERVERS:
         print(f"#   - {note_line}")
-    print("\n# Or wire one entry instead of twelve: the unified 'marketplace-mcp' server mounts every source.")
+    print()
+    print("# Or wire one entry instead of twelve: the unified 'marketplace-mcp' server mounts every source.")
     return 0
 
 

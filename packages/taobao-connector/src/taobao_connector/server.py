@@ -44,6 +44,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
@@ -567,12 +568,10 @@ async def taobao_card(
         raise_tool_error(TransportDownError(_redact(f"taobao_card failed: {exc}")))
 
 
-@mcp.tool(
-    name="taobao_selfcheck",
-    annotations=ToolAnnotations(
-        title="Taobao Self-Check", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
-    ),
-)
+# CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls taobao_selfcheck()
+# directly. It is deliberately NOT registered as an MCP tool — selfchecks are
+# operator diagnostics, and their input/output schemas would be billed in every
+# client request.
 async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckResponse:
     """Structural drift canary for Taobao (tri-state). Renders one live search
     page in the operator's Chrome and checks the extractor still finds items.
@@ -676,3 +675,9 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
         process_id=None,
     )
     return TaobaoSelfcheckResponse(**result_dict)
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)

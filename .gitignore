@@ -69,3 +69,7 @@ start-run.sh
 node_modules/
 package.json
 package-lock.json
+
+# dsh/package.json is not the Node artefact above: it is the plugin-bundle
+# manifest every dsh install resolves, so it must be tracked.
+!dsh/package.json

@@ -80,9 +80,9 @@ def test_server_version_matches_pyproject():
 
 
 @pytest.mark.asyncio
-async def test_three_tools_registered():
+async def test_two_tools_registered():
     names = {tool.name for tool in await server.mcp.list_tools()}
-    assert names == {"mpstats_item", "mpstats_warehouses", "mpstats_selfcheck"}
+    assert names == {"mpstats_item", "mpstats_warehouses"}
 
 
 # --------------------------------------------------------------------------- #
@@ -425,7 +425,7 @@ async def test_selfcheck_success_on_healthy_payload(monkeypatch):
     assert resp.status == "success"
     assert resp.healthy is True
     assert resp.checks["item"].state == "healthy"
-    assert resp.tool_count == 3
+    assert resp.tool_count == 2
 
 
 @pytest.mark.asyncio

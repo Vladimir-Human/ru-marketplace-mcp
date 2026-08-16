@@ -52,6 +52,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport import RateLimiter, build_client, get_text_with_retries, proxy_from_env
 from pydantic import Field
@@ -469,16 +470,10 @@ async def yandex_card(
     )
 
 
-@mcp.tool(
-    name="yandex_selfcheck",
-    annotations=ToolAnnotations(
-        title="Yandex Market Selfcheck",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+# CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls yandex_selfcheck()
+# directly. It is deliberately NOT registered as an MCP tool — selfchecks are
+# operator diagnostics, and their input/output schemas would be billed in every
+# client request.
 async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckResponse:
     """Probe Yandex Market's search and card pages and report a tri-state verdict.
 
@@ -582,6 +577,12 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
         tool_count=tool_count,
         cache_stats=_cache.stats.as_dict(),
     )
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)
 
 
 if __name__ == "__main__":

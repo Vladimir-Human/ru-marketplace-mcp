@@ -19,6 +19,7 @@ from __future__ import annotations
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from pydantic import BaseModel, Field
 
 
@@ -134,3 +135,9 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         skipped_count=len(_SKIPPED),
         server_version=SERVER_VERSION,
     )
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)

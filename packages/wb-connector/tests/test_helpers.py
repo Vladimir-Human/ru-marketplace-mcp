@@ -1652,8 +1652,8 @@ def test_questions_is_registered_as_a_tool():
             "wb_reviews",
             "wb_seller",
             "wb_categories",
-            "wb_selfcheck",
         } <= names
+        assert "wb_selfcheck" not in names, "selfcheck moved out of the MCP surface (CLI doctor only)"
 
     asyncio.run(scenario())
 
@@ -1892,8 +1892,8 @@ def test_category_products_is_registered_and_v1_tools_are_intact():
             "wb_reviews",
             "wb_seller",
             "wb_categories",
-            "wb_selfcheck",
         } <= names
+        assert "wb_selfcheck" not in names, "selfcheck moved out of the MCP surface (CLI doctor only)"
 
     asyncio.run(scenario())
 

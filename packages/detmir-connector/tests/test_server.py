@@ -134,7 +134,7 @@ def test_server_version_matches_pyproject():
 async def test_registered_tools_are_stable():
     """The tool surface is a public contract — renames break client configs."""
     names = {tool.name for tool in await server.mcp.list_tools()}
-    assert names == {"detmir_card", "detmir_category", "detmir_categories", "detmir_selfcheck"}
+    assert names == {"detmir_card", "detmir_category", "detmir_categories"}
 
 
 async def test_no_search_tool_is_exposed():
@@ -392,7 +392,7 @@ async def test_selfcheck_reports_success_when_every_family_is_healthy(monkeypatc
     assert result.status == "success"
     assert set(result.checks) == {"card", "category", "categories"}
     assert all(entry.state == "healthy" for entry in result.checks.values())
-    assert result.tool_count == 4
+    assert result.tool_count == 3
 
 
 async def test_selfcheck_is_inconclusive_when_transport_fails(monkeypatch, no_delay):
@@ -573,6 +573,6 @@ async def test_different_regions_do_not_share_a_cache_entry(monkeypatch):
     assert urls[0] != urls[1], "a St Petersburg request must not be answerable from Moscow's cache"
 
 
-async def test_all_four_tools_are_still_registered():
+async def test_all_three_tools_are_still_registered():
     names = {tool.name for tool in await server.mcp.list_tools()}
-    assert names == {"detmir_card", "detmir_category", "detmir_categories", "detmir_selfcheck"}
+    assert names == {"detmir_card", "detmir_category", "detmir_categories"}

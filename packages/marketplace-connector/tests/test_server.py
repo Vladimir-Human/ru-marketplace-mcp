@@ -16,22 +16,25 @@ def test_all_installed_sources_are_mounted():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
 
-    # Every connector's selfcheck must be present — it is the one tool each
-    # package guarantees, so its absence means the mount silently failed.
-    expected_selfchecks = {
-        "wb_selfcheck",
-        "ozon_selfcheck",
-        "yandex_selfcheck",
-        "detmir_selfcheck",
-        "avito_selfcheck",
-        "taobao_selfcheck",
-        "megamarket_selfcheck",
-        "lamoda_selfcheck",
-        "dns_selfcheck",
-        "citilink_selfcheck",
+    # One definitive tool per installed source. Selfchecks are no longer
+    # mounted (they are operator-only diagnostics for `marketplace-mcp doctor`),
+    # so a source's mount marker is the first model-facing tool it guarantees.
+    expected_markers = {
+        "wb_search",
+        "ozon_card",
+        "yandex_search",
+        "detmir_card",
+        "avito_search",
+        "taobao_search",
+        "megamarket_search",
+        "lamoda_card",
+        "dns_search",
+        "citilink_search",
+        "compare_prices",
+        "mpstats_item",
     }
-    missing = expected_selfchecks - names
-    assert not missing, f"selfchecks not mounted: {missing}"
+    missing = expected_markers - names
+    assert not missing, f"sources not mounted: {missing}"
 
 
 def test_tool_names_keep_their_source_prefixes():
@@ -48,12 +51,13 @@ def test_tool_names_keep_their_source_prefixes():
 def test_the_mounted_count_matches_the_imported_sources():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
-    # 9 + 4 + 3 + 4 + 4 + 3 + 3 + 3 + 3 + 3 + 2 + 3 = 44 tools across 12 servers,
-    # plus marketplace_sources, which this server owns rather than mounts.
+    # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 = 33 mounted tools across
+    # 12 servers, plus marketplace_sources, which this server owns rather than
+    # mounts. Operator-only *_selfcheck diagnostics are not MCP tools.
     own = {"marketplace_sources"}
     assert own <= names
-    assert len(tools) == 45, f"expected 44 mounted tools + 1 own, got {len(tools)}"
-    assert len(names - own) == 44
+    assert len(tools) == 34, f"expected 33 mounted tools + 1 own, got {len(tools)}"
+    assert len(names - own) == 33
 
 
 def test_marketplace_sources_reports_what_mounted():

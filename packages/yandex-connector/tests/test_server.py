@@ -60,7 +60,7 @@ def test_server_version_matches_pyproject():
 
 async def test_registered_tools_are_stable():
     names = {tool.name for tool in await server.mcp.list_tools()}
-    assert names == {"yandex_search", "yandex_card", "yandex_selfcheck"}
+    assert names == {"yandex_search", "yandex_card"}
 
 
 # ------------------------------------------------------------------ search ----
@@ -255,7 +255,7 @@ async def test_selfcheck_chains_search_into_card(monkeypatch):
     assert result.status == "success"
     assert result.checks["search"].state == "healthy"
     assert result.checks["card"].state == "healthy"
-    assert result.tool_count == 3
+    assert result.tool_count == 2
 
 
 async def test_selfcheck_is_inconclusive_when_transport_fails(monkeypatch):

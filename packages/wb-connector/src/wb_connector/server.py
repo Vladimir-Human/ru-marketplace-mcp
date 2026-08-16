@@ -51,6 +51,7 @@ from mcp_core.errors import (
     raise_tool_error,
 )
 from mcp_core.logging import log_event
+from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport import get_text_budgeted, proxy_from_env
@@ -2056,16 +2057,10 @@ async def wb_category_products(
         raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
 
 
-@mcp.tool(
-    name="wb_selfcheck",
-    annotations=ToolAnnotations(
-        title="WB Self-check (drift canary)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+# CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls wb_selfcheck()
+# directly. It is deliberately NOT registered as an MCP tool — selfchecks are
+# operator diagnostics, and their input/output schemas would be billed in every
+# client request.
 async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     """Structural drift canary for WB (tri-state: success / drift_detected /
     inconclusive). Probes EVERY endpoint family the tools depend on:
@@ -2523,6 +2518,12 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     result["tool_count"] = tool_count
     log_event("wb_selfcheck.done", status=result.get("status"), checks=len(checks))
     return WbSelfCheckResponse.model_validate(result)
+
+
+# Advertised output schemas are the dominant constant cost of an MCP mount:
+# replace the full Pydantic tree with top-level field names (~64 % fewer
+# wire tokens on the unified server).
+apply_compact_output_schemas(mcp)
 
 
 if __name__ == "__main__":
