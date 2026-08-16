@@ -522,7 +522,10 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 обращаются только к публичным эндпоинтам каталога, которые использует официальный
 веб-клиент. В приватные и административные разделы запросов нет. Уровень Ozon с
 браузером работает внутри сессии, которую вы открыли сами. Используйте на своё
-усмотрение, для личных исследований, в вежливом темпе запросов.
+усмотрение, для личных исследований, в вежливом темпе запросов. Пауза между
+вызовами к площадкам с анти-ботом — это часть конструкции, а не случайное
+торможение: её не нужно убирать ради скорости. Данные инструментов не предназначены
+для перепродажи или массового сбора.
 
 ## Как это сделано
 
@@ -899,7 +902,9 @@ Marketplace terms of service generally disallow unofficial parsing. These connec
 read only the public catalog endpoints the official web clients use; no authenticated
 or administrative areas are touched. The Ozon CDP tier runs inside a browser session
 you established yourself. Use at your discretion, for personal research, at a polite
-request rate.
+request rate; the backoff between calls to anti-bot sources is deliberate and should
+not be removed for speed. Tool output is not meant for redistribution or bulk
+harvesting.
 
 ## How this was built
 
