@@ -1,0 +1,50 @@
+# The 13 skills are always available and cost only their catalog rows.
+# Both MCP rows stay disabled until RU_MARKETPLACE_MCP_DIR is set. Once
+# enabled they are paid on EVERY request; wire-measured figures (post output-
+# schema compaction, scripts/mcp_wire.py):
+#   compare-mcp      ~0.9k tokens
+#   marketplace-mcp  ~13.0k tokens
+- insert:
+    - id: ru-marketplace-skills
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      config:
+        providerName: ru-marketplace
+        includeDefaultRoots: false
+        watch: false
+        customSkillDirs:
+          - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('ru-marketplace-mcp-dsh/package.json'), '..', 'skills')"
+
+    # Recommended and cheap: price comparison across WB, Detsky Mir and Yandex.
+    # 2 tools, ~0.9k wire tokens per request while mounted.
+    - id: ru-marketplace-compare
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !!process.env.RU_MARKETPLACE_MCP_FULL"
+      config:
+        serverName: rumarket
+        transport: stdio
+        command: uv
+        args:
+          - run
+          - --frozen
+          - --directory
+          - !!js "process.env.RU_MARKETPLACE_MCP_DIR || '.'"
+          - compare-mcp
+        failOnStartupError: false
+
+    # Deliberate full-mount choice: 34 model-facing tools, ~13.0k wire tokens
+    # per request. Operator-only *_selfcheck tools are no longer published over
+    # MCP; `marketplace-mcp doctor` still runs them from the CLI.
+    - id: ru-marketplace-full
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !process.env.RU_MARKETPLACE_MCP_FULL"
+      config:
+        serverName: rumarket
+        transport: stdio
+        command: uv
+        args:
+          - run
+          - --frozen
+          - --directory
+          - !!js "process.env.RU_MARKETPLACE_MCP_DIR || '.'"
+          - marketplace-mcp
+        failOnStartupError: false
