@@ -71,7 +71,7 @@ from yandex_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.4.1"
+SERVER_VERSION = "1.5.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://market.yandex.ru"

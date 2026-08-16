@@ -109,7 +109,7 @@ clone, use this row shape:
       - run
       - --rm
       - -i
-      - ru-marketplace-mcp:1.4.1
+      - ru-marketplace-mcp:1.5.0
       - marketplace-mcp
     failOnStartupError: false
 ```

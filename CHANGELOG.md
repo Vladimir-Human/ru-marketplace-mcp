@@ -7,6 +7,72 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.5.0] — 2026-08-16
+
+Основной релиз: установка в DeepSeek Harness и снижение постоянной цены
+MCP-контекста втрое. Теперь есть бандл `dsh/` (13 скиллов сразу, две
+MCP-строки выключены до явного включения), `marketplace-mcp install dsh`,
+гейты бандла в тестах и CI.
+
+### Изменено
+
+- **Выходные схемы сжаты до имён полей верхнего уровня.** По реальному
+  MCP-проводу: `marketplace-mcp` — 38 078 → 13 020 токенов на запрос,
+  `compare-mcp` — 2 424 → 918. Доля выходных схем упала с 64 % до 10 %.
+- **11 `*_selfcheck` ушли с MCP-поверхности** и остались CLI-only:
+  `marketplace-mcp doctor` их по-прежнему вызывает. Модельный набор — 33
+  инструмента в двенадцати серверах и 34 в объединённом вместо 44/45.
+- **Скиллы больше не предлагают агенту вызвать selfcheck.** Проверка паритета
+  теперь про раздел: пункт под заголовком «Tools available» обязан быть
+  зарегистрированным MCP-инструментом.
+- **Описания скиллов `mpstats-connector` и `compare-prices`** приведены под
+  лимит каталога dsh (476 и 449 символов).
+
+### Добавлено
+
+- **Бандл `dsh/`** и разделы про dsh в корневом README на обоих языках.
+- **Гейт установки бандла в CI** (`dsh-bundle`): состав профиля, 13 скиллов,
+  обе MCP-строки `disabled`, откат через `remove`.
+- **`mcp_wire.py` / `mcp_startup.py`** — замеры цены и старта MCP-серверов по
+  настоящему протоколу.
+
+### Исправлено
+
+- `dsh/package.json` выпадал из git из-за общего ignore `package.json`
+  (CI checkout был без манифеста бандла); добавлено исключение.
+- Smoke-работа CI и `e2e_stdio_check.py` ожидали прежние счётчики
+  инструментов (вплоть до 45); приведены к новой поверхности.
+
+English summary:
+
+### Changed
+
+- Output schemas now advertise top-level field names only. Measured over a real
+  stdio session: `marketplace-mcp` fell from ~38,078 to ~13,020 tokens per
+  request, `compare-mcp` from ~2,424 to ~918. Output-schema cost share: 64% → 10%.
+- The 11 operator `*_selfcheck` diagnostics left the MCP surface and remain
+  CLI-only via `marketplace-mcp doctor`. The model-facing surface is now 33
+  tools across twelve servers and 34 in the unified server, instead of 44/45.
+- Skills no longer list selfchecks under "Tools available"; the parity gate now
+  checks that a tools-list entry names a registered MCP tool.
+
+### Added
+
+- A DeepSeek Harness bundle in `dsh/` with 13 skills and two disabled
+  MCP rows; root README sections in Russian and English.
+- A CI job that installs the bundle into a clean profile and asserts the profile
+  layer, 13 skills, both MCP rows disabled, and clean removal.
+- `scripts/mcp_wire.py` and `scripts/mcp_startup.py` for wire-level cost and
+  startup measurements.
+
+### Fixed
+
+- `dsh/package.json` was silently ignored by the root `package.json` gitignore
+  rule, so CI checkouts shipped without the bundle manifest; an exception now
+  tracks it.
+- CI smoke and `e2e_stdio_check.py` still expected the old tool counts (up to
+  45); they now match the new surface.
+
 ## [1.4.1] — 2026-08-08
 
 Патч по итогам четырёх независимых аудитов, проведённых сразу после v1.4.0.
