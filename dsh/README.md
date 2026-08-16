@@ -91,11 +91,12 @@ dsh plugin --profile web remove ru-marketplace-mcp-dsh
 
 No MCP process survives profile restart without `RU_MARKETPLACE_MCP_DIR`.
 
-## Docker alternative (not verified)
+## Docker alternative (published and CI-verified)
 
-`docker` was unavailable on the development machine, so the following stdio
-launch has **not** been tested through dsh. If you prefer Docker over a local
-clone, use this row shape:
+Since v1.5.1 every release tag builds a stdio image and proves it with a real
+MCP session over `docker run --rm -i` before publishing to the MCP Registry:
+initialize, `tools/list` (34 tools) and a `marketplace_sources` call. Use the
+published GHCR image instead of a local clone:
 
 ```yaml
 - id: ru-marketplace-docker
@@ -109,10 +110,12 @@ clone, use this row shape:
       - run
       - --rm
       - -i
-      - ru-marketplace-mcp:1.5.1
-      - marketplace-mcp
+      - ghcr.io/vladimir-human/ru-marketplace-mcp:1.5.1
     failOnStartupError: false
 ```
+
+The image defaults to the unified server; full-mode wire cost applies
+(~13.0k tokens per request), so opt in deliberately.
 
 ## Source
 

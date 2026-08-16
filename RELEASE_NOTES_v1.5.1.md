@@ -15,7 +15,7 @@
 | `check_versions.py 1.5.1` | 72 места согласованы |
 | `check_test_count.py` / `check_no_print.py` / `uv lock --check` | зелёные |
 | `e2e_stdio_check.py` | 13/13 локальных серверов |
-| Сборка и публикация OCI + реестр | автоматически на теге `v1.5.1` (workflow `mcp-registry-publish`) |
+| Сборка и публикация OCI + реестр | ✅ run 31942741535, success; запись видна в API реестра |
 
 ## Что вошло в патч
 
@@ -43,5 +43,5 @@
 
 ## Проверка публикации
 
-Факт успешной публикации в официальный MCP-реестр фиксируется ран-логом
-workflow `mcp-registry-publish` для тега `v1.5.1`, а не текстом этого файла.
+Факт: workflow `mcp-registry-publish` для тега `v1.5.1` завершился success
+(run 31942741535); API реестра возвращает сервер `io.github.Vladimir-Human/ru-marketplace-mcp` версии 1.5.1 с OCI-пакетом.
