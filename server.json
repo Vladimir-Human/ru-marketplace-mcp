@@ -3,7 +3,7 @@
   "name": "io.github.Vladimir-Human/ru-marketplace-mcp",
   "description": "Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews, seller identity",
   "title": "ru-marketplace-mcp",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "websiteUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
   "repository": {
     "url": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
@@ -121,5 +121,15 @@
         }
       ]
     }
-  }
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:1.5.1",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

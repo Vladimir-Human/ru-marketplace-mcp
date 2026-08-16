@@ -1,0 +1,71 @@
+name: Publish MCP Registry package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  publish:
+    name: OCI image + registry publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version from tag
+        id: version
+        shell: bash
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/vladimir-human/ru-marketplace-mcp
+          tags: |
+            type=match,pattern=v(.*),group=1
+
+      - name: Build and push the stdio image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.stdio
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # This is the acceptance gate for the exact artifact the registry will
+      # advertise: the previous Docker-workflow version was never run through a
+      # client, so that [U] stayed [U]. The probe performs initialize /
+      # tools/list / tools/call over a real `docker run --rm -i`.
+      - name: Real MCP session over docker stdio
+        env:
+          MCP_DOCKER_IMAGE: ghcr.io/vladimir-human/ru-marketplace-mcp:${{ steps.version.outputs.value }}
+        run: python3 scripts/e2e_stdio_check_docker.py
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        run: ./mcp-publisher publish

@@ -7,6 +7,44 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [1.5.1] — 2026-08-16
+
+Патч доставки для официального MCP-реестра: OCI-образ stdio, настоящий
+`docker run -i` probe в CI и публикация `server.json` через `mcp-publisher` на
+каждый тег. Функциональных изменений поверхности нет.
+
+### Добавлено
+
+- `Dockerfile.stdio` с `MCP_TRANSPORT=stdio`, `CMD ["marketplace-mcp"]` и
+  OCI-меткой владения для MCP Registry.
+- `scripts/e2e_stdio_check_docker.py` — initialize / tools/list / tools/call
+  через настоящий `docker run --rm -i`.
+- `.github/workflows/mcp-registry-publish.yml` — на тег `v*`: сборка и push в
+  GHCR, docker-stdio probe, `mcp-publisher login github-oidc` + `publish`.
+- `packages` в `server.json`: `ghcr.io/vladimir-human/ru-marketplace-mcp:1.5.1`,
+  `runtimeHint: docker`, transport stdio.
+
+### Изменено
+
+- Версия всех 72 объявлений поднята на 1.5.1.
+
+English summary:
+
+### Added
+
+- `Dockerfile.stdio` with `MCP_TRANSPORT=stdio`, a default
+  `marketplace-mcp` entrypoint and the MCP Registry ownership label.
+- `scripts/e2e_stdio_check_docker.py`: a real initialize / tools/list /
+  tools/call session over `docker run --rm -i`.
+- A tag-driven workflow that pushes the OCI image to GHCR, runs the docker
+  stdio probe, then authenticates through GitHub OIDC and publishes
+  `server.json` with `mcp-publisher`.
+- An `oci` package entry in `server.json` pointing at the 1.5.1 GHCR image.
+
+### Changed
+
+- All 72 version declarations bumped to 1.5.1.
+
 ## [1.5.0] — 2026-08-16
 
 Основной релиз: установка в DeepSeek Harness и снижение постоянной цены
