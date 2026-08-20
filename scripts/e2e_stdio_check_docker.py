@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-EXPECTED_TOOLS = 34
+EXPECTED_TOOLS = 36
 TIMEOUT_S = 120.0
 
 
@@ -102,8 +102,8 @@ def probe(image: str) -> int:
         if result.get("isError"):
             raise RuntimeError(f"marketplace_sources returned an error: {result}")
         mounted = (result.get("structuredContent") or {}).get("mounted_count") or 0
-        if mounted != 12:
-            raise RuntimeError(f"expected 12 mounted sources, got {mounted}")
+        if mounted != 13:
+            raise RuntimeError(f"expected 13 mounted sources, got {mounted}")
         print(f"PASS: docker stdio MCP session, {len(tools)} tools, {mounted} sources mounted")
         return 0
     finally:
