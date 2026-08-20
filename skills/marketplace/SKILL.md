@@ -7,13 +7,13 @@ description: Use this skill when the operator wants every marketplace at once �
 
 One server mounting every installed connector as a namespaced toolset:
 `wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`,
-`lamoda_*`, `dns_*`, `citilink_*`, `mpstats_*` plus `compare_prices` /
-`compare_sources` and its own `marketplace_sources`. Tool names keep their
-prefixes, so habits and configs carry over — but the operator wires a single
-`marketplace` entry instead of twelve. The server exposes 34 tools: 33 mounted
-plus `marketplace_sources`. `mpstats_*` is the optional paid source: without
-`MPSTATS_MP_AUTH` its tools answer `auth_missing` while everything else is
-unaffected.
+`lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `mpstats_*` plus
+`compare_prices` / `compare_sources` and its own `marketplace_sources`. Tool
+names keep their prefixes, so habits and configs carry over — but the operator
+wires a single `marketplace` entry instead of thirteen. The server exposes 36
+tools: 35 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
+source: without `MPSTATS_MP_AUTH` its tools answer `auth_missing` while
+everything else is unaffected.
 
 ## When to use
 - "Where is X cheapest" — compare_prices fans out across all searchable sources

@@ -1,6 +1,6 @@
 [project]
 name = "ru-marketplace-mcp"
-version = "1.5.1"
+version = "1.6.0"
 description = "MCP servers for Russian marketplaces — Wildberries, Ozon and more"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,6 +30,7 @@ dependencies = [
     "dns-connector",
     "citilink-connector",
     "mpstats-connector",
+    "aliexpress-connector",
     "marketplace-connector",
 ]
 
@@ -56,6 +57,7 @@ lamoda-connector = { workspace = true }
 dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
 mpstats-connector = { workspace = true }
+aliexpress-connector = { workspace = true }
 marketplace-connector = { workspace = true }
 
 [dependency-groups]
@@ -132,6 +134,7 @@ testpaths = [
     "packages/dns-connector/tests",
     "packages/citilink-connector/tests",
     "packages/mpstats-connector/tests",
+    "packages/aliexpress-connector/tests",
     "packages/marketplace-connector/tests",
 ]
 asyncio_mode = "auto"
@@ -143,7 +146,7 @@ markers = [
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
-# Measure the fourteen workspace packages' source, not their tests. This is what the
+# Measure the fifteen workspace packages' source, not their tests. This is what the
 # `--cov` invocation in the CI coverage job reports against; the enforcing
 # --cov-fail-under floor is passed on that job's command line, not baked in here,
 # so the rest of the test matrix runs exactly as before.
@@ -162,6 +165,7 @@ source = [
     "packages/dns-connector/src/dns_connector",
     "packages/citilink-connector/src/citilink_connector",
     "packages/mpstats-connector/src/mpstats_connector",
+    "packages/aliexpress-connector/src/aliexpress_connector",
     "packages/marketplace-connector/src/marketplace_connector",
 ]
 omit = [

@@ -12,9 +12,9 @@ over the stdio MCP wire with `scripts/mcp_wire.py`:
 
 | Mode | Cost while mounted | Model-facing tools |
 |---|---|---|
-| Skills only (default) | ~390 tokens for 13 catalog rows | 0 |
+| Skills only (default) | ~390 tokens for 14 catalog rows | 0 |
 | `compare-mcp` (recommended) | ~0.9k tokens per request | 2 |
-| `marketplace-mcp` (full) | ~13.0k tokens per request | 34 |
+| `marketplace-mcp` (full) | ~13.6k tokens per request | 36 |
 
 The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools
 are now CLI-only (`marketplace-mcp doctor`); only model-facing tools are
@@ -38,7 +38,7 @@ published over MCP.
    dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
    ```
 
-   The 13 skills appear immediately. No MCP server starts yet.
+   The 14 skills appear immediately. No MCP server starts yet.
 
 2. Clone the server and install its locked environment once:
 
@@ -77,7 +77,7 @@ export RU_MARKETPLACE_MCP_FULL=1     # POSIX shell
 ```
 
 The enabled row then changes from `compare-mcp` (2 tools) to `marketplace-mcp`
-(34 tools). Both rows share `serverName: rumarket`, and their `disabled`
+(36 tools). Both rows share `serverName: rumarket`, and their `disabled`
 conditions are mutually exclusive, so exactly one server instance runs at a
 time.
 
@@ -93,9 +93,9 @@ No MCP process survives profile restart without `RU_MARKETPLACE_MCP_DIR`.
 
 ## Docker alternative (published and CI-verified)
 
-Since v1.5.1 every release tag builds a stdio image and proves it with a real
+Since v1.6.0 every release tag builds a stdio image and proves it with a real
 MCP session over `docker run --rm -i` before publishing to the MCP Registry:
-initialize, `tools/list` (34 tools) and a `marketplace_sources` call. Use the
+initialize, `tools/list` (36 tools) and a `marketplace_sources` call. Use the
 published GHCR image instead of a local clone:
 
 ```yaml
@@ -110,7 +110,7 @@ published GHCR image instead of a local clone:
       - run
       - --rm
       - -i
-      - ghcr.io/vladimir-human/ru-marketplace-mcp:1.5.1
+      - ghcr.io/vladimir-human/ru-marketplace-mcp:1.6.0
     failOnStartupError: false
 ```
 

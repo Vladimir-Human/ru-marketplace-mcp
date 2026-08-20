@@ -3,7 +3,7 @@
 # enabled they are paid on EVERY request; wire-measured figures (post output-
 # schema compaction, scripts/mcp_wire.py):
 #   compare-mcp      ~0.9k tokens
-#   marketplace-mcp  ~13.0k tokens
+#   marketplace-mcp  ~13.6k tokens
 - insert:
     - id: ru-marketplace-skills
       name: '@deepseek-ai/dsh-skill-filesystem'
@@ -31,7 +31,7 @@
           - compare-mcp
         failOnStartupError: false
 
-    # Deliberate full-mount choice: 34 model-facing tools, ~13.0k wire tokens
+    # Deliberate full-mount choice: 36 model-facing tools, ~13.6k wire tokens
     # per request. Operator-only *_selfcheck tools are no longer published over
     # MCP; `marketplace-mcp doctor` still runs them from the CLI.
     - id: ru-marketplace-full

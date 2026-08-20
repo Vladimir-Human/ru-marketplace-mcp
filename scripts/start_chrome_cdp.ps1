@@ -1,6 +1,6 @@
 # Start Chrome with CDP enabled, in a dedicated scraping profile by default.
-# Required by the seven connectors that read through a browser: Ozon, Avito,
-# Taobao, Megamarket, DNS, Citilink and Lamoda's search path.
+# Required by the eight connectors that read through a browser: Ozon, Avito,
+# Taobao, Megamarket, DNS, Citilink, AliExpress and Lamoda's search path.
 #
 # Run this BEFORE using those connectors' tools.
 # All Chrome windows must be closed first (Chrome refuses CDP if already running).

@@ -52,10 +52,10 @@ MPStats стоит особняком: это единственный **пла�
 поэтому он опционален и подключается по желанию, на остальные двенадцать
 серверов он не влияет никак.
 
-Всего 33 инструмента в 12 серверах на общем рантайме `mcp-core`. Плюс объединённый
+Всего 35 инструментов в 13 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
-вместо двенадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что в нём 34 инструмента: 33
+вместо тринадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
+поднялись, а какие отвалились и почему), так что в нём 36 инструментов: 35
 смонтированных плюс этот.
 
 ## Быстрый старт
@@ -66,7 +66,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1182 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1208 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -187,10 +187,10 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-Сразу после установки появляются 13 навыков и **ни одного** MCP-инструмента: обе
+Сразу после установки появляются 14 навыков и **ни одного** MCP-инструмента: обе
 строки MCP выключены, пока не задана переменная `RU_MARKETPLACE_MCP_DIR` с путём к
 клону. Так сделано потому, что смонтированный сервер платится в каждом запросе:
-рекомендуемый режим сравнения цен стоит ~0,9 тыс. токенов, полный набор — ~13 тыс.
+рекомендуемый режим сравнения цен стоит ~0,9 тыс. токенов, полный набор — ~13,6 тыс.
 Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
 
 </details>
@@ -321,10 +321,29 @@ Lamoda (`lamoda_*`) наполовину: карточки берутся ано
 через Chrome. Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен всем, кроме карточек
 Lamoda.
 
-Всего через CDP ходят семь источников — эти плюс Ozon и Авито, где Chrome лишь
+Всего через CDP ходят восемь источников — эти плюс AliExpress, Ozon и Авито, где Chrome лишь
 запасной уровень: их tier 1 обычно отвечает, а браузер включается, когда анонимный
 уровень упёрся в челлендж. `marketplace-mcp doctor` из вашего браузера скажет, какие
 эндпоинты подтверждены.
+
+
+### AliExpress — `aliexpress_*`
+
+| Инструмент                         | Что делает                              |
+| ---------------------------------- | --------------------------------------- |
+| `aliexpress_search(query)`         | Поиск: до 48 карточек с ценами в рублях |
+| `aliexpress_card(item_id_or_url)`  | Карточка: цена, рейтинг, число заказов  |
+
+Читается через ваш Chrome (CDP): x5sec ставит капчу анонимным клиентам, поэтому
+коннектор садится на страницу поиска (её не челленджат) и открывает карточку
+новой вкладкой из неё. Цены в рублях и участвуют в `compare_prices`. Карточка с
+названием, но без цены — известное состояние: под нагрузкой x5sec перестаёт
+отдавать ценовой модуль, коннектор пишет `price_missing`, а не выдумывает число.
+Цена «N ₽ с купоном» в `price_rub` не публикуется: там обычная цена, про купон
+коннектор честно предупреждает отдельно. Тексты отзывов не отдаются: только
+рейтинг и число заказов. Как и у остальных CDP-источников, зелёный
+`aliexpress_selfcheck` доказывает, что транспорт ответил, — не то, что цена
+верна.
 
 ### Сравнение цен — `compare_*`
 
@@ -467,7 +486,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1182 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1208 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -530,7 +549,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1182 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1208 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -591,12 +610,12 @@ from your own session for the current state.
 
 MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
 server boots but its tools answer `auth_missing`. It is therefore optional —
-plug it in if you have an account; the other twelve servers never notice.
+plug it in if you have an account; the other thirteen servers never notice.
 
-33 tools across 12 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+35 tools across 13 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds its
 own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 34 tools: the 33 mounted plus that one. stdio is the default;
+why — so it exposes 36 tools: the 35 mounted plus that one. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -608,7 +627,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1182 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1208 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -628,9 +647,9 @@ entry, from the [`dsh/`](dsh/README.md) subdirectory (`pnpm` must be on PATH):
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-That gives you 13 skills immediately and **no** MCP tools: both MCP rows stay
+That gives you 14 skills immediately and **no** MCP tools: both MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone. A mounted server is paid
-on every request — ~0.9k tokens for the recommended price-comparison mode, ~13k for
+on every request — ~0.9k tokens for the recommended price-comparison mode, ~13.6k for
 the full set — so opting in is left to you. [dsh/README.md](dsh/README.md) covers
 enabling it and the full mode.
 
@@ -717,6 +736,24 @@ Cloudflare challenges. Nothing is stored; you log in yourself, in a browser you
 control. Setup: [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 From a Russian residential IP the first tier usually works and no browser is needed.
+
+
+### AliExpress — `aliexpress_*`
+
+| Tool                                  | What it does                              |
+| ------------------------------------- | ----------------------------------------- |
+| `aliexpress_search(query)`            | Search: up to 48 tiles with ruble prices  |
+| `aliexpress_card(item_id_or_url)`     | Card: title, price, rating, order count   |
+
+Read through your Chrome (CDP): x5sec challenges anonymous clients, so the
+connector lands on a search page (never challenged) and opens the card in a new
+tab from it. Prices are rubles and rank in `compare_prices`. A card with a title
+but no price is a known state — under load x5sec stops serving the price module
+and the connector reports `price_missing` rather than inventing a number. A
+"with coupon" price never lands in `price_rub`: the regular price does, and the
+coupon is reported as a warning. Review texts are not exposed; rating and order
+counts are. As with every CDP source, a green `aliexpress_selfcheck` proves the
+transport answered — not that a given price is right.
 
 ### Cross-marketplace — `compare_*`
 
@@ -849,7 +886,7 @@ commits.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1182 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1208 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -909,7 +946,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1182 offline
+are confidently wrong, so the project is arranged around verification: 1208 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

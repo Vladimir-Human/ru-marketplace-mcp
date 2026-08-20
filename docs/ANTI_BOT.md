@@ -541,3 +541,65 @@ connector honours its own proxy variable (`WB_PROXY`, `OZON_PROXY`,
 **Run the selfchecks.** `success` / `drift_detected` / `inconclusive` — and note
 that `inconclusive` from a geo block says nothing about whether the parsers still
 work.
+
+
+## AliExpress (added 2026-08-20)
+
+Scope: one vantage point — a Russian residential IP, an anonymous scraping
+profile, 2026-08-20. From a datacenter IP or another geo the pattern will be
+stricter or different (a challenge on the search page itself is likely); the
+numbers below are a snapshot, not a constant. Prices are RUB-locale by the
+profile's region; a different ship-to region shifts both prices and the shape
+of challenges. Before quoting any of this today, run `aliexpress_selfcheck`
+from your own session.
+
+**Anonymous HTTP — nothing usable:**
+
+- item page: HTTP 200 with an x5sec challenge stub (`_____tmd_____/punish?x5secdata=…`,
+  «Пройдите проверку»), ~1 889 bytes. Full browser headers and language do not help.
+- search / category: 200, but a hollow SPA shell — `__AER_DATA__` carries zero
+  catalog data (empty `widgets.paths`), tiles are client-rendered. Why the shell
+  is empty was not isolated: it can be SPA architecture or the server declining
+  to ship data to a low-trust client — both read the same from the outside.
+- h5api item route (`acs.aliexpress.ru/h5/aapi/sc-item-detail/2.0`): route gone —
+  `FAIL_SYS_API_NOT_FOUNDED` (single probe; an API-rename, not proven anti-bot).
+- reviews (`feedback.aliexpress.ru/display/evaluationProductDetailAjaxService.htm`):
+  HTTP 500 (single probe; server error, not proven a block).
+
+**Real Chrome, challenge-passed session:**
+
+- search page renders fully: 31-96 tiles with prices, discount badges, ratings and
+  «N купили» lines; the landing search never challenges. The queries used were
+  topical («smart watch», «realme watch»); a distinctive-query relevance test
+  (the Detsky Mir lesson) was NOT run separately, so "search actually searches"
+  is evidenced by topical output, not by a controlled probe.
+- DIRECT navigation to an item page is challenged even in the warm profile. The
+  trigger is the navigation level, not the IP: in the SAME session a same-origin
+  in-page fetch of the item URL answers 200. Do not "fix" this by retrying
+  direct gotos — that only burns profile reputation. The working path is
+  search → open the card in a new tab.
+- in-page `fetch(itemUrl)` from the loaded search page: 200, 486 KB SSR shell, no
+  challenge — but the SSR carries no price (h1, og/meta description with the rating
+  and «N заказов» present).
+- `window.open(itemUrl)` from the loaded search page: the real card renders in
+  the new tab, prices included. This is the transport the connector uses.
+
+**Load behaviour (question 5 of the doctrine):** after many rapid probes x5sec
+degrades quietly — the search grid keeps working, but new-tab card renders come
+back with the price module stripped (title present, no ₽ anywhere). The measured
+threshold is not established (qualitative, at double-digit burst counts). The
+connector reports that state as `price_missing`, never as a fabricated number,
+and the selfcheck marks it `inconclusive`. A full challenge wall on the landing
+maps to a transport error telling the operator to pass the check by hand in the
+scraping window. The connector cannot tell "anti-bot stripped the price" from
+"this listing genuinely has no price" — either way the answer is None plus a
+warning, and a run of price_missing answers means back off, not push harder.
+
+**Not implemented (and why):** review TEXTS require navigating the review tab,
+which is challenge-prone; the connector ships rating + order counts only — if the
+tab ever stops challenging, a reviews tool becomes a small addition. The
+mtop/h5api signature is not reversed: x5sec is not solved programmatically, and
+per-request proof-of-work is precisely the case the doctrine calls "Neither".
+The connector does not pretend otherwise: on a challenge it degrades into
+`price_missing`/transport errors and tells the operator to pass the check by
+hand.

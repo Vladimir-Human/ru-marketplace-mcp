@@ -1,0 +1,23 @@
+{
+ "captured": "2026-08-20",
+ "url": "https://aliexpress.ru/wholesale?SearchText=realme+watch",
+ "tiles": [
+  {
+   "id": "1005012078506501",
+   "first_text": "5 700 ₽ с купоном5 959 ₽5.042 купилиrealme Watch S5 белые/серыеРекомендуемдо 10 дней, бесплатно"
+  },
+  {
+   "id": "1005012061152213",
+   "first_text": "5 196 ₽ с купоном5 800 ₽4.6108 купилиrealme Watch S5 умные часыРекомендуемдо 10 дней, бесплатно"
+  },
+  {
+   "id": "1005010003103368",
+   "first_text": "6 967 ₽-58%2 939 ₽4.72 334 купилиRealme Watch 5 смарт-часыдо 10 дней, бесплатно"
+  },
+  {
+   "id": "1005012078314868",
+   "first_text": "5 320 ₽ с купоном5 579 ₽4.9190 купилиrealme Watch S5 умные часыдо 10 дней, бесплатно"
+  }
+ ],
+ "notes": "only real grid tiles kept (text 20..600 chars; carousel monsters excluded). Nesting preserved."
+}

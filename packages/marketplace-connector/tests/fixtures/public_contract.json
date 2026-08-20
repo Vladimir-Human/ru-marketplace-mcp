@@ -1,4 +1,62 @@
 {
+  "aliexpress_card": {
+    "output": {
+      "properties": {
+        "_meta": {},
+        "item_id": {},
+        "old_price_rub": {},
+        "orders_count": {},
+        "price_rub": {},
+        "rating": {},
+        "status": {},
+        "tier_used": {},
+        "title": {},
+        "url": {}
+      },
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "item_id_or_url": {
+          "maxLength": 400,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id_or_url"
+      ],
+      "type": "object"
+    }
+  },
+  "aliexpress_search": {
+    "output": {
+      "properties": {
+        "_meta": {},
+        "count": {},
+        "items": {},
+        "query": {},
+        "status": {},
+        "tier_used": {}
+      },
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    }
+  },
   "avito_card": {
     "output": {
       "properties": {
