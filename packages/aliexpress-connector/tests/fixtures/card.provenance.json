@@ -1,0 +1,12 @@
+{
+ "captured": "2026-08-20",
+ "source": "in-page fetch of https://aliexpress.ru/item/1005010003103368.html (SSR shell, no challenge)",
+ "displayed_when_captured": [
+  "h1: Realme Watch 5 смарт-часы",
+  "meta description: '... 2334 заказов ... Рейтинг- 4.7 ...'"
+ ],
+ "notes": [
+  "The price module (HazeStickyOfferPrice) and the review module render client-side only; on 2026-08-20 repeated new-tab renders came back blank (x5sec load-shedding), so the DOM-level price assertions live in the cdp-marked test instead of this jsdom fixture.",
+  "The offline card tool tests cover the price pairing on the exact payload the extractor emits."
+ ]
+}

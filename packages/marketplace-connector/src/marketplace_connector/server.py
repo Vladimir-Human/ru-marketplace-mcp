@@ -36,14 +36,14 @@ class MarketplaceSourcesResponse(BaseModel):
     server_version: str = Field(default="", description="Unified server version.")
 
 
-SERVER_VERSION = "1.5.1"
+SERVER_VERSION = "1.6.0"
 
 mcp = FastMCP(
     "marketplace",
     instructions=(
         "All marketplace connectors in one server. Tools keep their per-source "
         "names: wb_*, ozon_*, yandex_*, detmir_*, avito_*, taobao_*, "
-        "megamarket_*, lamoda_*, dns_*, citilink_*, mpstats_* plus compare_prices and "
+        "megamarket_*, lamoda_*, dns_*, citilink_*, aliexpress_*, mpstats_* plus compare_prices and "
         "compare_sources. Sources whose optional dependencies are missing are "
         "simply absent from the set."
     ),
@@ -78,6 +78,7 @@ def _mount_all() -> None:
         ("lamoda", "lamoda_connector.server"),
         ("dns", "dns_connector.server"),
         ("citilink", "citilink_connector.server"),
+        ("aliexpress", "aliexpress_connector.server"),
         ("compare", "compare_connector.server"),
         ("mpstats", "mpstats_connector.server"),
     )

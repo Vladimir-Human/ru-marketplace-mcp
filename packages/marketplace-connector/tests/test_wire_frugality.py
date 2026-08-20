@@ -22,8 +22,9 @@ def test_no_operator_selfcheck_is_registered_as_a_tool():
 
     leaked = sorted(name for name in names if name.endswith("_selfcheck"))
     assert not leaked, f"operator-only selfchecks leaked into the MCP surface: {leaked}"
-    # The count changed from 45 to 34 on purpose: 11 selfchecks left.
-    assert len(tools) == 34
+    # The count changed from 45 to 34 on purpose (11 selfchecks left) and from
+    # 34 to 36 when the aliexpress connector (2 tools) joined the mount.
+    assert len(tools) == 36
 
 
 def test_every_output_schema_is_wire_frugal():

@@ -5,8 +5,10 @@ Some marketplaces refuse datacenter traffic outright. Ozon answers
 clears it. The reliable answer is not a better fingerprint — it is to run the fetch
 **inside a browser you already trust**, over the Chrome DevTools Protocol.
 
-Seven sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS and Citilink.
-The split matters. Taobao, Megamarket, DNS and Citilink are **CDP-only** — no
+Eight sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink
+and AliExpress.
+The split matters. Taobao, Megamarket, DNS, Citilink and AliExpress are
+**CDP-only** — no
 anonymous tier exists, so nothing reads from them without a logged-in Chrome. Ozon
 and Avito use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) usually works
 from a Russian residential IP, and CDP only kicks in when the anonymous tier is
@@ -68,7 +70,7 @@ Chrome readily, which defeats the purpose of using a real browser.
 
 In the window that opens, sign into whichever CDP sources you use — `ozon.ru`,
 `avito.ru`, `taobao.com`, `megamarket.ru`, `lamoda.ru`, `dns-shop.ru`,
-`citilink.ru`. One profile serves them all. **Do not** sign into banking, email, or
+`citilink.ru`, `aliexpress.ru`. One profile serves them all. **Do not** sign into banking, email, or
 work accounts here. Keeping it single-purpose is what bounds the risk.
 
 ### 3. Verify
@@ -145,13 +147,13 @@ If you only need Wildberries, Yandex Market and Detsky Mir: **no**. All three wo
 over plain anonymous HTTP, and `compare_prices` will report every CDP source it
 can't reach as blocked and rank the rest.
 
-You need it the moment Taobao, Megamarket, DNS or Citilink matter — those four have
-no anonymous tier, so without a logged-in Chrome they return nothing at all. For
+You need it the moment Taobao, Megamarket, DNS, Citilink or AliExpress matter —
+those five have no anonymous tier, so without a logged-in Chrome they return nothing at all. For
 Ozon and Avito it is optional insurance: tier 1 usually answers, and CDP only earns
 its keep when the anonymous tier is challenged. For Lamoda, card lookups work
 without it but search does not.
 
 A residential IP is the alternative for the fallback sources — from a Russian
 residential address Ozon's and Avito's tier 1 often work without any browser. It
-does nothing for the CDP-only four, whose block is at the API, not the IP. Set
+does nothing for the CDP-only five, whose block is at the API, not the IP. Set
 `OZON_PROXY`/`AVITO_PROXY` or the standard `HTTPS_PROXY` to route through one.

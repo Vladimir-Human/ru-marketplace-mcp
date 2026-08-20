@@ -52,7 +52,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.5.1"
+SERVER_VERSION = "1.6.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -140,6 +140,13 @@ def _available_sources() -> dict[str, Any]:
     except Exception as exc:
         log_event("compare.source_unavailable", source="citilink", error=_redact(str(exc))[:120])
 
+    try:
+        from aliexpress_connector import server as aliexpress_server
+
+        sources["aliexpress"] = aliexpress_server
+    except Exception as exc:
+        log_event("compare.source_unavailable", source="aliexpress", error=_redact(str(exc))[:120])
+
     return sources
 
 
@@ -158,6 +165,7 @@ SEARCHABLE = (
     "lamoda",
     "dns",
     "citilink",
+    "aliexpress",
 )
 
 # Yuan sources rank separately from ruble ones: a baked-in CNY→RUB rate would go
@@ -656,6 +664,36 @@ async def _search_citilink(query: str, limit: int) -> list[MarketOffer]:
     return offers
 
 
+async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
+    """Adapt ``aliexpress_search`` results (CDP tier; prices in rubles).
+
+    The connector already untangles the tile's base/current price pair, so
+    price_rub carries the current price. The page runs in the operator's Chrome:
+    x5sec challenges surface as a TransportDownError from the connector, which
+    compare reports as source_unavailable rather than a data result.
+    """
+    server = SOURCES["aliexpress"]
+    response = await server.aliexpress_search(query=query)
+
+    offers: list[MarketOffer] = []
+    for item in (getattr(response, "items", None) or [])[:limit]:
+        offers.append(
+            MarketOffer(
+                source="aliexpress",
+                product_id=str(item.item_id or ""),
+                title=item.title or "",
+                brand="",
+                seller="",
+                price_rub=item.price_rub,
+                rating=item.rating,
+                rating_count=None,
+                in_stock=None,
+                url=item.url or "",
+            )
+        )
+    return offers
+
+
 _SEARCH_IMPLS = {
     "wildberries": _search_wildberries,
     "yandex_market": _search_yandex,
@@ -666,6 +704,7 @@ _SEARCH_IMPLS = {
     "lamoda": _search_lamoda,
     "dns": _search_dns,
     "citilink": _search_citilink,
+    "aliexpress": _search_aliexpress,
 }
 
 
@@ -941,6 +980,11 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
             "lamoda": "search through the operator's Chrome; cards via anonymous GraphQL",
             "dns": "reachable only through the operator's Chrome (Qrator)",
             "citilink": "reachable only through the operator's Chrome (Qrator)",
+            "aliexpress": (
+                "reachable only through the operator's Chrome (x5sec); a challenged session "
+                "surfaces as a transport error, and coupon prices are reported as warnings, "
+                "never ranked as plain rubles"
+            ),
         },
         "source_timeout_s": SOURCE_TIMEOUT_S,
         "server_version": SERVER_VERSION,
