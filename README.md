@@ -7,7 +7,8 @@
 
 **MCP-серверы для российских и китайских маркетплейсов.** Цены, наличие,
 рейтинги, отзывы и реквизиты продавцов с Wildberries, Ozon, Яндекс Маркета,
-Детского мира, Авито, Taobao, Мегамаркета, Lamoda, DNS и Ситилинка. Плюс
+Детского мира, Авито, AliExpress, Taobao, Мегамаркета, Lamoda, DNS и Ситилинка.
+Плюс
 сравнение цен по всем источникам одним вызовом.
 
 Только чтение. Ключи API, токены и регистрация не нужны — площадки с жёстким
@@ -24,18 +25,19 @@
 
 | Сервер            | Инструментов | Что нужно, чтобы читалось                                                  | Что умеет                                                                                 |
 | ----------------- | ------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Wildberries**   | 9            | анонимный HTTP                                                             | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
-| **Яндекс Маркет** | 3            | анонимный HTTP                                                             | Цены разных продавцов, разбивка оценок по звёздам, отзывы                                 |
-| **Детский мир**   | 4            | анонимный HTTP                                                             | Детские товары, наличие в офлайн-магазинах, категории                                     |
-| **Ozon**          | 4            | ваш Chrome; с домашнего IP часто и без него                                | Поиск, карточки, отзывы                                                                   |
-| **Авито**         | 4            | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца                                            |
-| **Taobao**        | 3            | ваш Chrome с активным входом в Taobao                                      | Поиск и карточки, цены в юанях                                                            |
-| **Мегамаркет**    | 3            | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто           | Поиск и карточки через мобильный API                                                      |
-| **Lamoda**        | 3            | карточки анонимно (GraphQL), поиск — ваш Chrome                            | Поиск, карточки с размерами                                                               |
-| **DNS**           | 3            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
-| **Ситилинк**      | 3            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
+| **Wildberries**   | 8            | анонимный HTTP                                                             | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
+| **Яндекс Маркет** | 2            | анонимный HTTP                                                             | Цены разных продавцов, разбивка оценок по звёздам, отзывы                                 |
+| **Детский мир**   | 3            | анонимный HTTP                                                             | Детские товары, наличие в офлайн-магазинах, категории                                     |
+| **Ozon**          | 3            | ваш Chrome; с домашнего IP часто и без него                                | Поиск, карточки, отзывы                                                                   |
+| **Авито**         | 3            | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца                                            |
+| **Taobao**        | 2            | ваш Chrome с активным входом в Taobao                                      | Поиск и карточки, цены в юанях                                                            |
+| **Мегамаркет**    | 2            | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто           | Поиск и карточки через мобильный API                                                      |
+| **Lamoda**        | 2            | карточки анонимно (GraphQL), поиск — ваш Chrome                            | Поиск, карточки с размерами                                                               |
+| **DNS**           | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
+| **Ситилинк**      | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
+| **AliExpress**    | 2            | ваш Chrome (x5sec)                                                       | Поиск и карточки, цены в рублях                            |
 | **Сравнение**     | 2            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
-| **MPStats**       | 3            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
+| **MPStats**       | 2            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
 
 Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
 карточки Lamoda. Остальным нужен ваш залогиненный Chrome (CDP). Taobao и
@@ -171,7 +173,7 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 <summary><b>Другой stdio-клиент</b></summary>
 
 Запустите `uv run --directory /путь/к/репозиторию <команда>`, где команда — одна из
-`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`. Серверы говорят по
+`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`. Серверы говорят по
 JSON-RPC через stdin и stdout, диагностику пишут в stderr. Опциональный
 `mpstats-mcp` запускается так же, с `MPSTATS_MP_AUTH` в окружении.
 
@@ -321,7 +323,8 @@ Lamoda (`lamoda_*`) наполовину: карточки берутся ано
 через Chrome. Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен всем, кроме карточек
 Lamoda.
 
-Всего через CDP ходят восемь источников — эти плюс AliExpress, Ozon и Авито, где Chrome лишь
+Всего через CDP ходят восемь источников — эти плюс Taobao, AliExpress, Ozon и
+Авито, где Chrome лишь
 запасной уровень: их tier 1 обычно отвечает, а браузер включается, когда анонимный
 уровень упёрся в челлендж. `marketplace-mcp doctor` из вашего браузера скажет, какие
 эндпоинты подтверждены.
@@ -406,8 +409,8 @@ compare_prices("кроссовки мужские")
 
 ## Навыки для агента
 
-У каждого коннектора — свой навык в `skills/`, тринадцать штук на тринадцать
-серверов. Навык это не пересказ README: он объясняет агенту, когда за этот
+У каждого коннектора — свой навык в `skills/`: четырнадцать штук, по одному
+на источник плюс общий `marketplace`. Навык это не пересказ README: он объясняет агенту, когда за этот
 источник вообще браться, чего у источника нет, и каким его ответам нельзя верить
 без второго взгляда.
 
@@ -423,6 +426,7 @@ compare_prices("кроссовки мужские")
 | `skills/lamoda-connector`     | `lamoda-mcp`      |
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
+| `skills/aliexpress-connector` | `aliexpress-mcp`  |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
@@ -451,7 +455,8 @@ compare_prices("кроссовки мужские")
 | `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE` и другие), `CACHE_TTL`, `PROXY`                                                                     |
 | `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                        |
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                         |
-| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                               |
+| `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
 | `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
@@ -493,7 +498,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # что проверять — в [tool.mypy] files
 uv run mypy --platform win32                  # ловит ошибки, видимые только на Windows
 uv run python scripts/check_no_print.py       # запись в stdout ломает JSON-RPC
-uv run python scripts/check_versions.py       # одна версия во всех 72 местах
+uv run python scripts/check_versions.py       # одна версия во всех 77 местах
 ```
 
 Часть тестов прогоняет **настоящий JS-экстрактор коннектора** по снятой разметке
@@ -573,8 +578,9 @@ MIT, файл [LICENSE](LICENSE).
 
 **MCP servers for Russian and Chinese marketplaces.** Read prices, stock, ratings,
 reviews and seller identity from Wildberries, Ozon, Yandex Market, Detsky Mir, Avito,
-Taobao, Megamarket, Lamoda, DNS and Citilink, then compare prices across all of them
-in one call. Taobao is the Chinese one; the other nine are Russian.
+AliExpress, Taobao, Megamarket, Lamoda, DNS and Citilink, then compare prices across
+all of them in one call. Taobao and AliExpress are the Chinese ones; the other nine
+are Russian.
 
 Read-only. No credentials, no API keys, no account required — the marketplaces with
 hard anti-bot are read through your own Chrome. One optional exception: MPStats
@@ -585,18 +591,19 @@ it every other server is unaffected.
 
 | Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
 | ----------------- | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **Wildberries**   | 9     | anonymous HTTP                                                                | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
-| **Yandex Market** | 3     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
-| **Detsky Mir**    | 4     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
-| **Ozon**          | 4     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
-| **Avito**         | 4     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
-| **Taobao**        | 3     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
-| **Megamarket**    | 3     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
-| **Lamoda**        | 3     | cards anonymous (GraphQL), search via your Chrome                             | Search, cards with sizes                                                                           |
-| **DNS**           | 3     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
-| **Citilink**      | 3     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **Wildberries**   | 8     | anonymous HTTP                                                                | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
+| **Yandex Market** | 2     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
+| **Detsky Mir**    | 3     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
+| **Ozon**          | 3     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
+| **Avito**         | 3     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
+| **Taobao**        | 2     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
+| **Megamarket**    | 2     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
+| **Lamoda**        | 2     | cards anonymous (GraphQL), search via your Chrome                             | Search, cards with sizes                                                                           |
+| **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
 | **Compare**       | 2     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
-| **MPStats**       | 3     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
+| **MPStats**       | 2     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
 Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
 The rest need your logged-in Chrome (CDP). Taobao and Megamarket additionally need
@@ -631,7 +638,7 @@ uv run pytest -q -m "not live and not cdp"    # 1208 offline tests, no network n
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
-script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `compare-mcp`) launched
+script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`) launched
 through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
 runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
 account; without it the tools return `auth_missing`). `marketplace-mcp install
@@ -755,6 +762,44 @@ coupon is reported as a warning. Review texts are not exposed; rating and order
 counts are. As with every CDP source, a green `aliexpress_selfcheck` proves the
 transport answered — not that a given price is right.
 
+### Avito — `avito_*`
+
+| Tool                                              | What it does                                      |
+| ------------------------------------------------- | ------------------------------------------------- |
+| `avito_search(query, page, location_id, category_id)` | Classified search through the internal `js/items` API |
+| `avito_card(item_id_or_url)`                      | One listing: price, description, views, seller     |
+| `avito_seller(seller_id_or_url)`                  | Seller rating, review count, active listings       |
+
+Avito is classifieds, not a catalog: there is no per-product review pool, the
+seller's reputation IS the trust signal. A free/swap listing arrives with
+`price_rub: null` — never `0`, so it cannot win "cheapest". From a datacenter
+IP Avito answers a 403 firewall, hence the two-tier transport: TLS impersonation
+first, then your Chrome, exactly like Ozon.
+
+### Taobao — `taobao_*`
+
+| Tool                            | What it does             |
+| ------------------------------- | ------------------------ |
+| `taobao_search(query, page)`    | Catalog search           |
+| `taobao_card(item_id_or_url)`   | Product card             |
+
+Taobao search is a signed-mtop React app: every request needs a `sign` derived
+from a cookie token, so there is no anonymous path. All reads run inside your
+Chrome, where the site signs its own requests. **Prices stay in yuan (CNY)** and
+are never converted — a baked-in rate quietly goes stale, so compare ruble and
+yuan listings explicitly.
+
+### Megamarket, Lamoda, DNS, Citilink
+
+These four read through your Chrome (CDP). Megamarket (`megamarket_*`) goes
+through the mobile JSON API behind ServicePipe and needs an active login — an
+anonymous session reads empty. DNS (`dns_*`) and Citilink (`citilink_*`) render
+DOM behind Qrator with no anonymous path at all. Lamoda (`lamoda_*`) is split:
+cards over anonymous GraphQL, search through Chrome. All of them need Chrome
+with CDP (`scripts/start_chrome_cdp.sh`), except Lamoda cards. Eight sources
+run through CDP in total: these plus Taobao, AliExpress, Ozon and Avito, where
+Chrome is only the fallback tier when the anonymous one is challenged.
+
 ### Cross-marketplace — `compare_*`
 
 | Tool                                               | What it does                              |
@@ -813,8 +858,8 @@ The token is a secret on a paid, quota-billed account: never log or commit it.
 
 ## Agent skills
 
-Every connector ships its own skill under `skills/` — thirteen of them for thirteen
-servers. A skill is not a restatement of this README: it tells the agent when to
+Every connector ships its own skill under `skills/` — fourteen of them — one per source plus a shared
+`marketplace` overview. A skill is not a restatement of this README: it tells the agent when to
 reach for that source at all, what the source does not have, and which of its
 answers should not be trusted without a second look.
 
@@ -830,6 +875,7 @@ answers should not be trusted without a second look.
 | `skills/lamoda-connector`     | `lamoda-mcp`      |
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
+| `skills/aliexpress-connector` | `aliexpress-mcp`  |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
@@ -858,7 +904,8 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY`                                                            |
 | `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                  |
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                   |
-| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                         |
+| `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
@@ -869,13 +916,20 @@ Every setting is an environment variable with a per-connector prefix. All option
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
 `HTTPS_PROXY`/`ALL_PROXY` — seven connectors carry one: `WB_`, `YANDEX_`, `DETMIR_`,
-`OZON_`, `AVITO_`, `TAOBAO_` and `LAMODA_`. Megamarket, DNS and Citilink have none:
+`OZON_`, `AVITO_`, `LAMODA_` and `MPSTATS_`. Taobao has none by design and
+Megamarket, DNS and Citilink none either:
 their traffic goes through your own Chrome, whose egress is that browser's
 configuration. Only successful reads are cached: remembering a failure would stretch
 a one-second blip across the whole TTL window.
 
 Ozon's proxy applies to tier 1. Tier 2 runs inside your own Chrome, whose egress is
 that browser's configuration, not ours.
+
+**Containers.** `CHROME_CDP_HOST` points the CDP client at Chrome (default
+`127.0.0.1`; use `chrome` or `host.docker.internal` inside Docker). That single
+variable is what opens the tier-2 sources — Ozon, Avito, Taobao, Megamarket,
+Lamoda, DNS, Citilink and AliExpress — from a container without host networking.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 **One secret, and it is optional.** Every server except MPStats needs nothing:
 nothing to configure, nothing to leak. MPStats alone has `MPSTATS_MP_AUTH`, the JWT
@@ -893,7 +947,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
- uv run python scripts/check_versions.py       # one version across all 72 places
+uv run python scripts/check_versions.py       # one version across all 77 places
 ```
 
 Some tests execute a connector's **real extractor JavaScript** against captured

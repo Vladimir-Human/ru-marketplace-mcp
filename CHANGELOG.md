@@ -239,7 +239,7 @@ English summary:
   стоявшие ниже, не попадали в живой маунт. Секции перенесены перед `Args:`;
   структурный тест пинит наличие обеих секций у каждого смонтированного
   инструмента.
-- `RELEASE_NOTES_v1.4.0.md` с таблицей, какие источники проверены живо и как,
+- `docs/releases/RELEASE_NOTES_v1.4.0.md` с таблицей, какие источники проверены живо и как,
   а какие не проверены и почему.
 
 ### Прочее
@@ -279,7 +279,7 @@ English summary:
 - Live shape-signature checks in the Lamoda and Taobao selfchecks.
 - `## Return Format` / `## Error Format` on all 45 tools (moved before `Args:`
   because griffe truncates descriptions after it), pinned by a structural test.
-- `RELEASE_NOTES_v1.4.0.md` with the verified/unverified source table.
+- `docs/releases/RELEASE_NOTES_v1.4.0.md` with the verified/unverified source table.
 
 ### Other
 

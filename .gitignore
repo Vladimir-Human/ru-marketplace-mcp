@@ -64,11 +64,10 @@ start-run.sh
 # Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
 *.zip
 
-# jsdom для DOM-тестов ставится локально и в репозиторий не едет.
-# npm пишет рядом ещё два файла — проект не Node-овский, им тут тоже не место.
+# jsdom для DOM-тестов ставится из package.json + package-lock.json: оба
+# отслеживаются намеренно (CI кладёт jsdom по этим манифестам, иначе
+# dom-тесты экстракторов тихо скипаются на раннерах).
 node_modules/
-package.json
-package-lock.json
 
 # dsh/package.json is not the Node artefact above: it is the plugin-bundle
 # manifest every dsh install resolves, so it must be tracked.

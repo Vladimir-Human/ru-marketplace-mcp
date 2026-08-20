@@ -1,6 +1,6 @@
 ---
 name: aliexpress-connector
-description: Search AliExpress (aliexpress.ru) and read product cards inside the operator's own Chrome when x5sec blocks anonymous access. Two tools, aliexpress_search and aliexpress_card; prices in rubles; rating and order counts included, review TEXTS intentionally not exposed. CDP-only: without the scraping-profile Chrome this source answers nothing.
+description: Use this skill when the operator asks to search AliExpress or read one of its product cards. Two tools, aliexpress_search and aliexpress_card; prices in rubles; rating and order counts included, review TEXTS intentionally not exposed. CDP-only: without the scraping-profile Chrome this source answers nothing. Trigger on "алиэкспресс", "найди на али", "цена на aliexpress", "сколько на алиэкспрессе", or English equivalents. Skip other marketplaces — use their per-marketplace skills.
 ---
 
 # AliExpress connector
