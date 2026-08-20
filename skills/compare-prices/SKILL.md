@@ -1,6 +1,6 @@
 ---
 name: compare-prices
-description: Use this skill when the operator asks where something is cheapest across marketplaces. Fans out to nine searchable sources — Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS and Citilink (Detsky Mir is excluded — no text search). Trigger on "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip single-marketplace questions — use the per-marketplace skills.
+description: Use this skill when the operator asks where something is cheapest across marketplaces. Fans out to ten searchable sources — Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink and AliExpress (Detsky Mir is excluded — no text search; Taobao is ranked in yuan, never against rubles). Trigger on "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip single-marketplace questions — use the per-marketplace skills.
 ---
 
 # Cross-Marketplace Price Comparison

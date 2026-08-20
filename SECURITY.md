@@ -13,16 +13,16 @@
 
 ## Чего проект касается, а чего нет
 
-**Секрет в проекте один, и тот необязательный.** Одиннадцать источников из
-двенадцати не требуют ни ключей API, ни токенов, ни паролей: все настройки у них
+**Секрет в проекте один, и тот необязательный.** Двенадцать источников из
+тринадцати не требуют ни ключей API, ни токенов, ни паролей: все настройки у них
 эксплуатационные, то есть таймауты, задержки, регион и прокси. Исключение одно —
 коннектор MPStats. Ему нужен `MPSTATS_MP_AUTH`, JWT вашей платной сессии. Вы
 передаёте его через переменную окружения или `.env`; проект нигде его не хранит,
 не пишет в логи и вырезает из текста ошибок вместе с прочими секретами. Без этой
 переменной сервер MPStats поднимается и честно отвечает `auth_missing`, а
-остальные одиннадцать работают как работали.
+остальные двенадцать работают как работали.
 
-Весь доступ только на чтение. Одиннадцать источников читают публичные эндпоинты
+Весь доступ только на чтение. Двенадцать источников читают публичные эндпоинты
 каталога, которые дёргает официальный веб-клиент: ни в приватные, ни в
 административные разделы запросов нет. MPStats устроен иначе. Это приватный API
 браузерного плагина, доступный по вашей сессии, и потому единственное место, где
@@ -31,8 +31,8 @@
 
 ## Единственная часть с реальным риском: уровень CDP
 
-Семь источников читают через Chrome, который **вы** запустили и в котором залогинились
-сами, по DevTools Protocol. Taobao, Мегамаркет, DNS и Ситилинк — только так,
+Восемь источников читают через Chrome, который **вы** запустили и в котором залогинились
+сами, по DevTools Protocol. Taobao, Мегамаркет, DNS, Ситилинк и AliExpress — только так,
 анонимного уровня у них нет. Ozon и Авито уходят в браузер лишь когда анонимный
 уровень получил отказ. Lamoda берёт через браузер поиск, карточка идёт анонимно.
 
@@ -53,7 +53,7 @@
 маркетплейсы. Подробности в [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 Wildberries, Яндекс Маркет и Детский мир к CDP не обращаются вообще. Если вам хватает
-их, уровень можно не включать — но тогда семь остальных источников читать нечем.
+их, уровень можно не включать — но тогда восемь остальных источников читать нечем.
 
 ## Прочие меры
 
@@ -140,7 +140,7 @@ exception is the optional MPStats connector's `MPSTATS_MP_AUTH`: a paid account 
 you supply yourself via env. It is never written into code or stored by the project
 — there is still nothing to leak.
 
-All access is read-only. Eleven sources read the public catalog endpoints the official
+All access is read-only. Twelve sources read the public catalog endpoints the official
 web clients use, touching no authenticated or administrative area. MPStats is the
 exception: a private browser-plugin API reached with your own session, and so the one
 place this project enters an account-gated zone. The README explains what that means
@@ -148,8 +148,8 @@ for your account.
 
 ## The one part that carries real risk: the CDP tier
 
-Seven sources run their fetches inside a Chrome instance **you** started and logged
-into, over the DevTools Protocol. Taobao, Megamarket, DNS and Citilink work no other
+Eight sources run their fetches inside a Chrome instance **you** started and logged
+into, over the DevTools Protocol. Taobao, Megamarket, DNS, Citilink and AliExpress work no other
 way — they have no anonymous tier. Ozon and Avito fall back to the browser only after
 the anonymous tier is refused. Lamoda splits the difference: search goes through the
 browser, the product card does not.
@@ -172,7 +172,7 @@ marketplaces there and nothing else. Full detail:
 [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 Wildberries, Yandex Market and Detsky Mir never touch CDP. If those three cover your
-needs, leave the tier off — but the other seven sources cannot be read without it.
+needs, leave the tier off — but the other eight sources cannot be read without it.
 
 ## Other hardening in place
 
@@ -216,7 +216,7 @@ by anyone.
 ## Legal note
 
 Marketplace terms of service generally disallow unofficial parsing. This project
-queries only public catalog endpoints for eleven of its sources, at a deliberately
+queries only public catalog endpoints for twelve of its sources, at a deliberately
 polite rate, for personal research.
 
 MPStats needs its own warning, because there you risk a paid account rather than just

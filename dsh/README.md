@@ -1,7 +1,7 @@
 # ru-marketplace-mcp for DeepSeek Harness
 
 Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews
-and cross-marketplace price comparison. This bundle ships 13 Agent Skills plus
+and cross-marketplace price comparison. This bundle ships 14 Agent Skills plus
 two MCP server rows that are **off by default**.
 
 ## Why off by default
@@ -115,7 +115,7 @@ published GHCR image instead of a local clone:
 ```
 
 The image defaults to the unified server; full-mode wire cost applies
-(~13.0k tokens per request), so opt in deliberately.
+(~13.6k tokens per request), so opt in deliberately.
 
 ## Source
 

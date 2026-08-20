@@ -1,6 +1,8 @@
 # Anti-bot reality, source by source
 
-Every marketplace here was probed live from a datacenter IP in July 2026. This
+Every marketplace here was probed live from a datacenter IP in July 2026 —
+except AliExpress, which was probed from a Russian residential IP in August 2026
+and has its own section below. This
 document records what actually happened — including the sources that only became
 buildable once the CDP tier existed — because that determines what is buildable
 and what is a trap.
@@ -24,6 +26,7 @@ inside a real browser.
 | Lamoda | ⚠️ partial | anti-bot redirect loop | ✅ via your Chrome |
 | DNS | ❌ 401 | Qrator JS proof-of-work | ✅ via your Chrome |
 | Citilink | ❌ 429 | Qrator rate block | ✅ via your Chrome |
+| AliExpress | ❌ x5sec challenge | x5sec; search works in a real Chrome | ✅ via your Chrome |
 
 A second live run in July 2026 confirmed all four CDP sources on the maintainer's
 own machine — a Russian residential IP, a logged-in Chrome over CDP — and it

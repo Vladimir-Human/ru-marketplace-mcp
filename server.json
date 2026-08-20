@@ -11,7 +11,7 @@
   },
   "_meta": {
     "io.modelcontextprotocol.registry/publisher-provided": {
-      "note": "One repository shipping twelve stdio MCP servers as console scripts on a shared mcp-core runtime, plus a unified marketplace-mcp that mounts them all. Not published to a package registry; install from source with uv and launch a script per server. See README for client configuration.",
+      "note": "One repository shipping thirteen stdio MCP servers as console scripts on a shared mcp-core runtime, plus a unified marketplace-mcp that mounts them all. Not published to a package registry; install from source with uv and launch a script per server. See README for client configuration.",
       "install": "uv run --directory /path/to/ru-marketplace-mcp <script>",
       "servers": [
         {
@@ -101,6 +101,15 @@
           "subfolder": "packages/citilink-connector",
           "transport": "stdio",
           "toolPrefix": "citilink_"
+        },
+        {
+          "id": "aliexpress",
+          "script": "aliexpress-mcp",
+          "package": "aliexpress-connector",
+          "subfolder": "packages/aliexpress-connector",
+          "transport": "stdio",
+          "toolPrefix": "aliexpress_",
+          "note": "CDP-only: reads run inside the operator's own Chrome (x5sec blocks anonymous access)."
         },
         {
           "id": "mpstats",
