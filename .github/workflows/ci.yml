@@ -112,7 +112,7 @@ jobs:
         # step the tests silently SKIP in CI, which is exactly how a dead parser
         # stayed green before (the DNS/Citilink lesson). Dev tool only: the
         # servers themselves never touch Node.
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
