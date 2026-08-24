@@ -73,15 +73,20 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
 
 # Key families the parser reads, as alternatives: the parser binds through
 # every alias, so drift means the WHOLE family vanished, not a single key.
+#
+# 2026-08-24 patch: Avito moved the listings array from the top level into
+# payload.catalog.items[]. The parser already follows that path
+# (see server.py _parse_search_items, candidates tuple), but the smoke check
+# was checking the old top-level path and reporting false-positive drift.
 SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
-    ("items[].id", "items[].itemId", "items[].item_id"),
-    ("items[].title", "items[].name"),
+    ("catalog.items[].id", "catalog.items[].itemId", "catalog.items[].item_id"),
+    ("catalog.items[].title", "catalog.items[].name"),
     (
-        "items[].price",
-        "items[].priceRub",
-        "items[].price_rub",
-        "items[].priceDetailed.value",
-        "items[].priceDetailed.price",
+        "catalog.items[].price",
+        "catalog.items[].priceRub",
+        "catalog.items[].price_rub",
+        "catalog.items[].priceDetailed.value",
+        "catalog.items[].priceDetailed.price",
     ),
 )
 
