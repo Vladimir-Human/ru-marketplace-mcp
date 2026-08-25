@@ -68,7 +68,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1208 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1211 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -286,6 +286,17 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 
 С российского домашнего IP первый уровень обычно работает, и браузер не нужен.
 
+**Отзывы на Ozon общие для всей карточки-семейства, и соседи по пулу — часто другой
+товар другого бренда.** У карточки масляного радиатора Huter 1500 Вт (SKU 5264146973,
+рейтинг 4.8 из 356 отзывов) среди 100 вытянутых отзывов не оказалось ни одного о
+самом Huter: 38 про Ресанту 2000 Вт, 34 про Ресанту 1500 Вт, 5 про Eurolux и так
+далее — всего 12 товаров в пуле. Поэтому каждый отзыв несёт `item_id` — SKU того
+товара, о котором он написан, а ответ дополнительно отдаёт `requested_item_id`,
+`own_reviews` (сколько отзывов действительно об этом SKU) и `pool_variants`
+(`SKU → название` всех товаров пула). `rating_score` и `distribution` считаются по
+пулу, а не по товару: прежде чем делать вывод, отзывы нужно отфильтровать по
+`item_id`, а при `own_reviews: 0` — честно сказать, что своих отзывов у товара нет.
+
 ### Авито — `avito_*`
 
 | Инструмент                                            | Что делает                                           |
@@ -491,7 +502,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1208 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1211 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -554,7 +565,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1208 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1211 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -634,7 +645,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1208 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1211 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -743,6 +754,17 @@ Cloudflare challenges. Nothing is stored; you log in yourself, in a browser you
 control. Setup: [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 From a Russian residential IP the first tier usually works and no browser is needed.
+
+**Ozon pools reviews per card family, and the neighbours are often a different
+product from a different brand.** A live card for a 1500 W Huter oil heater (SKU
+5264146973, rated 4.8 across 356 reviews) returned 100 reviews of which *zero* were
+about the Huter: 38 about a 2000 W Resanta, 34 about a 1500 W Resanta, 5 about a
+Eurolux — 12 products in that pool. So every review carries `item_id`, the SKU it is
+actually about, and the response adds `requested_item_id`, `own_reviews` (how many
+returned reviews really are about that SKU) and `pool_variants` (`SKU → name` for the
+whole pool). `rating_score` and `distribution` are pool-wide, not per product: filter
+by `item_id` before concluding anything, and when `own_reviews` is 0, say plainly
+that the product has no reviews of its own.
 
 
 ### AliExpress — `aliexpress_*`
@@ -940,7 +962,7 @@ commits.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1208 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1211 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1000,7 +1022,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1208 offline
+are confidently wrong, so the project is arranged around verification: 1211 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

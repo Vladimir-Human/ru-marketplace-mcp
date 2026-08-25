@@ -52,6 +52,14 @@ class OzonReviewItemOut(BaseModel):
     photos: int = Field(default=0, description="Number of photos attached.")
     author: str = Field(default="", description="Author first name (truncated to 60 chars).")
     date: str | None = Field(default=None, description="Publication date as UTC ISO-8601.")
+    item_id: int | None = Field(
+        default=None,
+        description=(
+            "SKU of the variant this review is actually about. Ozon pools reviews across every "
+            "variant on a card — and sometimes across different brands — so a review with an "
+            "item_id other than the SKU you asked for describes a DIFFERENT product."
+        ),
+    )
 
 
 class OzonReviewsResponse(BaseModel):
@@ -73,6 +81,16 @@ class OzonReviewsResponse(BaseModel):
     last_error: dict[str, Any] | None = Field(default=None, description="Last error detail on partial success.")
     requested_limit: int = Field(default=0, description="The limit argument requested by the caller.")
     reviews: list[OzonReviewItemOut] = Field(default_factory=list, description="Collected review items.")
+    requested_item_id: int | None = Field(
+        default=None, description="SKU the caller asked about — compare each review's item_id to it."
+    )
+    own_reviews: int = Field(
+        default=0, description="How many of the returned reviews have item_id == requested_item_id."
+    )
+    pool_variants: dict[str, str] = Field(
+        default_factory=dict,
+        description="Variant SKU -> product name for every product sharing this review pool.",
+    )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 

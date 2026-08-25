@@ -779,6 +779,10 @@ def _parse_review_item(r: dict) -> dict[str, Any]:
         "photos": len(photos) if isinstance(photos, list) else 0,
         "author": name[:60],
         "date": _ts_to_iso(r.get("publishedAt") or r.get("createdAt")),
+        # Ozon serves ONE review pool per card family, so a review here may well
+        # describe a different variant — in practice often a different brand.
+        # itemId is the only field that says which product it is actually about.
+        "item_id": r.get("itemId") if isinstance(r.get("itemId"), int) else None,
     }
 
 
@@ -829,10 +833,22 @@ async def ozon_reviews(
     Pages are walked automatically (30/page) until `limit` texts are collected
     or pages run out, deduplicating by review uuid. Hard cap of 10 pages.
 
+    ## Reviews are pooled per card family, not per product
+
+    Ozon shows one shared pool for every variant of a card, and those variants
+    are frequently different products — different wattage, different brand. So
+    `rating_score` and `distribution` describe the POOL, not the SKU asked for.
+    Each review carries `item_id`, the SKU it is really about; `own_reviews`
+    counts the returned reviews whose `item_id` matches `requested_item_id`, and
+    `pool_variants` names every SKU in the pool. Filter by `item_id` before
+    drawing any conclusion about a product, and say so when `own_reviews` is 0 —
+    a headline 4.8 can be borrowed entirely from neighbours.
+
     ## Return Format
 
     OzonReviewsResponse: {status, sort, rating_score, reviews_count, distribution,
-    returned, partial, stop_reason, last_error, requested_limit, reviews, meta}
+    returned, partial, stop_reason, last_error, requested_limit, reviews,
+    requested_item_id, own_reviews, pool_variants, meta}
     on success. A later-page failure with reviews already collected is a
     PARTIAL SUCCESS (partial=True, stop_reason set), NOT an error.
 
@@ -913,6 +929,7 @@ async def _ozon_reviews_impl(
 
     MAX_PAGES = 10  # 10 * 30 ≈ 300 reviews ceiling regardless of limit
     collected: list[dict[str, Any]] = []
+    pool_variants: dict[str, str] = {}
     seen_uuids: set[str] = set()
     score_first: dict[str, Any] = {}
     total_from_paging: Any = None
@@ -981,6 +998,13 @@ async def _ozon_reviews_impl(
             score_first = _widget(widgets, "webReviewProductScore")
 
         list_w = _widget(widgets, "webListReviews")
+        # products maps every SKU sharing this pool to its name, which is what
+        # turns a foreign item_id into something a caller can act on.
+        raw_products = list_w.get("products")
+        if isinstance(raw_products, dict):
+            for variant_sku, info in raw_products.items():
+                if isinstance(info, dict) and isinstance(info.get("name"), str):
+                    pool_variants.setdefault(str(variant_sku), info["name"][:200])
         paging = list_w.get("paging")
         if not isinstance(paging, dict):
             paging = {}  # a non-dict paging drift must not crash the nested .get
@@ -1046,6 +1070,9 @@ async def _ozon_reviews_impl(
                 "last_error": last_error,
                 "requested_limit": limit,
                 "reviews": collected,
+                "requested_item_id": int(sku) if str(sku).isdigit() else None,
+                "own_reviews": sum(1 for r in collected if str(r.get("item_id")) == str(sku)),
+                "pool_variants": pool_variants,
             },
             R.validate_review_block(
                 {

@@ -619,6 +619,124 @@ def test_reviews_marks_partial_when_later_page_fails(monkeypatch):
     _run(scenario())
 
 
+def test_reviews_tag_each_item_with_the_variant_it_describes(monkeypatch):
+    """A pooled review must be attributable to the SKU it is actually about.
+
+    Ozon serves one review pool per card family, and the neighbours are often
+    other brands entirely — a live card for a 1500 W Huter returned 100 reviews
+    of which zero were about the Huter. Without item_id a caller reads those as
+    the product's own and repeats a rating that belongs to someone else.
+    """
+    body = json.dumps(
+        {
+            "widgetStates": {
+                "webListReviews-1": json.dumps(
+                    {
+                        "paging": {"total": 3},
+                        "products": {
+                            "123": {"name": "Asked-for product"},
+                            "456": {"name": "Neighbour in the same pool"},
+                        },
+                        "reviews": [
+                            {"uuid": "a", "itemId": 123, "content": {"score": 5, "comment": "mine"}},
+                            {"uuid": "b", "itemId": 456, "content": {"score": 1, "comment": "not mine"}},
+                            {"uuid": "c", "content": {"score": 4, "comment": "no item id"}},
+                        ],
+                    }
+                ),
+                "webReviewProductScore-1": json.dumps({"totalScore": 4.7, "reviewsCount": 3, "score": []}),
+            },
+        }
+    )
+
+    async def fake_fetch(path, ctx):
+        return 200, body, "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+        data = (await server.ozon_reviews("123", limit=5)).model_dump()
+
+        assert data["requested_item_id"] == 123
+        assert [r["item_id"] for r in data["reviews"]] == [123, 456, None]
+        assert data["own_reviews"] == 1
+        assert data["pool_variants"] == {
+            "123": "Asked-for product",
+            "456": "Neighbour in the same pool",
+        }
+
+    _run(scenario())
+
+
+def test_reviews_report_zero_own_reviews_when_the_pool_is_all_neighbours(monkeypatch):
+    """own_reviews=0 is the honest answer, not an error and not an empty result."""
+    body = json.dumps(
+        {
+            "widgetStates": {
+                "webListReviews-1": json.dumps(
+                    {
+                        "paging": {"total": 2},
+                        "products": {"456": {"name": "Neighbour"}},
+                        "reviews": [
+                            {"uuid": "a", "itemId": 456, "content": {"score": 5, "comment": "theirs"}},
+                            {"uuid": "b", "itemId": 456, "content": {"score": 5, "comment": "theirs too"}},
+                        ],
+                    }
+                ),
+                "webReviewProductScore-1": json.dumps({"totalScore": 4.8, "reviewsCount": 2, "score": []}),
+            },
+        }
+    )
+
+    async def fake_fetch(path, ctx):
+        return 200, body, "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+        data = (await server.ozon_reviews("123", limit=5)).model_dump()
+
+        assert data["status"] == "success"
+        assert data["returned"] == 2
+        assert data["own_reviews"] == 0
+        assert data["rating_score"] == 4.8  # pool-wide, and now visibly so
+
+    _run(scenario())
+
+
+def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
+    """A drifted itemId/products must degrade to None/{}, never crash the tool."""
+    body = json.dumps(
+        {
+            "widgetStates": {
+                "webListReviews-1": json.dumps(
+                    {
+                        "paging": {"total": 2},
+                        "products": ["not", "a", "mapping"],
+                        "reviews": [
+                            {"uuid": "a", "itemId": "123", "content": {"score": 5, "comment": "string id"}},
+                            {"uuid": "b", "itemId": {"bad": "shape"}, "content": {"score": 5, "comment": "dict id"}},
+                        ],
+                    }
+                ),
+                "webReviewProductScore-1": json.dumps({"totalScore": 4.7, "reviewsCount": 2, "score": []}),
+            },
+        }
+    )
+
+    async def fake_fetch(path, ctx):
+        return 200, body, "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+        data = (await server.ozon_reviews("123", limit=5)).model_dump()
+
+        assert data["returned"] == 2
+        assert [r["item_id"] for r in data["reviews"]] == [None, None]
+        assert data["own_reviews"] == 0
+        assert data["pool_variants"] == {}
+
+    _run(scenario())
+
+
 def test_reviews_tolerates_malformed_uuid_next_button_and_score(monkeypatch):
     body = json.dumps(
         {

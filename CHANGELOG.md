@@ -7,6 +7,31 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Добавлено
+
+- `ozon_reviews` помечает каждый отзыв полем `item_id` — SKU товара, о котором отзыв
+  написан на самом деле. Ozon держит один пул отзывов на всю карточку-семейство, и
+  соседи по пулу регулярно оказываются другим товаром другого бренда: у карточки
+  Huter 1500 Вт (SKU 5264146973, 4.8 из 356 отзывов) среди 100 вытянутых отзывов не
+  было ни одного о самом Huter. Без `item_id` агент выдавал чужой рейтинг за
+  собственный.
+- Ответ `ozon_reviews` дополнен полями `requested_item_id`, `own_reviews` (сколько
+  возвращённых отзывов относится к запрошенному SKU) и `pool_variants`
+  (`SKU → название` всех товаров пула), чтобы чужой `item_id` можно было назвать.
+
+### Added
+
+- `ozon_reviews` tags every review with `item_id`, the SKU the review is actually
+  about. Ozon serves one review pool per card family and the neighbours are often a
+  different product from a different brand: a card for a 1500 W Huter (SKU
+  5264146973, 4.8 across 356 reviews) returned 100 reviews, none of them about the
+  Huter. Without `item_id` an agent reports a borrowed rating as the product's own.
+- The `ozon_reviews` response gained `requested_item_id`, `own_reviews` (how many
+  returned reviews belong to the requested SKU) and `pool_variants` (`SKU → name` for
+  every product in the pool), so a foreign `item_id` can be named.
+
 ## [1.6.0] — 2026-08-20
 
 ### Добавлено
