@@ -1,9 +1,10 @@
 """Contract tests against a REAL ``js/items`` response.
 
 ``fixtures/js_items_live.json`` is a genuine Avito search response, captured
-2026-07-28 from a residential session (query «ноутбук», locationId 637640). Only
-the image lists, the geo block and the description text were trimmed for size;
-every field the parser reads is byte-for-byte as Avito sent it.
+2026-08-29 from a residential session (query «ноутбук», locationId 637640),
+trimmed to parser-relevant fields for size. Two-day-one fact this capture also
+records: the listings array no longer sits at the payload's top level — it lives
+under ``catalog.items[]``, and the selfcheck must accept both envelopes.
 
 That capture is the point. Avito answers 403 with a firewall captcha to any
 datacenter address, so this connector's payload shape had only ever been asserted
@@ -50,7 +51,6 @@ def test_live_payload_validates_at_all() -> None:
 def test_location_object_becomes_a_place_name() -> None:
     """``location`` is an object upstream; the wire field is a string."""
     items = _items()
-    assert items[0].location == "Москва"
     assert items[1].location == "Москва"
 
 
@@ -67,20 +67,21 @@ def test_a_place_name_is_never_a_python_repr() -> None:
 
 
 def test_missing_place_name_is_none_not_invented() -> None:
-    """Item 3 has ``location: null`` and ``addressDetailed.locationName: ""``.
+    """Items 1 and 3 have ``location: null`` and ``addressDetailed.locationName: ""``.
 
-    It also carries ``locationId: 625810``. Resolving that id to a city name would
+    They also carry ``locationId: 637640``. Resolving that id to a city name would
     require a lookup table this connector does not have, so the honest answer is
     None — not a guess that reads like data.
     """
     items = _items()
+    assert items[0].location is None
     assert items[2].location is None
 
 
 def test_price_comes_from_price_detailed_value() -> None:
     """There is no top-level ``price`` key in the live response."""
-    assert [i.price_rub for i in _items()] == [15500.0, 15990.0, 8700.0]
-    assert "price" not in _payload()["items"][0]
+    assert [i.price_rub for i in _items()] == [69900.0, 17990.0, 14000.0]
+    assert "price" not in _payload()["catalog"]["items"][0]
 
 
 def test_every_item_has_a_url() -> None:
@@ -132,7 +133,7 @@ def test_posted_at_never_raises_on_non_finite_or_huge_stamps() -> None:
 
 def test_total_count_is_read_from_the_envelope() -> None:
     _raw, total = _parse_search_items(_payload())
-    assert total == 51343
+    assert total == 48451
 
 
 def test_absent_seller_stays_none() -> None:

@@ -306,7 +306,7 @@ async def test_selfcheck_flags_drift_when_a_key_family_vanishes(monkeypatch):
     from pathlib import Path
 
     payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
-    for item in payload["items"]:
+    for item in payload["catalog"]["items"]:
         item["idRenamed"] = item.pop("id")
 
     async def fake_fetch(url, ctx):
