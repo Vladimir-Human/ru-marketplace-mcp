@@ -9,19 +9,42 @@
 
 ## [Unreleased]
 
+### Добавлено
+
+- `ozon_reviews` помечает каждый отзыв полем `item_id` — SKU товара, о котором отзыв
+  написан на самом деле. Ozon держит один пул отзывов на всю карточку-семейство, и
+  соседи по пулу регулярно оказываются другим товаром другого бренда: у карточки
+  Huter 1500 Вт (SKU 5264146973, 4.8 из 356 отзывов) среди 100 вытянутых отзывов не
+  было ни одного о самом Huter. Без `item_id` агент выдавал чужой рейтинг за
+  собственный.
+- Ответ `ozon_reviews` дополнен полями `requested_item_id`, `own_reviews` (сколько
+  возвращённых отзывов относится к запрошенному SKU) и `pool_variants`
+  (`SKU → название` всех товаров пула), чтобы чужой `item_id` можно было назвать.
+
+### Added
+
+- `ozon_reviews` tags every review with `item_id`, the SKU the review is actually
+  about. Ozon serves one review pool per card family and the neighbours are often a
+  different product from a different brand: a card for a 1500 W Huter (SKU
+  5264146973, 4.8 across 356 reviews) returned 100 reviews, none of them about the
+  Huter. Without `item_id` an agent reports a borrowed rating as the product's own.
+- The `ozon_reviews` response gained `requested_item_id`, `own_reviews` (how many
+  returned reviews belong to the requested SKU) and `pool_variants` (`SKU → name` for
+  every product in the pool), so a foreign `item_id` can be named.
+
 ### Исправлено
 
 - **Avito снова честный selfcheck** (спасибо @avxone за находку): Avito перенёс
-  массив объявлений из верхнего уровня payload в catalog.items[]. Парсер уже
-  читал новую форму, а смоук-проверка ждала старую и отвечала drift_detected на
+  массив объявлений из верхнего уровня payload в `catalog.items[]`. Парсер уже
+  читал новую форму, а смоук-проверка ждала старую и отвечала `drift_detected` на
   живом поиске. Семейства ключей принимают оба конверта, фикстура и справочник
   формы ре-фингерпринтированы по живому замеру 2026-08-29.
 
 ### Fixed
 
 - **Avito selfcheck honest again** (thanks @avxone): Avito moved the listings array
-  from the payload's top level into catalog.items[]. The parser already followed
-  it, but the smoke check waited for the old shape and answered drift_detected
+  from the payload's top level into `catalog.items[]`. The parser already followed
+  it, but the smoke check waited for the old shape and answered `drift_detected`
   on live traffic. Required key families now accept both envelopes; fixture and
   shape reference re-fingerprinted from a live capture dated 2026-08-29.
 
