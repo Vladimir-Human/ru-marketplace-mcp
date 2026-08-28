@@ -51,11 +51,11 @@ def test_the_parser_bindings_survive_in_the_reference_shape() -> None:
 
     signature = set(shape_reference.SEARCH_SHAPE_REFERENCE)
     for path in (
-        "items[].id:int",
-        "items[].title:str",
-        "items[].urlPath:str",
-        "items[].priceDetailed.value:int",
-        "items[].sortTimeStamp:int",
+        "catalog.items[].id:int",
+        "catalog.items[].title:str",
+        "catalog.items[].urlPath:str",
+        "catalog.items[].priceDetailed.value:int",
+        "catalog.items[].sortTimeStamp:int",
     ):
         assert path in signature, f"parser-critical path {path} vanished from the reference shape"
 
@@ -67,8 +67,29 @@ def test_missing_required_families_reports_only_absent_families() -> None:
 
     assert shape_reference.missing_required_families(shape_signature(payload)) == []
 
-    for item in payload["items"]:
+    for item in payload["catalog"]["items"]:
         item["idRenamed"] = item.pop("id")
 
     missing = shape_reference.missing_required_families(shape_signature(payload))
-    assert ("items[].id", "items[].itemId", "items[].item_id") in missing
+    assert (
+        "catalog.items[].id",
+        "catalog.items[].itemId",
+        "catalog.items[].item_id",
+        "items[].id",
+        "items[].itemId",
+        "items[].item_id",
+    ) in missing
+
+
+def test_the_pre_2026_08_top_level_envelope_still_passes_the_families() -> None:
+    """Avito moved listings into catalog.items[], but the parser binds both
+    shapes and the canary must not cry drift when a client is served the old
+    envelope — an A/B rollout must not flip it."""
+    legacy_payload = {
+        "count": 1,
+        "items": [
+            {"id": 1, "title": "Ноутбук", "priceDetailed": {"value": 59900}, "urlPath": "/x"},
+        ],
+    }
+
+    assert shape_reference.missing_required_families(shape_signature(legacy_payload)) == []

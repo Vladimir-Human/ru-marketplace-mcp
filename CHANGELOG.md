@@ -7,6 +7,24 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Исправлено
+
+- **Avito снова честный selfcheck** (спасибо @avxone за находку): Avito перенёс
+  массив объявлений из верхнего уровня payload в catalog.items[]. Парсер уже
+  читал новую форму, а смоук-проверка ждала старую и отвечала drift_detected на
+  живом поиске. Семейства ключей принимают оба конверта, фикстура и справочник
+  формы ре-фингерпринтированы по живому замеру 2026-08-29.
+
+### Fixed
+
+- **Avito selfcheck honest again** (thanks @avxone): Avito moved the listings array
+  from the payload's top level into catalog.items[]. The parser already followed
+  it, but the smoke check waited for the old shape and answered drift_detected
+  on live traffic. Required key families now accept both envelopes; fixture and
+  shape reference re-fingerprinted from a live capture dated 2026-08-29.
+
 ## [1.6.0] — 2026-08-20
 
 ### Добавлено
