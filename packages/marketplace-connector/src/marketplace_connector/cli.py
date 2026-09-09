@@ -33,6 +33,7 @@ KNOWN_CLIENTS = {"claude", "claude-code", "cursor", "dsh"}
 # by `uv run --directory`, so one user action both enables and locates a server.
 DSH_ENV_DIR = "RU_MARKETPLACE_MCP_DIR"
 DSH_ENV_FULL = "RU_MARKETPLACE_MCP_FULL"
+DSH_ENV_DECISION = "RU_MARKETPLACE_MCP_DECISION"
 
 # (config key, console script, human note)
 SERVERS: list[tuple[str, str, str]] = [
@@ -185,6 +186,13 @@ def _dsh_patch_block() -> tuple[str, str]:
         f"!process.env.{DSH_ENV_DIR} || !!process.env.{DSH_ENV_FULL}",
         compare_args,
     )
+    decision_cmd, decision_args, decision_note = _dsh_command("decision-mcp", root)
+    decision_row = _dsh_row(
+        "ru-marketplace-decision",
+        decision_cmd,
+        f"!process.env.{DSH_ENV_DIR} || !!process.env.{DSH_ENV_FULL} || !process.env.{DSH_ENV_DECISION}",
+        decision_args,
+    )
     full_cmd, full_args, full_note = _dsh_command("marketplace-mcp", root)
     full_row = _dsh_row(
         "ru-marketplace-full",
@@ -197,22 +205,24 @@ def _dsh_patch_block() -> tuple[str, str]:
         "# Add these rows to the `- insert:` list of your cordis.patch.yml (dsh).\n"
         "# Both rows start disabled (zero tool-schema cost until the env gates are\n"
         "# set) and their conditions are mutually exclusive.\n"
-        "- insert:\n" + compare_row + "\n" + full_row
+        "- insert:\n" + compare_row + "\n" + decision_row + "\n" + full_row
     )
 
     if root is not None:
         note = (
             f"# Set {DSH_ENV_DIR} to this checkout (or another clone): {root}\n"
-            f"# Full set: also set {DSH_ENV_FULL}=1. Compare-only: leave {DSH_ENV_FULL} unset."
+            f"# Decision set {DSH_ENV_DECISION}=1 for comparison + shortlist card inspection; full set {DSH_ENV_FULL}=1."
         )
     else:
         lines = [
             "# Installed as a package: commands are the console scripts on PATH, and",
             f"# {DSH_ENV_DIR} is only the enable switch (set it to any value).",
-            f"# Full set: also set {DSH_ENV_FULL}=1. Compare-only: leave {DSH_ENV_FULL} unset.",
+            f"# Decision set {DSH_ENV_DECISION}=1 for comparison + shortlist card inspection; full set {DSH_ENV_FULL}=1.",
         ]
         if compare_note:
             lines.append(compare_note)
+        if decision_note:
+            lines.append(decision_note)
         if full_note:
             lines.append(full_note)
         note = "\n".join(lines)

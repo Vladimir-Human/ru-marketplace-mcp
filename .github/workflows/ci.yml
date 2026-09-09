@@ -418,7 +418,7 @@ jobs:
           echo "vendored skills: $skills"
           test "$skills" -eq 14
 
-      - name: Both MCP rows are still disabled by default
+      - name: All MCP rows are still disabled by default
         # The safety promise of this bundle: skills are free, MCP tools are opt-in.
         # If a row ever ships enabled it would spend the user's context on every
         # request without consent, so the guard is asserted rather than trusted.
@@ -428,8 +428,8 @@ jobs:
           rows=$(grep -c "name: '@deepseek-ai/dsh-mcp-client'" "$patch")
           guards=$(grep -c 'disabled: !!js' "$patch")
           echo "mcp rows: $rows, disabled guards: $guards"
-          test "$rows" -eq 2
-          test "$guards" -eq 2
+          test "$rows" -eq 3
+          test "$guards" -eq 3
           grep -q 'RU_MARKETPLACE_MCP_DIR' "$patch"
 
       - name: Removal restores the profile
