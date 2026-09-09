@@ -37,6 +37,7 @@ PYPROJECT_VERSION = re.compile(r'^version\s*=\s*"([^"]+)"')
 DUNDER_VERSION = re.compile(r'^__version__\s*=\s*"([^"]+)"')
 SERVER_VERSION = re.compile(r'^SERVER_VERSION\s*=\s*"([^"]+)"')
 IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)")
+OCI_IDENTIFIER = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)$")
 # The `mcp-core==X.Y.Z` pin each connector carries. Inside the workspace it is
 # invisible — `uv.sources = { workspace = true }` overrides the constraint, so a
 # stale pin passes `uv lock`, `uv sync` and the whole suite. It only bites the
@@ -135,10 +136,20 @@ def main(argv: list[str]) -> int:
     # server.json is JSON, not line-oriented text: read the field directly.
     manifest = REPO_ROOT / "server.json"
     if manifest.exists():
-        declared = json.loads(manifest.read_text(encoding="utf-8")).get("version")
+        manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+        declared = manifest_data.get("version")
         counts["server.json"] = 1 if declared is not None else 0
         if declared != expected:
             mismatches.append(Mismatch(("server.json", 0, str(declared), expected)))
+        for package in manifest_data.get("packages", []):
+            identifier = package.get("identifier") if isinstance(package, dict) else None
+            if not isinstance(identifier, str):
+                continue
+            match = OCI_IDENTIFIER.search(identifier)
+            if match is not None:
+                counts["OCI image tag"] = counts.get("OCI image tag", 0) + 1
+                if match.group(1) != expected:
+                    mismatches.append(Mismatch(("server.json", 0, match.group(1), expected)))
 
     if silent:
         sys.stderr.write("files that declare no version at all:\n")
