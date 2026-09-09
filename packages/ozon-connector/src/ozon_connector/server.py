@@ -66,7 +66,7 @@ from ozon_connector.models_output import (
 )
 from ozon_connector.settings import get_settings
 
-SERVER_VERSION = "2.0.1"
+SERVER_VERSION = "2.0.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
