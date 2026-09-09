@@ -32,6 +32,7 @@ EXPECTED_TOOLS = {
     "detmir-mcp": 3,
     "yandex-mcp": 2,
     "compare-mcp": 3,
+    "decision-mcp": 4,  # compare trio + decision_inspect
     "avito-mcp": 3,
     "taobao-mcp": 2,
     "megamarket-mcp": 2,

@@ -16,7 +16,7 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 70;
-- `e2e_stdio_check.py` даёт 14/14, у всех серверов версия релиза;
+- `e2e_stdio_check.py` даёт 15/15, у всех серверов версия релиза;
 - `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
   непроверенному источнику;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
@@ -216,7 +216,7 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 70% coverage
-floor; `e2e_stdio_check.py` reports 14/14 at the release version; `doctor`
+floor; `e2e_stdio_check.py` reports 15/15 at the release version; `doctor`
 returns `0`, or `2` with a clear account of every unverified source; every
 source that answered was compared by eye on price and availability; Taobao's
 yuan did not win a rouble ranking; CI is green.
