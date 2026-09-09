@@ -72,6 +72,19 @@ def test_marketplace_sources_reports_what_mounted():
     assert "aliexpress" in result.mounted
     assert "mpstats" in result.mounted
     assert result.server_version == server.SERVER_VERSION
+    assert result.capabilities["taobao"]["currency"] == "cny"
+    assert result.capabilities["taobao"]["requires_login"] is True
+    assert result.capabilities["wildberries"]["text_search"] is True
+
+
+def test_marketplace_sources_capabilities_mark_skipped_sources(monkeypatch):
+    monkeypatch.setattr(server, "_MOUNTED", ["wildberries"])
+    monkeypatch.setattr(server, "_SKIPPED", {"ozon": "missing"})
+
+    result = asyncio.run(server.marketplace_sources())
+
+    assert result.capabilities["ozon"]["mounted"] is False
+    assert result.capabilities["wildberries"]["mounted"] is True
 
 
 def test_marketplace_sources_surfaces_a_skipped_source(monkeypatch):

@@ -29,3 +29,9 @@ Chrome over CDP.
 - A search page yielding zero SKUs is drift, not "no results" — verify manually.
 - A missing price is `null`, never `0`: `price_rub: null` means Lamoda had no
   usable price — treat it as no data, never as a free item.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

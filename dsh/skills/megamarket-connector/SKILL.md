@@ -31,3 +31,9 @@ code-7 refusal is inconclusive (transport), never drift. It is CLI-only —
   anonymously, and only a challenge-passed session confirms the in-browser shape.
 - A missing price is `null`, never `0`: `price_rub: null` means Megamarket had
   no usable price — treat it as no data, never as a free item.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

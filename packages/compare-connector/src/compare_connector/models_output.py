@@ -94,6 +94,13 @@ class CompareResponse(BaseModel):
         default=None,
         description="Lowest everyday price found. None when no marketplace returned a price.",
     )
+    cheapest_comparable: MarketOffer | None = Field(
+        default=None,
+        description=(
+            "Lowest everyday price among offers whose titles do not identify an accessory or a used/display condition. "
+            "Use this for a like-for-like recommendation; cheapest retains the raw lowest listing."
+        ),
+    )
     price_spread_rub: float | None = Field(
         default=None,
         description="Difference between the highest and lowest everyday price — how much the choice is worth.",

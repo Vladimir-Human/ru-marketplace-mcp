@@ -236,6 +236,7 @@
     "output": {
       "properties": {
         "cheapest": {},
+        "cheapest_comparable": {},
         "complete": {},
         "offers": {},
         "price_spread_rub": {},
@@ -523,6 +524,7 @@
   "marketplace_sources": {
     "output": {
       "properties": {
+        "capabilities": {},
         "mounted": {},
         "mounted_count": {},
         "server_version": {},

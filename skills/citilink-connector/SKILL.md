@@ -71,3 +71,9 @@ title comes from the `Snippet__title` anchor.
   there. This connector only means anything from the operator's own machine.
 - A missing price is `null`, never `0`: `price_rub: null` means Citilink had no
   usable price for the tile — treat it as no data, never as a free item.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

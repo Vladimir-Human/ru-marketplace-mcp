@@ -1,6 +1,6 @@
 ---
 name: marketplace
-description: Use this skill when the operator wants every marketplace at once — compare prices across sources, or wire one MCP entry instead of twelve. Trigger on "сравни цены", "где дешевле", "все маркетплейсы", "compare prices", or when setting up the client config. Skip for single-source tasks (use that source's skill).
+description: Use this skill when the operator wants the full marketplace mount, routing metadata, or client setup. Trigger on "один MCP", "все источники", "marketplace_sources", "настроить marketplace", or "full marketplace". Route price questions such as "где дешевле" and "compare prices" to compare-prices; skip single-source tasks.
 ---
 
 # Unified Marketplace Server
@@ -24,7 +24,9 @@ everything else is unaffected.
 
 ## Tools
 - `marketplace_sources()` — no arguments; returns `{mounted, skipped,
-  mounted_count, skipped_count, server_version}`. `skipped` maps a source name to the
+  mounted_count, skipped_count, capabilities, server_version}`. `capabilities` is
+  static routing metadata per source: access tier, CDP/login requirements, currency,
+  text-search support, and whether the connector is mounted. `skipped` maps a source name to the
   import error that dropped it, usually a missing dependency. Connectors are imported
   defensively, so a missing dep removes a marketplace instead of killing the server —
   but from the client an absent source looks identical to one that found nothing.
@@ -49,3 +51,9 @@ everything else is unaffected.
   `marketplace_sources` says which and why.
 - compare_prices ranks on everyday ruble prices; Taobao (CNY) is reported in
   `price_native` but never ranked against rubles.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

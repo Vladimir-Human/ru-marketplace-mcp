@@ -59,3 +59,9 @@ residential session:
 - The JSON API and the HTML pages are gated differently: `js/items` can answer
   from a residential session while `avito.ru/<region>/<category>/<slug>` still
   shows the security wall. A blocked listing page does not mean search is down.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

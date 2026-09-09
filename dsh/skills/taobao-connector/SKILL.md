@@ -31,3 +31,9 @@ connector's canary at once.
 - A login wall (title 登录) means the scraping profile is logged out of
   taobao.com — log in there, then retry.
 - The operator's Chrome must be running with CDP (scripts/start_chrome_cdp.sh).
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

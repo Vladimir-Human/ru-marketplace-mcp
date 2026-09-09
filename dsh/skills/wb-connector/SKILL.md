@@ -147,3 +147,9 @@ data, not policy.
 WB's seller agreement §9.9.6 disallows unofficial parsing. This connector queries
 the public catalog endpoints used by the official web client; no authenticated or
 admin areas. Use is at your discretion for personal research.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

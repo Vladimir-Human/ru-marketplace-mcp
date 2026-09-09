@@ -877,6 +877,34 @@ async def test_relevance_warnings_reach_the_response(monkeypatch):
     assert result.cheapest.price_rub == 990.0
 
 
+async def test_comparison_exposes_like_for_like_candidate(monkeypatch):
+    async def wb(query, limit):
+        return [offer("wildberries", 990.0, title="Чехол для iPhone 15")]
+
+    async def ozon(query, limit):
+        return [offer("ozon", 52049.0, title="Apple iPhone 15 128GB")]
+
+    stub_sources(monkeypatch, {"wildberries": wb, "ozon": ozon})
+
+    result = await server.compare_prices(query="iphone 15")
+
+    assert result.cheapest.source == "wildberries"
+    assert result.cheapest_comparable.source == "ozon"
+    assert any(w.startswith("comparable_price:") for w in result.warnings)
+
+
+async def test_comparable_candidate_is_none_when_everything_is_suspicious(monkeypatch):
+    async def wb(query, limit):
+        return [offer("wildberries", 990.0, title="Чехол для iPhone 15")]
+
+    stub_sources(monkeypatch, {"wildberries": wb})
+
+    result = await server.compare_prices(query="iphone 15")
+
+    assert result.cheapest_comparable is None
+    assert "comparable_price: every priced listing" in result.warnings[-1]
+
+
 # ------------------------------------------------------------------- condition ----
 #
 # Checked live on wildberries.ru in July 2026 for the query "iphone 15": the

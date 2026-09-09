@@ -62,9 +62,12 @@ counts them. Read `price_native` if you want to convert.
 **Standard comparison:**
 1. `compare_prices(query="стиральная машина узкая")`
 2. Check `complete`. If `false`, name the marketplaces that failed and why.
-3. Report `cheapest` plus `price_spread_rub` — the spread is what makes the
-   comparison actionable.
-4. Offer a follow-up: `*_card` on the winning product for reviews and seller.
+3. Report `cheapest_comparable` when it is present, rather than blindly quoting
+   `cheapest`. The raw cheapest row can be an accessory or a used/display
+   condition; the comparable field is the safer like-for-like candidate. Keep
+   `cheapest` visible when explaining the warning.
+4. Report `price_spread_rub` — the spread is what makes the comparison actionable.
+5. Offer a follow-up: `*_card` on the winning product for reviews and seller.
 
 **When a source is blocked:**
 1. `compare_sources()` to separate "not installed" from "refused".

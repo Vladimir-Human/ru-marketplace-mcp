@@ -882,6 +882,13 @@ async def compare_prices(
     failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
 
     cheapest = priced[0] if priced else None
+    comparable = [
+        offer
+        for offer in priced
+        if not _looks_like_an_accessory(offer.title, text)
+        and not _looks_like_another_condition(offer.title, text)
+    ]
+    cheapest_comparable = comparable[0] if comparable else None
     price_spread = None
     if len(priced) >= 2:
         low, high = priced[0].price_rub, priced[-1].price_rub
@@ -897,6 +904,13 @@ async def compare_prices(
     if not priced:
         warnings.append("no_prices: no marketplace returned a usable price for this query")
     warnings.extend(_relevance_warnings(text, priced))
+    if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
+        warnings.append(
+            "comparable_price: the raw cheapest listing is an accessory or different condition; "
+            "cheapest_comparable is the safer like-for-like candidate"
+        )
+    elif cheapest is not None and cheapest_comparable is None:
+        warnings.append("comparable_price: every priced listing looks like an accessory or different condition")
     if foreign:
         currencies = ", ".join(sorted({offer.currency for offer in foreign}))
         warnings.append(
@@ -918,6 +932,7 @@ async def compare_prices(
         complete=not failed_sources,
         total_offers=len(ranked),
         cheapest=cheapest,
+        cheapest_comparable=cheapest_comparable,
         price_spread_rub=price_spread,
         offers=ranked,
         source_outcomes=outcomes,

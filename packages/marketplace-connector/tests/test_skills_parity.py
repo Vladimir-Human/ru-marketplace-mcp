@@ -342,3 +342,21 @@ def test_readme_points_at_the_skills() -> None:
     """A skill nobody is told about is a skill nobody loads."""
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "skills/" in readme, "README never mentions the skills directory"
+
+
+def test_price_intent_routes_to_cheap_compare_skill() -> None:
+    compare = (REPO_ROOT / "skills" / "compare-prices" / "SKILL.md").read_text(encoding="utf-8")
+    marketplace = (REPO_ROOT / "skills" / "marketplace" / "SKILL.md").read_text(encoding="utf-8")
+
+    assert '"где дешевле"' in compare
+    assert 'description:' in marketplace
+    assert 'Trigger on "где дешевле"' not in marketplace.split("---", 2)[1]
+    assert "Route price questions" in marketplace
+
+
+def test_full_only_skills_explain_dsh_activation() -> None:
+    for path in sorted((REPO_ROOT / "skills").glob("*/SKILL.md")):
+        if path.parent.name == "compare-prices":
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert "RU_MARKETPLACE_MCP_FULL=1" in text, f"missing DSH activation contract: {path}"

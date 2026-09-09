@@ -105,3 +105,9 @@ token — not retryable), `bad_request` (bad SKU/place), `rate_limited`
 (upstream shape changed — code change needed), `not_found` (no analytics for
 any SKU). Partial data (some SKUs missing) stays a success with `meta.warnings`
 and `meta.healthy: false` — silence never reads as success here.
+## DSH activation
+
+In DeepSeek Harness, the default profile exposes only `compare_prices` and
+`compare_sources` through the cheap compare mount. Per-marketplace tools and
+`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
+do not call them in the default mode.

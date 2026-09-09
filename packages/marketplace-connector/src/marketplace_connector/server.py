@@ -33,6 +33,12 @@ class MarketplaceSourcesResponse(BaseModel):
     )
     mounted_count: int = Field(default=0, description="How many sources mounted.")
     skipped_count: int = Field(default=0, description="How many sources were skipped.")
+    capabilities: dict[str, dict[str, object]] = Field(
+        default_factory=dict,
+        description=(
+            "Static routing metadata: access tier, login/CDP requirement, currency, and whether text search is supported."
+        ),
+    )
     server_version: str = Field(default="", description="Unified server version.")
 
 
@@ -53,6 +59,24 @@ mcp = FastMCP(
 
 _MOUNTED: list[str] = []
 _SKIPPED: dict[str, str] = {}
+
+# Routing metadata is deliberately static and cheap: it tells a model which
+# tool path to attempt before spending a request on a blocked source. It is
+# separate from selfcheck/doctor, which performs live network probes.
+_CAPABILITIES: dict[str, dict[str, object]] = {
+    "wildberries": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
+    "ozon": {"access": "http_or_cdp", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
+    "yandex_market": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
+    "detsky_mir": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": False},
+    "avito": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
+    "taobao": {"access": "cdp", "requires_cdp": True, "requires_login": True, "currency": "cny", "text_search": True},
+    "megamarket": {"access": "cdp", "requires_cdp": True, "requires_login": True, "currency": "rub", "text_search": True},
+    "lamoda": {"access": "graphql_or_cdp", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
+    "dns": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
+    "citilink": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
+    "aliexpress": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
+    "mpstats": {"access": "api_token", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": False},
+}
 
 
 def _mount_all() -> None:
@@ -121,7 +145,7 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     ## Return Format
 
     MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-    server_version}. ``skipped`` maps source name to the import error that
+    capabilities, server_version}. ``skipped`` maps source name to the import error that
     removed it, which is usually a missing optional dependency.
 
     ## Error Format
@@ -134,6 +158,7 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         skipped=dict(sorted(_SKIPPED.items())),
         mounted_count=len(_MOUNTED),
         skipped_count=len(_SKIPPED),
+        capabilities={name: {**metadata, "mounted": name in _MOUNTED} for name, metadata in _CAPABILITIES.items()},
         server_version=SERVER_VERSION,
     )
 
