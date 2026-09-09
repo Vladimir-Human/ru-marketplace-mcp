@@ -293,7 +293,10 @@ def _scraping_profile_pids() -> set[int]:
     Any failure returns an empty set, which makes the caller hide nothing —
     leaving a scraping window visible beats hiding the operator's real browser.
     """
-    profile_marker = str(Path(SCRAPING_PROFILE))
+    # Keep the configured spelling on macOS. ``Path`` uses the host OS rules,
+    # so converting a POSIX profile path while running the offline Windows
+    # test suite would turn ``/Users/...`` into backslashes and miss the PID.
+    profile_marker = SCRAPING_PROFILE if sys.platform == "darwin" else str(Path(SCRAPING_PROFILE))
     if sys.platform == "darwin":
         # Only the main browser process owns the app in System Events; the
         # renderer/GPU helpers carry the same --user-data-dir but no windows.
