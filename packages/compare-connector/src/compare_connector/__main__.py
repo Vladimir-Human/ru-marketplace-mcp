@@ -27,5 +27,12 @@ def main() -> int:
     return run_server(mcp, server_name="compare")
 
 
+def decision_main() -> int:
+    """Run the middle comparison-plus-card DSH profile."""
+    from mcp_core.runtime import run_server
+    from compare_connector.decision_server import mcp
+    return run_server(mcp, server_name="decision")
+
+
 if __name__ == "__main__":
     sys.exit(main())

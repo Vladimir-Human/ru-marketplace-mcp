@@ -40,6 +40,7 @@ all = [
 
 [project.scripts]
 compare-mcp = "compare_connector.__main__:main"
+decision-mcp = "compare_connector.__main__:decision_main"
 
 [build-system]
 requires = ["hatchling"]

@@ -43,6 +43,7 @@ def test_dsh_install_emits_a_cordis_patch_instead_of_mcp_servers(capsys):
     assert "@deepseek-ai/dsh-mcp-client" in out
     assert "serverName: rumarket" in out
     assert "compare-mcp" in out
+    assert "decision-mcp" in out
     assert "marketplace-mcp" in out
     assert "mcpServers" not in out
 
@@ -55,7 +56,7 @@ def test_dsh_install_rows_are_disabled_until_the_env_gate_is_set(capsys):
     assert cli.DSH_ENV_DIR in out
     assert cli.DSH_ENV_FULL in out
     assert 'disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR' in out
-    assert out.count("disabled: !!js") == 2
+    assert out.count("disabled: !!js") == 3
 
 
 def test_dsh_patch_block_falls_back_to_console_scripts_outside_a_checkout(monkeypatch):

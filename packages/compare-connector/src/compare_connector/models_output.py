@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, model_validator
 
+from compare_connector.identity import OfferEvidence, ProductIdentity
+
 
 class MarketOffer(BaseModel):
     """One offer, normalised across marketplaces so prices are comparable."""
@@ -48,6 +50,14 @@ class MarketOffer(BaseModel):
     rating_count: int | None = Field(default=None, description="Number of ratings or reviews behind that average.")
     in_stock: bool | None = Field(default=None, description="Stock status, when the marketplace reports it.")
     url: str = Field(default="", description="Direct product URL.")
+    identity: ProductIdentity = Field(
+        default_factory=ProductIdentity,
+        description="Manufacturer and variant identity evidence; empty means identity is unknown.",
+    )
+    evidence: OfferEvidence | None = Field(
+        default=None,
+        description="Optional provenance for the native offer and its identity evidence.",
+    )
 
     @model_validator(mode="after")
     def _mirror_rouble_price_into_native(self) -> MarketOffer:

@@ -3,6 +3,7 @@
 # enabled they are paid on EVERY request; wire-measured figures (post output-
 # schema compaction, scripts/mcp_wire.py):
 #   compare-mcp      ~0.9k tokens
+#   decision-mcp     ~1.5k tokens (comparison plus shortlist card inspector)
 #   marketplace-mcp  ~13.6k tokens
 - insert:
     - id: ru-marketplace-skills
@@ -31,12 +32,29 @@
           - compare-mcp
         failOnStartupError: false
 
+    # Middle profile: comparison plus one generic card inspector. This is a
+    # deliberate shortlist/evidence step between cheap compare and full mount.
+    - id: ru-marketplace-decision
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !!process.env.RU_MARKETPLACE_MCP_FULL || !process.env.RU_MARKETPLACE_MCP_DECISION"
+      config:
+        serverName: rumarket
+        transport: stdio
+        command: uv
+        args:
+          - run
+          - --frozen
+          - --directory
+          - !!js "process.env.RU_MARKETPLACE_MCP_DIR || '.'"
+          - decision-mcp
+        failOnStartupError: false
+
     # Deliberate full-mount choice: 36 model-facing tools, ~13.6k wire tokens
     # per request. Operator-only *_selfcheck tools are no longer published over
     # MCP; `marketplace-mcp doctor` still runs them from the CLI.
     - id: ru-marketplace-full
       name: '@deepseek-ai/dsh-mcp-client'
-      disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !process.env.RU_MARKETPLACE_MCP_FULL"
+      disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !!process.env.RU_MARKETPLACE_MCP_DECISION || !process.env.RU_MARKETPLACE_MCP_FULL"
       config:
         serverName: rumarket
         transport: stdio

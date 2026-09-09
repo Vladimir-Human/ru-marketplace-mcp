@@ -46,7 +46,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Collection, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
@@ -531,6 +531,7 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 
 _RAW_CONNECT_TIMEOUT_S = 8.0
 _RAW_NAV_TIMEOUT_S = 20.0
+_RAW_MAX_FRAME_BYTES = max(64 * 1024, min(int(os.environ.get("CHROME_CDP_MAX_FRAME_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024))
 
 
 def _raw_page_count() -> int:
@@ -686,7 +687,7 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
     if not browser_ws:
         raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
 
-    async with _websockets.connect(browser_ws, max_size=None, open_timeout=_RAW_CONNECT_TIMEOUT_S) as bws:
+    async with _websockets.connect(browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S) as bws:
         # ``background`` keeps the new tab from activating the window: without
         # it Chrome comes to the front on every call (and macOS follows it to
         # its Space). Chrome-only parameter, and this path is Chrome-only.
@@ -714,7 +715,7 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
     parts = urlsplit(page_ws)
     page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
 
-    async with _websockets.connect(page_ws, max_size=None, open_timeout=_RAW_CONNECT_TIMEOUT_S) as pws:
+    async with _websockets.connect(page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S) as pws:
         page = _RawCdpPage(pws, target_id)
         try:
             await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
@@ -796,7 +797,30 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
 
 
 @asynccontextmanager
-async def open_page(url: str, wait_ms: int = 5000) -> AsyncIterator[PageLike]:
+def _check_final_host(url: str, allowed_hosts: Collection[str]) -> None:
+    """Reject a navigation that escaped the caller's host policy."""
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    allowed = {str(item).lower().rstrip(".") for item in allowed_hosts}
+    if parsed.scheme not in {"http", "https"} or not host or host not in allowed:
+        raise NavigationPolicyError(url, allowed)
+
+
+class NavigationPolicyError(RuntimeError):
+    """The final navigation host was outside the caller's explicit policy."""
+
+    def __init__(self, final_url: str, allowed_hosts: Collection[str]) -> None:
+        self.final_url = final_url
+        self.allowed_hosts = frozenset(allowed_hosts)
+        super().__init__("CDP navigation left the allowed host policy")
+
+
+async def open_page(
+    url: str,
+    wait_ms: int = 5000,
+    *,
+    allowed_hosts: Collection[str] | None = None,
+) -> AsyncIterator[PageLike]:
     """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
 
     Guarantees:
@@ -814,10 +838,17 @@ async def open_page(url: str, wait_ms: int = 5000) -> AsyncIterator[PageLike]:
     low = (url or "").strip().lower()
     if not (low.startswith("http://") or low.startswith("https://")):
         raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
+    # Default to the origin host. Callers may list a small explicit set for
+    # marketplace aliases (for example www + bare host), but redirects to an
+    # arbitrary host are never allowed to drive the authenticated profile.
+    initial_host = urlsplit(url).hostname
+    host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
     try:
         async with _playwright_page(url, wait_ms) as page:
+            _check_final_host(page.url, host_policy)
             yield page
     except _CdpConnectTimeout:
         async with _raw_cdp_page(url, wait_ms) as page:
+            _check_final_host(page.url, host_policy)
             yield page
