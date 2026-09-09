@@ -26,6 +26,14 @@ The first wave implemented in this checkout is deliberately measurable:
 - regression tests, public contract snapshots, and cross-platform CI gates own
   these behaviors.
 
+Live verification added an important concrete case: for Yandex product id
+`6203146574`, search returned 21,783 ₽ for one seller row, while the manually
+verified browser card showed the same product family at 18,565 ₽ (18,194 ₽ Pay)
+from RBT.ru. The new `expected_price_rub` argument on `compare_verify_offer`
+reports this delta explicitly instead of pretending the search row is current.
+The model is therefore allowed to say “search result stale/different offer”,
+which is materially safer than silently choosing a number.
+
 The second wave is required before calling the full 2.0 architecture complete:
 exact product identity using model/GTIN/MPN evidence, profile-based DSH tool
 presets, stored drift baselines, machine-readable performance gates, HTTP/CDP

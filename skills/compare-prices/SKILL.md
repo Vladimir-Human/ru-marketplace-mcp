@@ -32,9 +32,12 @@ rank its rows against rouble sources.
   Returns offers cheapest-first plus a per-source outcome report.
 - `compare_sources()` — which marketplaces this installation can query. Call it
   when a comparison comes back partial and you need to know why.
-- `compare_verify_offer(source, product_id_or_url)` — verify the winning offer
+- `compare_verify_offer(source, product_id_or_url, expected_price_rub=None)` — verify the winning offer
   through its native card tool without enabling the full unified marketplace
   mount. Use the `source` and product id/url returned by `compare_prices`.
+  Pass the raw `price_rub` as `expected_price_rub` to get an explicit live
+  `price_verification` delta; a mismatch means the search row may be stale or
+  refer to a different seller offer under the same product id.
 
 ## Reading the result correctly
 

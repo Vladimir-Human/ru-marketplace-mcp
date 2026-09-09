@@ -59,10 +59,13 @@ async def test_compare_verify_offer_dispatches_to_source_card(monkeypatch):
 
     monkeypatch.setattr(server, "SOURCES", {"wildberries": FakeSource()})
 
-    result = await server.compare_verify_offer("wildberries", "https://www.wildberries.ru/catalog/123/detail.aspx")
+    result = await server.compare_verify_offer(
+        "wildberries", "https://www.wildberries.ru/catalog/123/detail.aspx", expected_price_rub=1234
+    )
 
     assert result["source"] == "wildberries"
     assert result["card"]["nm_ids"] == [123]
+    assert result["price_verification"]["matches"] is True
 
 
 async def test_detsky_mir_is_not_a_comparison_source():

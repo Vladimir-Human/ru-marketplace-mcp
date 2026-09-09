@@ -306,6 +306,18 @@
     "parameters": {
       "additionalProperties": false,
       "properties": {
+        "expected_price_rub": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "product_id_or_url": {
           "maxLength": 400,
           "minLength": 1,

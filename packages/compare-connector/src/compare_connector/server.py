@@ -982,6 +982,10 @@ async def compare_verify_offer(
     product_id_or_url: Annotated[
         str, Field(min_length=1, max_length=400, description="product_id or direct product URL from the compared offer")
     ],
+    expected_price_rub: Annotated[
+        float | None,
+        Field(default=None, ge=0, description="Price returned by compare_prices; used to report a live card delta."),
+    ] = None,
 ) -> dict[str, Any]:
     """Verify one compared offer through its marketplace card tool.
 
@@ -1035,7 +1039,25 @@ async def compare_verify_offer(
         }[name]
         result = await tool(**{argument: product_id_or_url})
     payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
-    return {"source": name, "product_id_or_url": product_id_or_url, "card": payload}
+    verification: dict[str, object] | None = None
+    if expected_price_rub is not None:
+        observed = payload.get("price_rub") if isinstance(payload, dict) else None
+        if isinstance(observed, (int, float)):
+            delta = round(float(observed) - expected_price_rub, 2)
+            verification = {
+                "expected_price_rub": expected_price_rub,
+                "observed_price_rub": observed,
+                "delta_rub": delta,
+                "matches": abs(delta) < 1.0,
+            }
+        else:
+            verification = {
+                "expected_price_rub": expected_price_rub,
+                "observed_price_rub": None,
+                "delta_rub": None,
+                "matches": None,
+            }
+    return {"source": name, "product_id_or_url": product_id_or_url, "card": payload, "price_verification": verification}
 
 
 @mcp.tool(
