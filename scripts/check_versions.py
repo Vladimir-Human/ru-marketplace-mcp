@@ -151,6 +151,13 @@ def main(argv: list[str]) -> int:
                 if match.group(1) != expected:
                     mismatches.append(Mismatch(("server.json", 0, match.group(1), expected)))
 
+    dsh_manifest = REPO_ROOT / "dsh" / "package.json"
+    if dsh_manifest.exists():
+        dsh_version = json.loads(dsh_manifest.read_text(encoding="utf-8")).get("version")
+        counts["dsh/package.json"] = 1 if dsh_version is not None else 0
+        if dsh_version != expected:
+            mismatches.append(Mismatch(("dsh/package.json", 0, str(dsh_version), expected)))
+
     if silent:
         sys.stderr.write("files that declare no version at all:\n")
         for path in sorted(silent):

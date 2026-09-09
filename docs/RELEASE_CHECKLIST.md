@@ -71,9 +71,9 @@ npm install jsdom
 
 ## 2. Консистентность версий
 
-Одна версия живёт в семидесяти восьми местах: шестнадцать `pyproject.toml`,
+Одна версия живёт в семидесяти девяти местах: шестнадцать `pyproject.toml`,
 пятнадцать `__version__`, четырнадцать `SERVER_VERSION`, четырнадцать пинов
-`mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier и
+`mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier, `dsh/package.json` и
 семнадцать тегов образа в `docker-compose.yml` и `docs/DEPLOYMENT.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
@@ -239,9 +239,9 @@ install, image build or CI is red.
    on the live pacer or reaching for Chrome. `npm install jsdom` to also run the
    extractor checks against captured markup.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   seventy-eight declarations (sixteen `pyproject.toml`, fifteen `__version__`,
+   seventy-nine declarations (sixteen `pyproject.toml`, fifteen `__version__`,
    fourteen `SERVER_VERSION`, fourteen `mcp-core==` pins, seventeen image tags,
-   `server.json` and its OCI image identifier) against the root `pyproject.toml`;
+   `server.json`, its OCI image identifier, and `dsh/package.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
    actually say.
 3. **Live checks from the operator's machine** — seven sources refuse datacenter

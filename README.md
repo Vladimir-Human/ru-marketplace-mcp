@@ -969,7 +969,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
-uv run python scripts/check_versions.py       # one version across all 78 places
+uv run python scripts/check_versions.py       # one version across all 79 places
 ```
 
 Some tests execute a connector's **real extractor JavaScript** against captured
