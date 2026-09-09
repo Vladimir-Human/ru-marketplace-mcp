@@ -188,7 +188,9 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    return JSON.stringify({items: out, title: document.title || ''});
+    const bodyText = (document.body && document.body.textContent || '').toLowerCase();
+    const blocked = /проверку|не робот|бота|captcha|are you human|access denied/.test(bodyText);
+    return JSON.stringify({items: out, title: blocked ? '__BLOCKED__' : (document.title || '')});
 }
 """
 
@@ -346,6 +348,10 @@ async def lamoda_search(
             payload = await _cdp_render_search(query.strip(), ctx)
         except NavBlocked as exc:
             raise_tool_error(TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status})."))
+        if payload.get("title") == "__BLOCKED__":
+            raise_tool_error(
+                TransportDownError("Lamoda search is behind an anti-bot challenge in the connected Chrome.")
+            )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:
             raise_tool_error(
@@ -489,7 +495,13 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render_search("кроссовки", ctx)
-        items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
+        if payload.get("title") == "__BLOCKED__":
+            checks["search"] = R.selfcheck_entry(
+                "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
+            )
+            items_raw = []
+        else:
+            items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
         if items_raw:
             # Tiles extract — now ask the second question: did the SHAPE move?
             # The registry was measured on the captured page (2026-08-07); a
@@ -517,7 +529,7 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
                 checks["search"] = R.selfcheck_entry(
                     "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
                 )
-        else:
+        elif payload.get("title") != "__BLOCKED__":
             checks["search"] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]
             )

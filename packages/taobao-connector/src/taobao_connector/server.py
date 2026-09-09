@@ -236,7 +236,9 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    return JSON.stringify({items: out, title: document.title || ''});
+    const bodyText = (document.body && document.body.textContent || '').toLowerCase();
+    const blocked = /验证|验证码|人机|captcha|are you human|access denied/.test(bodyText);
+    return JSON.stringify({items: out, title: blocked ? '__BLOCKED__' : (document.title || '')});
 }
 """
 
@@ -633,7 +635,13 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                 notes=["login wall — log into taobao.com in the scraping profile"],
             )
         else:
-            items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
+            if payload.get("title") == "__BLOCKED__":
+                checks["search"] = R.selfcheck_entry(
+                    "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
+                )
+                items_raw = []
+            else:
+                items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
             if items_raw:
                 # Items extract — now ask the second question: did the SHAPE
                 # move? The registry was measured on the captured page
@@ -661,7 +669,7 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                     checks["search"] = R.selfcheck_entry(
                         "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
                     )
-            else:
+            elif payload.get("title") != "__BLOCKED__":
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["rendered page yielded zero items"]
                 )

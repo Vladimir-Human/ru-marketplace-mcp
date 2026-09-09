@@ -219,6 +219,16 @@ async def test_selfcheck_zero_items_is_drift(monkeypatch):
     assert result.healthy is False
 
 
+async def test_selfcheck_anti_bot_page_is_inconclusive(monkeypatch):
+    _patch_render(monkeypatch, {"title": "__BLOCKED__", "items": []})
+
+    result = await server.taobao_selfcheck()
+
+    assert result.status == "inconclusive"
+    assert result.checks["search"].state == "inconclusive"
+    assert result.checks["search"].reason == "blocked"
+
+
 async def test_selfcheck_cries_shape_drift_when_the_price_family_vanishes(monkeypatch):
     """Items still extract, but every key the parser binds a price through is
     gone — that is structural drift, and it must be said out loud with the
