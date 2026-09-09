@@ -103,7 +103,7 @@ payload shape and the connector needs updating.
 | `CHROME_CDP_PORT` | `9222` | Debugging port |
 | `CHROME_SCRAPING_PROFILE` | platform default above | Profile directory |
 | `CHROME_BINARY` | auto-detected | Explicit path to Chrome/Chromium/Edge |
-| `CHROME_STEALTH` | `1` | Windows: park the window off-screen so it never steals focus |
+| `CHROME_STEALTH` | `1` | Windows: park the window off-screen; macOS: open tabs in the background and keep the app hidden (⌘H) so it never steals focus or switches your Space |
 | `CHROME_HEADLESS` | `0` | Headless mode — detectable, use only on a display-less host |
 
 Auto-detection covers Chrome, Chromium and Edge in the standard locations for all

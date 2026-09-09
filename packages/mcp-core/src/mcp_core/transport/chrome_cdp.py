@@ -27,8 +27,9 @@ No credentials are ever stored, read, or transmitted by this code: the operator
 logs in by hand, in a browser they control.
 
 Cross-platform: Chrome binaries and profile locations are resolved per platform
-(Windows / macOS / Linux). Window-hiding stealth is Windows-only; elsewhere the
-browser launches normally, or headless when ``CHROME_HEADLESS=1``.
+(Windows / macOS / Linux). Window-hiding stealth exists on Windows (window parked
+off-screen) and macOS (tabs opened in the background, app kept hidden); on Linux
+the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -130,9 +132,11 @@ def _default_profile_dir() -> Path:
 
 SCRAPING_PROFILE = os.environ.get("CHROME_SCRAPING_PROFILE", str(_default_profile_dir()))
 
-# Windows-only: park the scraping window off-screen so it never steals focus.
-# A real (non-headless) window keeps Chrome's renderer fingerprint intact, which
-# is the whole point of using CDP instead of a headless scraper.
+# Keep the scraping window out of the operator's way without going headless:
+# Windows parks it off-screen, macOS opens tabs in the background and hides the
+# app (⌘H) so it never takes focus or drags the desktop to its Space. A real
+# (non-headless) window keeps Chrome's renderer fingerprint intact, which is the
+# whole point of using CDP instead of a headless scraper.
 STEALTH = os.environ.get("CHROME_STEALTH", "1") != "0"
 
 # Opt-in headless mode for Linux hosts with no display. Anti-bot systems detect
@@ -284,14 +288,40 @@ async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
 
 
 def _scraping_profile_pids() -> set[int]:
-    """PIDs of Chrome processes bound to *our* scraping profile (Windows only).
+    """PIDs of Chrome processes bound to *our* scraping profile (Windows, macOS).
 
     Any failure returns an empty set, which makes the caller hide nothing —
     leaving a scraping window visible beats hiding the operator's real browser.
     """
+    profile_marker = str(Path(SCRAPING_PROFILE))
+    if sys.platform == "darwin":
+        # Only the main browser process owns the app in System Events; the
+        # renderer/GPU helpers carry the same --user-data-dir but no windows.
+        try:
+            proc = subprocess.run(
+                ["ps", "-axo", "pid=,command="],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if proc.returncode != 0:
+                return set()
+            # Anchor the profile path on a following space or end of line so
+            # a sibling profile such as "Chrome-Scraping-2" is not matched.
+            marker = re.compile(rf"--user-data-dir={re.escape(profile_marker)}(?:\s|$)")
+            pids: set[int] = set()
+            for line in proc.stdout.splitlines():
+                if not marker.search(line) or "Helper" in line:
+                    continue
+                pid_str = line.strip().split(None, 1)[0]
+                if pid_str.isdigit():
+                    pids.add(int(pid_str))
+            return pids
+        except Exception:
+            return set()
     if sys.platform != "win32":
         return set()
-    profile_marker = str(Path(SCRAPING_PROFILE))
     try:
         ps_cmd = (
             "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" "
@@ -314,11 +344,33 @@ def _scraping_profile_pids() -> set[int]:
 
 
 def _hide_chrome_windows() -> None:
-    """Hide scraping-profile Chrome windows (Windows only, best-effort).
+    """Hide scraping-profile Chrome windows (Windows and macOS, best-effort).
 
     Only windows whose PID is confirmed to belong to the scraping profile are
     touched; ambiguity means do nothing.
+
+    On macOS a new tab (even one created with ``background: true``) and a
+    navigation both un-hide the app, so this runs after each of them. It hides
+    the app the way ⌘H does — the window keeps its Space and never takes focus,
+    which is what stops the desktop from switching mid-call.
     """
+    if sys.platform == "darwin":
+        for pid in _scraping_profile_pids():
+            try:
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        'tell application "System Events" to set visible of '
+                        f"(first process whose unix id is {pid}) to false",
+                    ],
+                    capture_output=True,
+                    timeout=5,
+                    check=False,
+                )
+            except Exception:
+                continue
+        return
     if sys.platform != "win32":
         return
     try:
@@ -632,9 +684,13 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
         raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
 
     async with _websockets.connect(browser_ws, max_size=None, open_timeout=_RAW_CONNECT_TIMEOUT_S) as bws:
-        created = await _RawCdpPage(bws, "")._send(
-            "Target.createTarget", {"url": "about:blank"}, timeout=_RAW_CONNECT_TIMEOUT_S
-        )
+        # ``background`` keeps the new tab from activating the window: without
+        # it Chrome comes to the front on every call (and macOS follows it to
+        # its Space). Chrome-only parameter, and this path is Chrome-only.
+        create_params: dict[str, Any] = {"url": "about:blank"}
+        if STEALTH:
+            create_params["background"] = True
+        created = await _RawCdpPage(bws, "")._send("Target.createTarget", create_params, timeout=_RAW_CONNECT_TIMEOUT_S)
         target_id = created.get("targetId")
         if not isinstance(target_id, str) or not target_id:
             raise RuntimeError("CDP Target.createTarget returned no targetId")
@@ -666,7 +722,7 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
                 raise NavBlocked(status, page.url)
             if wait_ms > 0:
                 await asyncio.sleep(wait_ms / 1000)
-            if STEALTH and sys.platform == "win32":
+            if STEALTH and sys.platform in ("win32", "darwin"):
                 await asyncio.to_thread(_hide_chrome_windows)
             yield page
         finally:
@@ -674,12 +730,43 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
                 await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
             except Exception:
                 pass
+            # Closing the tab un-hides the app again; tuck it away between calls.
+            if STEALTH and sys.platform in ("win32", "darwin"):
+                await asyncio.to_thread(_hide_chrome_windows)
+
+
+async def _new_tab(ctx: BrowserContext) -> Page:
+    """Open a tab in ``ctx`` — in the background when stealth is on.
+
+    ``BrowserContext.new_page`` creates its target in the foreground, which
+    activates the Chrome window on every call (and drags macOS along to the
+    Space that window lives on). With stealth on, create the target over a
+    browser-level CDP session with ``background: true`` and pick up the Page
+    Playwright attaches for it. If the CDP session itself cannot be opened,
+    fall back to the plain call: a visible tab beats no tab.
+    """
+    browser = ctx.browser
+    if not STEALTH or browser is None:
+        return await ctx.new_page()
+    try:
+        cdp = await browser.new_browser_cdp_session()
+    except Exception:
+        return await ctx.new_page()
+    try:
+        async with ctx.expect_page(timeout=_TAB_OP_TIMEOUT_S * 1000) as new_page:
+            await cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+        return await new_page.value
+    finally:
+        try:
+            await cdp.detach()
+        except Exception:
+            pass
 
 
 @asynccontextmanager
 async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
     async with get_context() as ctx:
-        page = await asyncio.wait_for(ctx.new_page(), timeout=_TAB_OP_TIMEOUT_S)
+        page = await asyncio.wait_for(_new_tab(ctx), timeout=_TAB_OP_TIMEOUT_S)
         try:
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
             status = resp.status if resp is not None else None
@@ -692,7 +779,7 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
                 raise NavBlocked(status, final)
             if wait_ms > 0:
                 await page.wait_for_timeout(wait_ms)
-            if STEALTH and sys.platform == "win32":
+            if STEALTH and sys.platform in ("win32", "darwin"):
                 await asyncio.to_thread(_hide_chrome_windows)
             yield page
         finally:
@@ -700,6 +787,9 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
                 await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
             except Exception:
                 pass
+            # Closing the tab un-hides the app again; tuck it away between calls.
+            if STEALTH and sys.platform in ("win32", "darwin"):
+                await asyncio.to_thread(_hide_chrome_windows)
 
 
 @asynccontextmanager

@@ -112,6 +112,7 @@ echo "Launching… log into the marketplaces you need IN THIS WINDOW ONLY."
 echo "Keep banking and email out of this profile."
 
 nohup "$CHROME" "${ARGS[@]}" >/dev/null 2>&1 &
+CHROME_PID=$!
 disown || true
 
 for _ in $(seq 1 30); do
@@ -119,6 +120,14 @@ for _ in $(seq 1 30); do
     if curl -sf -m 1 "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1; then
         echo
         echo "CDP is up. Verify with: curl -s http://127.0.0.1:$PORT/json/version"
+        # macOS: tuck the freshly opened window away (⌘H) so it does not sit on
+        # top of whatever you were doing. Connectors keep it hidden afterwards
+        # (CHROME_STEALTH=1, the default). Skip when the user opted out.
+        if [[ "$(uname -s)" == "Darwin" && "${CHROME_STEALTH:-1}" != "0" ]]; then
+            sleep 1
+            osascript -e "tell application \"System Events\" to set visible of (first process whose unix id is $CHROME_PID) to false" >/dev/null 2>&1 || true
+            echo "Window hidden (⌘H). Unhide it from the Dock when you need to log in; CHROME_STEALTH=0 disables this."
+        fi
         exit 0
     fi
 done
