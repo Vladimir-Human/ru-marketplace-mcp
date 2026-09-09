@@ -39,6 +39,10 @@
   читал новую форму, а смоук-проверка ждала старую и отвечала `drift_detected` на
   живом поиске. Семейства ключей принимают оба конверта, фикстура и справочник
   формы ре-фингерпринтированы по живому замеру 2026-08-29.
+- CDP-поиск Taobao и Lamoda теперь отличает антибот-проверку с HTTP 200 от
+  настоящего parser drift и возвращает честный `inconclusive/blocked`.
+- Все пакеты ограничили FastMCP диапазоном `>=3.4.6,<4`: FastMCP 4 меняет
+  публичную MCP-схему `_meta` на `meta` и несовместим с текущим контрактом.
 
 ### Fixed
 
@@ -47,6 +51,10 @@
   it, but the smoke check waited for the old shape and answered `drift_detected`
   on live traffic. Required key families now accept both envelopes; fixture and
   shape reference re-fingerprinted from a live capture dated 2026-08-29.
+- CDP search for Taobao and Lamoda now distinguishes an HTTP 200 anti-bot
+  challenge from real parser drift and reports `inconclusive/blocked` honestly.
+- All packages cap FastMCP at `>=3.4.6,<4`: FastMCP 4 changes the public MCP
+  schema from `_meta` to `meta` and is incompatible with the current contract.
 
 ## [1.6.0] — 2026-08-20
 
