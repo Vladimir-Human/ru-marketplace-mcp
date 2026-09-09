@@ -1,6 +1,6 @@
 [project]
 name = "marketplace-connector"
-version = "2.0.1"
+version = "2.0.2"
 description = "Unified marketplace MCP server — mounts every installed connector as one namespaced toolset"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -13,7 +13,7 @@ dependencies = [
     # unrelated project. Unpinned, a wheel installed straight from a GitHub
     # Release resolves to that stranger's package and the server dies on
     # import. A pin turns a silent wrong install into a loud resolve failure.
-"mcp-core==2.0.1",
+"mcp-core==2.0.2",
     "fastmcp>=3.4.6,<4",
     "pydantic>=2.6",
     "wb-connector",
