@@ -1,0 +1,12 @@
+{
+  "captured": "2026-09-09",
+  "page": "https://spb.cian.ru/rent/flat/317754437/",
+  "source": "window._cianConfig['frontend-offer-card'] -> defaultState.offerData",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "displayed": {
+    "title": "Сдам двухкомнатные апартаменты 43м² просп. Просвещения, 83, Санкт-Петербург, р-н Калининский, Прометей м. Гражданский проспект - база ЦИАН, объявление 317754437",
+    "price": 60000,
+    "priceRur": null
+  },
+  "trimmed": "offerData reduced to offer/agent/company/user/priceChanges/stats; description 300 chars; photos 2"
+}

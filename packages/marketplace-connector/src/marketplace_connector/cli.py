@@ -47,6 +47,7 @@ SERVERS: list[tuple[str, str, str]] = [
     ("lamoda", "lamoda-mcp", "cards anonymous; search needs your Chrome"),
     ("dns", "dns-mcp", "needs your Chrome — Qrator proof-of-work"),
     ("citilink", "citilink-mcp", "needs your Chrome — Qrator"),
+    ("cian", "cian-mcp", "real estate; needs your Chrome — WAF by IP"),
     ("compare-prices", "compare-mcp", "fans out across all of the above"),
 ]
 
@@ -61,6 +62,7 @@ _SELFCHECKS: list[tuple[str, str, str]] = [
     ("lamoda", "lamoda_connector.server", "lamoda_selfcheck"),
     ("dns", "dns_connector.server", "dns_selfcheck"),
     ("citilink", "citilink_connector.server", "citilink_selfcheck"),
+    ("cian", "cian_connector.server", "cian_selfcheck"),
     ("mpstats", "mpstats_connector.server", "mpstats_selfcheck"),
 ]
 

@@ -240,6 +240,24 @@ services:
       - "127.0.0.1:8014:8000"
     restart: unless-stopped
 
+  # cian-mcp is real estate (flats, houses, commercial property), not goods.
+  # Tier-2 only: Cian's WAF blocks plain HTTP by IP, so it needs the Chrome
+  # sidecar like the sources above.
+  cian:
+    build: .
+    image: ru-marketplace-mcp:2.0.2
+    command: ["cian-mcp"]
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+      # CHROME_CDP_HOST: chrome
+      # CHROME_CDP_PORT: "9222"
+    ports:
+      - "127.0.0.1:8015:8000"
+    restart: unless-stopped
+
   # mpstats-mcp is the optional paid source: without MPSTATS_MP_AUTH the server
   # starts but its tools return auth_missing. No Chrome needed — plain httpx.
   mpstats:

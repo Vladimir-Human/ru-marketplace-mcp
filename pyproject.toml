@@ -31,6 +31,7 @@ dependencies = [
     "citilink-connector",
     "mpstats-connector",
     "aliexpress-connector",
+    "cian-connector",
     "marketplace-connector",
 ]
 
@@ -58,6 +59,7 @@ dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
 mpstats-connector = { workspace = true }
 aliexpress-connector = { workspace = true }
+cian-connector = { workspace = true }
 marketplace-connector = { workspace = true }
 
 [dependency-groups]
@@ -135,6 +137,7 @@ testpaths = [
     "packages/citilink-connector/tests",
     "packages/mpstats-connector/tests",
     "packages/aliexpress-connector/tests",
+    "packages/cian-connector/tests",
     "packages/marketplace-connector/tests",
 ]
 asyncio_mode = "auto"
@@ -166,6 +169,7 @@ source = [
     "packages/citilink-connector/src/citilink_connector",
     "packages/mpstats-connector/src/mpstats_connector",
     "packages/aliexpress-connector/src/aliexpress_connector",
+    "packages/cian-connector/src/cian_connector",
     "packages/marketplace-connector/src/marketplace_connector",
 ]
 omit = [

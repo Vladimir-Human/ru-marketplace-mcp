@@ -175,6 +175,185 @@
       "type": "object"
     }
   },
+  "cian_card": {
+    "output": {
+      "properties": {
+        "_meta": {},
+        "address": {},
+        "agency_name": {},
+        "agent": {},
+        "build_year": {},
+        "building_material": {},
+        "category": {},
+        "ceiling_height_m": {},
+        "created_at": {},
+        "deal_type": {},
+        "deposit_rub": {},
+        "description": {},
+        "flat_type": {},
+        "floor": {},
+        "floors_total": {},
+        "is_apartments": {},
+        "is_by_homeowner": {},
+        "kitchen_area_m2": {},
+        "lease_term": {},
+        "living_area_m2": {},
+        "metro": {},
+        "newbuilding_name": {},
+        "offer_id": {},
+        "photos": {},
+        "price_history": {},
+        "price_period": {},
+        "price_rub": {},
+        "rooms": {},
+        "seller_type": {},
+        "status": {},
+        "tier_used": {},
+        "title": {},
+        "total_area_m2": {},
+        "updated_at": {},
+        "url": {},
+        "views": {}
+      },
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "offer_id_or_url": {
+          "maxLength": 300,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "offer_id_or_url"
+      ],
+      "type": "object"
+    }
+  },
+  "cian_search": {
+    "output": {
+      "properties": {
+        "_meta": {},
+        "count": {},
+        "deal": {},
+        "items": {},
+        "offer_type": {},
+        "page": {},
+        "region": {},
+        "status": {},
+        "tier_used": {},
+        "total_count": {}
+      },
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "area_max": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "area_min": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "deal": {
+          "enum": [
+            "sale",
+            "rent"
+          ],
+          "type": "string"
+        },
+        "offer_type": {
+          "default": "flat",
+          "enum": [
+            "flat",
+            "room",
+            "house",
+            "commercial"
+          ],
+          "type": "string"
+        },
+        "page": {
+          "default": 1,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "price_max": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "price_min": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rooms": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "deal"
+      ],
+      "type": "object"
+    }
+  },
   "citilink_card": {
     "output": {
       "properties": {

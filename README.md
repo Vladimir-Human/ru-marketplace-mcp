@@ -173,7 +173,7 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 <summary><b>Другой stdio-клиент</b></summary>
 
 Запустите `uv run --directory /путь/к/репозиторию <команда>`, где команда — одна из
-`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`. Серверы говорят по
+`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`. Серверы говорят по
 JSON-RPC через stdin и stdout, диагностику пишут в stderr. Опциональный
 `mpstats-mcp` запускается так же, с `MPSTATS_MP_AUTH` в окружении.
 
@@ -359,6 +359,23 @@ Lamoda.
 `aliexpress_selfcheck` доказывает, что транспорт ответил, — не то, что цена
 верна.
 
+### Циан — `cian_*`
+
+| Инструмент                                                                                  | Что делает                                              |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `cian_search(deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page)` | Поиск недвижимости по фильтрам: 28 объявлений на страницу |
+| `cian_card(offer_id_or_url)`                                                                | Карточка: цена и её история, планировка, дом, адрес, метро, публикатор |
+
+Недвижимость, а не товары: квартиры, комнаты, дома и коммерция на продажу и в
+долгосрочную аренду. Поиск только по фильтрам — текстового поиска у Циана нет.
+Регион задаётся id Циана: 1 Москва, 2 Санкт-Петербург, 4593 Московская область,
+4588 Ленинградская область (все четыре проверены живьём); остальным регионам
+нужен их id. Читается через ваш Chrome (CDP): WAF Циана режет голый HTTP по IP,
+а из сессии браузера отвечает собственный JSON-API сайта, так что HTML не
+парсится. Цена «не указана» приходит как `null`, не `0`. Агентской страницы как
+инструмента нет: она не отдаёт структурированных данных, агент приходит внутри
+карточки. В `compare_prices` источник не участвует.
+
 ### Сравнение цен — `compare_*`
 
 | Инструмент                                         | Что делает                                   |
@@ -438,6 +455,7 @@ compare_prices("кроссовки мужские")
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
 | `skills/aliexpress-connector` | `aliexpress-mcp`  |
+| `skills/cian-connector`       | `cian-mcp`        |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
@@ -649,7 +667,7 @@ uv run pytest -q -m "not live and not cdp"    # 1243 offline tests, no network n
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
-script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`) launched
+script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`) launched
 through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
 runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
 account; without it the tools return `auth_missing`). `marketplace-mcp install
@@ -784,6 +802,23 @@ coupon is reported as a warning. Review texts are not exposed; rating and order
 counts are. As with every CDP source, a green `aliexpress_selfcheck` proves the
 transport answered — not that a given price is right.
 
+### Cian — `cian_*`
+
+| Tool                                                                                        | What it does                                                    |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `cian_search(deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page)` | Real-estate search by filters: 28 offers per page               |
+| `cian_card(offer_id_or_url)`                                                                | One offer: price and its history, layout, building, address, metro, publisher |
+
+Real estate, not goods: flats, rooms, houses and commercial property for sale or
+long-term rent. Search is by filters only — Cian has no text search. The region
+is a Cian id: 1 Moscow, 2 St. Petersburg, 4593 Moscow oblast, 4588 Leningrad
+oblast (all four verified live); other regions need their own id. Read through
+your Chrome (CDP): Cian's WAF blocks plain HTTP by IP, while inside the browser
+session the site's own JSON API answers, so no HTML is parsed. A price Cian does
+not state arrives as `null`, never `0`. There is no agent tool: the agent page
+exposes no structured data, and the publisher ships inside the card. The source
+takes no part in `compare_prices`.
+
 ### Avito — `avito_*`
 
 | Tool                                              | What it does                                      |
@@ -898,6 +933,7 @@ answers should not be trusted without a second look.
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
 | `skills/aliexpress-connector` | `aliexpress-mcp`  |
+| `skills/cian-connector`       | `cian-mcp`        |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |

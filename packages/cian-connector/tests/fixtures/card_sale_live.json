@@ -1,0 +1,600 @@
+{
+  "offerData": {
+    "offer": {
+      "category": "newBuildingFlatSale",
+      "status": "published",
+      "dealType": "sale",
+      "offerType": "flat",
+      "geo": {
+        "address": [
+          {
+            "fullName": "Москва",
+            "id": 1,
+            "locationTypeId": 1,
+            "name": "Москва",
+            "shortName": "Москва",
+            "type": "location",
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&object_type%5B0%5D=2&offer_type=flat&region=1&room1=1"
+          },
+          {
+            "fullName": "НАО (Новомосковский)",
+            "id": 325,
+            "locationTypeId": -1,
+            "name": "НАО (Новомосковский)",
+            "shortName": "НАО (Новомосковский)",
+            "type": "okrug",
+            "url": "https://www.cian.ru/kupit-1-komnatnuyu-kvartiru-novostroyki-moskva-nao-novomoskovskiy-04325/"
+          },
+          {
+            "fullName": "Московский г.",
+            "id": 1224131,
+            "locationTypeId": 1,
+            "name": "Московский",
+            "shortName": "Московский",
+            "type": "location",
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&location%5B0%5D=1224131&object_type%5B0%5D=2&offer_type=flat&room1=1"
+          },
+          {
+            "fullName": "Первый Московский мкр",
+            "id": 252280,
+            "locationTypeId": 174,
+            "name": "Первый Московский",
+            "shortName": "Первый Московский микрорайон",
+            "type": "location",
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&location%5B0%5D=252280&object_type%5B0%5D=2&offer_type=flat&room1=1"
+          },
+          {
+            "fullName": "Первый Московский ЖК",
+            "id": 312653,
+            "locationTypeId": 213,
+            "name": "Первый Московский",
+            "shortName": "Первый Московский жилой комплекс",
+            "type": "location",
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&location%5B0%5D=312653&object_type%5B0%5D=2&offer_type=flat&room1=1"
+          },
+          {
+            "fullName": "11-я фаза",
+            "id": 470077,
+            "locationTypeId": 308,
+            "name": "11-я",
+            "shortName": "11-я фаза",
+            "type": "location",
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&location%5B0%5D=470077&object_type%5B0%5D=2&offer_type=flat&room1=1"
+          }
+        ],
+        "coordinates": {
+          "lat": 55.606802608988,
+          "lng": 37.3612718295558
+        },
+        "highways": [
+          {
+            "name": "Киевское",
+            "distance": 7,
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&highway%5B0%5D=12&object_type%5B0%5D=2&offer_type=flat&room1=1",
+            "id": 12
+          },
+          {
+            "name": "Боровское",
+            "distance": 12,
+            "url": "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&highway%5B0%5D=2&object_type%5B0%5D=2&offer_type=flat&room1=1",
+            "id": 2
+          }
+        ],
+        "jk": {
+          "id": 1448,
+          "name": "Город-парк Первый Московский",
+          "developer": {
+            "name": "Абсолют Недвижимость"
+          },
+          "house": {
+            "id": 10922142,
+            "name": "6 корпус (11 квартал)"
+          },
+          "gaGeo": {
+            "moId": 0,
+            "oblId": 1,
+            "cityId": 1224131
+          },
+          "fullUrl": "https://www.cian.ru/zhiloy-kompleks-gorodpark-pervyy-moskovskiy-moskva-1448/",
+          "fullUrlTemplate": "{request_scheme}://zhk-gorod-park-pervyy-moskovskiy-i.{host}/",
+          "webSiteUrl": "https://www.absrealty.ru/projects/pervyj-moskovskij"
+        },
+        "railways": [
+          {
+            "id": 848,
+            "directionIds": [
+              14
+            ],
+            "distance": "5.0",
+            "time": 70,
+            "name": "Аэропорт Внуково",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 848,
+            "directionIds": [
+              14
+            ],
+            "distance": "6.0",
+            "time": 10,
+            "name": "Аэропорт Внуково",
+            "travelType": "byCar"
+          },
+          {
+            "id": 778,
+            "directionIds": [
+              14
+            ],
+            "distance": "6.0",
+            "time": 77,
+            "name": "Мичуринец",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 766,
+            "directionIds": [
+              14
+            ],
+            "distance": "6.0",
+            "time": 80,
+            "name": "Новопеределкино",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 766,
+            "directionIds": [
+              14
+            ],
+            "distance": "7.0",
+            "time": 10,
+            "name": "Новопеределкино",
+            "travelType": "byCar"
+          },
+          {
+            "id": 778,
+            "directionIds": [
+              14
+            ],
+            "distance": "11.0",
+            "time": 17,
+            "name": "Мичуринец",
+            "travelType": "byCar"
+          }
+        ],
+        "undergrounds": [
+          {
+            "id": 367,
+            "name": "Рассказовка",
+            "lineColor": "FFDF00",
+            "travelType": "transport",
+            "travelTime": 6,
+            "url": "https://www.cian.ru/kupit-1-komnatnuyu-kvartiru-novostroyki-moskva-metro-rasskazovka/",
+            "underConstruction": false
+          },
+          {
+            "id": 366,
+            "name": "Новопеределкино",
+            "lineColor": "FFDF00",
+            "travelType": "transport",
+            "travelTime": 9,
+            "url": "https://www.cian.ru/kupit-1-komnatnuyu-kvartiru-novostroyki-moskva-metro-novoperedelkino-366/",
+            "underConstruction": false
+          },
+          {
+            "id": 535,
+            "name": "Аэропорт Внуково",
+            "lineColor": "FFDF00",
+            "travelType": "transport",
+            "travelTime": 9,
+            "url": "https://www.cian.ru/kupit-1-komnatnuyu-kvartiru-novostroyki-moskva-metro-aeroport-vnukovo/",
+            "underConstruction": false
+          }
+        ]
+      },
+      "id": 331002424,
+      "objectGuid": "66abc10c-00eb-4af2-8a67-d2c9359ba4e8",
+      "cianId": 331002424,
+      "userId": 134642318,
+      "publishedUserId": 134642318,
+      "cianUserId": 134642318,
+      "description": "Продается однокомнатная квартира  в 11 квартале города-парка \"Первый Московский\". \nОбщая площадь квартиры - 38,1 кв. м, этаж 12 из 22. \nПланируемый срок ввода в эксплуатацию - 3 квартал 2029 года. \nТип дома - монолитный. \n \nТОЛЬКО ДО 30 СЕНТЯБРЯ выгодные условия на приобретение квартиры в ипотеку. \n",
+      "photos": [
+        {
+          "id": 2953413873,
+          "isDefault": false,
+          "fullUrl": "https://images.cdn-cian.ru/images/2953413873-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/2953413873-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/2953413873-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/2953413873-3.jpg",
+          "isLayout": true,
+          "isCianLayout": false
+        },
+        {
+          "id": 2958331459,
+          "isDefault": false,
+          "fullUrl": "https://images.cdn-cian.ru/images/2958331459-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/2958331459-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/2958331459-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/2958331459-3.jpg",
+          "isLayout": false,
+          "isCianLayout": false
+        }
+      ],
+      "phones": [
+        {
+          "countryCode": "+7",
+          "number": "9230727409"
+        }
+      ],
+      "publishTerms": {
+        "terms": [
+          {
+            "services": [
+              "paid"
+            ],
+            "days": 30,
+            "type": "periodical"
+          }
+        ],
+        "autoprolong": true
+      },
+      "flatType": "rooms",
+      "isApartments": false,
+      "totalArea": "38.1",
+      "kitchenArea": "16.6",
+      "allRoomsArea": "12.2",
+      "windowsViewType": "yard",
+      "combinedWcsCount": 1,
+      "decoration": "without",
+      "flags": {
+        "isArchived": false,
+        "isCommercialOwnershipVerified": false
+      },
+      "kpnChatEnabled": true,
+      "specialty": {
+        "types": [],
+        "additionalTypes": []
+      },
+      "isNeedHideExactAddress": false,
+      "areaParts": [],
+      "roomsCount": 1,
+      "floorNumber": 12,
+      "bargainTerms": {
+        "price": 11985439,
+        "priceType": "all",
+        "currency": "rur",
+        "mortgageAllowed": true,
+        "saleType": "fz214",
+        "includedOptions": [],
+        "prices": {
+          "rur": 11985439,
+          "usd": 138604,
+          "eur": 119260
+        },
+        "tags": []
+      },
+      "building": {
+        "materialType": "monolith",
+        "floorsCount": 22,
+        "ceilingHeight": "2.73",
+        "totalArea": "38.1",
+        "liftTypes": [],
+        "cranageTypes": [],
+        "passengerLiftsCount": 2,
+        "cargoLiftsCount": 2,
+        "deadline": {
+          "year": 2029,
+          "quarter": "third",
+          "isComplete": false,
+          "quarterEnd": "2029-09-30"
+        },
+        "houseMaterialType": "monolith"
+      },
+      "editDate": "2026-09-08T22:25:42.932744Z",
+      "humanizedEditDate": "вчера, 22:25",
+      "isInCpd": false,
+      "isInHiddenBase": false,
+      "isObjectHidden": false,
+      "isClosedVisibility": false,
+      "videos": [
+        {
+          "id": "456239331",
+          "url": "https://vkvideo.ru/video_ext.php?oid=-34496106&id=456239331&hd=2&hash=f1f6731c9fa8e20f",
+          "type": "vk",
+          "previewUrl": "https://iv.okcdn.ru/getVideoPreview?id=9276621916909&idx=12&type=39&tkn=7SPc820List5MGet0stC8R89t4A&fn=vid_w"
+        }
+      ],
+      "priceTotal": 11985439,
+      "priceTotalRur": 11985439,
+      "exportLinks": {
+        "pdfUrl": "/export/pdf/sale/flat/331002424/",
+        "docxUrl": "/export/docx/sale/flat/331002424/"
+      },
+      "passengerLiftsCount": 2,
+      "cargoLiftsCount": 2,
+      "added": "4 сен, 22:10",
+      "categoriesIds": [
+        1,
+        100,
+        110,
+        113
+      ],
+      "publicationDate": 1781196144,
+      "creationDate": "2026-06-11T19:42:24.507",
+      "recoveryLink": "/razmestit-obyavlenie/331002424/?isFromXML=1",
+      "isFromBuilder": true,
+      "isFromSeller": false,
+      "isFromLeadFactory": false,
+      "trackingData": {
+        "moId": 0,
+        "oblId": 1,
+        "cityId": 470077,
+        "fbRegion": "Москва",
+        "fbCity": "11-я"
+      },
+      "editPhoto": "/realty/add2.aspx?id=331002424&isFromXML=1",
+      "newEdit": "/razmestit-obyavlenie/?realty_id=331002424&isFromXML=1",
+      "certificate": "https://www.cian.ru/newobjects/cian/certification/get?announcementId=331002424",
+      "edit": "/realty/add1.aspx?id=331002424&isFromXML=1",
+      "similarOffersLink": "",
+      "similarOffersCount": 0,
+      "buildersIds": [
+        5956
+      ],
+      "builderId": 5956,
+      "isImported": true,
+      "userConfirmedFix": false,
+      "newbuilding": {
+        "id": 1448,
+        "name": "Город-парк Первый Московский",
+        "house": {
+          "isReliable": false,
+          "isFinished": false,
+          "finishDate": {
+            "quarter": 3,
+            "year": 2029
+          },
+          "id": 10922142,
+          "name": "6 корпус (11 квартал)"
+        },
+        "isTariffPremium": false,
+        "isFromDeveloper": true,
+        "isFromBuilder": true,
+        "isFromSeller": false,
+        "isFromLeadFactory": false,
+        "showJkReliableFlag": false,
+        "isFichering": true,
+        "isFicheringPlus": false,
+        "isPremium": false,
+        "newbuildingFeatures": {
+          "imagesCount": 44,
+          "firstImageUrl": "https://images.cdn-cian.ru/images/gorodpark-pervyy-moskovskiy-moskva-jk-2356445413-6.jpg",
+          "videosCount": 0,
+          "deadlineInfo": "Сдача в 2026—2030, есть сданные"
+        },
+        "isReliable": false
+      },
+      "timezone": 3,
+      "isEnabledCallTracking": true,
+      "isRentByParts": false,
+      "isDuplicate": false,
+      "userTrust": "notInvolved",
+      "userTrustLevel": "notInvolved",
+      "showWarningMessage": false,
+      "moderationInfo": {
+        "showContactWarningMessage": false
+      },
+      "isUnique": true,
+      "isUniqueCheckDate": "2026-09-08",
+      "isCianPartner": false,
+      "externalId": "26201587",
+      "isIllegalConstruction": false,
+      "amenities": [],
+      "isFromDeveloperBooked": false,
+      "layoutKey": "5799e19f-2152-4b38-937d-6e55ade846ca",
+      "externalOfferUrl": "",
+      "cianLayouts": null,
+      "demolishedInMoscowProgramm": false
+    },
+    "agent": {
+      "id": 134642318,
+      "cianUserId": 134642318,
+      "realtyUserId": 134642318,
+      "accountType": "agency",
+      "companyName": "Абсолют Недвижимость",
+      "creationDate": "2025-09-01T12:35:58.743000Z",
+      "name": "Абсолют Недвижимость",
+      "isPro": false,
+      "phones": [
+        {
+          "confirmed": true
+        },
+        {
+          "confirmed": true
+        }
+      ],
+      "skills": [],
+      "absoluteAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=72650908&t=2&p=2&timestamp=1766554569",
+      "absoluteMiniAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=72650908&t=2&p=1&timestamp=1766554569",
+      "isDeveloper": true,
+      "isRecidivist": false,
+      "isUserOffersHasErrors": false,
+      "offersCount": 1500,
+      "offersLink": "",
+      "availableServices": {
+        "isUploadsAvailable": true,
+        "isCallTrackingAvailable": false,
+        "isPhoneChangingAvailable": true,
+        "isServicePackagesAvailable": true,
+        "canUseHiddenBase": false
+      },
+      "userType": "developer",
+      "removeCompetitor": false,
+      "status": "published",
+      "isSubAgent": false,
+      "isMessagingEnabled": false,
+      "isPassportVerified": false,
+      "isSelfEmployed": false,
+      "isPrivateBroker": false,
+      "isCianPartner": false,
+      "canShowOnline": false,
+      "moderationInfo": {
+        "isUserIdentified": false,
+        "isUserIdentifiedByDocuments": false,
+        "showUserIdentifiedByDocuments": false
+      },
+      "isHidden": false,
+      "metrics": [
+        {
+          "title": "На Циан",
+          "value": "1 год"
+        },
+        {
+          "title": "Объектов в работе",
+          "value": "более 1000"
+        }
+      ],
+      "agentLists": []
+    },
+    "company": {
+      "buildersAuctionRank": 1638558426,
+      "buildingStatus": [
+        {
+          "count": 6,
+          "housesCount": 193,
+          "statusId": 5004
+        },
+        {
+          "count": 3,
+          "housesCount": 17,
+          "statusId": 5002
+        }
+      ],
+      "categoryId": 2002,
+      "description": "Девелоперская компания «Абсолют Недвижимость» является партнером Инвестиционной Группы «Абсолют» и реализует крупные инвестиционные проекты жилой и коммерческой недвижимости, земельных участков в Москве и ближнем Подмосковье. В основе успеха компании – многолетний опыт и инновационный подход в продажах, который обеспечивает высокий уровень обслуживания. Финансовыми партнерами являются крупнейшие банки России, в числе которых «Сбербанк», «ВТБ 24», «РайффайзенБанк», «Уралсиб», «Возрождение» и другие. В каждом жилом комплексе создается полноценная инфраструктура с современными детскими садами, школами, безопасными спортивными и детскими площадками, благоустроенными дворами и авторскими интерьерами входных групп. Крупные реализуемые проекты жилой недвижимости – это города-парки «Переделкино Ближнее» и «Первый Московский», жилые комплексы бизнес-класса «Западное Кунцево» и Резиденции «Сколково», жилые комплексы «Внуково», «Химки 2019», «Люберцы» и «Новоград Павлино». Среди коттеджных поселков известны «Александровы Пруды», «Лисичкин лес», «Певчее» и «Цветочный», из объектов коммерческой недвижимости – БЦ «Омега Плаза».",
+      "fromDeveloperPropsCount": 1499,
+      "hasSpecProject": false,
+      "id": 5956,
+      "isTest": false,
+      "locationIds": [
+        1,
+        338625,
+        1224131,
+        1268067,
+        1224136,
+        1226664,
+        58347,
+        312814,
+        4593,
+        191990,
+        1268058
+      ],
+      "logoUrl": "/api/get-company-logo/?id=5956&rnd=405447",
+      "maxBet": 4000,
+      "name": "Абсолют Недвижимость",
+      "newobjectsCount": 6,
+      "offersCount": 1501,
+      "phones": [],
+      "promoCount": 0,
+      "specProjectNewobjectsCount": 0,
+      "status": 12,
+      "website": "http://www.absrealty.ru/",
+      "yearFoundation": 1990,
+      "url": "/zastroishchik-absoliut-nedvizhimost-5956/",
+      "isReliable": true,
+      "stats": {
+        "housesDone": {
+          "housesCount": 193,
+          "newbuildingCount": 6,
+          "qs": "builder=5956&deal_type=sale&engine_version=2&offer_type=newobject&show_old_newobjects=1&status[0]=5004"
+        },
+        "housesInProgress": {
+          "housesCount": 17,
+          "newbuildingCount": 3,
+          "qs": "builder=5956&deal_type=sale&engine_version=2&offer_type=newobject&status[0]=5002"
+        },
+        "newbuildingCount": {
+          "qs": "builder=5956&deal_type=sale&engine_version=2&offer_type=newobject&show_old_newobjects=1",
+          "text": "ЖК",
+          "value": 6
+        },
+        "newbuildingWithOffers": {
+          "qs": "builders[0]=5956&deal_type=sale&engine_version=2&from_developer=1&offer_type=newobject&show_old_newobjects=1",
+          "text": "ЖК в реализации",
+          "value": 3
+        }
+      },
+      "headerImageUrl": "https://images.cdn-cian.ru/images/gorodpark-pervyy-moskovskiy-moskva-jk-2356445413-10.jpg",
+      "newbuildingIds": [
+        1611,
+        1287,
+        1448,
+        1446,
+        1609,
+        5799
+      ],
+      "advantages": [],
+      "workYears": {
+        "text": "лет на рынке",
+        "value": 36
+      },
+      "reviewStats": {
+        "reviewCount": 532,
+        "reviewCountText": "532 отзыва",
+        "totalRate": 4.6
+      },
+      "email": null,
+      "emailForRequest": null
+    },
+    "user": {
+      "realtyUserId": null,
+      "isAuthenticated": false,
+      "permissions": {
+        "canModerateUsers": false,
+        "canModerateAnnouncements": false,
+        "canModerateAnnouncementsExpert": false,
+        "canViewUsers": false,
+        "canViewAnnouncements": false
+      },
+      "ga": {
+        "type": "",
+        "balance": 0,
+        "packages": [],
+        "emailMd5": ""
+      }
+    },
+    "priceChanges": [
+      {
+        "changeTime": "2026-09-01T19:14:33.257248Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 11985439
+        }
+      },
+      {
+        "changeTime": "2026-07-15T11:21:37.194579Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 11866772
+        }
+      },
+      {
+        "changeTime": "2026-07-01T16:16:07.692597Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 11633130
+        }
+      },
+      {
+        "changeTime": "2026-06-11T16:42:25.033456Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 12417574
+        }
+      }
+    ],
+    "stats": {
+      "totalViewsFormattedString": "12907 просмотров, 98 за сегодня"
+    }
+  }
+}

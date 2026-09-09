@@ -9,6 +9,35 @@
 
 ## [Unreleased]
 
+### Добавлено
+
+- Коннектор Циан (`cian-connector`, скрипт `cian-mcp`, тулы `cian_search` и
+  `cian_card`) — недвижимость, а не товары: квартиры, комнаты, дома и коммерция
+  на продажу и в долгосрочную аренду. Только второй ярус (CDP): WAF Циана режет
+  голый HTTP по IP (403 `cian_waf_block`, без капчи), а из сессии Chrome
+  отвечает собственный JSON-API сайта (`search-offers-desktop`) и состояние
+  карточки в `window._cianConfig`. Поиск по фильтрам (сделка, тип, регион,
+  комнаты, цена, площадь), не по тексту; регионы 1/2/4593/4588 проверены живьём.
+  Карточка отдаёт цену и её историю, планировку, дом, адрес, метро, описание и
+  публикатора. Цена без указания — `None`, не 0. В `compare_prices` источник не
+  участвует. Страница агента структурированных данных не отдаёт, поэтому тула
+  `cian_agent` нет — агент приходит внутри карточки (`docs/ANTI_BOT.md` § Cian).
+
+### Added
+
+- Cian connector (`cian-connector`, `cian-mcp` console script, tools
+  `cian_search` and `cian_card`) — real estate, not goods: flats, rooms, houses
+  and commercial property for sale or long-term rent. Tier 2 only: Cian's WAF
+  blocks plain HTTP by IP (403 `cian_waf_block`, no captcha), while inside the
+  Chrome session the site's own JSON API (`search-offers-desktop`) and the card
+  state in `window._cianConfig` answer. Search is by filters (deal, type,
+  region, rooms, price, area), not text; regions 1/2/4593/4588 verified live.
+  The card carries the price and its history, layout, building, address, metro,
+  description and publisher. A missing price is `None`, never 0. The source
+  takes no part in `compare_prices`. The agent page exposes no structured data,
+  so there is no `cian_agent` tool — the agent ships inside the card
+  (`docs/ANTI_BOT.md` § Cian).
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено

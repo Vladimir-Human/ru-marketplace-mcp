@@ -1,0 +1,54 @@
+{
+  "captured": "2026-09-09",
+  "endpoint": "https://api.cian.ru/search-offers/v2/search-offers-desktop/",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "jsonQuery": {
+    "_type": "flatrent",
+    "engine_version": {
+      "type": "term",
+      "value": 2
+    },
+    "region": {
+      "type": "terms",
+      "value": [
+        2
+      ]
+    },
+    "page": {
+      "type": "term",
+      "value": 1
+    },
+    "for_day": {
+      "type": "term",
+      "value": "!1"
+    },
+    "room": {
+      "type": "terms",
+      "value": [
+        2
+      ]
+    },
+    "price": {
+      "type": "range",
+      "value": {
+        "gte": 40000,
+        "lte": 60000
+      }
+    }
+  },
+  "displayed": {
+    "status": 200,
+    "count": 28,
+    "offerCount": 1228,
+    "aggregatedCount": 1227,
+    "first": {
+      "id": 317754437,
+      "priceRur": 60000,
+      "price": 60000,
+      "userInput": "Россия, Санкт-Петербург, проспект Просвещения, 83",
+      "category": "flatRent",
+      "fullUrl": "https://spb.cian.ru/rent/flat/317754437/?mlSearchSessionGuid=04cee7065c9de1921e1e12b67e121d18"
+    }
+  },
+  "trimmed": "first 3 offers; description cut to 300 chars; photos cut to 2"
+}

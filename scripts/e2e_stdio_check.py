@@ -40,8 +40,9 @@ EXPECTED_TOOLS = {
     "dns-mcp": 2,
     "citilink-mcp": 2,
     "aliexpress-mcp": 2,
+    "cian-mcp": 2,
     "mpstats-mcp": 2,
-    "marketplace-mcp": 37,  # 36 mounted + marketplace_sources
+    "marketplace-mcp": 39,  # 38 mounted + marketplace_sources
 }
 
 TIMEOUT_S = 60.0
