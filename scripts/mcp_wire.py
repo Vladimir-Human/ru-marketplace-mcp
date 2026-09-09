@@ -8,9 +8,9 @@ Cyrillic characters weigh 1/3, everything else 1/4.
 
 from __future__ import annotations
 
-import json
 import argparse
 import hashlib
+import json
 import subprocess
 import sys
 import time
@@ -89,9 +89,14 @@ def _snapshot(script: str, tools: list[dict], elapsed: float) -> dict[str, objec
     rows.sort(key=lambda row: str(row["name"]))
     total = sum(int(row["tokens"]) for row in rows)
     schema_hash = hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
-    return {"script": script, "tool_count": len(tools), "wire_tokens": total,
-            "latency_ms": round(elapsed * 1000, 1), "schema_sha256": schema_hash,
-            "tools": rows}
+    return {
+        "script": script,
+        "tool_count": len(tools),
+        "wire_tokens": total,
+        "latency_ms": round(elapsed * 1000, 1),
+        "schema_sha256": schema_hash,
+        "tools": rows,
+    }
 
 
 def _load_baseline(path: Path) -> dict[str, object]:
@@ -103,8 +108,9 @@ def _load_baseline(path: Path) -> dict[str, object]:
     return value
 
 
-def _check_gate(snapshot: dict[str, object], baseline: dict[str, object], max_regression: float,
-                max_latency_ms: float | None) -> dict[str, object]:
+def _check_gate(
+    snapshot: dict[str, object], baseline: dict[str, object], max_regression: float, max_latency_ms: float | None
+) -> dict[str, object]:
     profiles = baseline.get("profiles", {})
     old = profiles.get(snapshot["script"], {}) if isinstance(profiles, dict) else {}
     failures: list[str] = []
@@ -121,8 +127,13 @@ def _check_gate(snapshot: dict[str, object], baseline: dict[str, object], max_re
             latency_delta = snapshot["latency_ms"] - previous_latency
     if max_latency_ms is not None and snapshot["latency_ms"] > max_latency_ms:
         failures.append(f"latency_ms:{snapshot['latency_ms']:.1f}>{max_latency_ms:.1f}")
-    return {"ok": not failures, "failures": failures, "token_delta_percent": token_delta,
-            "latency_delta_ms": latency_delta, "baseline": old}
+    return {
+        "ok": not failures,
+        "failures": failures,
+        "token_delta_percent": token_delta,
+        "latency_delta_ms": latency_delta,
+        "baseline": old,
+    }
 
 
 def main(argv: list[str]) -> int:
@@ -192,13 +203,22 @@ def main(argv: list[str]) -> int:
             for prefix, costs in sorted(groups.items(), key=lambda item: -sum(item[1])):
                 print(f"    {prefix:<12} {len(costs):2d} tools  ~{sum(costs):6d} tok.")
         print()
-    report = {"version": 1, "root": str(root), "profiles": snapshots, "gates": gates,
-              "ok": all(bool(g.get("ok")) for g in gates.values()) if gates else False}
+    report = {
+        "version": 1,
+        "root": str(root),
+        "profiles": snapshots,
+        "gates": gates,
+        "ok": all(bool(g.get("ok")) for g in gates.values()) if gates else False,
+    }
     if args.update_baseline:
         if args.baseline is None:
             parser.error("--update-baseline requires --baseline")
         args.baseline.parent.mkdir(parents=True, exist_ok=True)
-        args.baseline.write_text(json.dumps({"version": 1, "profiles": {s["script"]: s for s in snapshots}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        args.baseline.write_text(
+            json.dumps({"version": 1, "profiles": {s["script"]: s for s in snapshots}}, ensure_ascii=False, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -207,5 +227,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-
-

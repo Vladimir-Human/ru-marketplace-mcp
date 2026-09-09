@@ -1,4 +1,5 @@
 """Conservative product and offer identity helpers."""
+
 from __future__ import annotations
 
 import re

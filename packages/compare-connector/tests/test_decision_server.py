@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from compare_connector import decision_server as server
 
 

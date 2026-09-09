@@ -43,10 +43,10 @@ import socket
 import subprocess
 import sys
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Collection, Protocol
+from typing import Any, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
@@ -531,7 +531,9 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 
 _RAW_CONNECT_TIMEOUT_S = 8.0
 _RAW_NAV_TIMEOUT_S = 20.0
-_RAW_MAX_FRAME_BYTES = max(64 * 1024, min(int(os.environ.get("CHROME_CDP_MAX_FRAME_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024))
+_RAW_MAX_FRAME_BYTES = max(
+    64 * 1024, min(int(os.environ.get("CHROME_CDP_MAX_FRAME_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024)
+)
 
 
 def _raw_page_count() -> int:
@@ -687,7 +689,9 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
     if not browser_ws:
         raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
 
-    async with _websockets.connect(browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S) as bws:
+    async with _websockets.connect(
+        browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+    ) as bws:
         # ``background`` keeps the new tab from activating the window: without
         # it Chrome comes to the front on every call (and macOS follows it to
         # its Space). Chrome-only parameter, and this path is Chrome-only.
@@ -796,7 +800,6 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
                 await asyncio.to_thread(_hide_chrome_windows)
 
 
-@asynccontextmanager
 def _check_final_host(url: str, allowed_hosts: Collection[str]) -> None:
     """Reject a navigation that escaped the caller's host policy."""
     parsed = urlsplit(url)
@@ -815,6 +818,7 @@ class NavigationPolicyError(RuntimeError):
         super().__init__("CDP navigation left the allowed host policy")
 
 
+@asynccontextmanager
 async def open_page(
     url: str,
     wait_ms: int = 5000,

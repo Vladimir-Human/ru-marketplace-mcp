@@ -11,11 +11,11 @@ from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from mcp_core.errors import BadRequestError, raise_tool_error
+from mcp_core.output_schema import apply_compact_output_schemas
 from pydantic import Field
 
 from compare_connector import server as compare
-from mcp_core.errors import BadRequestError, raise_tool_error
-from mcp_core.output_schema import apply_compact_output_schemas
 
 mcp = FastMCP(name="decision-connector", version=compare.SERVER_VERSION)
 mcp.mount(compare.mcp)
@@ -32,9 +32,15 @@ mcp.mount(compare.mcp)
     ),
 )
 async def decision_inspect(
-    source: Annotated[str, Field(description="Marketplace source from compare_prices, e.g. wildberries or yandex_market.")],
-    product_id_or_url: Annotated[str, Field(min_length=1, max_length=400, description="Product identifier or URL from the shortlist.")],
-    include_reviews: Annotated[bool, Field(default=False, description="Include source-native reviews when the card supports them.")] = False,
+    source: Annotated[
+        str, Field(description="Marketplace source from compare_prices, e.g. wildberries or yandex_market.")
+    ],
+    product_id_or_url: Annotated[
+        str, Field(min_length=1, max_length=400, description="Product identifier or URL from the shortlist.")
+    ],
+    include_reviews: Annotated[
+        bool, Field(default=False, description="Include source-native reviews when the card supports them.")
+    ] = False,
 ) -> dict[str, Any]:
     """Inspect one shortlisted offer, optionally including its reviews.
 
@@ -54,6 +60,7 @@ async def decision_inspect(
 
     if name == "wildberries":
         import re
+
         digits = re.search(r"\d+", product_id_or_url)
         if digits is None:
             raise_tool_error(BadRequestError("wildberries inspection needs a numeric nm_id"))
@@ -64,9 +71,14 @@ async def decision_inspect(
         result = await tool(product_id=int(product_id_or_url))
     else:
         argument = {
-            "ozon": "sku_or_path", "avito": "item_id_or_url", "taobao": "item_id_or_url",
-            "megamarket": "product_id_or_url", "lamoda": "sku_or_url", "dns": "product_url",
-            "citilink": "product_url", "aliexpress": "item_id_or_url",
+            "ozon": "sku_or_path",
+            "avito": "item_id_or_url",
+            "taobao": "item_id_or_url",
+            "megamarket": "product_id_or_url",
+            "lamoda": "sku_or_url",
+            "dns": "product_url",
+            "citilink": "product_url",
+            "aliexpress": "item_id_or_url",
         }[name]
         result = await tool(**{argument: product_id_or_url})
     payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
@@ -74,4 +86,3 @@ async def decision_inspect(
 
 
 apply_compact_output_schemas(mcp)
-
