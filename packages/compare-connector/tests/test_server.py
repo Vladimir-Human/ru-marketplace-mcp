@@ -905,6 +905,22 @@ async def test_comparable_candidate_is_none_when_everything_is_suspicious(monkey
     assert "comparable_price: every priced listing" in result.warnings[-1]
 
 
+async def test_stock_filter_ranks_only_confirmed_available_offers(monkeypatch):
+    async def wb(query, limit):
+        return [offer("wildberries", 1000.0, title="Product", in_stock=False)]
+
+    async def ozon(query, limit):
+        return [offer("ozon", 1200.0, title="Product", in_stock=True)]
+
+    stub_sources(monkeypatch, {"wildberries": wb, "ozon": ozon})
+
+    result = await server.compare_prices(query="product", in_stock_only=True)
+
+    assert result.cheapest.source == "ozon"
+    assert len(result.offers) == 2
+    assert any(w.startswith("stock_filter:") for w in result.warnings)
+
+
 # ------------------------------------------------------------------- condition ----
 #
 # Checked live on wildberries.ru in July 2026 for the query "iphone 15": the

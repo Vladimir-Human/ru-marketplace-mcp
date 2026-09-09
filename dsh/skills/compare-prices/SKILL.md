@@ -28,7 +28,7 @@ rank its rows against rouble sources.
 
 ## Tools
 
-- `compare_prices(query, per_source_limit=5, sources=None)` — the main tool.
+- `compare_prices(query, per_source_limit=5, sources=None, in_stock_only=False)` — the main tool.
   Returns offers cheapest-first plus a per-source outcome report.
 - `compare_sources()` — which marketplaces this installation can query. Call it
   when a comparison comes back partial and you need to know why.
@@ -68,6 +68,10 @@ counts them. Read `price_native` if you want to convert.
    `cheapest` visible when explaining the warning.
 4. Report `price_spread_rub` — the spread is what makes the comparison actionable.
 5. Offer a follow-up: `*_card` on the winning product for reviews and seller.
+
+Set `in_stock_only=true` when the user asks where the item can be bought now.
+The response keeps excluded offers for audit, but ranks and selects winners only
+from listings whose marketplace explicitly reports stock.
 
 **When a source is blocked:**
 1. `compare_sources()` to separate "not installed" from "refused".

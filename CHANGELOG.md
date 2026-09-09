@@ -9,6 +9,18 @@
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-09-09
+
+### Добавлено
+
+- `compare_prices(in_stock_only=true)` ранжирует только предложения с явно
+  подтверждённым наличием, сохраняя исключённые строки для аудита.
+
+### Added
+
+- `compare_prices(in_stock_only=true)` ranks only offers with explicitly
+  confirmed stock while retaining excluded rows for auditability.
+
 ## [1.7.0] — 2026-09-09
 
 ### Добавлено

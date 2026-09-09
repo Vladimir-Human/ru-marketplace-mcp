@@ -253,6 +253,10 @@
     "parameters": {
       "additionalProperties": false,
       "properties": {
+        "in_stock_only": {
+          "default": false,
+          "type": "boolean"
+        },
         "per_source_limit": {
           "default": 5,
           "maximum": 20,

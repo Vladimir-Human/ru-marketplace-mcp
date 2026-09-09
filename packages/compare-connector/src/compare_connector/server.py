@@ -52,7 +52,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.7.0"
+SERVER_VERSION = "1.8.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -782,6 +782,10 @@ async def compare_prices(
             description="Restrict to specific marketplaces (wildberries, yandex_market, ozon). Omit to query all.",
         ),
     ] = None,
+    in_stock_only: Annotated[
+        bool,
+        Field(default=False, description="Rank only offers whose marketplace explicitly reports them in stock."),
+    ] = False,
     ctx: Context | None = None,
 ) -> CompareResponse:
     """Price one product across every configured Russian marketplace at once.
@@ -845,7 +849,7 @@ async def compare_prices(
             )
         )
 
-    log_event("compare_prices.start", query=text, sources=active, limit=per_source_limit)
+    log_event("compare_prices.start", query=text, sources=active, limit=per_source_limit, in_stock_only=in_stock_only)
     if ctx is not None:
         await ctx.info(f"compare_prices: {text!r} across {', '.join(active)}")
 
@@ -867,14 +871,17 @@ async def compare_prices(
     # than implied by price_rub being None: an adapter that starts populating
     # price_rub from a foreign-currency field should fail this filter, not
     # quietly win the comparison.
+    priced_all = [offer for offer in offers if _ranks_in_rubles(offer)]
     priced = sorted(
-        (offer for offer in offers if _ranks_in_rubles(offer)),
+        (offer for offer in priced_all if not in_stock_only or offer.in_stock is True),
         key=lambda offer: offer.price_rub or 0.0,
     )
     # Unpriced offers keep their place at the end rather than being dropped:
     # "found, but not priced in rubles" is information, and for Taobao the yuan
     # price still rides along in price_native.
-    unpriced = [offer for offer in offers if not _ranks_in_rubles(offer)]
+    unpriced = [
+        offer for offer in offers if not _ranks_in_rubles(offer) or (in_stock_only and offer.in_stock is not True)
+    ]
     ranked = priced + unpriced
     foreign = [offer for offer in offers if offer.currency != "rub"]
 
@@ -902,6 +909,12 @@ async def compare_prices(
         )
     if not priced:
         warnings.append("no_prices: no marketplace returned a usable price for this query")
+    if in_stock_only:
+        excluded = len(priced_all) - len(priced)
+        if excluded:
+            warnings.append(f"stock_filter: excluded {excluded} priced offer(s) without confirmed stock")
+        if not priced_all:
+            warnings.append("stock_filter: no priced offers were returned")
     warnings.extend(_relevance_warnings(text, priced))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(

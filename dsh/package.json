@@ -1,6 +1,6 @@
 {
   "name": "ru-marketplace-mcp-dsh",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "type": "module",
   "files": ["cordis.patch.yml", "skills"],
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
