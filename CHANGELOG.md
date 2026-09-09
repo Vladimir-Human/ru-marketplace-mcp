@@ -9,6 +9,20 @@
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-09-09
+
+### Исправлено
+
+- Docker stdio release probe обновлён до 37 tools после добавления
+  `compare_verify_offer`; MCP Registry publish снова проверяет фактическую
+  unified surface.
+
+### Fixed
+
+- Docker stdio release probe now expects 37 tools after adding
+  `compare_verify_offer`, so MCP Registry publication verifies the actual
+  unified surface.
+
 ## [2.0.0] — 2026-09-09
 
 ### Добавлено

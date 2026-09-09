@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-EXPECTED_TOOLS = 36
+EXPECTED_TOOLS = 37
 TIMEOUT_S = 120.0
 
 
