@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-09-09
+
+### Добавлено
+
+- `compare_prices` возвращает `cheapest_comparable` — более безопасного кандидата
+  после исключения очевидных аксессуаров и товаров в другом состоянии.
+- `marketplace_sources` публикует статические capability-метаданные для routing:
+  access tier, CDP/login, валюту, text search и mounted state.
+- DSH skills разделяют cheap compare routing и full marketplace activation.
+
+### Added
+
+- `compare_prices` exposes `cheapest_comparable`, a safer candidate after
+  excluding obvious accessories and different-condition listings.
+- `marketplace_sources` exposes static routing capabilities: access tier,
+  CDP/login, currency, text-search support, and mounted state.
+- DSH skills separate cheap compare routing from full marketplace activation.
+
 ## [1.6.1] — 2026-09-09
 
 ### Добавлено
