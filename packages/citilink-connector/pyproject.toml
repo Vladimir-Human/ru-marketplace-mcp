@@ -1,6 +1,6 @@
 [project]
 name = "citilink-connector"
-version = "2.0.2"
+version = "2.1.0"
 description = "Citilink-Shop MCP connector — catalog search and cards rendered in the operator's Chrome over CDP (Qrator)"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -10,7 +10,7 @@ dependencies = [
     # unrelated project. Unpinned, a wheel installed straight from a GitHub
     # Release resolves to that stranger's package and the server dies on
     # import. A pin turns a silent wrong install into a loud resolve failure.
-"mcp-core==2.0.2",
+"mcp-core==2.1.0",
     "fastmcp>=3.4.6,<4",
     "pydantic>=2.6",
     "pydantic-settings>=2.2",

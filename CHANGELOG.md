@@ -9,6 +9,49 @@
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-09-09
+
+### Добавлено
+
+- Средний DSH-профиль `ru-marketplace-decision` (консоль-скрипт `decision-mcp`):
+  сравнение цен плюс один card inspector `decision_inspect(source, product_id_or_url)`.
+  Позволяет проверить победителя сравнения, продавца и карточку без полного
+  37-инструментного mount; ряд включён в `dsh/cordis.patch.yml` выключенным по
+  умолчанию и включается через `RU_MARKETPLACE_MCP_DECISION=1` (взаимоисключающе
+  с полным mount).
+- `compare_prices`: предложения теперь несут `identity` (бренд, модель, MPN,
+  GTIN, атрибуты варианта) и `evidence` (provenance нативного оффера), чтобы
+  точное соответствие товара проверялось, а не предполагалось.
+- Reliability-скрипты: детерминированный routing-контракт DSH
+  (`scripts/routing_eval.py`), операционные гейты (`scripts/test_ops_gates.py`),
+  baseline/snapshot-режимы `scripts/mcp_wire.py` против регрессии wire-токенов
+  и латентности.
+- CDP: ограничение размера websocket-фреймов и allowlist финального хоста
+  (`_check_final_host`) после навигации.
+
+### Изменено
+
+- `e2e_stdio_check.py` проверяет 15 stdio-серверов, включая `decision-mcp`;
+  dsh-bundle guard в CI ожидает 3 MCP rows, все выключены по умолчанию.
+- Офлайн-счётчик тестов в документации обновлён до 1243.
+
+### Added
+
+- Middle DSH profile `ru-marketplace-decision` (`decision-mcp`): comparison plus
+  one card inspector `decision_inspect(source, product_id_or_url)`, shipped
+  disabled by default and enabled with `RU_MARKETPLACE_MCP_DECISION=1`.
+- `compare_prices` offers carry `identity` (brand, model, MPN, GTIN, variant
+  attributes) and `evidence` provenance for verifiable exact-product matching.
+- Reliability scripts: DSH routing eval, operational gates, and
+  `mcp_wire.py` wire-token/latency regression baselines.
+- CDP hardening: bounded websocket frames and a final-host allowlist.
+
+### Changed
+
+- `e2e_stdio_check.py` covers 15 stdio servers including `decision-mcp`; the DSH
+  bundle CI guard asserts all 3 MCP rows are disabled by default.
+- Documented offline test count is 1243.
+
 ## [2.0.2] — 2026-09-09
 
 ### Исправлено
