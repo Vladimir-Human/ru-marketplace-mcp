@@ -41,6 +41,15 @@ jobs:
       - name: List built artifacts
         run: ls -la dist
 
+      - name: Verify release artifact set
+        shell: bash
+        run: |
+          count=$(find dist -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l)
+          test "$count" -eq 30 || {
+            echo "expected 30 wheel/sdist artifacts, found $count" >&2
+            exit 1
+          }
+
       - name: Attach artifacts to the GitHub Release
         uses: softprops/action-gh-release@v3
         with:
