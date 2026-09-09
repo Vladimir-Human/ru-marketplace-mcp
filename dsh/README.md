@@ -93,7 +93,7 @@ No MCP process survives profile restart without `RU_MARKETPLACE_MCP_DIR`.
 
 ## Docker alternative (published and CI-verified)
 
-Since v1.6.0 every release tag builds a stdio image and proves it with a real
+Since v1.8.0 every release tag builds a stdio image and proves it with a real
 MCP session over `docker run --rm -i` before publishing to the MCP Registry:
 initialize, `tools/list` (36 tools) and a `marketplace_sources` call. Use the
 published GHCR image instead of a local clone:
@@ -110,7 +110,7 @@ published GHCR image instead of a local clone:
       - run
       - --rm
       - -i
-      - ghcr.io/vladimir-human/ru-marketplace-mcp:1.6.0
+      - ghcr.io/vladimir-human/ru-marketplace-mcp:1.8.0
     failOnStartupError: false
 ```
 
