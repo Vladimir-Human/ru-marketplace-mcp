@@ -9,6 +9,32 @@
 
 ## [Unreleased]
 
+### Исправлено
+
+- macOS: CDP-Chrome больше не забирает фокус и не перекидывает рабочий стол
+  (Space) на каждый вызов. Причина была в `Target.createTarget` без
+  `background: true` — так Chrome становится активным приложением, а macOS
+  следует за его окном; закрытие вкладки и навигация вдобавок «расхайдивали»
+  приложение. Режим `CHROME_STEALTH` (по умолчанию включён) теперь работает и на
+  macOS: вкладки открываются в фоне в обоих путях (Playwright через
+  browser-level CDP-сессию и raw CDP), а окно скрапинг-профиля прячется (⌘H)
+  после навигации и после закрытия вкладки. `start_chrome_cdp.sh` прячет окно
+  сразу после подъёма CDP. Прячется только процесс с нашим `--user-data-dir`;
+  основной Chrome не трогается. `CHROME_STEALTH=0` возвращает прежнее поведение.
+
+### Fixed
+
+- macOS: the CDP Chrome no longer steals focus or drags the desktop to its
+  Space on every call. `Target.createTarget` without `background: true` makes
+  Chrome the active app and macOS follows its window; closing the tab and
+  navigating un-hid the app on top of that. `CHROME_STEALTH` (on by default) now
+  covers macOS: tabs open in the background on both paths (Playwright via a
+  browser-level CDP session, and raw CDP), and the scraping-profile window is
+  hidden (⌘H) after navigation and after the tab closes. `start_chrome_cdp.sh`
+  hides the window as soon as CDP is up. Only the process running our
+  `--user-data-dir` is touched; the operator's daily Chrome is left alone.
+  `CHROME_STEALTH=0` restores the old behaviour.
+
 ## [2.0.1] — 2026-09-09
 
 ### Исправлено
