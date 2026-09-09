@@ -43,12 +43,27 @@ jobs:
 
       - name: Verify release artifact set
         shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: |
           count=$(find dist -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l)
           test "$count" -eq 30 || {
             echo "expected 30 wheel/sdist artifacts, found $count" >&2
             exit 1
           }
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          artifacts = [
+              p.name for p in Path("dist").iterdir() if p.suffix == ".whl" or p.name.endswith(".tar.gz")
+          ]
+          wrong = [name for name in artifacts if f"-{version}-" not in name and f"-{version}." not in name]
+          if wrong:
+              raise SystemExit(f"artifacts with the wrong version: {', '.join(sorted(wrong))}")
+          print(f"verified {len(artifacts)} artifacts at version {version}")
+          PY
 
       - name: Attach artifacts to the GitHub Release
         uses: softprops/action-gh-release@v3
