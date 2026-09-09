@@ -134,7 +134,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:1.6.0",
+      "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:1.6.1",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"

@@ -31,6 +31,9 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Verify tag matches package version
+        run: uv run python scripts/check_versions.py "${GITHUB_REF_NAME#v}"
+
       - name: Build wheels and sdists for all workspace packages
         # --all-packages builds each of the 15 members (mcp-core plus the 14
         # connectors, including the unified marketplace-connector) into a wheel
@@ -44,7 +47,7 @@ jobs:
       - name: Verify release artifact set
         shell: bash
         env:
-          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           packages=$(find packages -mindepth 2 -maxdepth 2 -name pyproject.toml | wc -l)
           expected=$((packages * 2))
@@ -57,7 +60,7 @@ jobs:
           import os
           from pathlib import Path
 
-          version = os.environ["RELEASE_VERSION"]
+          version = os.environ["RELEASE_VERSION"].removeprefix("v")
           artifacts = [
               p.name for p in Path("dist").iterdir() if p.suffix == ".whl" or p.name.endswith(".tar.gz")
           ]
