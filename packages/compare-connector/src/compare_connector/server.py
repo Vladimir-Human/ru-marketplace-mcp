@@ -885,8 +885,7 @@ async def compare_prices(
     comparable = [
         offer
         for offer in priced
-        if not _looks_like_an_accessory(offer.title, text)
-        and not _looks_like_another_condition(offer.title, text)
+        if not _looks_like_an_accessory(offer.title, text) and not _looks_like_another_condition(offer.title, text)
     ]
     cheapest_comparable = comparable[0] if comparable else None
     price_spread = None

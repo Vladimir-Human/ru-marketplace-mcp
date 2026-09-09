@@ -64,18 +64,72 @@ _SKIPPED: dict[str, str] = {}
 # tool path to attempt before spending a request on a blocked source. It is
 # separate from selfcheck/doctor, which performs live network probes.
 _CAPABILITIES: dict[str, dict[str, object]] = {
-    "wildberries": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
-    "ozon": {"access": "http_or_cdp", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
-    "yandex_market": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
-    "detsky_mir": {"access": "anonymous_http", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": False},
+    "wildberries": {
+        "access": "anonymous_http",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "ozon": {
+        "access": "http_or_cdp",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "yandex_market": {
+        "access": "anonymous_http",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "detsky_mir": {
+        "access": "anonymous_http",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": False,
+    },
     "avito": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
     "taobao": {"access": "cdp", "requires_cdp": True, "requires_login": True, "currency": "cny", "text_search": True},
-    "megamarket": {"access": "cdp", "requires_cdp": True, "requires_login": True, "currency": "rub", "text_search": True},
-    "lamoda": {"access": "graphql_or_cdp", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": True},
+    "megamarket": {
+        "access": "cdp",
+        "requires_cdp": True,
+        "requires_login": True,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "lamoda": {
+        "access": "graphql_or_cdp",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
     "dns": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
-    "citilink": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
-    "aliexpress": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
-    "mpstats": {"access": "api_token", "requires_cdp": False, "requires_login": False, "currency": "rub", "text_search": False},
+    "citilink": {
+        "access": "cdp",
+        "requires_cdp": True,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "aliexpress": {
+        "access": "cdp",
+        "requires_cdp": True,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": True,
+    },
+    "mpstats": {
+        "access": "api_token",
+        "requires_cdp": False,
+        "requires_login": False,
+        "currency": "rub",
+        "text_search": False,
+    },
 }
 
 

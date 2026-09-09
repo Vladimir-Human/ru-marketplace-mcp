@@ -349,7 +349,7 @@ def test_price_intent_routes_to_cheap_compare_skill() -> None:
     marketplace = (REPO_ROOT / "skills" / "marketplace" / "SKILL.md").read_text(encoding="utf-8")
 
     assert '"где дешевле"' in compare
-    assert 'description:' in marketplace
+    assert "description:" in marketplace
     assert 'Trigger on "где дешевле"' not in marketplace.split("---", 2)[1]
     assert "Route price questions" in marketplace
 
