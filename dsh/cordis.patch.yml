@@ -15,7 +15,7 @@
           - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('ru-marketplace-mcp-dsh/package.json'), '..', 'skills')"
 
     # Recommended and cheap: price comparison across WB, Detsky Mir and Yandex.
-    # 2 tools, ~0.9k wire tokens per request while mounted.
+    # 3 tools, ~0.9k wire tokens per request while mounted.
     - id: ru-marketplace-compare
       name: '@deepseek-ai/dsh-mcp-client'
       disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !!process.env.RU_MARKETPLACE_MCP_FULL"

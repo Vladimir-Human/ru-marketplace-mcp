@@ -31,7 +31,7 @@ EXPECTED_TOOLS = {
     "ozon-mcp": 3,
     "detmir-mcp": 3,
     "yandex-mcp": 2,
-    "compare-mcp": 2,
+    "compare-mcp": 3,
     "avito-mcp": 3,
     "taobao-mcp": 2,
     "megamarket-mcp": 2,

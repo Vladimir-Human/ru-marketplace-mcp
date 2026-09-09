@@ -32,6 +32,9 @@ rank its rows against rouble sources.
   Returns offers cheapest-first plus a per-source outcome report.
 - `compare_sources()` — which marketplaces this installation can query. Call it
   when a comparison comes back partial and you need to know why.
+- `compare_verify_offer(source, product_id_or_url)` — verify the winning offer
+  through its native card tool without enabling the full unified marketplace
+  mount. Use the `source` and product id/url returned by `compare_prices`.
 
 ## Reading the result correctly
 
@@ -67,7 +70,8 @@ counts them. Read `price_native` if you want to convert.
    condition; the comparable field is the safer like-for-like candidate. Keep
    `cheapest` visible when explaining the warning.
 4. Report `price_spread_rub` — the spread is what makes the comparison actionable.
-5. Offer a follow-up: `*_card` on the winning product for reviews and seller.
+5. Use `compare_verify_offer` on the winning row for a cheap card-level check;
+   then use a native `*_card` tool for deeper reviews or seller details.
 
 Set `in_stock_only=true` when the user asks where the item can be bought now.
 The response keeps excluded offers for audit, but ranks and selects winners only

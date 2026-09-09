@@ -13,7 +13,7 @@ over the stdio MCP wire with `scripts/mcp_wire.py`:
 | Mode | Cost while mounted | Model-facing tools |
 |---|---|---|
 | Skills only (default) | ~390 tokens for 14 catalog rows | 0 |
-| `compare-mcp` (recommended) | ~0.9k tokens per request | 2 |
+| `compare-mcp` (recommended) | ~0.9k tokens per request | 3 |
 | `marketplace-mcp` (full) | ~13.6k tokens per request | 36 |
 
 The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools
@@ -76,7 +76,7 @@ $env:RU_MARKETPLACE_MCP_FULL = "1"   # PowerShell
 export RU_MARKETPLACE_MCP_FULL=1     # POSIX shell
 ```
 
-The enabled row then changes from `compare-mcp` (2 tools) to `marketplace-mcp`
+The enabled row then changes from `compare-mcp` (3 tools) to `marketplace-mcp`
 (36 tools). Both rows share `serverName: rumarket`, and their `disabled`
 conditions are mutually exclusive, so exactly one server instance runs at a
 time.

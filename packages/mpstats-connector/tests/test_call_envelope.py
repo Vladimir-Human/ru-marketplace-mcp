@@ -214,6 +214,19 @@ async def test_inner_error_is_not_cached(monkeypatch):
     assert calls["n"] == 2, "an upstream error was served from cache"
 
 
+async def test_inner_error_message_redacts_secret_in_tool_error(monkeypatch):
+    secret = "synthetic-session-secret"
+
+    async def handler(request):
+        return httpx.Response(200, text=f'{{"code":500,"message":"Cookie: mp_auth={secret}"}}')
+
+    wire(monkeypatch, handler)
+    with pytest.raises(ToolError) as excinfo:
+        await server._call({"Request": "broken"}, label="probe")
+
+    assert secret not in str(excinfo.value)
+
+
 # --------------------------------------------------------------------------- #
 # The secret must not ride out on an error
 # --------------------------------------------------------------------------- #

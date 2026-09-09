@@ -299,6 +299,29 @@
       "type": "object"
     }
   },
+  "compare_verify_offer": {
+    "output": {
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "product_id_or_url": {
+          "maxLength": 400,
+          "minLength": 1,
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "product_id_or_url"
+      ],
+      "type": "object"
+    }
+  },
   "detmir_card": {
     "output": {
       "properties": {

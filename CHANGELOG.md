@@ -9,6 +9,36 @@
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-09-09
+
+### Добавлено
+
+- Продуктовый trust/evidence слой: comparable winner, stock-aware ranking,
+  native card verification и capability metadata для routing.
+- DSH progressive disclosure и activation contract.
+- v2 research artifacts, eval matrix и security findings.
+- Исправлена утечка upstream MPStats message в MCP ToolError.
+
+### Added
+
+- Product trust/evidence layer: comparable winner, stock-aware ranking, native
+  card verification, and routing capability metadata.
+- DSH progressive disclosure and activation contract.
+- v2 research artifacts, eval matrix, and security findings.
+- Fixed upstream MPStats message leakage into MCP ToolError.
+
+## [1.9.0] — 2026-09-09
+
+### Добавлено
+
+- Lightweight `compare_verify_offer` проверяет победившее предложение через
+  native card tool без включения full unified mount.
+
+### Added
+
+- Lightweight `compare_verify_offer` verifies a winning offer through its native
+  card tool without enabling the full unified mount.
+
 ## [1.8.0] — 2026-09-09
 
 ### Добавлено

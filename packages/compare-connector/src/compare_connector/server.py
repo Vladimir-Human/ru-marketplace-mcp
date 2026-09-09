@@ -52,7 +52,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "1.8.0"
+SERVER_VERSION = "2.0.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -60,6 +60,20 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
 
 mcp = FastMCP(name="compare-connector", version=SERVER_VERSION)
+
+_CARD_TOOL_NAMES = {
+    "wildberries": "wb_card",
+    "yandex_market": "yandex_card",
+    "detsky_mir": "detmir_card",
+    "ozon": "ozon_card",
+    "avito": "avito_card",
+    "taobao": "taobao_card",
+    "megamarket": "megamarket_card",
+    "lamoda": "lamoda_card",
+    "dns": "dns_card",
+    "citilink": "citilink_card",
+    "aliexpress": "aliexpress_card",
+}
 
 
 def _available_sources() -> dict[str, Any]:
@@ -951,6 +965,77 @@ async def compare_prices(
         warnings=warnings,
         server_version=SERVER_VERSION,
     )
+
+
+@mcp.tool(
+    name="compare_verify_offer",
+    annotations=ToolAnnotations(
+        title="Verify Compared Offer",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def compare_verify_offer(
+    source: Annotated[str, Field(description="Marketplace source name from compare_prices, e.g. wildberries or ozon.")],
+    product_id_or_url: Annotated[
+        str, Field(min_length=1, max_length=400, description="product_id or direct product URL from the compared offer")
+    ],
+) -> dict[str, Any]:
+    """Verify one compared offer through its marketplace card tool.
+
+    This is the cheap compare-server follow-up: it lets an agent confirm the
+    raw search price, stock and seller without enabling the 36-tool unified
+    mount. The returned card is source-native and therefore keeps fields the
+    comparison intentionally normalises away.
+
+    ## Return Format
+
+    JSON object: `{source, product_id_or_url, card}`. `card` is the native
+    source response, preserving price, availability, seller, and source-specific
+    fields when the marketplace exposes them.
+
+    ## Error Format
+
+    Raises `BadRequestError` when the source is unknown, not installed, or the
+    identifier cannot be validated; native card errors are returned as tool
+    errors with their source-specific taxonomy.
+    """
+    name = source.strip().lower()
+    if name not in _CARD_TOOL_NAMES:
+        raise_tool_error(BadRequestError(f"source {source!r} has no supported card verifier"))
+    module = SOURCES.get(name)
+    if module is None:
+        raise_tool_error(BadRequestError(f"source {name!r} is not installed in this compare server"))
+    tool_name = _CARD_TOOL_NAMES[name]
+    tool = getattr(module, tool_name, None)
+    if tool is None:
+        raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
+
+    if name == "wildberries":
+        digits = re.search(r"\d+", product_id_or_url)
+        if digits is None:
+            raise_tool_error(BadRequestError("wildberries verification needs a numeric nm_id"))
+        result = await tool(nm_ids=[int(digits.group(0))])
+    elif name == "yandex_market":
+        result = await tool(product_id=product_id_or_url, include_reviews=False)
+    elif name == "detsky_mir":
+        result = await tool(product_id=int(product_id_or_url))
+    else:
+        argument = {
+            "ozon": "sku_or_path",
+            "avito": "item_id_or_url",
+            "taobao": "item_id_or_url",
+            "megamarket": "product_id_or_url",
+            "lamoda": "sku_or_url",
+            "dns": "product_url",
+            "citilink": "product_url",
+            "aliexpress": "item_id_or_url",
+        }[name]
+        result = await tool(**{argument: product_id_or_url})
+    payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    return {"source": name, "product_id_or_url": product_id_or_url, "card": payload}
 
 
 @mcp.tool(

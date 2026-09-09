@@ -78,7 +78,7 @@ from mpstats_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "1.8.0"
+SERVER_VERSION = "2.0.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -354,10 +354,9 @@ async def _call(body: dict[str, Any], *, label: str) -> dict[str, Any]:
         log_event(f"{label}.auth_denied")
         raise_tool_error(AuthMissingError("mp_auth token rejected (code 403)", provider="mpstats"))
     if inner_code is not None and inner_code != 200:
-        log_event(f"{label}.inner_error", code=inner_code, message=_redact(str(data.get("message", ""))))
-        raise_tool_error(
-            TransportDownError(f"mpstats code {inner_code}: {data.get('message', '')}", provider="mpstats")
-        )
+        message = _redact(str(data.get("message", "")))
+        log_event(f"{label}.inner_error", code=inner_code, message=message)
+        raise_tool_error(TransportDownError(f"mpstats code {inner_code}: {message}", provider="mpstats"))
 
     # Cache only now, with the inner verdict known good. Caching on HTTP 200
     # alone stored the failures too: MPStats answers `{"code": 403}` and its

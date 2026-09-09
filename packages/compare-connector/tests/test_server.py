@@ -46,7 +46,23 @@ def test_server_version_matches_pyproject():
 
 async def test_registered_tools_are_stable():
     names = {tool.name for tool in await server.mcp.list_tools()}
-    assert names == {"compare_prices", "compare_sources"}
+    assert names == {"compare_prices", "compare_sources", "compare_verify_offer"}
+
+
+async def test_compare_verify_offer_dispatches_to_source_card(monkeypatch):
+    class FakeCard:
+        async def __call__(self, *, nm_ids):
+            return {"nm_ids": nm_ids, "price_rub": 1234}
+
+    class FakeSource:
+        wb_card = FakeCard()
+
+    monkeypatch.setattr(server, "SOURCES", {"wildberries": FakeSource()})
+
+    result = await server.compare_verify_offer("wildberries", "https://www.wildberries.ru/catalog/123/detail.aspx")
+
+    assert result["source"] == "wildberries"
+    assert result["card"]["nm_ids"] == [123]
 
 
 async def test_detsky_mir_is_not_a_comparison_source():
