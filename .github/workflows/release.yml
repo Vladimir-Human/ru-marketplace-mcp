@@ -46,9 +46,11 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: |
+          packages=$(find packages -mindepth 2 -maxdepth 2 -name pyproject.toml | wc -l)
+          expected=$((packages * 2))
           count=$(find dist -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l)
-          test "$count" -eq 30 || {
-            echo "expected 30 wheel/sdist artifacts, found $count" >&2
+          test "$count" -eq "$expected" || {
+            echo "expected $expected wheel/sdist artifacts for $packages workspace packages, found $count" >&2
             exit 1
           }
           python3 - <<'PY'
