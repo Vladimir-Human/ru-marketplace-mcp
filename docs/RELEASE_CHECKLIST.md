@@ -16,7 +16,7 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 70;
-- `e2e_stdio_check.py` даёт 13/13, у всех серверов версия релиза;
+- `e2e_stdio_check.py` даёт 14/14, у всех серверов версия релиза;
 - `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
   непроверенному источнику;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
@@ -71,9 +71,9 @@ npm install jsdom
 
 ## 2. Консистентность версий
 
-Одна версия живёт в семидесяти двух местах: пятнадцать `pyproject.toml`,
-четырнадцать `__version__`, тринадцать `SERVER_VERSION`, тринадцать пинов
-`mcp-core==` в `pyproject.toml` коннекторов, `server.json` и шестнадцать
+Одна версия живёт в семидесяти семи местах: шестнадцать `pyproject.toml`,
+пятнадцать `__version__`, четырнадцать `SERVER_VERSION`, четырнадцать пинов
+`mcp-core==` в `pyproject.toml` коннекторов, `server.json` и семнадцать
 тегов образа в `docker-compose.yml` и `docs/DEPLOYMENT.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
@@ -187,7 +187,7 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-Пуш тега запускает release workflow: он собирает 28 артефактов (14 wheel и 14
+Пуш тега запускает release workflow: он собирает 30 артефактов (15 wheel и 15
 sdist) и прикладывает их к релизу.
 
 ## 8. Проверка после публикации
@@ -202,7 +202,7 @@ uv run python scripts/e2e_stdio_check.py
 ```
 
 Проверить страницу релиза глазами: текст на месте, таблица проверенных
-источников отрисовалась, приложено 28 файлов.
+источников отрисовалась, приложено 30 файлов.
 
 ---
 
@@ -216,7 +216,7 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 70% coverage
-floor; `e2e_stdio_check.py` reports 13/13 at the release version; `doctor`
+floor; `e2e_stdio_check.py` reports 14/14 at the release version; `doctor`
 returns `0`, or `2` with a clear account of every unverified source; every
 source that answered was compared by eye on price and availability; Taobao's
 yuan did not win a rouble ranking; CI is green.
@@ -235,12 +235,12 @@ install, image build or CI is red.
 
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
    plus win32 and darwin, the no-print and version-consistency checks, the
-   coverage floor, and a real stdio MCP session for all thirteen servers. Seconds, not minutes; a slow run means a test is sleeping
+   coverage floor, and a real stdio MCP session for all fourteen servers. Seconds, not minutes; a slow run means a test is sleeping
    on the live pacer or reaching for Chrome. `npm install jsdom` to also run the
    extractor checks against captured markup.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   seventy-two declarations (fifteen `pyproject.toml`, fourteen `__version__`,
-   thirteen `SERVER_VERSION`, thirteen `mcp-core==` pins, sixteen image tags
+   seventy-seven declarations (sixteen `pyproject.toml`, fifteen `__version__`,
+   fourteen `SERVER_VERSION`, fourteen `mcp-core==` pins, seventeen image tags
    and `server.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
    actually say.
@@ -261,6 +261,6 @@ install, image build or CI is red.
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
 7. **Branch, PR, green CI, squash merge, tag.** The tag push builds and attaches
-   28 artifacts.
+   30 artifacts.
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page.
