@@ -55,7 +55,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -164,7 +164,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "curl-cffi", specifier = ">=0.8" },
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
@@ -328,7 +328,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -411,7 +411,7 @@ requires-dist = [
     { name = "detmir-connector", editable = "packages/detmir-connector" },
     { name = "dns-connector", marker = "extra == 'all'", editable = "packages/dns-connector" },
     { name = "dns-connector", marker = "extra == 'dns'", editable = "packages/dns-connector" },
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "lamoda-connector", marker = "extra == 'all'", editable = "packages/lamoda-connector" },
     { name = "lamoda-connector", marker = "extra == 'lamoda'", editable = "packages/lamoda-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
@@ -609,7 +609,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -639,7 +639,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -1119,7 +1119,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
@@ -1230,7 +1230,7 @@ requires-dist = [
     { name = "compare-connector", editable = "packages/compare-connector" },
     { name = "detmir-connector", editable = "packages/detmir-connector" },
     { name = "dns-connector", editable = "packages/dns-connector" },
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "lamoda-connector", editable = "packages/lamoda-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "megamarket-connector", editable = "packages/megamarket-connector" },
@@ -1290,7 +1290,7 @@ impersonate = [
 [package.metadata]
 requires-dist = [
     { name = "curl-cffi", marker = "extra == 'impersonate'", specifier = ">=0.7" },
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "playwright", marker = "extra == 'cdp'", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -1322,7 +1322,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -1352,7 +1352,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -1472,7 +1472,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "curl-cffi", specifier = ">=0.7" },
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.47" },
@@ -2126,8 +2126,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "python_full_version >= '3.15' or sys_platform != 'win32'" },
+    { name = "jeepney", marker = "python_full_version >= '3.15' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -2183,7 +2183,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -2357,7 +2357,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -2507,7 +2507,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=3.4.6" },
+    { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.6" },
