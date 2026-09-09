@@ -335,7 +335,11 @@ Content-Type: application/json
 That returns real prices, brands, availability and sizes. But:
 
 - Catalog and search GET paths return the same self-referential 307 loop as Ozon.
-- HTML pages return 403 even with a full browser header set.
+- Depending on the Chrome profile and IP, the browser can instead receive an
+  HTTP 200 anti-bot challenge page ("Пожалуйста, пройдите проверку") with no
+  product links. This is still a block, not an empty search result; the
+  connector reports it as `inconclusive/blocked` rather than parser drift.
+- HTML pages can also return 403 even with a full browser header set.
 - `rating` is not in the schema; introspection is disabled.
 - The mobile API (`api.lamoda.ru`) returns 403.
 
