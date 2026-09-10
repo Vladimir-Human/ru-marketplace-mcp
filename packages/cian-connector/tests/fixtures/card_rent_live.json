@@ -1,0 +1,520 @@
+{
+  "offerData": {
+    "offer": {
+      "category": "flatRent",
+      "status": "published",
+      "dealType": "rent",
+      "offerType": "flat",
+      "geo": {
+        "address": [
+          {
+            "fullName": "Санкт-Петербург",
+            "id": 2,
+            "locationTypeId": 1,
+            "name": "Санкт-Петербург",
+            "shortName": "Санкт-Петербург",
+            "type": "location",
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&region=2&room2=1&type=3"
+          },
+          {
+            "fullName": "район Калининский",
+            "id": 147,
+            "locationTypeId": -1,
+            "name": "Калининский",
+            "shortName": "р-н Калининский",
+            "type": "raion",
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&district%5B0%5D=147&engine_version=2&offer_type=flat&room2=1&type=3"
+          },
+          {
+            "fullName": "Прометей",
+            "id": 768,
+            "locationTypeId": -1,
+            "name": "Прометей",
+            "shortName": "Прометей",
+            "type": "okrug",
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&district%5B0%5D=768&engine_version=2&offer_type=flat&room2=1&type=3"
+          },
+          {
+            "fullName": "проспект Просвещения",
+            "id": 4636,
+            "locationTypeId": -1,
+            "name": "Просвещения",
+            "shortName": "просп. Просвещения",
+            "type": "street",
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&room2=1&street%5B0%5D=4636&type=3"
+          },
+          {
+            "fullName": "83",
+            "id": 3722,
+            "locationTypeId": -1,
+            "name": "83",
+            "shortName": "83",
+            "type": "house",
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&house%5B0%5D=3722&offer_type=flat&room2=1&type=3"
+          }
+        ],
+        "coordinates": {
+          "lat": 60.036793,
+          "lng": 30.407317
+        },
+        "highways": [],
+        "railways": [
+          {
+            "id": 284,
+            "directionIds": [
+              10
+            ],
+            "distance": "2.0",
+            "time": 4,
+            "name": "Мурино",
+            "travelType": "byCar"
+          },
+          {
+            "id": 284,
+            "directionIds": [
+              10
+            ],
+            "distance": "2.0",
+            "time": 25,
+            "name": "Мурино",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 296,
+            "directionIds": [
+              10
+            ],
+            "distance": "3.0",
+            "time": 39,
+            "name": "Девяткино",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 277,
+            "directionIds": [
+              10
+            ],
+            "distance": "4.0",
+            "time": 6,
+            "name": "Депо Ручьи",
+            "travelType": "byCar"
+          },
+          {
+            "id": 277,
+            "directionIds": [
+              10
+            ],
+            "distance": "4.0",
+            "time": 54,
+            "name": "Депо Ручьи",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 296,
+            "directionIds": [
+              10
+            ],
+            "distance": "7.0",
+            "time": 11,
+            "name": "Девяткино",
+            "travelType": "byCar"
+          }
+        ],
+        "undergrounds": [
+          {
+            "id": 168,
+            "name": "Гражданский проспект",
+            "lineColor": "D70834",
+            "travelType": "walk",
+            "travelTime": 10,
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=168&offer_type=flat&only_foot=2&room2=1&type=3",
+            "underConstruction": false
+          },
+          {
+            "id": 169,
+            "name": "Академическая",
+            "lineColor": "D70834",
+            "travelType": "transport",
+            "travelTime": 7,
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=169&offer_type=flat&only_foot=2&room2=1&type=3",
+            "underConstruction": false
+          },
+          {
+            "id": 167,
+            "name": "Девяткино",
+            "lineColor": "D70834",
+            "travelType": "transport",
+            "travelTime": 7,
+            "url": "https://spb.cian.ru/cat.php?deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=167&offer_type=flat&only_foot=2&room2=1&type=3",
+            "underConstruction": false
+          }
+        ]
+      },
+      "id": 317754437,
+      "objectGuid": "781d647a-a512-4105-909b-3553b57dd660",
+      "cianId": 317754437,
+      "userId": 131124249,
+      "publishedUserId": 131124249,
+      "cianUserId": 131124249,
+      "isByHomeowner": false,
+      "title": "Сдаются впервые после ремонта",
+      "description": "Сдаются двухкомнатные апартаменты площадью 43 м² без комиссии и посредников. В стоимость аренды уже включены коммунальные услуги, уборка раз в две недели, Wi-Fi. \n\nАпартаменты идеально подойдут для семейного проживания или пары, ценящей тишину, уют и порядок. В Вашем распоряжении — отдельная спальня",
+      "photos": [
+        {
+          "id": 2495568875,
+          "isDefault": true,
+          "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-3.jpg",
+          "isCianLayout": false
+        },
+        {
+          "id": 2495555177,
+          "isDefault": false,
+          "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-3.jpg",
+          "isCianLayout": false
+        }
+      ],
+      "phones": [
+        {
+          "countryCode": "+7",
+          "number": "9119664962"
+        }
+      ],
+      "publishTerms": {
+        "terms": [
+          {
+            "services": [
+              "auction"
+            ],
+            "days": 7,
+            "type": "periodical"
+          },
+          {
+            "services": [
+              "top3"
+            ],
+            "days": 30,
+            "type": "periodical",
+            "tariffIdentificator": {
+              "tariffId": 1298636,
+              "tariffGridType": "packageTariff"
+            }
+          }
+        ],
+        "autoprolong": true
+      },
+      "flatType": "rooms",
+      "roomType": "both",
+      "isApartments": true,
+      "totalArea": "43.0",
+      "loggiasCount": 0,
+      "balconiesCount": 0,
+      "separateWcsCount": 0,
+      "combinedWcsCount": 1,
+      "repairType": "design",
+      "hasPhone": false,
+      "hasFridge": true,
+      "hasDishwasher": false,
+      "hasWasher": true,
+      "hasFurniture": true,
+      "hasKitchenFurniture": true,
+      "hasConditioner": true,
+      "hasTv": true,
+      "hasInternet": true,
+      "hasBathtub": false,
+      "hasShower": true,
+      "childrenAllowed": true,
+      "petsAllowed": false,
+      "flags": {
+        "isArchived": false,
+        "isCommercialOwnershipVerified": false
+      },
+      "hasLift": true,
+      "specialty": {
+        "types": [],
+        "additionalTypes": []
+      },
+      "isNeedHideExactAddress": false,
+      "areaParts": [],
+      "roomsCount": 2,
+      "floorNumber": 14,
+      "bargainTerms": {
+        "price": 60000,
+        "priceType": "all",
+        "currency": "rur",
+        "paymentPeriod": "monthly",
+        "leaseTermType": "fewMonths",
+        "prepayMonths": 1,
+        "deposit": 50000,
+        "utilitiesTerms": {
+          "includedInPrice": true,
+          "price": 0,
+          "flowMetersNotIncludedInPrice": false
+        },
+        "includedOptions": [],
+        "clientFee": 0,
+        "agentFee": 0,
+        "prices": {
+          "rur": 60000,
+          "usd": 694,
+          "eur": 598
+        },
+        "depositPrices": {
+          "rur": 50000,
+          "usd": 579,
+          "eur": 498
+        },
+        "utilitiesTermsPrices": {
+          "rur": 0,
+          "usd": 0,
+          "eur": 0
+        },
+        "tags": []
+      },
+      "building": {
+        "floorsCount": 23,
+        "parking": {
+          "type": "ground"
+        },
+        "totalArea": "43.0",
+        "liftTypes": [],
+        "cranageTypes": [],
+        "passengerLiftsCount": 3,
+        "cargoLiftsCount": 0
+      },
+      "editDate": "2026-09-09T14:25:19.803865Z",
+      "humanizedEditDate": "сегодня, 14:25",
+      "isInHiddenBase": false,
+      "isObjectHidden": false,
+      "isClosedVisibility": false,
+      "videos": [],
+      "exportLinks": {
+        "pdfUrl": "/export/pdf/rent/flat/317754437/",
+        "docxUrl": "/export/docx/rent/flat/317754437/"
+      },
+      "passengerLiftsCount": 3,
+      "cargoLiftsCount": 0,
+      "added": "7 сен, 14:03",
+      "valueAddedServices": {
+        "isStandard": false,
+        "isTop3": true,
+        "isPremium": false
+      },
+      "promotion": {
+        "isPerformanceVasPilot": false,
+        "promotionDescription": "",
+        "isCpcAuction": false
+      },
+      "categoriesIds": [
+        1000,
+        1100,
+        1110,
+        1111
+      ],
+      "publicationDate": 1747731366,
+      "creationDate": "2025-05-20T11:56:06.607",
+      "recoveryLink": "/razmestit-obyavlenie/317754437/",
+      "trackingData": {
+        "moId": 0,
+        "oblId": 2,
+        "cityId": 2,
+        "fbRegion": "Санкт-Петербург",
+        "fbCity": "Санкт-Петербург"
+      },
+      "editPhoto": "/realty/add2.aspx?id=317754437",
+      "newEdit": "/razmestit-obyavlenie/?realty_id=317754437",
+      "certificate": "https://www.cian.ru/newobjects/cian/certification/get?announcementId=317754437",
+      "edit": "/realty/add1.aspx?id=317754437",
+      "similarOffersLink": "",
+      "similarOffersCount": 0,
+      "buildersIds": [],
+      "isImported": false,
+      "userConfirmedFix": false,
+      "timezone": 3,
+      "isEnabledCallTracking": true,
+      "callTrackingProvider": "mts",
+      "isRentByParts": false,
+      "isDuplicate": false,
+      "userTrust": "notInvolved",
+      "userTrustLevel": "notInvolved",
+      "showWarningMessage": false,
+      "moderationInfo": {
+        "showContactWarningMessage": false
+      },
+      "isUnique": true,
+      "isUniqueCheckDate": "2026-09-08",
+      "isCianPartner": false,
+      "isIllegalConstruction": false,
+      "amenities": [],
+      "externalOfferUrl": "",
+      "cianLayouts": null,
+      "newbuilding": {
+        "id": 0,
+        "isFromBuilder": false,
+        "isFromDeveloper": false,
+        "isFromLeadFactory": false,
+        "isFromSeller": false,
+        "isReliable": false,
+        "isTariffPremium": false,
+        "isPremium": false,
+        "name": "",
+        "newbuildingFeatures": null,
+        "showJkReliableFlag": false
+      },
+      "demolishedInMoscowProgramm": false
+    },
+    "agent": {
+      "id": 131124249,
+      "cianUserId": 131124249,
+      "realtyUserId": 131124249,
+      "accountType": "agency",
+      "companyName": "SVET hotel",
+      "creationDate": "2025-05-16T10:56:17.787000Z",
+      "name": "SVET hotel",
+      "isPro": true,
+      "description": "Открытие отеля — 22 сентября 2025 года.\n\nНовый современный отель с богатой инфраструктурой.\n\nОтель SVET расположен в одном самом экологически чистом районе на севере Санкт-Петербурга и предлагает гостям 802 апартамента в категориях от «Стандарт Комфорт» до «Люкса» для долгосрочного проживания.\n\nВ 5 минутах ходьбы расположена станция метро Гражданский проспект, а путь до исторического центра займет не более 20 минут на автомобиле.\n\nНомера отеля предлагают современную эргономичную обстановку и оснащены всем необходимым для вашего комфортного отдыха.",
+      "phones": [
+        {
+          "confirmed": true
+        }
+      ],
+      "skills": [
+        {
+          "id": 712,
+          "name": "жилая",
+          "parentName": "Аренда недвижимости"
+        }
+      ],
+      "absoluteAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=71539216&t=2&p=2&timestamp=1787129417",
+      "absoluteMiniAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=71539216&t=2&p=1&timestamp=1787129417",
+      "isDeveloper": false,
+      "isRecidivist": false,
+      "isUserOffersHasErrors": false,
+      "offersCount": 5,
+      "offersLink": "https://www.cian.ru/company/131124249/",
+      "availableServices": {
+        "isUploadsAvailable": true,
+        "isCallTrackingAvailable": false,
+        "isPhoneChangingAvailable": false,
+        "isServicePackagesAvailable": true,
+        "canUseHiddenBase": true
+      },
+      "userType": "realtor_based",
+      "removeCompetitor": false,
+      "status": "published",
+      "isSubAgent": false,
+      "isMessagingEnabled": false,
+      "isPassportVerified": false,
+      "isSelfEmployed": false,
+      "isPrivateBroker": false,
+      "isCianPartner": false,
+      "canShowOnline": false,
+      "moderationInfo": {
+        "qualityLevelInfo": {
+          "levelSystemName": "low",
+          "levelName": "Низкий уровень",
+          "levelOrder": 1,
+          "hasVerifiedDocuments": true,
+          "highResponsibility": false,
+          "isSuperAgent": false,
+          "isSuperHost": false,
+          "isBlocked": false,
+          "showSuperHost": false,
+          "showSuperAgent": false,
+          "showHighResponsibility": false
+        },
+        "isUserIdentified": true,
+        "isUserIdentifiedByDocuments": true,
+        "showUserIdentifiedByDocuments": true
+      },
+      "isHidden": false,
+      "metrics": [
+        {
+          "title": "На Циан",
+          "value": "1 год"
+        },
+        {
+          "title": "Объектов в работе",
+          "value": "5"
+        }
+      ],
+      "agentLists": []
+    },
+    "company": null,
+    "user": {
+      "realtyUserId": null,
+      "isAuthenticated": false,
+      "permissions": {
+        "canModerateUsers": false,
+        "canModerateAnnouncements": false,
+        "canModerateAnnouncementsExpert": false,
+        "canViewUsers": false,
+        "canViewAnnouncements": false
+      },
+      "ga": {
+        "type": "",
+        "balance": 0,
+        "packages": [],
+        "emailMd5": ""
+      }
+    },
+    "priceChanges": [
+      {
+        "changeTime": "2026-08-21T11:06:56.997924Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 60000,
+          "paymentPeriod": "monthly"
+        }
+      },
+      {
+        "changeTime": "2026-07-23T14:50:07.591324Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 59000,
+          "paymentPeriod": "monthly"
+        }
+      },
+      {
+        "changeTime": "2026-04-20T10:38:18.188761Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 70000,
+          "paymentPeriod": "monthly"
+        }
+      },
+      {
+        "changeTime": "2025-12-27T13:41:51.074579Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 65900,
+          "paymentPeriod": "monthly"
+        }
+      },
+      {
+        "changeTime": "2025-08-22T10:50:43.550446Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 76704,
+          "paymentPeriod": "monthly"
+        }
+      },
+      {
+        "changeTime": "2025-05-21T06:55:53.566466Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 103400,
+          "paymentPeriod": "monthly"
+        }
+      }
+    ],
+    "stats": {
+      "totalViewsFormattedString": "3841 просмотр, 37 за сегодня"
+    }
+  }
+}

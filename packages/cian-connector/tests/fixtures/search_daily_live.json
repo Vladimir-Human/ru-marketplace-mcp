@@ -1,0 +1,2114 @@
+{
+  "status": "ok",
+  "data": {
+    "jsonQuery": {
+      "_type": "flatrent",
+      "engine_version": {
+        "type": "term",
+        "value": 2
+      },
+      "region": {
+        "type": "terms",
+        "value": [
+          1
+        ]
+      },
+      "page": {
+        "type": "term",
+        "value": 1
+      },
+      "for_day": {
+        "type": "term",
+        "value": "1"
+      }
+    },
+    "offerCount": 53453,
+    "aggregatedCount": 53441,
+    "offersSerialized": [
+      {
+        "descriptionMinhash": [
+          23631867,
+          8359824,
+          13184479,
+          31312792,
+          14030143,
+          107167424,
+          81907297,
+          2885405,
+          56920750,
+          37900519,
+          43445225,
+          39685766,
+          15850973,
+          4384957,
+          82870207,
+          15438368,
+          2237706,
+          105139689,
+          22218893,
+          55439485,
+          58035355,
+          41607337,
+          49312433,
+          38907129,
+          14007984,
+          12001902,
+          19658598,
+          77941595,
+          94368730,
+          65083295,
+          28700681,
+          69063018
+        ],
+        "jkUrl": "https://zhk-fili-grad-i.cian.ru/",
+        "externalId": null,
+        "similar": null,
+        "basicProfiScore": 0,
+        "isInHiddenBase": false,
+        "formattedFullPrice": "от 5 000 ₽/сут.",
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1113
+        ],
+        "id": 191071633,
+        "formattedFullInfo": "1-комн.кв.  ·  32,4 м²  ·  25/25 этаж",
+        "isSubsidisedMortgage": null,
+        "isApartments": false,
+        "showWarningMessage": false,
+        "roomsForSaleCount": null,
+        "monthlyIncome": null,
+        "isTop3": true,
+        "accessType": null,
+        "newbuildingVasPromotion": null,
+        "photos": [
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-4.jpg",
+            "isDefault": true,
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-2.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-3.jpg",
+            "rotateDegree": null,
+            "id": 2742596853,
+            "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-1.jpg",
+            "isLayout": null
+          },
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-4.jpg",
+            "isDefault": false,
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-2.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-3.jpg",
+            "rotateDegree": null,
+            "id": 530398203,
+            "fullUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-1.jpg",
+            "isLayout": null
+          }
+        ],
+        "descriptionWordsHighlighted": [],
+        "shareAmount": null,
+        "creationDate": "2018-07-30T18:33:53.143",
+        "roomArea": null,
+        "publishedUserId": 17548313,
+        "hasFurniture": true,
+        "formattedShortInfo": "1-комн.кв.  ·  25/25 этаж",
+        "geo": {
+          "userInput": "Россия, Москва, Береговой проезд, 5Ак2",
+          "countryId": 138,
+          "districts": [
+            {
+              "name": "Филевский парк",
+              "qs": "deal_type=rent&district%5B0%5D=123&engine_version=2&offer_type=flat&type=2",
+              "parentId": 11,
+              "type": "raion",
+              "fullName": "р-н Филевский парк",
+              "id": 123,
+              "locationId": 1,
+              "geoType": "district",
+              "title": "р-н Филевский парк"
+            },
+            {
+              "name": "ЗАО",
+              "qs": "deal_type=rent&district%5B0%5D=11&engine_version=2&offer_type=flat&type=2",
+              "parentId": null,
+              "type": "okrug",
+              "fullName": "ЗАО",
+              "id": 11,
+              "locationId": 1,
+              "geoType": "district",
+              "title": "ЗАО"
+            }
+          ],
+          "highways": [],
+          "address": [
+            {
+              "name": "Москва",
+              "shortName": "Москва",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&region=1&type=2",
+              "isFormingAddress": true,
+              "geoType": "location",
+              "type": "location",
+              "fullName": "Москва",
+              "id": 1,
+              "locationTypeId": 1,
+              "title": "Москва"
+            },
+            {
+              "name": "ЗАО",
+              "shortName": "ЗАО",
+              "qs": "deal_type=rent&district%5B0%5D=11&engine_version=2&offer_type=flat&type=2",
+              "isFormingAddress": null,
+              "geoType": "district",
+              "type": "okrug",
+              "fullName": "ЗАО",
+              "id": 11,
+              "locationTypeId": null,
+              "title": "ЗАО"
+            },
+            {
+              "name": "Филевский парк",
+              "shortName": "р-н Филевский парк",
+              "qs": "deal_type=rent&district%5B0%5D=123&engine_version=2&offer_type=flat&type=2",
+              "isFormingAddress": null,
+              "geoType": "district",
+              "type": "raion",
+              "fullName": "р-н Филевский парк",
+              "id": 123,
+              "locationTypeId": null,
+              "title": "р-н Филевский парк"
+            },
+            {
+              "name": "Фили",
+              "shortName": "м. Фили",
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=142&offer_type=flat&only_foot=2&type=2",
+              "isFormingAddress": null,
+              "geoType": "underground",
+              "type": "metro",
+              "fullName": "м. Фили",
+              "id": 142,
+              "locationTypeId": null,
+              "title": "м. Фили"
+            },
+            {
+              "name": "Береговой",
+              "shortName": "Береговой проезд",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&street%5B0%5D=684&type=2",
+              "isFormingAddress": true,
+              "geoType": "street",
+              "type": "street",
+              "fullName": "Береговой проезд",
+              "id": 684,
+              "locationTypeId": null,
+              "title": "Береговой проезд"
+            },
+            {
+              "name": "5Ак2",
+              "shortName": "5Ак2",
+              "qs": "deal_type=rent&engine_version=2&house%5B0%5D=3067547&offer_type=flat&type=2",
+              "isFormingAddress": true,
+              "geoType": "house",
+              "type": "house",
+              "fullName": "5Ак2",
+              "id": 3067547,
+              "locationTypeId": null,
+              "title": "5Ак2"
+            }
+          ],
+          "railways": [
+            {
+              "name": "Фили",
+              "travelType": "byCar",
+              "time": 5,
+              "directionIds": [
+                11
+              ],
+              "id": 708,
+              "geoType": "railway",
+              "distance": 2.0,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=708&type=2"
+            },
+            {
+              "name": "Тестовская",
+              "travelType": "byCar",
+              "time": 8,
+              "directionIds": [
+                11
+              ],
+              "id": 707,
+              "geoType": "railway",
+              "distance": 4.0,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=707&type=2"
+            },
+            {
+              "name": "Москва-Сортировочная",
+              "travelType": "byCar",
+              "time": 18,
+              "directionIds": [
+                14
+              ],
+              "id": 706,
+              "geoType": "railway",
+              "distance": 11.0,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=706&type=2"
+            }
+          ],
+          "undergrounds": [
+            {
+              "name": "Фили",
+              "lineColor": "009BD5",
+              "underConstruction": false,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=142&offer_type=flat&only_foot=2&type=2",
+              "isDefault": true,
+              "releaseYear": null,
+              "time": 14,
+              "lineId": 12,
+              "id": 142,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Шелепиха",
+              "lineColor": "7ACDCE",
+              "underConstruction": false,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=453&offer_type=flat&only_foot=2&type=2",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 19,
+              "lineId": 27,
+              "id": 453,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Шелепиха",
+              "lineColor": "FA6F9E",
+              "underConstruction": false,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=311&offer_type=flat&only_foot=2&type=2",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 19,
+              "lineId": 22,
+              "id": 311,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": "mck"
+            }
+          ],
+          "jk": {
+            "name": "Фили Град",
+            "house": {
+              "name": "Береговой, 5Ак2",
+              "id": 2790
+            },
+            "developer": null,
+            "gaGeo": {
+              "moId": 0,
+              "cityId": 1,
+              "oblId": 1
+            },
+            "webSiteUrl": null,
+            "displayName": "ЖК «Фили Град»",
+            "id": 5489,
+            "fullUrl": "https://zhk-fili-grad-i.cian.ru/",
+            "webSiteUrlUtm": null
+          },
+          "buildingAddress": null,
+          "coordinates": {
+            "lat": 55.755459,
+            "lng": 37.509334
+          },
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 142
+            },
+            {
+              "type": "underground",
+              "id": 453
+            },
+            {
+              "type": "underground",
+              "id": 311
+            },
+            {
+              "type": "railway",
+              "id": 708
+            },
+            {
+              "type": "railway",
+              "id": 707
+            },
+            {
+              "type": "railway",
+              "id": 706
+            },
+            {
+              "type": "district",
+              "id": 123
+            },
+            {
+              "type": "district",
+              "id": 11
+            }
+          ]
+        },
+        "loggiasCount": null,
+        "newbuilding": {
+          "name": "Фили Град",
+          "house": {
+            "name": "Береговой, 5Ак2",
+            "isFinished": true,
+            "section": null,
+            "finishDate": {
+              "year": 2017,
+              "quarter": 3
+            },
+            "id": 2790
+          },
+          "isFichering": false,
+          "isSalesLeader": null,
+          "isFromBuilder": false,
+          "isFromDeveloper": false,
+          "isFromLeadFactory": false,
+          "isFromSeller": false,
+          "id": 5489,
+          "showJkReliableFlag": false,
+          "comparisonStatus": null,
+          "hasFlatTourBooking": false,
+          "isPremium": false
+        },
+        "isCalltrackingEnabled": true,
+        "buildingCadastralNumber": null,
+        "land": null,
+        "commercialOwnership": null,
+        "rentByPartsDescription": null,
+        "workTimeInfo": null,
+        "permittedUseType": null,
+        "isInCpd": null,
+        "formattedAdditionalInfo": "Посуточно",
+        "description": "Сдается квартира - студия в современном комплексе бизнес класса ЖК Филиград. В квартире можно расположить до 4 человек. Оборудована всем необходимым для комфортного проживания:\n- Холодильник\n- Посудомоечная,стиральная машины,микроволновая \nпечь,эл.чайник .\n-кондиционер ( сплит - система )!!!\n-ТВ,Wi-",
+        "isCommercialOwnershipVerified": null,
+        "dealType": "rent",
+        "isAuction": true,
+        "rosreestrCheck": null,
+        "booking": null,
+        "offerType": "flat",
+        "fromDeveloper": null,
+        "newbuildingCplLayer": null,
+        "buildersIds": [
+          6008
+        ],
+        "fullUrl": "https://www.cian.ru/rent/flat/191071633/?mlSearchSessionGuid=0a844ba9ae762b9fe351e5219e161d42",
+        "roomsCount": 1,
+        "offerInDeal": false,
+        "offerFeatureLabelsV2": null,
+        "bargainTerms": {
+          "paymentPeriod": null,
+          "clientFee": null,
+          "saleType": null,
+          "priceType": "all",
+          "utilitiesTerms": {
+            "includedInPrice": true,
+            "price": 0,
+            "flowMetersNotIncludedInPrice": null
+          },
+          "vatPrice": null,
+          "agentFee": null,
+          "price": 5000,
+          "priceRur": 5000,
+          "priceForWorkplace": null,
+          "leaseTermType": null,
+          "agentBonus": null,
+          "vatType": null,
+          "tags": [],
+          "mortgageAllowed": null,
+          "leaseType": null,
+          "bargainAllowed": null,
+          "deposit": null,
+          "currency": "rur"
+        },
+        "isColorized": false,
+        "minArea": null,
+        "auction": {},
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9230758879"
+          }
+        ],
+        "isImported": false,
+        "flatType": "rooms",
+        "layout": null,
+        "dealRentVersion": null,
+        "coworking": null,
+        "kitchenArea": null,
+        "cianUserId": 17548313,
+        "isNeedHideExactAddress": false,
+        "isRecidivist": false,
+        "isCianPartner": false,
+        "villageMortgageAllowed": null,
+        "totalArea": "32.4",
+        "addedTimestamp": 1788977130,
+        "category": "dailyFlatRent",
+        "building": {
+          "cargoLiftsCount": 2,
+          "heatingType": null,
+          "materialType": "monolith",
+          "deadline": null,
+          "passengerLiftsCount": null,
+          "floorsCount": 25,
+          "type": null,
+          "buildYear": 2017,
+          "classType": null,
+          "parking": null,
+          "accessType": null
+        },
+        "newbuildingWithExtendedFeatures": null,
+        "businessShoppingCenter": null,
+        "isPremium": false,
+        "balconiesCount": null,
+        "status": "published",
+        "floorNumber": 25,
+        "isBookedFromDeveloper": false,
+        "humanizedTimedelta": "вчера",
+        "isByHomeowner": false,
+        "garage": null,
+        "readyBusinessType": null,
+        "coworkingOfferType": null,
+        "moderationInfo": {
+          "showContactWarningMessage": false,
+          "warningMessage": null,
+          "photoStub": null
+        },
+        "isNew": false,
+        "areaParts": null,
+        "cianId": 191071633,
+        "allFromOffrep": null,
+        "videos": [],
+        "kp": null,
+        "bedroomsCount": null,
+        "isStandard": false,
+        "decoration": null,
+        "officeType": null,
+        "isEarlyAccessEnabled": false,
+        "livingArea": null,
+        "title": null,
+        "specialty": {
+          "types": [],
+          "additionalTypes": [],
+          "specialties": []
+        },
+        "workplaceCount": null,
+        "demolishedInMoscowProgramm": null,
+        "cadastralNumber": null,
+        "promoInfo": null,
+        "tradingLink": null,
+        "isRentByParts": false,
+        "isByCommercialOwner": null,
+        "added": "вчера, 21:05",
+        "userId": 17548313,
+        "isExcludedFromAction": false,
+        "isLayoutApproved": null,
+        "formattedShortPrice": "от 5 000 ₽/сут.",
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "17548313",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": true,
+          "isSubAgent": false,
+          "userId": 17548313,
+          "userTrustLevel": "notInvolved",
+          "accountType": "specialist",
+          "agencyName": "Наталья  Ярышкина",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": false,
+              "isSuperHost": true,
+              "levelName": "Суперхозяин",
+              "levelOrder": 4,
+              "levelSystemName": "max",
+              "showSuperAgent": false,
+              "showHighResponsibility": true,
+              "showSuperHost": true
+            },
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 0,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Москва и ближнее Подмосковье",
+                "locationId": 1,
+                "packageTypeId": 1,
+                "packageTypeName": "Некоммерческий"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9128541333"
+            }
+          ],
+          "profileUri": "agents/17548313/",
+          "userType": "realtor_not_commerce",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 17548313,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": false,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=1/city_id=1/object_type=1/ga_obj_type=1/spec=agent/rent_type=daily/191071633/from_developer=0/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid4": "offer_type_1",
+          "puid5": "obl_id_1",
+          "puid6": "1_50",
+          "puid7": "2323",
+          "puid8": 5000,
+          "puid9": 142,
+          "puid10": "no_agent",
+          "puid16": "true",
+          "puid17": "true",
+          "puid18": 5489,
+          "puid19": "not_video",
+          "puid36": 1
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "Сдан"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "Береговой, 5Ак2"
+          }
+        ],
+        "dailyrent": {
+          "actionType": "otaCheckDates",
+          "hotelData": {
+            "isHotel": false
+          },
+          "isOnlineBooking": true,
+          "isVerifiedByCian": true,
+          "offerLabels": [
+            "instantBooking"
+          ],
+          "priceInfo": {
+            "finalPrice": "5 000 ₽",
+            "finalPricePerNight": "от 5 000 ₽/сут."
+          },
+          "realtyId": 191071633,
+          "guestsInfo": {
+            "guestsCount": 1,
+            "maxGuestsCount": 4
+          },
+          "rating": {
+            "rating": "5,0",
+            "reviewsCount": "7 отзывов"
+          }
+        },
+        "isVerifiedByCian": true,
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "newbuildingDynamicCalltracking": {
+          "siteBlockId": null,
+          "newbuildingId": null
+        },
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      },
+      {
+        "descriptionMinhash": [
+          343527,
+          3173382,
+          3583066,
+          4831008,
+          29331269,
+          36150648,
+          10357415,
+          20606574,
+          11679811,
+          37900519,
+          22560835,
+          17304062,
+          14490383,
+          27405120,
+          77425371,
+          90946905,
+          14850229,
+          11649512,
+          61898119,
+          25534808,
+          40632402,
+          6596859,
+          944162,
+          5837452,
+          36465122,
+          11152441,
+          8088586,
+          17358135,
+          23909840,
+          18561244,
+          16575688,
+          15067180
+        ],
+        "loggiasCount": null,
+        "isColorized": false,
+        "description": "Атмосфера Монако в центре Москвы.\n\nДобро пожаловать в пространство, где роскошь встречается с искусством, а каждый день начинается с панорамного вида на Москва-Сити.\n\nНовая трехкомнатная квартира премиум-класса в ЦАО, расположенная в современном жилом комплексе бизнес-класса Хедлайнер, создана для т",
+        "businessShoppingCenter": null,
+        "booking": null,
+        "isSubsidisedMortgage": null,
+        "videos": [
+          {
+            "uploadDate": null,
+            "id": "4d343c8f-a6ae-4fcd-b594-3bd371ea2384",
+            "duration": 12,
+            "url": "https://kinescope.io/embed/awWDmedrUywuYjj45dKMNd",
+            "previewUrl": "https://kinescopecdn.net/f9f281e3-5528-474a-b760-2c5cecf2ce98/posters/d5adca8e-f78c-42fa-88e1-dea3983f7fdf/md/01a047ad-db47-7c72-9d3e-3145301c0700.jpg",
+            "type": "kinescope"
+          }
+        ],
+        "garage": null,
+        "balconiesCount": null,
+        "decoration": null,
+        "similar": null,
+        "isInHiddenBase": false,
+        "roomsCount": 3,
+        "isRentByParts": false,
+        "totalArea": "77.0",
+        "isExcludedFromAction": false,
+        "fullUrl": "https://www.cian.ru/rent/flat/331744103/?mlSearchSessionGuid=0a844ba9ae762b9fe351e5219e161d42",
+        "moderationInfo": {
+          "showContactWarningMessage": false,
+          "warningMessage": null,
+          "photoStub": null
+        },
+        "isStandard": false,
+        "auction": {},
+        "rentByPartsDescription": null,
+        "offerInDeal": false,
+        "tradingLink": null,
+        "isPremium": false,
+        "workTimeInfo": null,
+        "promoInfo": null,
+        "building": {
+          "heatingType": null,
+          "classType": null,
+          "buildYear": null,
+          "deadline": null,
+          "floorsCount": 53,
+          "parking": null,
+          "materialType": null,
+          "accessType": null,
+          "type": null,
+          "cargoLiftsCount": null,
+          "passengerLiftsCount": null
+        },
+        "kp": null,
+        "buildingCadastralNumber": null,
+        "bargainTerms": {
+          "clientFee": null,
+          "bargainAllowed": null,
+          "saleType": null,
+          "priceType": "all",
+          "price": 15000,
+          "utilitiesTerms": {
+            "includedInPrice": true,
+            "price": 0,
+            "flowMetersNotIncludedInPrice": null
+          },
+          "paymentPeriod": null,
+          "agentFee": null,
+          "currency": "rur",
+          "vatType": null,
+          "agentBonus": null,
+          "leaseType": null,
+          "priceRur": 15000,
+          "deposit": 10000,
+          "mortgageAllowed": null,
+          "tags": [],
+          "leaseTermType": null,
+          "priceForWorkplace": null,
+          "vatPrice": null
+        },
+        "rosreestrCheck": null,
+        "isInCpd": null,
+        "basicProfiScore": 1,
+        "specialty": {
+          "specialties": [],
+          "types": [],
+          "additionalTypes": []
+        },
+        "formattedFullPrice": "от 15 000 ₽/сут.",
+        "commercialOwnership": null,
+        "isTop3": true,
+        "formattedFullInfo": "3-комн.кв.  ·  77 м²  ·  5/53 этаж",
+        "isCalltrackingEnabled": true,
+        "publishedUserId": 82978482,
+        "land": null,
+        "isNeedHideExactAddress": false,
+        "formattedShortInfo": "3-комн.кв.  ·  5/53 этаж",
+        "title": "Премиум апартаменты Монако",
+        "layout": null,
+        "isBookedFromDeveloper": false,
+        "permittedUseType": null,
+        "isNew": false,
+        "minArea": null,
+        "category": "dailyFlatRent",
+        "status": "published",
+        "allFromOffrep": null,
+        "coworking": null,
+        "externalId": null,
+        "formattedAdditionalInfo": "Залог 10 000 ₽, посуточно",
+        "cianId": 331744103,
+        "demolishedInMoscowProgramm": null,
+        "isLayoutApproved": null,
+        "geo": {
+          "jk": {
+            "house": {
+              "name": "Шмитовский, 39к8 (Корпус 10)",
+              "id": 581734
+            },
+            "id": 26654,
+            "gaGeo": {
+              "oblId": 1,
+              "moId": 0,
+              "cityId": 1
+            },
+            "displayName": "ЖК «Headliner»",
+            "name": "Headliner",
+            "fullUrl": "https://zhk-headliner-i.cian.ru/",
+            "developer": null,
+            "webSiteUrlUtm": null,
+            "webSiteUrl": null
+          },
+          "undergrounds": [
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 512,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=512&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 6,
+              "lineId": 34,
+              "lineColor": "40B280",
+              "isDefault": true,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mcd4"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 311,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=311&offer_type=flat&only_foot=2&type=2",
+              "name": "Шелепиха",
+              "time": 8,
+              "lineId": 22,
+              "lineColor": "FA6F9E",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mck"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 35,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=35&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 12,
+              "lineId": 12,
+              "lineColor": "009BD5",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 453,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=453&offer_type=flat&only_foot=2&type=2",
+              "name": "Шелепиха",
+              "time": 12,
+              "lineId": 27,
+              "lineColor": "7ACDCE",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 400,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=400&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 19,
+              "lineId": 30,
+              "lineColor": "DE9C4E",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mcd1"
+            }
+          ],
+          "coordinates": {
+            "lng": 37.525827,
+            "lat": 55.752425
+          },
+          "districts": [
+            {
+              "id": 18,
+              "locationId": 1,
+              "qs": "deal_type=rent&district%5B0%5D=18&engine_version=2&offer_type=flat&type=2",
+              "parentId": 4,
+              "title": "р-н Пресненский",
+              "name": "Пресненский",
+              "fullName": "р-н Пресненский",
+              "type": "raion",
+              "geoType": "district"
+            },
+            {
+              "id": 4,
+              "locationId": 1,
+              "qs": "deal_type=rent&district%5B0%5D=4&engine_version=2&offer_type=flat&type=2",
+              "parentId": null,
+              "title": "ЦАО",
+              "name": "ЦАО",
+              "fullName": "ЦАО",
+              "type": "okrug",
+              "geoType": "district"
+            }
+          ],
+          "buildingAddress": null,
+          "countryId": 138,
+          "userInput": "Россия, Москва, Шмитовский проезд, 39к8",
+          "address": [
+            {
+              "isFormingAddress": true,
+              "id": 1,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&region=1&type=2",
+              "title": "Москва",
+              "name": "Москва",
+              "fullName": "Москва",
+              "shortName": "Москва",
+              "type": "location",
+              "locationTypeId": 1,
+              "geoType": "location"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 4,
+              "qs": "deal_type=rent&district%5B0%5D=4&engine_version=2&offer_type=flat&type=2",
+              "title": "ЦАО",
+              "name": "ЦАО",
+              "fullName": "ЦАО",
+              "shortName": "ЦАО",
+              "type": "okrug",
+              "locationTypeId": null,
+              "geoType": "district"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 18,
+              "qs": "deal_type=rent&district%5B0%5D=18&engine_version=2&offer_type=flat&type=2",
+              "title": "р-н Пресненский",
+              "name": "Пресненский",
+              "fullName": "р-н Пресненский",
+              "shortName": "р-н Пресненский",
+              "type": "raion",
+              "locationTypeId": null,
+              "geoType": "district"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 512,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=512&offer_type=flat&only_foot=2&type=2",
+              "title": "м. Москва-Сити",
+              "name": "Москва-Сити",
+              "fullName": "м. Москва-Сити",
+              "shortName": "м. Москва-Сити",
+              "type": "metro",
+              "locationTypeId": null,
+              "geoType": "underground"
+            },
+            {
+              "isFormingAddress": true,
+              "id": 2456,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&street%5B0%5D=2456&type=2",
+              "title": "Шмитовский проезд",
+              "name": "Шмитовский",
+              "fullName": "Шмитовский проезд",
+              "shortName": "Шмитовский проезд",
+              "type": "street",
+              "locationTypeId": null,
+              "geoType": "street"
+            },
+            {
+              "isFormingAddress": true,
+              "id": 906981,
+              "qs": "deal_type=rent&engine_version=2&house%5B0%5D=906981&offer_type=flat&type=2",
+              "title": "39к8",
+              "name": "39к8",
+              "fullName": "39к8",
+              "shortName": "39к8",
+              "type": "house",
+              "locationTypeId": null,
+              "geoType": "house"
+            }
+          ],
+          "railways": [
+            {
+              "id": 707,
+              "travelType": "byFoot",
+              "name": "Тестовская",
+              "time": 15,
+              "distance": 1.0,
+              "directionIds": [
+                11
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=707&type=2"
+            },
+            {
+              "id": 708,
+              "travelType": "byCar",
+              "name": "Фили",
+              "time": 5,
+              "distance": 2.0,
+              "directionIds": [
+                11
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=708&type=2"
+            },
+            {
+              "id": 699,
+              "travelType": "byCar",
+              "name": "Беговая",
+              "time": 8,
+              "distance": 5.0,
+              "directionIds": [
+                11
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=699&type=2"
+            }
+          ],
+          "highways": [],
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 512
+            },
+            {
+              "type": "underground",
+              "id": 311
+            },
+            {
+              "type": "underground",
+              "id": 35
+            },
+            {
+              "type": "underground",
+              "id": 453
+            },
+            {
+              "type": "underground",
+              "id": 400
+            },
+            {
+              "type": "railway",
+              "id": 707
+            },
+            {
+              "type": "railway",
+              "id": 708
+            },
+            {
+              "type": "railway",
+              "id": 699
+            },
+            {
+              "type": "district",
+              "id": 18
+            },
+            {
+              "type": "district",
+              "id": 4
+            }
+          ]
+        },
+        "accessType": null,
+        "readyBusinessType": null,
+        "newbuildingVasPromotion": null,
+        "added": "3 сен, 21:43",
+        "isImported": false,
+        "officeType": null,
+        "newbuildingWithExtendedFeatures": null,
+        "roomsForSaleCount": null,
+        "floorNumber": 5,
+        "humanizedTimedelta": "шесть дней назад",
+        "photos": [
+          {
+            "isLayout": false,
+            "id": 2957365075,
+            "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365075-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365075-2.jpg",
+            "isDefault": true,
+            "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365075-1.jpg",
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365075-4.jpg",
+            "rotateDegree": null
+          },
+          {
+            "isLayout": false,
+            "id": 2957365383,
+            "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365383-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365383-2.jpg",
+            "isDefault": false,
+            "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365383-1.jpg",
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-shmitovskiy-proezd-2957365383-4.jpg",
+            "rotateDegree": null
+          }
+        ],
+        "dealType": "rent",
+        "coworkingOfferType": null,
+        "roomArea": null,
+        "areaParts": null,
+        "newbuilding": {
+          "house": {
+            "id": 581734,
+            "name": "Шмитовский, 39к8 (Корпус 10)",
+            "finishDate": {
+              "quarter": 1,
+              "year": 2023
+            },
+            "isFinished": true,
+            "section": null
+          },
+          "isFichering": false,
+          "id": 26654,
+          "isFromSeller": false,
+          "showJkReliableFlag": false,
+          "name": "Headliner (Хедлайнер)",
+          "comparisonStatus": null,
+          "isSalesLeader": null,
+          "isFromBuilder": false,
+          "isFromLeadFactory": false,
+          "isPremium": false,
+          "isFromDeveloper": false,
+          "hasFlatTourBooking": false
+        },
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9810868105"
+          }
+        ],
+        "cadastralNumber": null,
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1113
+        ],
+        "descriptionWordsHighlighted": [],
+        "monthlyIncome": null,
+        "villageMortgageAllowed": null,
+        "addedTimestamp": 1788461005,
+        "formattedShortPrice": "от 15 000 ₽/сут.",
+        "dealRentVersion": null,
+        "newbuildingCplLayer": null,
+        "livingArea": null,
+        "fromDeveloper": null,
+        "creationDate": "2026-07-06T18:35:20.627",
+        "isCommercialOwnershipVerified": null,
+        "kitchenArea": null,
+        "isByCommercialOwner": null,
+        "isRecidivist": false,
+        "workplaceCount": null,
+        "isEarlyAccessEnabled": false,
+        "isAuction": true,
+        "showWarningMessage": false,
+        "userId": 82978482,
+        "jkUrl": "https://zhk-headliner-i.cian.ru/",
+        "offerFeatureLabelsV2": null,
+        "bedroomsCount": null,
+        "isByHomeowner": false,
+        "offerType": "flat",
+        "isApartments": false,
+        "id": 331744103,
+        "isCianPartner": false,
+        "hasFurniture": null,
+        "cianUserId": 82978482,
+        "shareAmount": null,
+        "buildersIds": [
+          7043
+        ],
+        "flatType": "rooms",
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "82978482",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": false,
+          "isSubAgent": false,
+          "userId": 82978482,
+          "userTrustLevel": "involved",
+          "accountType": "agency",
+          "agencyName": "Алис",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=48440392&t=2&p=2&timestamp=1769078938",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": true,
+              "isSuperHost": true,
+              "levelName": "Суперагент",
+              "levelOrder": 4,
+              "levelSystemName": "max",
+              "showSuperAgent": false,
+              "showHighResponsibility": true,
+              "showSuperHost": true
+            },
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 1,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Россия",
+                "packageTypeId": 2,
+                "packageTypeName": "Базовый"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "Алис",
+          "experience": "2019",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9645593399"
+            },
+            {
+              "countryCode": "+7",
+              "number": "4950329232"
+            }
+          ],
+          "profileUri": "company/82978482/",
+          "userType": "realtor_based",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 82978482,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": true,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=1/city_id=1/object_type=1/ga_obj_type=3/spec=company/rent_type=daily/331744103/from_developer=0/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid4": "offer_type_3",
+          "puid5": "obl_id_1",
+          "puid6": "1_50",
+          "puid7": "2323",
+          "puid8": 15000,
+          "puid9": 512,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid18": 26654,
+          "puid19": "not_video",
+          "puid36": 1
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": true,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [
+          {
+            "type": "hasVideo",
+            "text": "Объявление с видео",
+            "link": "https://www.cian.ru/rent/flat/331744103/"
+          }
+        ],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "Сдан"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "Шмитовский, 39к8 (Корпус 10)"
+          }
+        ],
+        "dailyrent": {
+          "actionType": "otaCheckDates",
+          "hotelData": {
+            "isHotel": false
+          },
+          "isOnlineBooking": true,
+          "isVerifiedByCian": true,
+          "offerLabels": [
+            "instantBooking"
+          ],
+          "priceInfo": {
+            "finalPrice": "15 000 ₽",
+            "finalPricePerNight": "от 15 000 ₽/сут."
+          },
+          "realtyId": 331744103,
+          "guestsInfo": {
+            "guestsCount": 1,
+            "maxGuestsCount": 4
+          }
+        },
+        "isVerifiedByCian": true,
+        "brandingLevel": "thirdLevel",
+        "isRosreestrChecked": false,
+        "newbuildingDynamicCalltracking": {
+          "siteBlockId": null,
+          "newbuildingId": null
+        },
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      },
+      {
+        "descriptionMinhash": [
+          7271919,
+          19965460,
+          41763141,
+          1115077,
+          2088518,
+          13162573,
+          2242720,
+          3351022,
+          56920750,
+          37342448,
+          28420684,
+          15240597,
+          4178831,
+          2285990,
+          8565558,
+          18872239,
+          2237706,
+          12370780,
+          4926574,
+          5573487,
+          23010934,
+          3842294,
+          944162,
+          8692421,
+          28131336,
+          20249216,
+          9953071,
+          57527,
+          3534384,
+          4088320,
+          3813664,
+          21828491
+        ],
+        "loggiasCount": null,
+        "isColorized": false,
+        "description": "Ванная у oкна | Бaшня HEВА ТАУЭPС | Вид на город с 7 этажа | Кондиционер | Ортопедический матрас | Высокоскоростной Wi-Fi | Полный пакет отчетных документов с чеками | Высокий Рейтинг | Скидки при длительном проживании | \n\nЗабронируйте прямо сейчас! В календаре только актуальные цены! \nВыбирайте дат",
+        "businessShoppingCenter": null,
+        "booking": null,
+        "isSubsidisedMortgage": null,
+        "videos": [
+          {
+            "uploadDate": null,
+            "id": "5e54110e-7580-41c7-9b03-342ddbcacbc9",
+            "duration": 19,
+            "url": "https://kinescope.io/embed/cDA7sD6hfGfdmrTPfyC4Aa",
+            "previewUrl": "https://kinescopecdn.net/f9f281e3-5528-474a-b760-2c5cecf2ce98/posters/fd5f4b3a-7eee-4e77-816d-55630c26f3e6/md/fb5526c3-e8ae-4918-8aff-1b03be15e6e9.jpg",
+            "type": "kinescope"
+          }
+        ],
+        "garage": null,
+        "balconiesCount": null,
+        "decoration": null,
+        "similar": null,
+        "isInHiddenBase": false,
+        "roomsCount": null,
+        "isRentByParts": false,
+        "totalArea": "28.0",
+        "isExcludedFromAction": false,
+        "fullUrl": "https://www.cian.ru/rent/flat/298900566/?mlSearchSessionGuid=0a844ba9ae762b9fe351e5219e161d42",
+        "moderationInfo": {
+          "showContactWarningMessage": false,
+          "warningMessage": null,
+          "photoStub": null
+        },
+        "isStandard": false,
+        "auction": {},
+        "rentByPartsDescription": null,
+        "offerInDeal": false,
+        "tradingLink": null,
+        "isPremium": false,
+        "workTimeInfo": null,
+        "promoInfo": null,
+        "building": {
+          "heatingType": null,
+          "classType": null,
+          "buildYear": 2020,
+          "deadline": null,
+          "floorsCount": 68,
+          "parking": null,
+          "materialType": "monolith",
+          "accessType": null,
+          "type": null,
+          "cargoLiftsCount": null,
+          "passengerLiftsCount": null
+        },
+        "kp": null,
+        "buildingCadastralNumber": null,
+        "bargainTerms": {
+          "clientFee": null,
+          "bargainAllowed": null,
+          "saleType": null,
+          "priceType": "all",
+          "price": 7990,
+          "utilitiesTerms": {
+            "includedInPrice": true,
+            "price": 0,
+            "flowMetersNotIncludedInPrice": null
+          },
+          "paymentPeriod": null,
+          "agentFee": null,
+          "currency": "rur",
+          "vatType": null,
+          "agentBonus": null,
+          "leaseType": null,
+          "priceRur": 7990,
+          "deposit": 5000,
+          "mortgageAllowed": null,
+          "tags": [],
+          "leaseTermType": null,
+          "priceForWorkplace": null,
+          "vatPrice": null
+        },
+        "rosreestrCheck": null,
+        "isInCpd": null,
+        "basicProfiScore": 0,
+        "specialty": {
+          "specialties": [],
+          "types": [],
+          "additionalTypes": []
+        },
+        "formattedFullPrice": "от 7 990 ₽/сут.",
+        "commercialOwnership": null,
+        "isTop3": true,
+        "formattedFullInfo": "Студия  ·  28 м²  ·  7/68 этаж",
+        "isCalltrackingEnabled": true,
+        "publishedUserId": 112566994,
+        "land": null,
+        "isNeedHideExactAddress": false,
+        "formattedShortInfo": "Студия  ·  7/68 этаж",
+        "title": "Большой выбор апартов Москва и МО",
+        "layout": null,
+        "isBookedFromDeveloper": false,
+        "permittedUseType": null,
+        "isNew": false,
+        "minArea": null,
+        "category": "dailyFlatRent",
+        "status": "published",
+        "allFromOffrep": null,
+        "coworking": null,
+        "externalId": null,
+        "formattedAdditionalInfo": "Залог 5 000 ₽, посуточно",
+        "cianId": 298900566,
+        "demolishedInMoscowProgramm": null,
+        "isLayoutApproved": null,
+        "geo": {
+          "jk": {
+            "house": {
+              "name": "1-й Красногвардейский, 22с2 (Башня Т2)",
+              "id": 10478
+            },
+            "id": 8825,
+            "gaGeo": {
+              "oblId": 1,
+              "moId": 0,
+              "cityId": 1
+            },
+            "displayName": "ЖК «NEVA TOWERS»",
+            "name": "NEVA TOWERS",
+            "fullUrl": "https://zhk-neva-towers-i.cian.ru/",
+            "developer": null,
+            "webSiteUrlUtm": "https://www.nevatowers.ru/?utm_source=cian&utm_medium=kartochka_cian&utm_campaign=8825",
+            "webSiteUrl": "https://www.nevatowers.ru/"
+          },
+          "undergrounds": [
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 400,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=400&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 3,
+              "lineId": 30,
+              "lineColor": "DE9C4E",
+              "isDefault": true,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mcd1"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 35,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=35&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 4,
+              "lineId": 12,
+              "lineColor": "009BD5",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 70,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=70&offer_type=flat&only_foot=2&type=2",
+              "name": "Деловой центр",
+              "time": 6,
+              "lineId": 12,
+              "lineColor": "009BD5",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 444,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=444&offer_type=flat&only_foot=2&type=2",
+              "name": "Деловой центр",
+              "time": 6,
+              "lineId": 27,
+              "lineColor": "7ACDCE",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 272,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=272&offer_type=flat&only_foot=2&type=2",
+              "name": "Деловой центр",
+              "time": 6,
+              "lineId": 22,
+              "lineColor": "FA6F9E",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mck"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 512,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=512&offer_type=flat&only_foot=2&type=2",
+              "name": "Москва-Сити",
+              "time": 10,
+              "lineId": 34,
+              "lineColor": "40B280",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mcd4"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 311,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=311&offer_type=flat&only_foot=2&type=2",
+              "name": "Шелепиха",
+              "time": 16,
+              "lineId": 22,
+              "lineColor": "FA6F9E",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": "mck"
+            },
+            {
+              "releaseYear": null,
+              "cianId": null,
+              "id": 453,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=453&offer_type=flat&only_foot=2&type=2",
+              "name": "Шелепиха",
+              "time": 20,
+              "lineId": 27,
+              "lineColor": "7ACDCE",
+              "isDefault": false,
+              "underConstruction": false,
+              "transportType": "walk",
+              "lineType": null
+            }
+          ],
+          "coordinates": {
+            "lng": 37.535332,
+            "lat": 55.751584
+          },
+          "districts": [
+            {
+              "id": 18,
+              "locationId": 1,
+              "qs": "deal_type=rent&district%5B0%5D=18&engine_version=2&offer_type=flat&type=2",
+              "parentId": 4,
+              "title": "р-н Пресненский",
+              "name": "Пресненский",
+              "fullName": "р-н Пресненский",
+              "type": "raion",
+              "geoType": "district"
+            },
+            {
+              "id": 4,
+              "locationId": 1,
+              "qs": "deal_type=rent&district%5B0%5D=4&engine_version=2&offer_type=flat&type=2",
+              "parentId": null,
+              "title": "ЦАО",
+              "name": "ЦАО",
+              "fullName": "ЦАО",
+              "type": "okrug",
+              "geoType": "district"
+            }
+          ],
+          "buildingAddress": null,
+          "countryId": 138,
+          "userInput": "Россия, Москва, 1-й Красногвардейский проезд, 22с2",
+          "address": [
+            {
+              "isFormingAddress": true,
+              "id": 1,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&region=1&type=2",
+              "title": "Москва",
+              "name": "Москва",
+              "fullName": "Москва",
+              "shortName": "Москва",
+              "type": "location",
+              "locationTypeId": 1,
+              "geoType": "location"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 4,
+              "qs": "deal_type=rent&district%5B0%5D=4&engine_version=2&offer_type=flat&type=2",
+              "title": "ЦАО",
+              "name": "ЦАО",
+              "fullName": "ЦАО",
+              "shortName": "ЦАО",
+              "type": "okrug",
+              "locationTypeId": null,
+              "geoType": "district"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 18,
+              "qs": "deal_type=rent&district%5B0%5D=18&engine_version=2&offer_type=flat&type=2",
+              "title": "р-н Пресненский",
+              "name": "Пресненский",
+              "fullName": "р-н Пресненский",
+              "shortName": "р-н Пресненский",
+              "type": "raion",
+              "locationTypeId": null,
+              "geoType": "district"
+            },
+            {
+              "isFormingAddress": null,
+              "id": 400,
+              "qs": "deal_type=rent&engine_version=2&foot_min=25&metro%5B0%5D=400&offer_type=flat&only_foot=2&type=2",
+              "title": "м. Москва-Сити",
+              "name": "Москва-Сити",
+              "fullName": "м. Москва-Сити",
+              "shortName": "м. Москва-Сити",
+              "type": "metro",
+              "locationTypeId": null,
+              "geoType": "underground"
+            },
+            {
+              "isFormingAddress": true,
+              "id": 1265,
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&street%5B0%5D=1265&type=2",
+              "title": "1-й Красногвардейский проезд",
+              "name": "1-й Красногвардейский",
+              "fullName": "1-й Красногвардейский проезд",
+              "shortName": "1-й Красногвардейский проезд",
+              "type": "street",
+              "locationTypeId": null,
+              "geoType": "street"
+            },
+            {
+              "isFormingAddress": true,
+              "id": 5731398,
+              "qs": "deal_type=rent&engine_version=2&house%5B0%5D=5731398&offer_type=flat&type=2",
+              "title": "22с2",
+              "name": "22с2",
+              "fullName": "22с2",
+              "shortName": "22с2",
+              "type": "house",
+              "locationTypeId": null,
+              "geoType": "house"
+            }
+          ],
+          "railways": [
+            {
+              "id": 707,
+              "travelType": "byFoot",
+              "name": "Тестовская",
+              "time": 7,
+              "distance": 1.0,
+              "directionIds": [
+                11
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=707&type=2"
+            },
+            {
+              "id": 708,
+              "travelType": "byCar",
+              "name": "Фили",
+              "time": 6,
+              "distance": 4.0,
+              "directionIds": [
+                11
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=708&type=2"
+            },
+            {
+              "id": 693,
+              "travelType": "byCar",
+              "name": "Москва (Киевский вокзал)",
+              "time": 7,
+              "distance": 5.0,
+              "directionIds": [
+                14
+              ],
+              "geoType": "railway",
+              "qs": "deal_type=rent&engine_version=2&offer_type=flat&railway%5B0%5D=693&type=2"
+            }
+          ],
+          "highways": [],
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 400
+            },
+            {
+              "type": "underground",
+              "id": 35
+            },
+            {
+              "type": "underground",
+              "id": 70
+            },
+            {
+              "type": "underground",
+              "id": 444
+            },
+            {
+              "type": "underground",
+              "id": 272
+            },
+            {
+              "type": "underground",
+              "id": 512
+            },
+            {
+              "type": "underground",
+              "id": 311
+            },
+            {
+              "type": "underground",
+              "id": 453
+            },
+            {
+              "type": "railway",
+              "id": 707
+            },
+            {
+              "type": "railway",
+              "id": 708
+            },
+            {
+              "type": "railway",
+              "id": 693
+            },
+            {
+              "type": "district",
+              "id": 18
+            },
+            {
+              "type": "district",
+              "id": 4
+            }
+          ]
+        },
+        "accessType": null,
+        "readyBusinessType": null,
+        "newbuildingVasPromotion": null,
+        "added": "вчера, 17:58",
+        "isImported": false,
+        "officeType": null,
+        "newbuildingWithExtendedFeatures": null,
+        "roomsForSaleCount": null,
+        "floorNumber": 7,
+        "humanizedTimedelta": "вчера",
+        "photos": [
+          {
+            "isLayout": null,
+            "id": 2107685005,
+            "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685005-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685005-2.jpg",
+            "isDefault": false,
+            "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685005-1.jpg",
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685005-4.jpg",
+            "rotateDegree": null
+          },
+          {
+            "isLayout": null,
+            "id": 2107685023,
+            "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685023-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685023-2.jpg",
+            "isDefault": false,
+            "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685023-1.jpg",
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-1y-krasnogvardeyskiy-proezd-2107685023-4.jpg",
+            "rotateDegree": null
+          }
+        ],
+        "dealType": "rent",
+        "coworkingOfferType": null,
+        "roomArea": null,
+        "areaParts": null,
+        "newbuilding": {
+          "house": {
+            "id": 10478,
+            "name": "1-й Красногвардейский, 22с2 (Башня Т2)",
+            "finishDate": {
+              "quarter": 4,
+              "year": 2019
+            },
+            "isFinished": true,
+            "section": null
+          },
+          "isFichering": false,
+          "id": 8825,
+          "isFromSeller": false,
+          "showJkReliableFlag": false,
+          "name": "NEVA TOWERS (Нева Тауэрс)",
+          "comparisonStatus": null,
+          "isSalesLeader": null,
+          "isFromBuilder": false,
+          "isFromLeadFactory": false,
+          "isPremium": false,
+          "isFromDeveloper": false,
+          "hasFlatTourBooking": false
+        },
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9339384779"
+          }
+        ],
+        "cadastralNumber": null,
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1113
+        ],
+        "descriptionWordsHighlighted": [],
+        "monthlyIncome": null,
+        "villageMortgageAllowed": null,
+        "addedTimestamp": 1788965922,
+        "formattedShortPrice": "от 7 990 ₽/сут.",
+        "dealRentVersion": null,
+        "newbuildingCplLayer": null,
+        "livingArea": null,
+        "fromDeveloper": null,
+        "creationDate": "2024-02-23T12:34:20.627",
+        "isCommercialOwnershipVerified": null,
+        "kitchenArea": null,
+        "isByCommercialOwner": null,
+        "isRecidivist": false,
+        "workplaceCount": null,
+        "isEarlyAccessEnabled": false,
+        "isAuction": true,
+        "showWarningMessage": false,
+        "userId": 112566994,
+        "jkUrl": "https://zhk-neva-towers-i.cian.ru/",
+        "offerFeatureLabelsV2": null,
+        "bedroomsCount": null,
+        "isByHomeowner": false,
+        "offerType": "flat",
+        "isApartments": false,
+        "id": 298900566,
+        "isCianPartner": false,
+        "hasFurniture": true,
+        "cianUserId": 112566994,
+        "shareAmount": null,
+        "buildersIds": [
+          9621
+        ],
+        "flatType": "studio",
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "112566994",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": false,
+          "isSubAgent": false,
+          "userId": 112566994,
+          "userTrustLevel": "notInvolved",
+          "accountType": "agency",
+          "agencyName": "ФУЛЛ ХАУС",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=61619977&t=2&p=2&timestamp=1772282392",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": true,
+              "isSuperHost": true,
+              "levelName": "Суперагент",
+              "levelOrder": 4,
+              "levelSystemName": "max",
+              "showSuperAgent": false,
+              "showHighResponsibility": true,
+              "showSuperHost": true
+            },
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 1,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Россия",
+                "packageTypeId": 1,
+                "packageTypeName": "Некоммерческий"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "ФУЛЛ ХАУС",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9254809517"
+            }
+          ],
+          "profileUri": "company/112566994/",
+          "userType": "realtor_not_commerce",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 112566994,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": false,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=1/city_id=1/object_type=1/ga_obj_type=None/spec=company/rent_type=daily/298900566/from_developer=0/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid5": "obl_id_1",
+          "puid6": "1_50",
+          "puid7": "2323",
+          "puid8": 7990,
+          "puid9": 400,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid18": 8825,
+          "puid19": "not_video",
+          "puid36": 1
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [
+          {
+            "type": "hasVideo",
+            "text": "Объявление с видео",
+            "link": "https://www.cian.ru/rent/flat/298900566/"
+          }
+        ],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "Сдан"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "1-й Красногвардейский, 22с2 (Башня Т2)"
+          }
+        ],
+        "dailyrent": {
+          "actionType": "otaCheckDates",
+          "hotelData": {
+            "isHotel": false
+          },
+          "isOnlineBooking": true,
+          "isVerifiedByCian": true,
+          "offerLabels": [
+            "instantBooking"
+          ],
+          "priceInfo": {
+            "finalPrice": "7 990 ₽",
+            "finalPricePerNight": "от 7 990 ₽/сут."
+          },
+          "realtyId": 298900566,
+          "guestsInfo": {
+            "guestsCount": 1,
+            "maxGuestsCount": 2
+          },
+          "rating": {
+            "rating": "4,9",
+            "reviewsCount": "36 отзывов"
+          }
+        },
+        "isVerifiedByCian": true,
+        "brandingLevel": "thirdLevel",
+        "isRosreestrChecked": false,
+        "newbuildingDynamicCalltracking": {
+          "siteBlockId": null,
+          "newbuildingId": null
+        },
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      }
+    ]
+  }
+}

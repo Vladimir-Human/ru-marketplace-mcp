@@ -1,0 +1,12 @@
+{
+  "captured": "2026-09-09",
+  "page": "https://www.cian.ru/sale/flat/331002424/",
+  "source": "window._cianConfig['frontend-offer-card'] -> defaultState.offerData",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "displayed": {
+    "title": "Продажа однокомнатной квартиры 38.1м² Москва, НАО (Новомосковский), Московский, Первый Московский микрорайон, Первый Московский жилой комплекс, 11-я фаза м. Рассказовка - база ЦИАН, объявление 331002424",
+    "price": 11985439,
+    "priceRur": null
+  },
+  "trimmed": "offerData reduced to offer/agent/company/user/priceChanges/stats; description 300 chars; photos 2"
+}

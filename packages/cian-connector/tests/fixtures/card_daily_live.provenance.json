@@ -1,0 +1,14 @@
+{
+  "captured": "2026-09-10",
+  "page": "https://www.cian.ru/rent/flat/191071633/",
+  "source": "window._cianConfig['frontend-offer-card'] -> defaultState.offerData",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "displayed": {
+    "title": "Аренда однокомнатной квартиры 32.4м² Береговой проезд, 5Ак2, Москва, ЗАО, р-н Филевский парк м. Фили - база ЦИАН, объявление 191071633",
+    "price_per_night": 5000,
+    "priceRur_present": false,
+    "category": "dailyFlatRent"
+  },
+  "note": "A daily card has no bargainTerms.priceRur — only .price, and it is the nightly rate.",
+  "trimmed": "offerData reduced to offer/agent/company/priceChanges/stats; description 300 chars; photos 2"
+}

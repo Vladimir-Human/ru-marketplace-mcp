@@ -168,7 +168,9 @@ SOURCES = _available_sources()
 
 # Marketplaces that support a text query. Detsky Mir is absent on purpose: its
 # API has no working text search (see the detmir connector's module docstring),
-# so including it would mean returning products unrelated to the query.
+# so including it would mean returning products unrelated to the query. Cian is
+# absent too: it is real estate searched by filters, and a flat has no price to
+# compare against a kettle.
 SEARCHABLE = (
     "wildberries",
     "yandex_market",
@@ -990,7 +992,7 @@ async def compare_verify_offer(
     """Verify one compared offer through its marketplace card tool.
 
     This is the cheap compare-server follow-up: it lets an agent confirm the
-    raw search price, stock and seller without enabling the 36-tool unified
+    raw search price, stock and seller without enabling the 39-tool unified
     mount. The returned card is source-native and therefore keeps fields the
     comparison intentionally normalises away.
 

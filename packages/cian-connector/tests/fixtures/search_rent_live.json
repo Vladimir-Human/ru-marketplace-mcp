@@ -1,0 +1,1970 @@
+{
+  "status": "ok",
+  "data": {
+    "jsonQuery": {
+      "_type": "flatrent",
+      "engine_version": {
+        "type": "term",
+        "value": 2
+      },
+      "region": {
+        "type": "terms",
+        "value": [
+          2
+        ]
+      },
+      "price": {
+        "type": "range",
+        "value": {
+          "gte": 40000,
+          "lte": 60000
+        }
+      },
+      "page": {
+        "type": "term",
+        "value": 1
+      },
+      "for_day": {
+        "type": "term",
+        "value": "!1"
+      },
+      "room": {
+        "type": "terms",
+        "value": [
+          2
+        ]
+      }
+    },
+    "offerCount": 1228,
+    "aggregatedCount": 1227,
+    "fullUrl": "https://spb.cian.ru/cat.php?currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&p=1&region=2&room2=1&type=4",
+    "avgPriceInformer": {
+      "price": 50000,
+      "currency": "rur"
+    },
+    "offersSerialized": [
+      {
+        "title": "Сдаются впервые после ремонта",
+        "kitchenArea": null,
+        "demolishedInMoscowProgramm": null,
+        "isBookedFromDeveloper": false,
+        "isExcludedFromAction": false,
+        "kp": null,
+        "tradingLink": null,
+        "businessShoppingCenter": null,
+        "minArea": null,
+        "readyBusinessType": null,
+        "roomArea": null,
+        "isApartments": true,
+        "isCalltrackingEnabled": true,
+        "formattedShortInfo": "2-комн.кв.  ·  14/23 этаж",
+        "rosreestrCheck": null,
+        "cianUserId": 131124249,
+        "humanizedTimedelta": "6 часов назад",
+        "formattedAdditionalInfo": "Залог 50 000 ₽, без комиссии, предоплата 1 месяц, на несколько месяцев",
+        "isTop3": true,
+        "roomsCount": 2,
+        "workplaceCount": null,
+        "isNew": false,
+        "newbuildingCplLayer": null,
+        "booking": null,
+        "buildersIds": [],
+        "workTimeInfo": null,
+        "isRentByParts": false,
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1111
+        ],
+        "land": null,
+        "layout": null,
+        "floorNumber": 14,
+        "buildingCadastralNumber": null,
+        "loggiasCount": 0,
+        "bargainTerms": {
+          "priceForWorkplace": null,
+          "leaseTermType": "fewMonths",
+          "leaseType": null,
+          "agentFee": 0,
+          "agentBonus": null,
+          "vatPrice": null,
+          "price": 60000,
+          "deposit": 50000,
+          "vatType": null,
+          "priceRur": 60000,
+          "paymentPeriod": "monthly",
+          "utilitiesTerms": {
+            "price": 0,
+            "flowMetersNotIncludedInPrice": false,
+            "includedInPrice": true
+          },
+          "mortgageAllowed": null,
+          "clientFee": 0,
+          "bargainAllowed": null,
+          "tags": [],
+          "saleType": null,
+          "currency": "rur",
+          "priceType": "all"
+        },
+        "villageMortgageAllowed": null,
+        "balconiesCount": 0,
+        "officeType": null,
+        "isByCommercialOwner": null,
+        "building": {
+          "deadline": null,
+          "type": null,
+          "materialType": null,
+          "parking": {
+            "type": "ground",
+            "purposeType": null,
+            "isFree": null,
+            "locationType": null,
+            "priceEntry": null,
+            "priceMonthly": null,
+            "placesCount": null,
+            "currency": null,
+            "isAvailable": null
+          },
+          "cargoLiftsCount": 0,
+          "buildYear": null,
+          "heatingType": null,
+          "floorsCount": 23,
+          "passengerLiftsCount": 3,
+          "classType": null,
+          "accessType": null
+        },
+        "flatType": "rooms",
+        "newbuilding": null,
+        "added": "сегодня, 14:25",
+        "isStandard": false,
+        "auction": {},
+        "basicProfiScore": 1,
+        "dealType": "rent",
+        "isEarlyAccessEnabled": false,
+        "isInCpd": null,
+        "offerInDeal": false,
+        "isCommercialOwnershipVerified": null,
+        "isPremium": false,
+        "specialty": {
+          "types": [],
+          "additionalTypes": [],
+          "specialties": []
+        },
+        "dealRentVersion": null,
+        "commercialOwnership": null,
+        "areaParts": null,
+        "newbuildingWithExtendedFeatures": null,
+        "jkUrl": null,
+        "coworkingOfferType": null,
+        "publishedUserId": 131124249,
+        "isLayoutApproved": null,
+        "addedTimestamp": 1788953119,
+        "shareAmount": null,
+        "fromDeveloper": null,
+        "isImported": false,
+        "offerType": "flat",
+        "isInHiddenBase": false,
+        "rentByPartsDescription": null,
+        "hasFurniture": true,
+        "bedroomsCount": null,
+        "totalArea": "43.0",
+        "moderationInfo": {
+          "photoStub": null,
+          "showContactWarningMessage": false,
+          "warningMessage": null
+        },
+        "accessType": null,
+        "monthlyIncome": null,
+        "category": "flatRent",
+        "isNeedHideExactAddress": false,
+        "garage": null,
+        "isCianPartner": false,
+        "formattedFullInfo": "2-комн.кв.  ·  43 м²  ·  14/23 этаж",
+        "description": "Сдаются двухкомнатные апартаменты площадью 43 м² без комиссии и посредников. В стоимость аренды уже включены коммунальные услуги, уборка раз в две недели, Wi-Fi. \n\nАпартаменты идеально подойдут для семейного проживания или пары, ценящей тишину, уют и порядок. В Вашем распоряжении — отдельная спальня",
+        "userId": 131124249,
+        "offerFeatureLabelsV2": null,
+        "descriptionWordsHighlighted": [],
+        "externalId": null,
+        "newbuildingVasPromotion": null,
+        "cianId": 317754437,
+        "isByHomeowner": false,
+        "coworking": null,
+        "phones": [
+          {
+            "number": "9119664962",
+            "countryCode": "7"
+          }
+        ],
+        "isSubsidisedMortgage": null,
+        "cadastralNumber": null,
+        "roomsForSaleCount": null,
+        "livingArea": null,
+        "photos": [
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-4.jpg",
+            "isLayout": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-2.jpg",
+            "id": 2495568875,
+            "isDefault": true,
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495568875-3.jpg",
+            "rotateDegree": null
+          },
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-4.jpg",
+            "isLayout": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-2.jpg",
+            "id": 2495555177,
+            "isDefault": false,
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-prospekt-prosveshceniya-2495555177-3.jpg",
+            "rotateDegree": null
+          }
+        ],
+        "videos": [],
+        "descriptionMinhash": [
+          11657364,
+          60079018,
+          41763141,
+          28932783,
+          2088518,
+          4134826,
+          62457250,
+          16422298,
+          12009655,
+          37900519,
+          11419043,
+          80418541,
+          4178831,
+          2039279,
+          27505215,
+          53222516,
+          9153089,
+          79825488,
+          7576996,
+          8855208,
+          8686384,
+          14305239,
+          5793994,
+          5003345,
+          4548529,
+          26005222,
+          225344,
+          39160761,
+          21531700,
+          10473298,
+          3706214,
+          33465035
+        ],
+        "creationDate": "2025-05-20T11:56:06.607",
+        "isRecidivist": false,
+        "geo": {
+          "coordinates": {
+            "lat": 60.036793,
+            "lng": 30.407317
+          },
+          "undergrounds": [
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=168&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "D70834",
+              "id": 168,
+              "time": 10,
+              "name": "Гражданский проспект",
+              "isDefault": true,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "walk",
+              "underConstruction": false,
+              "lineId": 13,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=169&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "D70834",
+              "id": 169,
+              "time": 7,
+              "name": "Академическая",
+              "isDefault": false,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "transport",
+              "underConstruction": false,
+              "lineId": 13,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=167&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "D70834",
+              "id": 167,
+              "time": 7,
+              "name": "Девяткино",
+              "isDefault": false,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "transport",
+              "underConstruction": false,
+              "lineId": 13,
+              "lineType": null
+            }
+          ],
+          "railways": [
+            {
+              "travelType": "byCar",
+              "distance": 2.0,
+              "id": 284,
+              "time": 4,
+              "name": "Мурино",
+              "directionIds": [
+                10
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=284&room2=1&type=4"
+            },
+            {
+              "travelType": "byCar",
+              "distance": 4.0,
+              "id": 277,
+              "time": 6,
+              "name": "Депо Ручьи",
+              "directionIds": [
+                10
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=277&room2=1&type=4"
+            },
+            {
+              "travelType": "byCar",
+              "distance": 7.0,
+              "id": 296,
+              "time": 11,
+              "name": "Девяткино",
+              "directionIds": [
+                10
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=296&room2=1&type=4"
+            }
+          ],
+          "districts": [
+            {
+              "type": "okrug",
+              "title": "Прометей",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=768&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 768,
+              "locationId": 2,
+              "fullName": "Прометей",
+              "name": "Прометей",
+              "parentId": 147,
+              "geoType": "district"
+            },
+            {
+              "type": "raion",
+              "title": "р-н Калининский",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=147&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 147,
+              "locationId": 2,
+              "fullName": "р-н Калининский",
+              "name": "Калининский",
+              "parentId": null,
+              "geoType": "district"
+            }
+          ],
+          "countryId": 138,
+          "jk": null,
+          "buildingAddress": null,
+          "address": [
+            {
+              "type": "location",
+              "locationTypeId": 1,
+              "title": "Санкт-Петербург",
+              "isFormingAddress": true,
+              "shortName": "Санкт-Петербург",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&region=2&room2=1&type=4",
+              "id": 2,
+              "fullName": "Санкт-Петербург",
+              "name": "Санкт-Петербург",
+              "geoType": "location"
+            },
+            {
+              "type": "raion",
+              "locationTypeId": null,
+              "title": "р-н Калининский",
+              "isFormingAddress": null,
+              "shortName": "р-н Калининский",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=147&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 147,
+              "fullName": "р-н Калининский",
+              "name": "Калининский",
+              "geoType": "district"
+            },
+            {
+              "type": "okrug",
+              "locationTypeId": null,
+              "title": "Прометей",
+              "isFormingAddress": null,
+              "shortName": "Прометей",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=768&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 768,
+              "fullName": "Прометей",
+              "name": "Прометей",
+              "geoType": "district"
+            },
+            {
+              "type": "metro",
+              "locationTypeId": null,
+              "title": "м. Гражданский проспект",
+              "isFormingAddress": null,
+              "shortName": "м. Гражданский проспект",
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=168&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "id": 168,
+              "fullName": "м. Гражданский проспект",
+              "name": "Гражданский проспект",
+              "geoType": "underground"
+            },
+            {
+              "type": "street",
+              "locationTypeId": null,
+              "title": "проспект Просвещения",
+              "isFormingAddress": true,
+              "shortName": "просп. Просвещения",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&street%5B0%5D=4636&type=4",
+              "id": 4636,
+              "fullName": "проспект Просвещения",
+              "name": "Просвещения",
+              "geoType": "street"
+            },
+            {
+              "type": "house",
+              "locationTypeId": null,
+              "title": "83",
+              "isFormingAddress": true,
+              "shortName": "83",
+              "qs": "currency=2&deal_type=rent&engine_version=2&house%5B0%5D=3722&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 3722,
+              "fullName": "83",
+              "name": "83",
+              "geoType": "house"
+            }
+          ],
+          "userInput": "Россия, Санкт-Петербург, проспект Просвещения, 83",
+          "highways": [],
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 168
+            },
+            {
+              "type": "underground",
+              "id": 169
+            },
+            {
+              "type": "underground",
+              "id": 167
+            },
+            {
+              "type": "railway",
+              "id": 284
+            },
+            {
+              "type": "railway",
+              "id": 277
+            },
+            {
+              "type": "railway",
+              "id": 296
+            },
+            {
+              "type": "district",
+              "id": 768
+            },
+            {
+              "type": "district",
+              "id": 147
+            }
+          ]
+        },
+        "status": "published",
+        "formattedShortPrice": "60 000 ₽/мес.",
+        "promoInfo": null,
+        "isAuction": true,
+        "allFromOffrep": null,
+        "formattedFullPrice": "60 000 ₽/мес.",
+        "isColorized": false,
+        "showWarningMessage": false,
+        "fullUrl": "https://spb.cian.ru/rent/flat/317754437/?mlSearchSessionGuid=04cee7065c9de1921e1e12b67e121d18",
+        "decoration": null,
+        "id": 317754437,
+        "permittedUseType": null,
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "131124249",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": false,
+          "isSubAgent": false,
+          "userId": 131124249,
+          "userTrustLevel": "notInvolved",
+          "accountType": "agency",
+          "agencyName": "SVET hotel",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=71539216&t=2&p=2&timestamp=1787129417",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": false,
+              "isBlocked": false,
+              "isSuperAgent": false,
+              "isSuperHost": false,
+              "levelName": "Низкий уровень",
+              "levelOrder": 1,
+              "levelSystemName": "low",
+              "showHighResponsibility": false,
+              "showSuperAgent": false,
+              "showSuperHost": false
+            },
+            "showUserIdentifiedByDocuments": true
+          },
+          "billingInfo": {
+            "accountType": 1,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Санкт-Петербург и область",
+                "locationId": 2,
+                "packageTypeId": 2,
+                "packageTypeName": "Базовый"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "SVET hotel",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9523724431"
+            }
+          ],
+          "profileUri": "company/131124249/",
+          "userType": "realtor_based",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": false,
+            "availableFrom": "2026-09-10T09:00:00+03:00",
+            "availableTo": "2026-09-10T18:00:00+03:00",
+            "message": "Напишите ему или позвоните завтра.",
+            "title": "Специалист работает с 9:00 по 18:00.",
+            "userId": 131124249,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": true,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=2/city_id=2/object_type=1/ga_obj_type=2/spec=company/rent_type=/317754437/from_developer=0/repres=0/owner=0/pod_snos=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid4": "offer_type_2",
+          "puid5": "obl_id_2",
+          "puid6": "51_100",
+          "puid8": 60000,
+          "puid9": 168,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid19": "not_video",
+          "puid21": 168,
+          "puid36": 2
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": true,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [],
+        "factoids": [],
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "isOnlineRentalAgreementEnabled": null,
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      },
+      {
+        "title": "Без депозита! Пешком до метро",
+        "kitchenArea": "6.0",
+        "demolishedInMoscowProgramm": false,
+        "isBookedFromDeveloper": false,
+        "isExcludedFromAction": false,
+        "kp": null,
+        "tradingLink": null,
+        "businessShoppingCenter": null,
+        "minArea": null,
+        "readyBusinessType": null,
+        "roomArea": null,
+        "isApartments": null,
+        "isCalltrackingEnabled": true,
+        "formattedShortInfo": "2-комн.кв.  ·  9/11 этаж",
+        "rosreestrCheck": null,
+        "cianUserId": 107398974,
+        "humanizedTimedelta": "2 часа назад",
+        "formattedAdditionalInfo": "Без депозита, комиссия 60%(agent_fee), предоплата 1 месяц, на длительный срок",
+        "isTop3": true,
+        "roomsCount": 2,
+        "workplaceCount": null,
+        "isNew": false,
+        "newbuildingCplLayer": null,
+        "booking": null,
+        "buildersIds": [
+          9
+        ],
+        "workTimeInfo": null,
+        "isRentByParts": false,
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1111
+        ],
+        "land": null,
+        "layout": null,
+        "floorNumber": 9,
+        "buildingCadastralNumber": null,
+        "loggiasCount": 0,
+        "bargainTerms": {
+          "priceForWorkplace": null,
+          "leaseTermType": "longTerm",
+          "leaseType": null,
+          "agentFee": 50,
+          "agentBonus": null,
+          "vatPrice": null,
+          "price": 49000,
+          "deposit": 0,
+          "vatType": null,
+          "priceRur": 49000,
+          "paymentPeriod": "monthly",
+          "utilitiesTerms": {
+            "price": 0,
+            "flowMetersNotIncludedInPrice": true,
+            "includedInPrice": false
+          },
+          "mortgageAllowed": null,
+          "clientFee": 60,
+          "bargainAllowed": null,
+          "tags": [],
+          "saleType": null,
+          "currency": "rur",
+          "priceType": "all"
+        },
+        "villageMortgageAllowed": null,
+        "balconiesCount": 1,
+        "officeType": null,
+        "isByCommercialOwner": null,
+        "building": {
+          "deadline": null,
+          "type": null,
+          "materialType": "panel",
+          "parking": {
+            "type": "ground",
+            "purposeType": null,
+            "isFree": null,
+            "locationType": null,
+            "priceEntry": null,
+            "priceMonthly": null,
+            "placesCount": null,
+            "currency": null,
+            "isAvailable": null
+          },
+          "cargoLiftsCount": 1,
+          "buildYear": 2025,
+          "heatingType": null,
+          "floorsCount": 11,
+          "passengerLiftsCount": 1,
+          "classType": null,
+          "accessType": null
+        },
+        "flatType": "rooms",
+        "newbuilding": {
+          "comparisonStatus": null,
+          "isFromSeller": false,
+          "house": {
+            "section": null,
+            "finishDate": {
+              "quarter": 1,
+              "year": 2025
+            },
+            "isFinished": true,
+            "id": 7882195,
+            "name": "Корпус 3"
+          },
+          "showJkReliableFlag": false,
+          "isPremium": false,
+          "isFromLeadFactory": false,
+          "id": 4026695,
+          "hasFlatTourBooking": false,
+          "name": "Витебский парк",
+          "isFichering": false,
+          "isFromDeveloper": false,
+          "isSalesLeader": null,
+          "isFromBuilder": false
+        },
+        "added": "сегодня, 18:25",
+        "isStandard": false,
+        "auction": {},
+        "basicProfiScore": 1,
+        "dealType": "rent",
+        "isEarlyAccessEnabled": false,
+        "isInCpd": null,
+        "offerInDeal": false,
+        "isCommercialOwnershipVerified": null,
+        "isPremium": false,
+        "specialty": {
+          "types": [],
+          "additionalTypes": [],
+          "specialties": []
+        },
+        "dealRentVersion": null,
+        "commercialOwnership": null,
+        "areaParts": null,
+        "newbuildingWithExtendedFeatures": null,
+        "jkUrl": "https://zhk-vitebskiy-park-spb-i.cian.ru/",
+        "coworkingOfferType": null,
+        "publishedUserId": 117832788,
+        "isLayoutApproved": null,
+        "addedTimestamp": 1788967540,
+        "shareAmount": null,
+        "fromDeveloper": null,
+        "isImported": true,
+        "offerType": "flat",
+        "isInHiddenBase": false,
+        "rentByPartsDescription": null,
+        "hasFurniture": true,
+        "bedroomsCount": null,
+        "totalArea": "35.6",
+        "moderationInfo": {
+          "photoStub": null,
+          "showContactWarningMessage": false,
+          "warningMessage": null
+        },
+        "accessType": null,
+        "monthlyIncome": null,
+        "category": "flatRent",
+        "isNeedHideExactAddress": false,
+        "garage": null,
+        "isCianPartner": false,
+        "formattedFullInfo": "2-комн.кв.  ·  35,6 м²  ·  9/11 этаж",
+        "description": "Сдаётся светлая 2-комнатная квартира с хорошим ремонтом, без депозита! Квартира свободна, готова к заселению. Подойдёт одному человеку или паре с ребенком.\n\nКоммунальные услуги и счётчики оплачиваются отдельно. Изолированная спальня, просторная кухня-гостиная, балкон и совмещённый санузел. Полы - ла",
+        "userId": 107398974,
+        "offerFeatureLabelsV2": null,
+        "descriptionWordsHighlighted": [],
+        "externalId": null,
+        "newbuildingVasPromotion": null,
+        "cianId": 332754245,
+        "isByHomeowner": null,
+        "coworking": null,
+        "phones": [
+          {
+            "number": "9820937453",
+            "countryCode": "7"
+          }
+        ],
+        "isSubsidisedMortgage": null,
+        "cadastralNumber": null,
+        "roomsForSaleCount": null,
+        "livingArea": "20.0",
+        "photos": [
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2939982694-4.jpg",
+            "isLayout": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/2939982694-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2939982694-2.jpg",
+            "id": 2939982694,
+            "isDefault": false,
+            "miniUrl": "https://images.cdn-cian.ru/images/2939982694-3.jpg",
+            "rotateDegree": null
+          },
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2939982705-4.jpg",
+            "isLayout": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/2939982705-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2939982705-2.jpg",
+            "id": 2939982705,
+            "isDefault": false,
+            "miniUrl": "https://images.cdn-cian.ru/images/2939982705-3.jpg",
+            "rotateDegree": null
+          }
+        ],
+        "videos": [],
+        "descriptionMinhash": [
+          2313326,
+          5781654,
+          6160837,
+          42337346,
+          2088518,
+          28636284,
+          14072187,
+          13892692,
+          57588588,
+          37900519,
+          11419043,
+          39685766,
+          4178831,
+          72348985,
+          1842657,
+          15438368,
+          21211329,
+          52883763,
+          46276819,
+          68225272,
+          8262839,
+          9879729,
+          5793994,
+          38907129,
+          40658430,
+          10065804,
+          14425114,
+          33686360,
+          11334613,
+          57684938,
+          6976463,
+          54770475
+        ],
+        "creationDate": "2026-08-08T18:07:28.787",
+        "isRecidivist": false,
+        "geo": {
+          "coordinates": {
+            "lat": 59.9021,
+            "lng": 30.342306
+          },
+          "undergrounds": [
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=241&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "700579",
+              "id": 241,
+              "time": 19,
+              "name": "Обводный канал",
+              "isDefault": true,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "walk",
+              "underConstruction": false,
+              "lineId": 17,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=197&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "087DCD",
+              "id": 197,
+              "time": 6,
+              "name": "Фрунзенская",
+              "isDefault": null,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "transport",
+              "underConstruction": false,
+              "lineId": 14,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=230&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "lineColor": "700579",
+              "id": 230,
+              "time": 8,
+              "name": "Волковская",
+              "isDefault": null,
+              "releaseYear": null,
+              "cianId": null,
+              "transportType": "transport",
+              "underConstruction": false,
+              "lineId": 17,
+              "lineType": null
+            }
+          ],
+          "railways": [
+            {
+              "travelType": "byFoot",
+              "distance": 1.0,
+              "id": 235,
+              "time": 9,
+              "name": "Боровая",
+              "directionIds": [
+                5
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=235&room2=1&type=4"
+            },
+            {
+              "travelType": "byFoot",
+              "distance": 1.0,
+              "id": 237,
+              "time": 16,
+              "name": "Воздухоплавательный парк",
+              "directionIds": [
+                5
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=237&room2=1&type=4"
+            },
+            {
+              "travelType": "byCar",
+              "distance": 3.0,
+              "id": 226,
+              "time": 4,
+              "name": "Санкт-Петербург (Витебский вокзал)",
+              "directionIds": [
+                5
+              ],
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=226&room2=1&type=4"
+            }
+          ],
+          "districts": [
+            {
+              "type": "okrug",
+              "title": "Волковское",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=765&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 765,
+              "locationId": 2,
+              "fullName": "Волковское",
+              "name": "Волковское",
+              "parentId": 134,
+              "geoType": "district"
+            },
+            {
+              "type": "raion",
+              "title": "р-н Фрунзенский",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=134&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 134,
+              "locationId": 2,
+              "fullName": "р-н Фрунзенский",
+              "name": "Фрунзенский",
+              "parentId": null,
+              "geoType": "district"
+            }
+          ],
+          "countryId": 138,
+          "jk": {
+            "house": {
+              "name": "Корпус 3",
+              "id": 7882195
+            },
+            "fullUrl": "https://zhk-vitebskiy-park-spb-i.cian.ru/",
+            "gaGeo": {
+              "cityId": 2,
+              "oblId": 2,
+              "moId": 0
+            },
+            "webSiteUrl": null,
+            "id": 4026695,
+            "displayName": "ЖК «Витебский парк»",
+            "name": "Витебский парк",
+            "developer": null,
+            "webSiteUrlUtm": null
+          },
+          "buildingAddress": null,
+          "address": [
+            {
+              "type": "location",
+              "locationTypeId": 1,
+              "title": "Санкт-Петербург",
+              "isFormingAddress": true,
+              "shortName": "Санкт-Петербург",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&region=2&room2=1&type=4",
+              "id": 2,
+              "fullName": "Санкт-Петербург",
+              "name": "Санкт-Петербург",
+              "geoType": "location"
+            },
+            {
+              "type": "raion",
+              "locationTypeId": null,
+              "title": "р-н Фрунзенский",
+              "isFormingAddress": null,
+              "shortName": "р-н Фрунзенский",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=134&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 134,
+              "fullName": "р-н Фрунзенский",
+              "name": "Фрунзенский",
+              "geoType": "district"
+            },
+            {
+              "type": "okrug",
+              "locationTypeId": null,
+              "title": "Волковское",
+              "isFormingAddress": null,
+              "shortName": "Волковское",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=765&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 765,
+              "fullName": "Волковское",
+              "name": "Волковское",
+              "geoType": "district"
+            },
+            {
+              "type": "metro",
+              "locationTypeId": null,
+              "title": "м. Обводный канал",
+              "isFormingAddress": null,
+              "shortName": "м. Обводный канал",
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=241&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "id": 241,
+              "fullName": "м. Обводный канал",
+              "name": "Обводный канал",
+              "geoType": "underground"
+            },
+            {
+              "type": "street",
+              "locationTypeId": null,
+              "title": "Лиговский проспект",
+              "isFormingAddress": true,
+              "shortName": "Лиговский просп.",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&street%5B0%5D=4191&type=4",
+              "id": 4191,
+              "fullName": "Лиговский проспект",
+              "name": "Лиговский",
+              "geoType": "street"
+            },
+            {
+              "type": "house",
+              "locationTypeId": null,
+              "title": "242",
+              "isFormingAddress": true,
+              "shortName": "242",
+              "qs": "currency=2&deal_type=rent&engine_version=2&house%5B0%5D=100119&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "id": 100119,
+              "fullName": "242",
+              "name": "242",
+              "geoType": "house"
+            }
+          ],
+          "userInput": "г Санкт-Петербург, пр-кт Лиговский, д 242",
+          "highways": [],
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 241
+            },
+            {
+              "type": "underground",
+              "id": 197
+            },
+            {
+              "type": "underground",
+              "id": 230
+            },
+            {
+              "type": "railway",
+              "id": 235
+            },
+            {
+              "type": "railway",
+              "id": 237
+            },
+            {
+              "type": "railway",
+              "id": 226
+            },
+            {
+              "type": "district",
+              "id": 765
+            },
+            {
+              "type": "district",
+              "id": 134
+            }
+          ]
+        },
+        "status": "published",
+        "formattedShortPrice": "49 000 ₽/мес.",
+        "promoInfo": null,
+        "isAuction": true,
+        "allFromOffrep": null,
+        "formattedFullPrice": "49 000 ₽/мес.",
+        "isColorized": false,
+        "showWarningMessage": false,
+        "fullUrl": "https://spb.cian.ru/rent/flat/332754245/?mlSearchSessionGuid=04cee7065c9de1921e1e12b67e121d18",
+        "decoration": null,
+        "id": 332754245,
+        "permittedUseType": null,
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "117832788",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": true,
+          "isPassportVerified": false,
+          "isSubAgent": true,
+          "userId": 117832788,
+          "userTrustLevel": "involved",
+          "accountType": "specialist",
+          "agencyName": "Дмитрий Шубин",
+          "agentModerationInfo": {
+            "isUserIdentified": false,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": false,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": false,
+              "isSuperHost": false,
+              "levelName": "Высокий уровень",
+              "levelOrder": 3,
+              "levelSystemName": "high",
+              "showHighResponsibility": true,
+              "showSuperAgent": false,
+              "showSuperHost": false
+            },
+            "showUserIdentifiedByDocuments": true
+          },
+          "billingInfo": {
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Москва и ближнее Подмосковье",
+                "locationId": 1,
+                "packageTypeId": 2,
+                "packageTypeName": "Базовый"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "hide",
+          "companyName": "Циан х ПИК-Аренда",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "masterAgent": {
+            "absoluteAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=59029046&t=2&p=2&timestamp=1757150436",
+            "absoluteMiniAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=59029046&t=2&p=1&timestamp=1757150436",
+            "accountType": "agency",
+            "avatarUrl": "/api/get-avatar/?i=59029046&t=2&p=2&timestamp=1757150436",
+            "id": 107398974,
+            "isModerationPassed": true,
+            "miniAvatarUrl": "/api/get-avatar/?i=59029046&t=2&p=1&timestamp=1757150436",
+            "name": "Циан х ПИК-Аренда",
+            "profileUri": "company/107398974/"
+          },
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9609919856"
+            },
+            {
+              "countryCode": "+7",
+              "number": "4951563586"
+            }
+          ],
+          "subAgentCompanyName": "Циан х ПИК-Аренда",
+          "userType": "realtor_based",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 117832788,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": true,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=2/city_id=2/object_type=1/ga_obj_type=2/spec=agent/rent_type=/332754245/from_developer=0/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid4": "offer_type_2",
+          "puid5": "obl_id_2",
+          "puid6": "1_50",
+          "puid8": 49000,
+          "puid9": 241,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid18": 4026695,
+          "puid19": "not_video",
+          "puid21": 241,
+          "puid36": 2
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "Сдан"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "Корпус 3"
+          },
+          {
+            "type": "livingArea",
+            "title": "Жилая пл.",
+            "text": "20.0 м2"
+          }
+        ],
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "isOnlineRentalAgreementEnabled": null,
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      },
+      {
+        "descriptionMinhash": [
+          7670570,
+          169631854,
+          45446420,
+          181143664,
+          2088518,
+          234015424,
+          133101555,
+          146991052,
+          56920750,
+          80102118,
+          56374716,
+          39685766,
+          4178831,
+          187931150,
+          334388014,
+          15438368,
+          53258488,
+          58200472,
+          74236807,
+          195232547,
+          8262839,
+          97805799,
+          5793994,
+          52673459,
+          189413599,
+          20249216,
+          14611990,
+          294726568,
+          98192669,
+          146302257,
+          204406583,
+          253496168
+        ],
+        "jkUrl": null,
+        "externalId": null,
+        "basicProfiScore": 1,
+        "isInHiddenBase": false,
+        "formattedFullPrice": "55 000 ₽/мес.",
+        "categoriesIds": [
+          1000,
+          1100,
+          1110,
+          1111
+        ],
+        "id": 333183294,
+        "formattedFullInfo": "2-комн.кв.  ·  46,7 м²  ·  6/6 этаж",
+        "isSubsidisedMortgage": null,
+        "isApartments": false,
+        "showWarningMessage": false,
+        "roomsForSaleCount": null,
+        "monthlyIncome": null,
+        "isTop3": false,
+        "accessType": null,
+        "newbuildingVasPromotion": null,
+        "photos": [
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948772174-4.jpg",
+            "isDefault": true,
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948772174-2.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948772174-3.jpg",
+            "rotateDegree": null,
+            "id": 2948772174,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948772174-1.jpg",
+            "isLayout": null
+          },
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948763724-4.jpg",
+            "isDefault": false,
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948763724-2.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948763724-3.jpg",
+            "rotateDegree": null,
+            "id": 2948763724,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-sanktpeterburg-pereulok-apraksin-2948763724-1.jpg",
+            "isLayout": null
+          }
+        ],
+        "descriptionWordsHighlighted": [],
+        "shareAmount": null,
+        "creationDate": "2026-08-21T18:52:49.46",
+        "roomArea": null,
+        "publishedUserId": 47557313,
+        "hasFurniture": true,
+        "formattedShortInfo": "2-комн.кв.  ·  6/6 этаж",
+        "geo": {
+          "userInput": "Россия, Санкт-Петербург, Апраксин переулок, 3",
+          "countryId": 138,
+          "districts": [
+            {
+              "name": "№ 78",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=687&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "parentId": 133,
+              "type": "okrug",
+              "fullName": "№ 78",
+              "id": 687,
+              "locationId": 2,
+              "geoType": "district",
+              "title": "№ 78"
+            },
+            {
+              "name": "Центральный",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=133&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "parentId": null,
+              "type": "raion",
+              "fullName": "р-н Центральный",
+              "id": 133,
+              "locationId": 2,
+              "geoType": "district",
+              "title": "р-н Центральный"
+            }
+          ],
+          "highways": [],
+          "address": [
+            {
+              "name": "Санкт-Петербург",
+              "shortName": "Санкт-Петербург",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&region=2&room2=1&type=4",
+              "isFormingAddress": true,
+              "geoType": "location",
+              "type": "location",
+              "fullName": "Санкт-Петербург",
+              "id": 2,
+              "locationTypeId": 1,
+              "title": "Санкт-Петербург"
+            },
+            {
+              "name": "Центральный",
+              "shortName": "р-н Центральный",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=133&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "isFormingAddress": null,
+              "geoType": "district",
+              "type": "raion",
+              "fullName": "р-н Центральный",
+              "id": 133,
+              "locationTypeId": null,
+              "title": "р-н Центральный"
+            },
+            {
+              "name": "№ 78",
+              "shortName": "№ 78",
+              "qs": "currency=2&deal_type=rent&district%5B0%5D=687&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "isFormingAddress": null,
+              "geoType": "district",
+              "type": "okrug",
+              "fullName": "№ 78",
+              "id": 687,
+              "locationTypeId": null,
+              "title": "№ 78"
+            },
+            {
+              "name": "Сенная площадь",
+              "shortName": "м. Сенная площадь",
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=195&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isFormingAddress": null,
+              "geoType": "underground",
+              "type": "metro",
+              "fullName": "м. Сенная площадь",
+              "id": 195,
+              "locationTypeId": null,
+              "title": "м. Сенная площадь"
+            },
+            {
+              "name": "Апраксин",
+              "shortName": "пер. Апраксин",
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&room2=1&street%5B0%5D=3517&type=4",
+              "isFormingAddress": true,
+              "geoType": "street",
+              "type": "street",
+              "fullName": "переулок Апраксин",
+              "id": 3517,
+              "locationTypeId": null,
+              "title": "переулок Апраксин"
+            },
+            {
+              "name": "3",
+              "shortName": "3",
+              "qs": "currency=2&deal_type=rent&engine_version=2&house%5B0%5D=1699672&maxprice=60000&minprice=40000&offer_type=flat&room2=1&type=4",
+              "isFormingAddress": true,
+              "geoType": "house",
+              "type": "house",
+              "fullName": "3",
+              "id": 1699672,
+              "locationTypeId": null,
+              "title": "3"
+            }
+          ],
+          "railways": [
+            {
+              "name": "Санкт-Петербург (Витебский вокзал)",
+              "travelType": "byFoot",
+              "time": 18,
+              "directionIds": [
+                5
+              ],
+              "id": 226,
+              "geoType": "railway",
+              "distance": 1.0,
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=226&room2=1&type=4"
+            },
+            {
+              "name": "Санкт-Петербург (Московский вокзал)",
+              "travelType": "byCar",
+              "time": 5,
+              "directionIds": [
+                6
+              ],
+              "id": 230,
+              "geoType": "railway",
+              "distance": 2.0,
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=230&room2=1&type=4"
+            },
+            {
+              "name": "Боровая",
+              "travelType": "byCar",
+              "time": 6,
+              "directionIds": [
+                5
+              ],
+              "id": 235,
+              "geoType": "railway",
+              "distance": 3.0,
+              "qs": "currency=2&deal_type=rent&engine_version=2&maxprice=60000&minprice=40000&offer_type=flat&railway%5B0%5D=235&room2=1&type=4"
+            }
+          ],
+          "undergrounds": [
+            {
+              "name": "Сенная площадь",
+              "lineColor": "087DCD",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=195&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": true,
+              "releaseYear": null,
+              "time": 6,
+              "lineId": 14,
+              "id": 195,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Спасская",
+              "lineColor": "DF6E08",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=232&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 7,
+              "lineId": 16,
+              "id": 232,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Садовая",
+              "lineColor": "700579",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=220&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 7,
+              "lineId": 17,
+              "id": 220,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Гостиный двор",
+              "lineColor": "069857",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=206&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 9,
+              "lineId": 15,
+              "id": 206,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Невский проспект",
+              "lineColor": "087DCD",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=194&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 10,
+              "lineId": 14,
+              "id": 194,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Звенигородская",
+              "lineColor": "700579",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=231&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 14,
+              "lineId": 17,
+              "id": 231,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Адмиралтейская",
+              "lineColor": "700579",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=242&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 16,
+              "lineId": 17,
+              "id": 242,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Пушкинская",
+              "lineColor": "D70834",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=178&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 16,
+              "lineId": 13,
+              "id": 178,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Достоевская",
+              "lineColor": "DF6E08",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=221&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 17,
+              "lineId": 16,
+              "id": 221,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "name": "Владимирская",
+              "lineColor": "D70834",
+              "underConstruction": false,
+              "qs": "currency=2&deal_type=rent&engine_version=2&foot_min=25&maxprice=60000&metro%5B0%5D=177&minprice=40000&offer_type=flat&only_foot=2&room2=1&type=4",
+              "isDefault": false,
+              "releaseYear": null,
+              "time": 19,
+              "lineId": 13,
+              "id": 177,
+              "transportType": "walk",
+              "cianId": null,
+              "lineType": null
+            }
+          ],
+          "jk": null,
+          "buildingAddress": null,
+          "coordinates": {
+            "lat": 59.92865,
+            "lng": 30.325121
+          },
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 195
+            },
+            {
+              "type": "underground",
+              "id": 232
+            },
+            {
+              "type": "underground",
+              "id": 220
+            },
+            {
+              "type": "underground",
+              "id": 206
+            },
+            {
+              "type": "underground",
+              "id": 194
+            },
+            {
+              "type": "underground",
+              "id": 231
+            },
+            {
+              "type": "underground",
+              "id": 242
+            },
+            {
+              "type": "underground",
+              "id": 178
+            },
+            {
+              "type": "underground",
+              "id": 221
+            },
+            {
+              "type": "underground",
+              "id": 177
+            },
+            {
+              "type": "railway",
+              "id": 226
+            },
+            {
+              "type": "railway",
+              "id": 230
+            },
+            {
+              "type": "railway",
+              "id": 235
+            },
+            {
+              "type": "district",
+              "id": 687
+            },
+            {
+              "type": "district",
+              "id": 133
+            }
+          ]
+        },
+        "loggiasCount": 0,
+        "newbuilding": null,
+        "isCalltrackingEnabled": true,
+        "buildingCadastralNumber": null,
+        "land": null,
+        "commercialOwnership": null,
+        "rentByPartsDescription": null,
+        "workTimeInfo": null,
+        "permittedUseType": null,
+        "isInCpd": null,
+        "formattedAdditionalInfo": "Залог 55 000 ₽, комиссия 70%(agent_fee), предоплата 1 месяц, на несколько месяцев",
+        "description": "Квартира сдаётся до 1 мая 2027 года.\n\nКвартира будет свободна с 3 сентября.\n\nВ квартире есть все необходимое для комфортного проживания \n\nПо планировке кухня- гостиная и две изолированные комнаты.\n\nВ доме есть лифт\n\nДо метро Сенная площадь 6 минут пешком \n\nКоммунальные платежи оплачиваются отдельно.",
+        "isCommercialOwnershipVerified": null,
+        "dealType": "rent",
+        "isAuction": false,
+        "rosreestrCheck": null,
+        "booking": null,
+        "offerType": "flat",
+        "fromDeveloper": null,
+        "newbuildingCplLayer": null,
+        "buildersIds": [],
+        "fullUrl": "https://spb.cian.ru/rent/flat/333183294/?mlSearchSessionGuid=04cee7065c9de1921e1e12b67e121d18",
+        "roomsCount": 2,
+        "offerInDeal": false,
+        "offerFeatureLabelsV2": null,
+        "bargainTerms": {
+          "paymentPeriod": "monthly",
+          "clientFee": 70,
+          "saleType": null,
+          "priceType": "all",
+          "utilitiesTerms": {
+            "includedInPrice": false,
+            "price": 0,
+            "flowMetersNotIncludedInPrice": true
+          },
+          "vatPrice": null,
+          "agentFee": 70,
+          "price": 55000,
+          "priceRur": 55000,
+          "priceForWorkplace": null,
+          "leaseTermType": "fewMonths",
+          "agentBonus": null,
+          "vatType": null,
+          "tags": [],
+          "mortgageAllowed": null,
+          "leaseType": null,
+          "bargainAllowed": null,
+          "deposit": 55000,
+          "currency": "rur"
+        },
+        "isColorized": false,
+        "minArea": null,
+        "auction": {},
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9119520225"
+          }
+        ],
+        "isImported": false,
+        "flatType": "rooms",
+        "layout": null,
+        "dealRentVersion": null,
+        "coworking": null,
+        "kitchenArea": "10.0",
+        "cianUserId": 47557313,
+        "isNeedHideExactAddress": false,
+        "isRecidivist": false,
+        "isCianPartner": false,
+        "villageMortgageAllowed": null,
+        "totalArea": "46.7",
+        "addedTimestamp": 1788854858,
+        "category": "flatRent",
+        "building": {
+          "cargoLiftsCount": null,
+          "heatingType": null,
+          "materialType": "brick",
+          "deadline": null,
+          "passengerLiftsCount": 1,
+          "floorsCount": 6,
+          "type": null,
+          "buildYear": 1852,
+          "classType": null,
+          "parking": {
+            "purposeType": null,
+            "currency": null,
+            "isAvailable": null,
+            "isFree": null,
+            "type": "ground",
+            "placesCount": null,
+            "priceMonthly": null,
+            "priceEntry": null,
+            "locationType": null
+          },
+          "accessType": null
+        },
+        "newbuildingWithExtendedFeatures": null,
+        "businessShoppingCenter": null,
+        "isPremium": true,
+        "balconiesCount": 0,
+        "status": "published",
+        "floorNumber": 6,
+        "isBookedFromDeveloper": false,
+        "humanizedTimedelta": "вчера",
+        "isByHomeowner": false,
+        "garage": null,
+        "readyBusinessType": null,
+        "coworkingOfferType": null,
+        "moderationInfo": {
+          "showContactWarningMessage": false,
+          "warningMessage": null,
+          "photoStub": null
+        },
+        "isNew": false,
+        "areaParts": null,
+        "cianId": 333183294,
+        "allFromOffrep": null,
+        "videos": [],
+        "kp": null,
+        "bedroomsCount": null,
+        "isStandard": false,
+        "decoration": null,
+        "officeType": null,
+        "isEarlyAccessEnabled": false,
+        "livingArea": null,
+        "title": null,
+        "specialty": {
+          "types": [],
+          "additionalTypes": [],
+          "specialties": []
+        },
+        "workplaceCount": null,
+        "demolishedInMoscowProgramm": false,
+        "cadastralNumber": null,
+        "promoInfo": null,
+        "tradingLink": null,
+        "isRentByParts": false,
+        "isByCommercialOwner": null,
+        "added": "вчера, 11:07",
+        "userId": 47557313,
+        "isExcludedFromAction": false,
+        "isLayoutApproved": null,
+        "formattedShortPrice": "55 000 ₽/мес.",
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "47557313",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": true,
+          "isPassportVerified": true,
+          "isSubAgent": true,
+          "userId": 47557313,
+          "userTrustLevel": "involved",
+          "accountType": "specialist",
+          "agencyName": "Игорь Соснин",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=51820428&t=2&p=2&timestamp=1656583167",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": true,
+              "isSuperHost": false,
+              "levelName": "Суперагент",
+              "levelOrder": 4,
+              "levelSystemName": "max",
+              "showHighResponsibility": true,
+              "showSuperAgent": true,
+              "showSuperHost": false
+            },
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 0,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Санкт-Петербург и область",
+                "locationId": 2,
+                "packageTypeId": 2,
+                "packageTypeName": "Базовый"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": true,
+          "cianProfileStatus": "hide",
+          "companyName": "8 ЭТАЖ",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "masterAgent": {
+            "absoluteAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=212842&t=2&p=2&timestamp=1713628688",
+            "absoluteMiniAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=212842&t=2&p=1&timestamp=1713628688",
+            "accountType": "agency",
+            "avatarUrl": "/api/get-avatar/?i=212842&t=2&p=2&timestamp=1713628688",
+            "id": 12478232,
+            "isModerationPassed": true,
+            "miniAvatarUrl": "/api/get-avatar/?i=212842&t=2&p=1&timestamp=1713628688",
+            "name": "8 ЭТАЖ",
+            "profileUri": "company/12478232/"
+          },
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9523873161"
+            }
+          ],
+          "subAgentCompanyName": "8 ЭТАЖ",
+          "userType": "realtor_based",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 47557313,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": true,
+        "gaLabel": "/rent/flat/mo_id=0/obl_id=2/city_id=2/object_type=1/ga_obj_type=2/spec=agent/rent_type=/333183294/from_developer=0/repres=0/owner=0/pod_snos=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_rent",
+          "puid2": "offer_flat",
+          "puid4": "offer_type_2",
+          "puid5": "obl_id_2",
+          "puid6": "51_100",
+          "puid8": 55000,
+          "puid9": 195,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid19": "not_video",
+          "puid21": 195,
+          "puid36": 2
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": false,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": null,
+        "photoFeatureIcons": [],
+        "factoids": [],
+        "brandingLevel": "firstLevel",
+        "isRosreestrChecked": false,
+        "isOnlineRentalAgreementEnabled": null,
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": false
+      }
+    ]
+  }
+}

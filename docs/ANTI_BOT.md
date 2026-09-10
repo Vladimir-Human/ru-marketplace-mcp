@@ -610,3 +610,56 @@ per-request proof-of-work is precisely the case the doctrine calls "Neither".
 The connector does not pretend otherwise: on a challenge it degrades into
 `price_missing`/transport errors and tells the operator to pass the check by
 hand.
+
+## Cian (added 2026-09-09)
+
+Real estate, not a marketplace — but the same doctrine applies and the probe
+came out unusually clean. Probed from a datacenter egress (VPN, Timeweb DE) on
+2026-09-09, first with plain HTTP and then through the operator's Chrome.
+
+**Plain HTTP (question 1):** everything is 403 — the search page, the offer
+card, and the internal JSON API `api.cian.ru/search-offers/v2/search-offers-desktop/`,
+with full Chrome headers. The block page is Cian's own WAF
+(`Код страницы: cian_waf_block`, «Обнаружен подозрительный трафик»), no captcha
+markers, no redirect loop. It sets `_yasc` and answers by IP reputation:
+question 2's answer is "firewall", not "challenge".
+
+**Inside the operator's Chrome (tier 2):** the same egress passes. The search
+page renders (636 listings for a one-room Moscow query), and — the useful part —
+the page's own JSON API answers an in-page `fetch` POST with
+`credentials: 'include'`: 200, `data.offersSerialized[]` (28 per page),
+`data.aggregatedCount`, `data.offerCount`. Structured fields, no HTML parsing:
+id, `bargainTerms.priceRur`/`price`, `totalArea`, `roomsCount`, `floorNumber`,
+`building.floorsCount`, `geo.userInput`, `geo.undergrounds[]`, `fullUrl`,
+`user.agencyName`, `isByHomeowner`, `creationDate`. `jsonQuery` keys confirmed
+live: `_type` (`flatsale`, `flatrent`, `suburbansale`, `commercialsale`),
+`engine_version 2`, `region` (1 Moscow, 2 St. Petersburg, 4593 Moscow oblast,
+4588 Leningrad oblast — all four verified by the addresses that came back),
+`room` (`[0]` yields `roomSale` offers), `price` range, `page`, `for_day "!1"`
+(long-term rent).
+
+**Offer card (question 3):** `https://www.cian.ru/sale/flat/<id>/` embeds the
+whole offer in `window._cianConfig['frontend-offer-card']` →
+`defaultState.offerData`: `offer` (83 keys; a new-building offer carries the
+price in `bargainTerms.price` and `priceTotalRur`, with NO `priceRur` — the
+parser reads all three), `agent`, `company`, `priceChanges` (price history),
+`stats` («12907 просмотров, 98 за сегодня» as a string). A rent id requested
+under `/sale/flat/` is redirected by Cian to the right `/rent/flat/` URL on the
+regional subdomain, `offerData` intact.
+
+**Reviews:** none as a data family — real estate has no per-offer reviews.
+
+**Agent page:** `/agents/<id>/` renders, but `_cianConfig['realtor-reviews-frontend']`
+is application config (project name, version, telemetry endpoints), and the
+profile facts («На Циане 1 год», «В работе 1500 объектов», «Регион работы»)
+exist only as DOM text. No structured source → no `cian_agent` tool, per the
+rule at the end of ADDING_A_SOURCE.md. The agent's name, type and id ship inside
+`cian_card` from `offerData.agent`.
+
+**Load (question 5):** eight back-to-back API POSTs inside the session: all
+200, ~1.2 s each, no 429. The connector still paces itself (1.5 s) and holds
+one tab under a lock; a 403 inside the session maps to `transport_down` with
+the instruction to open cian.ru in the scraping Chrome and pass the check.
+
+**Verdict:** tier 2 only, JSON both ways. Tier 1 (`curl_cffi`) was not built:
+the WAF keys on IP and the residential case is unmeasured.

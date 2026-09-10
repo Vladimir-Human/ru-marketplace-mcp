@@ -7,17 +7,17 @@ description: Use this skill when the operator wants the full marketplace mount, 
 
 One server mounting every installed connector as a namespaced toolset:
 `wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`,
-`lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `mpstats_*` plus
+`lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `cian_*`, `mpstats_*` plus
 `compare_prices` / `compare_sources` and its own `marketplace_sources`. Tool
 names keep their prefixes, so habits and configs carry over — but the operator
-wires a single `marketplace` entry instead of thirteen. The server exposes 36
-tools: 35 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
+wires a single `marketplace` entry instead of fourteen. The server exposes 39
+tools: 38 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
 source: without `MPSTATS_MP_AUTH` its tools answer `auth_missing` while
 everything else is unaffected.
 
 ## When to use
 - "Where is X cheapest" — compare_prices fans out across all searchable sources
-- Client setup: one config entry, not twelve
+- Client setup: one config entry, not fourteen
 - Health overview: the CLI's `doctor` runs every selfcheck at once
 - A source came back empty and you can't tell installed-but-quiet from never-loaded
   → `marketplace_sources`

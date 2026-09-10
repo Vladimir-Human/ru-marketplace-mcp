@@ -1,0 +1,50 @@
+{
+  "captured": "2026-09-09",
+  "endpoint": "https://api.cian.ru/search-offers/v2/search-offers-desktop/",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "jsonQuery": {
+    "_type": "flatsale",
+    "engine_version": {
+      "type": "term",
+      "value": 2
+    },
+    "region": {
+      "type": "terms",
+      "value": [
+        1
+      ]
+    },
+    "page": {
+      "type": "term",
+      "value": 1
+    },
+    "room": {
+      "type": "terms",
+      "value": [
+        1
+      ]
+    },
+    "price": {
+      "type": "range",
+      "value": {
+        "gte": 10000000,
+        "lte": 12000000
+      }
+    }
+  },
+  "displayed": {
+    "status": 200,
+    "count": 28,
+    "offerCount": 636,
+    "aggregatedCount": 501,
+    "first": {
+      "id": 331002424,
+      "priceRur": 11985439,
+      "price": 11985439,
+      "userInput": "Москва, Московский, микрорайон Первый Московский",
+      "category": "newBuildingFlatSale",
+      "fullUrl": "https://www.cian.ru/sale/flat/331002424/?mlSearchSessionGuid=5de2db838918a063854e163ee9623af6"
+    }
+  },
+  "trimmed": "first 3 offers; description cut to 300 chars; photos cut to 2"
+}

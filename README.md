@@ -8,8 +8,8 @@
 **MCP-серверы для российских и китайских маркетплейсов.** Цены, наличие,
 рейтинги, отзывы и реквизиты продавцов с Wildberries, Ozon, Яндекс Маркета,
 Детского мира, Авито, AliExpress, Taobao, Мегамаркета, Lamoda, DNS и Ситилинка.
-Плюс
-сравнение цен по всем источникам одним вызовом.
+Плюс недвижимость с Циана и
+сравнение цен по всем товарным источникам одним вызовом.
 
 Только чтение. Ключи API, токены и регистрация не нужны — площадки с жёстким
 анти-ботом читаются через ваш собственный Chrome. Одно исключение по желанию:
@@ -36,7 +36,8 @@
 | **DNS**           | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
 | **Ситилинк**      | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
 | **AliExpress**    | 2            | ваш Chrome (x5sec)                                                       | Поиск и карточки, цены в рублях                            |
-| **Сравнение**     | 2            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
+| **Циан**          | 2            | ваш Chrome (WAF по IP)                                                     | Недвижимость: поиск по фильтрам (продажа, аренда, посуточно) и карточка объявления         |
+| **Сравнение**     | 3            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
 | **MPStats**       | 2            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
 
 Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
@@ -54,10 +55,10 @@ MPStats стоит особняком: это единственный **пла�
 поэтому он опционален и подключается по желанию, на остальные двенадцать
 серверов он не влияет никак.
 
-Всего 35 инструментов в 13 серверах на общем рантайме `mcp-core`. Плюс объединённый
+Всего 38 инструментов в 14 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
-вместо тринадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что в нём 36 инструментов: 35
+вместо четырнадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
+поднялись, а какие отвалились и почему), так что в нём 39 инструментов: 38
 смонтированных плюс этот.
 
 ## Быстрый старт
@@ -68,7 +69,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1243 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1311 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -173,7 +174,7 @@ claude mcp add compare-prices -- uv run --directory /путь/к/ru-marketplace-
 <summary><b>Другой stdio-клиент</b></summary>
 
 Запустите `uv run --directory /путь/к/репозиторию <команда>`, где команда — одна из
-`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`. Серверы говорят по
+`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`. Серверы говорят по
 JSON-RPC через stdin и stdout, диагностику пишут в stderr. Опциональный
 `mpstats-mcp` запускается так же, с `MPSTATS_MP_AUTH` в окружении.
 
@@ -359,6 +360,28 @@ Lamoda.
 `aliexpress_selfcheck` доказывает, что транспорт ответил, — не то, что цена
 верна.
 
+### Циан — `cian_*`
+
+| Инструмент                                                                                  | Что делает                                              |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `cian_search(deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page)` | Поиск по фильтрам: продажа, аренда, посуточно — 28 объявлений на страницу |
+| `cian_card(offer_id_or_url)`                                                                | Карточка: цена и её история, планировка, дом, адрес, метро, публикатор |
+
+Недвижимость, а не товары: квартиры, комнаты, дома и коммерция на продажу, в
+долгосрочную аренду и посуточно (`deal="daily"`; коммерции посуточно у Циана
+нет, такой запрос отклоняется). Длительная и суточная аренда — два разных рынка,
+в одной выдаче не смешиваются: у суточных цена за ночь, `price_period` и
+`lease_term` пустые, поэтому у каждой строки есть `price_unit` — `total`,
+`month` или `day`. Сравнивать цены между единицами нельзя.
+Поиск только по фильтрам — текстового поиска у Циана нет.
+Регион задаётся id Циана: 1 Москва, 2 Санкт-Петербург, 4593 Московская область,
+4588 Ленинградская область (все четыре проверены живьём); остальным регионам
+нужен их id. Читается через ваш Chrome (CDP): WAF Циана режет голый HTTP по IP,
+а из сессии браузера отвечает собственный JSON-API сайта, так что HTML не
+парсится. Цена «не указана» приходит как `null`, не `0`. Агентской страницы как
+инструмента нет: она не отдаёт структурированных данных, агент приходит внутри
+карточки. В `compare_prices` источник не участвует.
+
 ### Сравнение цен — `compare_*`
 
 | Инструмент                                         | Что делает                                   |
@@ -438,6 +461,7 @@ compare_prices("кроссовки мужские")
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
 | `skills/aliexpress-connector` | `aliexpress-mcp`  |
+| `skills/cian-connector`       | `cian-mcp`        |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
@@ -502,7 +526,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1243 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1311 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -565,7 +589,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1243 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1311 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -613,7 +637,8 @@ it every other server is unaffected.
 | **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
 | **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
 | **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
-| **Compare**       | 2     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
+| **Cian**          | 2     | your Chrome (WAF by IP)                                                      | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
+| **Compare**       | 3     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
 | **MPStats**       | 2     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
 Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
@@ -630,10 +655,10 @@ MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
 server boots but its tools answer `auth_missing`. It is therefore optional —
 plug it in if you have an account; the other thirteen servers never notice.
 
-35 tools across 13 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+38 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds its
 own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 36 tools: the 35 mounted plus that one. stdio is the default;
+why — so it exposes 39 tools: the 38 mounted plus that one. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -645,11 +670,11 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1243 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1311 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
-script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `compare-mcp`) launched
+script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`) launched
 through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
 runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
 account; without it the tools return `auth_missing`). `marketplace-mcp install
@@ -784,6 +809,28 @@ coupon is reported as a warning. Review texts are not exposed; rating and order
 counts are. As with every CDP source, a green `aliexpress_selfcheck` proves the
 transport answered — not that a given price is right.
 
+### Cian — `cian_*`
+
+| Tool                                                                                        | What it does                                                    |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `cian_search(deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page)` | Search by filters — sale, long-term rent, daily: 28 offers per page |
+| `cian_card(offer_id_or_url)`                                                                | One offer: price and its history, layout, building, address, metro, publisher |
+
+Real estate, not goods: flats, rooms, houses and commercial property for sale,
+long-term rent or daily rent (`deal="daily"`; Cian has no daily commercial
+market and that combination is refused). Long-term and daily are separate
+markets that never share a result page: a daily price is per night and Cian
+leaves `price_period` and `lease_term` null there, so every row carries
+`price_unit` — `total`, `month` or `day`. Never compare prices across units.
+Search is by filters only — Cian has no text search. The region
+is a Cian id: 1 Moscow, 2 St. Petersburg, 4593 Moscow oblast, 4588 Leningrad
+oblast (all four verified live); other regions need their own id. Read through
+your Chrome (CDP): Cian's WAF blocks plain HTTP by IP, while inside the browser
+session the site's own JSON API answers, so no HTML is parsed. A price Cian does
+not state arrives as `null`, never `0`. There is no agent tool: the agent page
+exposes no structured data, and the publisher ships inside the card. The source
+takes no part in `compare_prices`.
+
 ### Avito — `avito_*`
 
 | Tool                                              | What it does                                      |
@@ -898,6 +945,7 @@ answers should not be trusted without a second look.
 | `skills/dns-connector`        | `dns-mcp`         |
 | `skills/citilink-connector`   | `citilink-mcp`    |
 | `skills/aliexpress-connector` | `aliexpress-mcp`  |
+| `skills/cian-connector`       | `cian-mcp`        |
 | `skills/compare-prices`       | `compare-mcp`     |
 | `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
@@ -962,7 +1010,7 @@ commits.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1243 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1311 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1022,7 +1070,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1243 offline
+are confidently wrong, so the project is arranged around verification: 1311 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

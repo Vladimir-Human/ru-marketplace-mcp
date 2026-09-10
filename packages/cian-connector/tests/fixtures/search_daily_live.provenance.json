@@ -1,0 +1,51 @@
+{
+  "captured": "2026-09-10",
+  "endpoint": "https://api.cian.ru/search-offers/v2/search-offers-desktop/",
+  "transport": "CDP (operator's Chrome), datacenter egress via VPN",
+  "jsonQuery": {
+    "_type": "flatrent",
+    "engine_version": {
+      "type": "term",
+      "value": 2
+    },
+    "region": {
+      "type": "terms",
+      "value": [
+        1
+      ]
+    },
+    "page": {
+      "type": "term",
+      "value": 1
+    },
+    "for_day": {
+      "type": "term",
+      "value": "1"
+    }
+  },
+  "displayed": {
+    "aggregatedCount": 53441,
+    "offers": [
+      {
+        "id": 191071633,
+        "price": 5000,
+        "category": "dailyFlatRent",
+        "addr": "Россия, Москва, Береговой проезд, 5Ак2"
+      },
+      {
+        "id": 331744103,
+        "price": 15000,
+        "category": "dailyFlatRent",
+        "addr": "Россия, Москва, Шмитовский проезд, 39к8"
+      },
+      {
+        "id": 298900566,
+        "price": 7990,
+        "category": "dailyFlatRent",
+        "addr": "Россия, Москва, 1-й Красногвардейский проезд, 22с2"
+      }
+    ]
+  },
+  "note": "Daily rent: bargainTerms carries price (no priceRur), paymentPeriod and leaseTermType are null, category dailyFlatRent. The price is per NIGHT.",
+  "trimmed": "first 3 offers; description cut to 300 chars; photos cut to 2"
+}

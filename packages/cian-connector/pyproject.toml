@@ -1,0 +1,33 @@
+[project]
+name = "cian-connector"
+version = "2.1.0"
+description = "Cian MCP connector — real-estate search and offer cards via the site's own JSON API, fetched inside the operator's Chrome (CDP)"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "fosteev" }]
+dependencies = [
+    # Pinned, not floating: the name `mcp-core` on PyPI belongs to an
+    # unrelated project. Unpinned, a wheel installed straight from a GitHub
+    # Release resolves to that stranger's package and the server dies on
+    # import. A pin turns a silent wrong install into a loud resolve failure.
+    "mcp-core==2.1.0",
+    "fastmcp>=3.4.6,<4",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    # Every Cian read runs inside the operator's Chrome over CDP, and
+    # mcp_core.transport.chrome_cdp imports playwright at module load.
+    "playwright>=1.40",
+]
+
+[project.scripts]
+cian-mcp = "cian_connector.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cian_connector"]
+
+[tool.uv.sources]
+mcp-core = { workspace = true }

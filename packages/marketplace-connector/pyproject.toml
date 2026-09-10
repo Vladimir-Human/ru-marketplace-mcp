@@ -26,6 +26,7 @@ dependencies = [
     "lamoda-connector",
     "dns-connector",
     "citilink-connector",
+    "cian-connector",
     "compare-connector",
     "mpstats-connector",
 ]
@@ -52,5 +53,6 @@ megamarket-connector = { workspace = true }
 lamoda-connector = { workspace = true }
 dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
+cian-connector = { workspace = true }
 compare-connector = { workspace = true }
 mpstats-connector = { workspace = true }

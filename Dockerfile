@@ -33,7 +33,7 @@ WORKDIR /app
 # re-resolve"; --no-install-project defers the workspace packages themselves to
 # the next step; --no-dev drops the test/lint toolchain from the runtime image.
 #
-# Every one of the 15 workspace members must be listed here. `uv sync
+# Every one of the 16 workspace members must be listed here. `uv sync
 # --all-packages` reads each member's pyproject.toml even under
 # --no-install-project (it still resolves their workspace deps), so a missing
 # manifest fails the resolve with "Distribution not found at:
@@ -55,6 +55,7 @@ COPY packages/lamoda-connector/pyproject.toml packages/lamoda-connector/pyprojec
 COPY packages/dns-connector/pyproject.toml packages/dns-connector/pyproject.toml
 COPY packages/citilink-connector/pyproject.toml packages/citilink-connector/pyproject.toml
 COPY packages/aliexpress-connector/pyproject.toml packages/aliexpress-connector/pyproject.toml
+COPY packages/cian-connector/pyproject.toml packages/cian-connector/pyproject.toml
 COPY packages/mpstats-connector/pyproject.toml packages/mpstats-connector/pyproject.toml
 COPY packages/marketplace-connector/pyproject.toml packages/marketplace-connector/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -120,9 +121,9 @@ EXPOSE 8000
 # change in packages/, out of scope here. Until then, no check beats a lying one.
 
 # Default to the Wildberries server; override the command to run any of the
-# other thirteen entry points — ozon-mcp, yandex-mcp, detmir-mcp, compare-mcp,
+# other fourteen entry points — ozon-mcp, yandex-mcp, detmir-mcp, compare-mcp,
 # avito-mcp, taobao-mcp, megamarket-mcp, lamoda-mcp, dns-mcp, citilink-mcp,
-# aliexpress-mcp, mpstats-mcp, or the unified marketplace-mcp (all sources in
-# one server). docker-compose.yml shows running several at once, each on its
+# aliexpress-mcp, cian-mcp, mpstats-mcp, or the unified marketplace-mcp (all
+# sources in one server). docker-compose.yml shows running several at once, each on its
 # own published port.
 CMD ["wb-mcp"]

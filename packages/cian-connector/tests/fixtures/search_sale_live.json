@@ -1,0 +1,2021 @@
+{
+  "status": "ok",
+  "data": {
+    "jsonQuery": {
+      "_type": "flatsale",
+      "engine_version": {
+        "type": "term",
+        "value": 2
+      },
+      "region": {
+        "type": "terms",
+        "value": [
+          1
+        ]
+      },
+      "price": {
+        "type": "range",
+        "value": {
+          "gte": 10000000,
+          "lte": 12000000
+        }
+      },
+      "page": {
+        "type": "term",
+        "value": 1
+      },
+      "room": {
+        "type": "terms",
+        "value": [
+          1
+        ]
+      }
+    },
+    "offerCount": 636,
+    "aggregatedCount": 501,
+    "fullUrl": "https://www.cian.ru/cat.php?currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&p=1&region=1&room1=1",
+    "avgPriceInformer": {
+      "price": 11400000,
+      "currency": "rur"
+    },
+    "offersSerialized": [
+      {
+        "newbuildingVasPromotion": null,
+        "isExcludedFromAction": false,
+        "isByHomeowner": null,
+        "isNeedHideExactAddress": false,
+        "promoInfo": null,
+        "dealType": "sale",
+        "flatType": "rooms",
+        "minArea": null,
+        "phones": [
+          {
+            "number": "9230727409",
+            "countryCode": "7"
+          }
+        ],
+        "fromDeveloper": true,
+        "fullUrl": "https://www.cian.ru/sale/flat/331002424/?mlSearchSessionGuid=5de2db838918a063854e163ee9623af6",
+        "readyBusinessType": null,
+        "formattedFullPrice": "11 985 439 ₽",
+        "formattedShortPrice": "11 985 439 ₽",
+        "isNew": false,
+        "dealRentVersion": null,
+        "roomArea": null,
+        "cadastralNumber": null,
+        "formattedShortInfo": "1-комн.кв.  ·  12/22 этаж",
+        "title": null,
+        "roomsCount": 1,
+        "offerFeatureLabelsV2": [],
+        "shareAmount": null,
+        "hasFurniture": null,
+        "balconiesCount": null,
+        "videos": [
+          {
+            "id": "456239331",
+            "uploadDate": "2025-10-30T13:14:38+00:00",
+            "url": "https://vkvideo.ru/video_ext.php?oid=-34496106&id=456239331&hd=2&hash=f1f6731c9fa8e20f",
+            "type": "vk",
+            "duration": 170,
+            "previewUrl": "https://iv.okcdn.ru/getVideoPreview?id=9276621916909&idx=12&type=39&tkn=7SPc820List5MGet0stC8R89t4A&fn=vid_w"
+          }
+        ],
+        "newbuildingCplLayer": "otherPromoted",
+        "newbuilding": {
+          "showJkReliableFlag": false,
+          "id": 1448,
+          "isPremium": false,
+          "isSalesLeader": true,
+          "hasFlatTourBooking": false,
+          "comparisonStatus": null,
+          "isFichering": true,
+          "isFromSeller": false,
+          "isFromBuilder": true,
+          "name": "Город-парк Первый Московский",
+          "isFromLeadFactory": false,
+          "house": {
+            "section": "Секция 1",
+            "id": 10922142,
+            "isFinished": false,
+            "finishDate": {
+              "year": 2029,
+              "quarter": 3
+            },
+            "name": "6 корпус (11 квартал)"
+          },
+          "isFromDeveloper": true,
+          "countPromos": 8,
+          "snippetType": "advanced"
+        },
+        "photos": [
+          {
+            "isLayout": true,
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2953413873-4.jpg",
+            "id": 2953413873,
+            "rotateDegree": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/2953413873-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2953413873-2.jpg",
+            "isDefault": false,
+            "miniUrl": "https://images.cdn-cian.ru/images/2953413873-3.jpg"
+          },
+          {
+            "isLayout": false,
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2958331459-4.jpg",
+            "id": 2958331459,
+            "rotateDegree": null,
+            "fullUrl": "https://images.cdn-cian.ru/images/2958331459-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2958331459-2.jpg",
+            "isDefault": false,
+            "miniUrl": "https://images.cdn-cian.ru/images/2958331459-3.jpg"
+          }
+        ],
+        "isEarlyAccessEnabled": null,
+        "rosreestrCheck": null,
+        "isLayoutApproved": null,
+        "jkUrl": "https://zhk-gorod-park-pervyy-moskovskiy-i.cian.ru/",
+        "kitchenArea": "16.6",
+        "externalId": null,
+        "isPremium": false,
+        "offerType": "flat",
+        "creationDate": "2026-06-11T19:42:24.507",
+        "kp": null,
+        "isAuction": false,
+        "buildingCadastralNumber": null,
+        "buildersIds": [
+          5956
+        ],
+        "loggiasCount": null,
+        "building": {
+          "cargoLiftsCount": 2,
+          "materialType": "monolith",
+          "heatingType": null,
+          "parking": null,
+          "deadline": {
+            "isComplete": false,
+            "quarterEnd": "2029-09-30",
+            "year": 2029,
+            "quarter": "third"
+          },
+          "buildYear": null,
+          "type": null,
+          "passengerLiftsCount": 2,
+          "floorsCount": 22,
+          "accessType": null,
+          "classType": null
+        },
+        "newbuildingWithExtendedFeatures": false,
+        "monthlyIncome": null,
+        "workplaceCount": null,
+        "descriptionWordsHighlighted": [],
+        "decoration": "without",
+        "land": null,
+        "addedTimestamp": 1788549007,
+        "cianUserId": 134642318,
+        "added": "4 сен, 22:10",
+        "auction": {},
+        "villageMortgageAllowed": false,
+        "layout": null,
+        "commercialOwnership": null,
+        "formattedAdditionalInfo": "Долевое участие (214-ФЗ), возможна ипотека",
+        "isSubsidisedMortgage": null,
+        "categoriesIds": [
+          1,
+          100,
+          110,
+          113
+        ],
+        "userId": 134642318,
+        "booking": null,
+        "isBookedFromDeveloper": false,
+        "coworking": null,
+        "descriptionMinhash": [
+          18308017,
+          7301773,
+          3583066,
+          9618444,
+          4619971,
+          13162573,
+          3461634,
+          45820160,
+          33951044,
+          48014802,
+          7735558,
+          13033977,
+          2852019,
+          7517558,
+          49087523,
+          12481266,
+          15159853,
+          3574582,
+          20509280,
+          6351486,
+          117996751,
+          33389951,
+          5584062,
+          38130276,
+          30266932,
+          29275567,
+          43367606,
+          794253,
+          23909840,
+          31010081,
+          12218809,
+          18591719
+        ],
+        "showWarningMessage": false,
+        "areaParts": null,
+        "isCommercialOwnershipVerified": null,
+        "officeType": null,
+        "moderationInfo": {
+          "showContactWarningMessage": false,
+          "photoStub": null,
+          "warningMessage": null
+        },
+        "tradingLink": null,
+        "isRecidivist": false,
+        "isRentByParts": false,
+        "rentByPartsDescription": null,
+        "demolishedInMoscowProgramm": null,
+        "floorNumber": 12,
+        "isStandard": false,
+        "allFromOffrep": null,
+        "permittedUseType": null,
+        "isImported": true,
+        "isInCpd": false,
+        "garage": null,
+        "livingArea": null,
+        "isInHiddenBase": false,
+        "description": "Продается однокомнатная квартира  в 11 квартале города-парка \"Первый Московский\". \nОбщая площадь квартиры - 38,1 кв. м, этаж 12 из 22. \nПланируемый срок ввода в эксплуатацию - 3 квартал 2029 года. \nТип дома - монолитный. \n \nТОЛЬКО ДО 30 СЕНТЯБРЯ выгодные условия на приобретение квартиры в ипотеку. \n",
+        "bedroomsCount": null,
+        "isTop3": false,
+        "businessShoppingCenter": null,
+        "cianId": 331002424,
+        "coworkingOfferType": null,
+        "roomsForSaleCount": null,
+        "isApartments": false,
+        "status": "published",
+        "formattedFullInfo": "1-комн.кв.  ·  38,1 м²  ·  12/22 этаж",
+        "isCalltrackingEnabled": true,
+        "isColorized": false,
+        "isByCommercialOwner": null,
+        "totalArea": "38.1",
+        "publishedUserId": 134642318,
+        "workTimeInfo": {
+          "callFrom": "09:00:00",
+          "callTo": "21:00:00",
+          "isAvailable": false,
+          "timezoneText": "Московскому"
+        },
+        "specialty": {
+          "specialties": [],
+          "additionalTypes": [],
+          "types": []
+        },
+        "basicProfiScore": 0,
+        "bargainTerms": {
+          "bargainAllowed": null,
+          "saleType": "fz214",
+          "leaseType": null,
+          "clientFee": null,
+          "paymentPeriod": null,
+          "leaseTermType": null,
+          "priceForWorkplace": null,
+          "utilitiesTerms": null,
+          "mortgageAllowed": true,
+          "priceRur": 11985439,
+          "agentFee": null,
+          "vatType": null,
+          "priceType": "all",
+          "tags": [],
+          "agentBonus": null,
+          "price": 11985439,
+          "vatPrice": null,
+          "currency": "rur",
+          "deposit": null
+        },
+        "isCianPartner": false,
+        "accessType": null,
+        "humanizedTimedelta": "четыре дня назад",
+        "offerInDeal": false,
+        "category": "newBuildingFlatSale",
+        "id": 331002424,
+        "geo": {
+          "coordinates": {
+            "lng": 37.3612718295558,
+            "lat": 55.606802608988
+          },
+          "districts": [
+            {
+              "fullName": "Московский",
+              "id": 332,
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=332&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "title": "Московский",
+              "geoType": "district",
+              "parentId": 325,
+              "type": "poselenie",
+              "locationId": 1,
+              "name": "Московский"
+            },
+            {
+              "fullName": "НАО (Новомосковский)",
+              "id": 325,
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=325&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "title": "НАО (Новомосковский)",
+              "geoType": "district",
+              "parentId": null,
+              "type": "okrug",
+              "locationId": 1,
+              "name": "НАО (Новомосковский)"
+            }
+          ],
+          "highways": [
+            {
+              "id": 12,
+              "isDefault": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&highway%5B0%5D=12&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "geoType": "highway",
+              "distance": "7.0",
+              "name": "Киевское"
+            },
+            {
+              "id": 2,
+              "isDefault": null,
+              "qs": "currency=2&deal_type=sale&engine_version=2&highway%5B0%5D=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "geoType": "highway",
+              "distance": "12.0",
+              "name": "Боровское"
+            }
+          ],
+          "countryId": 138,
+          "buildingAddress": null,
+          "userInput": "Москва, Московский, микрорайон Первый Московский",
+          "railways": [
+            {
+              "directionIds": [
+                14
+              ],
+              "id": 848,
+              "time": 10,
+              "geoType": "railway",
+              "travelType": "byCar",
+              "distance": 6.0,
+              "name": "Аэропорт Внуково",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=848&room1=1"
+            },
+            {
+              "directionIds": [
+                14
+              ],
+              "id": 766,
+              "time": 10,
+              "geoType": "railway",
+              "travelType": "byCar",
+              "distance": 7.0,
+              "name": "Новопеределкино",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=766&room1=1"
+            },
+            {
+              "directionIds": [
+                14
+              ],
+              "id": 778,
+              "time": 17,
+              "geoType": "railway",
+              "travelType": "byCar",
+              "distance": 11.0,
+              "name": "Мичуринец",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=778&room1=1"
+            }
+          ],
+          "undergrounds": [
+            {
+              "id": 367,
+              "releaseYear": null,
+              "isDefault": true,
+              "lineId": 4,
+              "time": 6,
+              "lineColor": "FFDF00",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=367&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "cianId": null,
+              "name": "Рассказовка",
+              "transportType": "transport",
+              "lineType": null
+            },
+            {
+              "id": 366,
+              "releaseYear": null,
+              "isDefault": null,
+              "lineId": 4,
+              "time": 9,
+              "lineColor": "FFDF00",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=366&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "cianId": null,
+              "name": "Новопеределкино",
+              "transportType": "transport",
+              "lineType": null
+            },
+            {
+              "id": 535,
+              "releaseYear": null,
+              "isDefault": null,
+              "lineId": 4,
+              "time": 9,
+              "lineColor": "FFDF00",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=535&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "cianId": null,
+              "name": "Аэропорт Внуково",
+              "transportType": "transport",
+              "lineType": null
+            }
+          ],
+          "address": [
+            {
+              "fullName": "Москва",
+              "id": 1,
+              "isFormingAddress": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&region=1&room1=1",
+              "shortName": "Москва",
+              "locationTypeId": 1,
+              "title": "Москва",
+              "geoType": "location",
+              "type": "location",
+              "name": "Москва"
+            },
+            {
+              "fullName": "НАО (Новомосковский)",
+              "id": 325,
+              "isFormingAddress": null,
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=325&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "НАО (Новомосковский)",
+              "locationTypeId": null,
+              "title": "НАО (Новомосковский)",
+              "geoType": "district",
+              "type": "okrug",
+              "name": "НАО (Новомосковский)"
+            },
+            {
+              "fullName": "м. Рассказовка",
+              "id": 367,
+              "isFormingAddress": null,
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=367&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "м. Рассказовка",
+              "locationTypeId": null,
+              "title": "м. Рассказовка",
+              "geoType": "underground",
+              "type": "metro",
+              "name": "Рассказовка"
+            },
+            {
+              "fullName": "Московский г.",
+              "id": 1224131,
+              "isFormingAddress": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=1224131&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "Московский",
+              "locationTypeId": 1,
+              "title": "Московский г.",
+              "geoType": "location",
+              "type": "location",
+              "name": "Московский"
+            },
+            {
+              "fullName": "Первый Московский мкр",
+              "id": 252280,
+              "isFormingAddress": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=252280&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "Первый Московский микрорайон",
+              "locationTypeId": 174,
+              "title": "Первый Московский мкр",
+              "geoType": "location",
+              "type": "location",
+              "name": "Первый Московский"
+            },
+            {
+              "fullName": "Первый Московский ЖК",
+              "id": 312653,
+              "isFormingAddress": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=312653&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "Первый Московский жилой комплекс",
+              "locationTypeId": 213,
+              "title": "Первый Московский ЖК",
+              "geoType": "location",
+              "type": "location",
+              "name": "Первый Московский"
+            },
+            {
+              "fullName": "11-я фаза",
+              "id": 470077,
+              "isFormingAddress": true,
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=470077&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "shortName": "11-я фаза",
+              "locationTypeId": 308,
+              "title": "11-я фаза",
+              "geoType": "location",
+              "type": "location",
+              "name": "11-я"
+            }
+          ],
+          "jk": {
+            "id": 1448,
+            "webSiteUrl": "https://www.absrealty.ru/projects/pervyj-moskovskij",
+            "webSiteUrlUtm": "https://www.absrealty.ru/projects/pervyj-moskovskij?utm_source=cian&utm_medium=kartochka_cian&utm_campaign=1448",
+            "fullUrl": "https://zhk-gorod-park-pervyy-moskovskiy-i.cian.ru/",
+            "displayName": "ЖК «Город-парк Первый Московский»",
+            "developer": {
+              "name": "Абсолют Недвижимость",
+              "id": null
+            },
+            "gaGeo": {
+              "moId": 0,
+              "cityId": 1224131,
+              "oblId": 1
+            },
+            "name": "Город-парк Первый Московский",
+            "house": {
+              "name": "6 корпус (11 квартал)",
+              "id": 10922142
+            }
+          },
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 367
+            },
+            {
+              "type": "underground",
+              "id": 366
+            },
+            {
+              "type": "underground",
+              "id": 535
+            },
+            {
+              "type": "railway",
+              "id": 848
+            },
+            {
+              "type": "railway",
+              "id": 766
+            },
+            {
+              "type": "railway",
+              "id": 778
+            },
+            {
+              "type": "highway",
+              "id": 12
+            },
+            {
+              "type": "highway",
+              "id": 2
+            },
+            {
+              "type": "district",
+              "id": 332
+            },
+            {
+              "type": "district",
+              "id": 325
+            }
+          ]
+        },
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "134642318",
+          "isAgent": true,
+          "isBuilder": true,
+          "isCallbackUser": true,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": false,
+          "isSubAgent": false,
+          "userId": 134642318,
+          "userTrustLevel": "notInvolved",
+          "accountType": "agency",
+          "agencyName": "Абсолют Недвижимость",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=72650908&t=2&p=2&timestamp=1766554569",
+          "agentModerationInfo": {
+            "isUserIdentified": false,
+            "isUserIdentifiedByDocuments": false,
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 1,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Москва и ближнее Подмосковье",
+                "locationId": 1,
+                "packageTypeId": 5,
+                "packageTypeName": "Застройщик"
+              },
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Дальнее Подмосковье",
+                "locationId": 4593,
+                "packageTypeId": 5,
+                "packageTypeName": "Застройщик"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": true
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "Абсолют Недвижимость",
+          "isChatsEnabled": false,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9253532887"
+            },
+            {
+              "countryCode": "+7",
+              "number": "9263483889"
+            }
+          ],
+          "userType": "developer",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 134642318,
+            "vacationTo": null
+          },
+          "agentLists": [],
+          "profileUri": "zastroishchik-absolyut-nedvizhimost-5956/"
+        },
+        "isPro": true,
+        "gaLabel": "/sale/flat/mo_id=0/obl_id=1/city_id=470077/object_type=2/ga_obj_type=1/spec=company/331002424/from_developer=1/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_sale",
+          "puid2": "offer_flat",
+          "puid3": "sale_type_first",
+          "puid4": "offer_type_1",
+          "puid5": "obl_id_1",
+          "puid6": "10001_15000",
+          "puid7": "2323",
+          "puid8": 11985439,
+          "puid9": 367,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid18": 1448,
+          "puid19": "not_video",
+          "puid36": 1,
+          "puid41": "business"
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": false
+        },
+        "isUnique": true,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": true,
+        "isExternalTourAvailable": true,
+        "comparisonStatus": {
+          "status": "available",
+          "description": "Добавить к сравнению"
+        },
+        "photoFeatureIcons": [
+          {
+            "type": "has3dTour",
+            "text": "Объявление с 3D-туром",
+            "link": "https://www.cian.ru/sale/flat/331002424/"
+          },
+          {
+            "type": "hasVideo",
+            "text": "Объявление с видео",
+            "link": "https://www.cian.ru/sale/flat/331002424/"
+          }
+        ],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "3 кв 2029"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "6 корпус (11 квартал)"
+          }
+        ],
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": {
+          "title": "В ипотеку от 55 885 ₽/мес",
+          "programTypeWithRate": "Семейная 5,75%",
+          "descriptionDialog": {
+            "title": "Семейная ипотека 5,75%"
+          }
+        },
+        "newbuildingBroker": {
+          "bookingEnabled": true
+        },
+        "offerFeatureLabels": [
+          "ЖК лидер продаж"
+        ],
+        "isNewLabel": false
+      },
+      {
+        "layout": null,
+        "rentByPartsDescription": null,
+        "description": "Продаётся 1-комнатная квартира в Северном Измайлово по адресу: Москва, Сиреневый бульвар, 27к1.\n\nКвартира общей площадью 31,3 м², жилая площадь — 21,2 м², кухня — 5,2 м². Расположена на комфортном 3 этаже 9-этажного дома. Квартира светлая, с удобной планировкой и хорошим соотношением жилой площади. ",
+        "isCalltrackingEnabled": true,
+        "tradingLink": null,
+        "rosreestrCheck": null,
+        "offerType": "flat",
+        "showWarningMessage": false,
+        "cianUserId": 132219853,
+        "isInCpd": true,
+        "isNew": false,
+        "flatType": "rooms",
+        "bargainTerms": {
+          "bargainAllowed": null,
+          "mortgageAllowed": true,
+          "paymentPeriod": null,
+          "saleType": "free",
+          "agentBonus": null,
+          "leaseTermType": null,
+          "vatType": null,
+          "clientFee": null,
+          "priceType": "all",
+          "utilitiesTerms": null,
+          "tags": [],
+          "agentFee": null,
+          "vatPrice": null,
+          "leaseType": null,
+          "priceRur": 11900000,
+          "priceForWorkplace": null,
+          "price": 11900000,
+          "deposit": null,
+          "currency": "rur"
+        },
+        "auction": {},
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9863239225"
+          }
+        ],
+        "kitchenArea": "5.2",
+        "isByCommercialOwner": null,
+        "isNeedHideExactAddress": false,
+        "publishedUserId": 132219853,
+        "hasFurniture": true,
+        "land": null,
+        "businessShoppingCenter": null,
+        "loggiasCount": 0,
+        "floorNumber": 3,
+        "monthlyIncome": null,
+        "workTimeInfo": null,
+        "isImported": false,
+        "newbuildingVasPromotion": null,
+        "formattedFullInfo": "1-комн.кв.  ·  31,3 м²  ·  3/9 этаж",
+        "villageMortgageAllowed": false,
+        "basicProfiScore": 0,
+        "offerInDeal": false,
+        "category": "flatSale",
+        "videos": [],
+        "isColorized": false,
+        "id": 333761512,
+        "cadastralNumber": null,
+        "isSubsidisedMortgage": null,
+        "isAuction": false,
+        "geo": {
+          "buildingAddress": null,
+          "userInput": "Россия, Москва, Сиреневый бульвар, 27к1",
+          "highways": [],
+          "jk": null,
+          "coordinates": {
+            "lng": 37.796355,
+            "lat": 55.803418
+          },
+          "railways": [
+            {
+              "travelType": "byCar",
+              "id": 771,
+              "distance": 8.0,
+              "name": "Стройка",
+              "directionIds": [
+                12
+              ],
+              "time": 10,
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=771&room1=1"
+            },
+            {
+              "travelType": "byCar",
+              "id": 701,
+              "distance": 8.0,
+              "name": "Электрозаводская",
+              "directionIds": [
+                13
+              ],
+              "time": 13,
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=701&room1=1"
+            },
+            {
+              "travelType": "byCar",
+              "id": 737,
+              "distance": 9.0,
+              "name": "Новогиреево",
+              "directionIds": [
+                12
+              ],
+              "time": 13,
+              "geoType": "railway",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=737&room1=1"
+            }
+          ],
+          "countryId": 138,
+          "districts": [
+            {
+              "fullName": "р-н Северное Измайлово",
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=69&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "type": "raion",
+              "id": 69,
+              "title": "р-н Северное Измайлово",
+              "name": "Северное Измайлово",
+              "parentId": 7,
+              "locationId": 1,
+              "geoType": "district"
+            },
+            {
+              "fullName": "ВАО",
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=7&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "type": "okrug",
+              "id": 7,
+              "title": "ВАО",
+              "name": "ВАО",
+              "parentId": null,
+              "locationId": 1,
+              "geoType": "district"
+            }
+          ],
+          "undergrounds": [
+            {
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=153&minprice=10000000&offer_type=flat&room1=1",
+              "lineColor": "03238B",
+              "transportType": "walk",
+              "releaseYear": null,
+              "underConstruction": false,
+              "id": 153,
+              "lineId": 1,
+              "name": "Щёлковская",
+              "time": 7,
+              "isDefault": true,
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=89&minprice=10000000&offer_type=flat&room1=1",
+              "lineColor": "03238B",
+              "transportType": "walk",
+              "releaseYear": null,
+              "underConstruction": false,
+              "id": 89,
+              "lineId": 1,
+              "name": "Первомайская",
+              "time": 12,
+              "isDefault": false,
+              "cianId": null,
+              "lineType": null
+            },
+            {
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=41&minprice=10000000&offer_type=flat&room1=1",
+              "lineColor": "03238B",
+              "transportType": "transport",
+              "releaseYear": null,
+              "underConstruction": false,
+              "id": 41,
+              "lineId": 1,
+              "name": "Измайловская",
+              "time": 4,
+              "isDefault": false,
+              "cianId": null,
+              "lineType": null
+            }
+          ],
+          "address": [
+            {
+              "fullName": "Москва",
+              "locationTypeId": 1,
+              "shortName": "Москва",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&region=1&room1=1",
+              "type": "location",
+              "id": 1,
+              "title": "Москва",
+              "name": "Москва",
+              "isFormingAddress": true,
+              "geoType": "location"
+            },
+            {
+              "fullName": "ВАО",
+              "locationTypeId": null,
+              "shortName": "ВАО",
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=7&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "type": "okrug",
+              "id": 7,
+              "title": "ВАО",
+              "name": "ВАО",
+              "isFormingAddress": null,
+              "geoType": "district"
+            },
+            {
+              "fullName": "р-н Северное Измайлово",
+              "locationTypeId": null,
+              "shortName": "р-н Северное Измайлово",
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=69&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "type": "raion",
+              "id": 69,
+              "title": "р-н Северное Измайлово",
+              "name": "Северное Измайлово",
+              "isFormingAddress": null,
+              "geoType": "district"
+            },
+            {
+              "fullName": "м. Щёлковская",
+              "locationTypeId": null,
+              "shortName": "м. Щёлковская",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=153&minprice=10000000&offer_type=flat&room1=1",
+              "type": "metro",
+              "id": 153,
+              "title": "м. Щёлковская",
+              "name": "Щёлковская",
+              "isFormingAddress": null,
+              "geoType": "underground"
+            },
+            {
+              "fullName": "Сиреневый бульвар",
+              "locationTypeId": null,
+              "shortName": "Сиреневый бул.",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1&street%5B0%5D=2094",
+              "type": "street",
+              "id": 2094,
+              "title": "Сиреневый бульвар",
+              "name": "Сиреневый",
+              "isFormingAddress": true,
+              "geoType": "street"
+            },
+            {
+              "fullName": "27К1",
+              "locationTypeId": null,
+              "shortName": "27К1",
+              "qs": "currency=2&deal_type=sale&engine_version=2&house%5B0%5D=73810&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "type": "house",
+              "id": 73810,
+              "title": "27К1",
+              "name": "27К1",
+              "isFormingAddress": true,
+              "geoType": "house"
+            }
+          ],
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 153
+            },
+            {
+              "type": "underground",
+              "id": 89
+            },
+            {
+              "type": "underground",
+              "id": 41
+            },
+            {
+              "type": "railway",
+              "id": 771
+            },
+            {
+              "type": "railway",
+              "id": 701
+            },
+            {
+              "type": "railway",
+              "id": 737
+            },
+            {
+              "type": "district",
+              "id": 69
+            },
+            {
+              "type": "district",
+              "id": 7
+            }
+          ]
+        },
+        "roomsForSaleCount": null,
+        "shareAmount": null,
+        "cianId": 333761512,
+        "booking": null,
+        "isCianPartner": false,
+        "buildingCadastralNumber": null,
+        "isCommercialOwnershipVerified": null,
+        "userId": 132219853,
+        "addedTimestamp": 1788960260,
+        "offerFeatureLabelsV2": [],
+        "isTop3": true,
+        "promoInfo": null,
+        "humanizedTimedelta": "4 часа назад",
+        "commercialOwnership": null,
+        "formattedShortPrice": "11 900 000 ₽",
+        "kp": null,
+        "dealType": "sale",
+        "coworking": null,
+        "formattedShortInfo": "1-комн.кв.  ·  3/9 этаж",
+        "isApartments": false,
+        "bedroomsCount": null,
+        "workplaceCount": null,
+        "totalArea": "31.3",
+        "added": "сегодня, 16:24",
+        "isRentByParts": false,
+        "balconiesCount": 1,
+        "dealRentVersion": null,
+        "creationDate": "2026-09-09T15:13:58.317",
+        "moderationInfo": {
+          "photoStub": null,
+          "showContactWarningMessage": false,
+          "warningMessage": null
+        },
+        "specialty": {
+          "additionalTypes": [],
+          "types": [],
+          "specialties": []
+        },
+        "formattedFullPrice": "11 900 000 ₽",
+        "coworkingOfferType": null,
+        "minArea": null,
+        "formattedAdditionalInfo": "Свободная продажа, возможна ипотека",
+        "photos": [
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961468085-4.jpg",
+            "rotateDegree": null,
+            "isLayout": false,
+            "id": 2961468085,
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961468085-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961468085-2.jpg",
+            "isDefault": true,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961468085-1.jpg"
+          },
+          {
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961466350-4.jpg",
+            "rotateDegree": null,
+            "isLayout": false,
+            "id": 2961466350,
+            "miniUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961466350-3.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961466350-2.jpg",
+            "isDefault": false,
+            "fullUrl": "https://images.cdn-cian.ru/images/kvartira-moskva-sirenevyy-bulvar-2961466350-1.jpg"
+          }
+        ],
+        "fromDeveloper": false,
+        "fullUrl": "https://www.cian.ru/sale/flat/333761512/?mlSearchSessionGuid=5de2db838918a063854e163ee9623af6",
+        "accessType": null,
+        "isPremium": false,
+        "categoriesIds": [
+          1,
+          100,
+          110,
+          111
+        ],
+        "newbuildingCplLayer": null,
+        "title": "однушка в Северном Измайлово",
+        "newbuildingWithExtendedFeatures": null,
+        "readyBusinessType": null,
+        "externalId": null,
+        "isStandard": false,
+        "isInHiddenBase": false,
+        "jkUrl": null,
+        "isBookedFromDeveloper": null,
+        "roomArea": null,
+        "isLayoutApproved": null,
+        "officeType": null,
+        "isEarlyAccessEnabled": null,
+        "allFromOffrep": null,
+        "status": "published",
+        "isRecidivist": false,
+        "livingArea": "21.2",
+        "descriptionMinhash": [
+          14467733,
+          4828131,
+          20734870,
+          42337346,
+          19619075,
+          15707023,
+          48336418,
+          53523005,
+          9230228,
+          48195840,
+          22965245,
+          1006418,
+          5958311,
+          2039279,
+          5165062,
+          15438368,
+          48790356,
+          4960642,
+          74236807,
+          6983705,
+          56828475,
+          136142293,
+          1611909,
+          38907129,
+          89496755,
+          17152915,
+          27025535,
+          131947161,
+          60077067,
+          51652993,
+          117625516,
+          25429645
+        ],
+        "areaParts": null,
+        "permittedUseType": null,
+        "demolishedInMoscowProgramm": false,
+        "roomsCount": 1,
+        "buildersIds": [],
+        "building": {
+          "accessType": null,
+          "heatingType": null,
+          "buildYear": 1963,
+          "classType": null,
+          "type": null,
+          "passengerLiftsCount": 1,
+          "deadline": null,
+          "parking": {
+            "purposeType": null,
+            "isFree": null,
+            "locationType": null,
+            "isAvailable": null,
+            "priceMonthly": null,
+            "placesCount": null,
+            "type": "ground",
+            "currency": null,
+            "priceEntry": null
+          },
+          "cargoLiftsCount": null,
+          "floorsCount": 9,
+          "materialType": "block"
+        },
+        "newbuilding": null,
+        "descriptionWordsHighlighted": [],
+        "garage": null,
+        "isByHomeowner": false,
+        "isExcludedFromAction": false,
+        "decoration": null,
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "132219853",
+          "isAgent": true,
+          "isBuilder": false,
+          "isCallbackUser": false,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": true,
+          "isSubAgent": false,
+          "userId": 132219853,
+          "userTrustLevel": "notInvolved",
+          "accountType": "agency",
+          "agencyName": "GK Недвижимость",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=71906879&t=2&p=2&timestamp=1751039985",
+          "agentModerationInfo": {
+            "isUserIdentified": true,
+            "isUserIdentifiedByDocuments": true,
+            "qualityLevelInfo": {
+              "hasVerifiedDocuments": true,
+              "highResponsibility": true,
+              "isBlocked": false,
+              "isSuperAgent": true,
+              "isSuperHost": false,
+              "levelName": "Суперагент",
+              "levelOrder": 4,
+              "levelSystemName": "max",
+              "showHighResponsibility": true,
+              "showSuperAgent": true,
+              "showSuperHost": false
+            },
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 0,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Россия",
+                "packageTypeId": 1,
+                "packageTypeName": "Некоммерческий"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": false
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "GK Недвижимость",
+          "experience": "2020",
+          "isChatsEnabled": true,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9160332434"
+            }
+          ],
+          "profileUri": "company/132219853/",
+          "userType": "realtor_not_commerce",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 132219853,
+            "vacationTo": null
+          },
+          "agentLists": []
+        },
+        "isPro": false,
+        "gaLabel": "/sale/flat/mo_id=0/obl_id=1/city_id=1/object_type=1/ga_obj_type=1/spec=company/333761512/from_developer=0/repres=0/owner=0/pod_snos=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_sale",
+          "puid2": "offer_flat",
+          "puid3": "sale_type_second",
+          "puid4": "offer_type_1",
+          "puid5": "obl_id_1",
+          "puid6": "10001_15000",
+          "puid7": "2323",
+          "puid8": 11900000,
+          "puid9": 153,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid19": "not_video",
+          "puid36": 1,
+          "puid41": "business"
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": true
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": false,
+        "isExternalTourAvailable": false,
+        "comparisonStatus": {
+          "status": "available",
+          "description": "Добавить к сравнению"
+        },
+        "photoFeatureIcons": [],
+        "factoids": [
+          {
+            "type": "livingArea",
+            "title": "Жилая пл.",
+            "text": "21.2 м2"
+          }
+        ],
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "goodPrice": {
+          "priceLabel": "Хорошая цена",
+          "estimationRange": "11,2—13,7 млн ₽"
+        },
+        "isSoldFurnished": true,
+        "bestPlaceAnalyticsAvailable": null,
+        "mortgagePayment": null,
+        "offerFeatureLabels": [],
+        "isNewLabel": true
+      },
+      {
+        "categoriesIds": [
+          1,
+          100,
+          110,
+          113
+        ],
+        "decoration": "without",
+        "isRecidivist": false,
+        "formattedFullInfo": "1-комн.кв.  ·  42,1 м²  ·  7/22 этаж",
+        "kitchenArea": "14.2",
+        "livingArea": null,
+        "auction": {},
+        "newbuilding": {
+          "isFromSeller": false,
+          "id": 1448,
+          "isFromBuilder": true,
+          "name": "Город-парк Первый Московский",
+          "house": {
+            "id": 7538830,
+            "name": "5 корпус (11 квартал)",
+            "isFinished": false,
+            "finishDate": {
+              "quarter": 1,
+              "year": 2029
+            },
+            "section": "Секция 1"
+          },
+          "isFromLeadFactory": false,
+          "comparisonStatus": null,
+          "showJkReliableFlag": false,
+          "isSalesLeader": true,
+          "isFromDeveloper": true,
+          "isPremium": false,
+          "hasFlatTourBooking": false,
+          "isFichering": true,
+          "countPromos": 8,
+          "snippetType": "advanced"
+        },
+        "newbuildingVasPromotion": null,
+        "flatType": "rooms",
+        "balconiesCount": null,
+        "isInCpd": false,
+        "externalId": null,
+        "villageMortgageAllowed": false,
+        "showWarningMessage": false,
+        "formattedShortPrice": "11 887 164 ₽",
+        "fromDeveloper": true,
+        "promoInfo": null,
+        "isPremium": false,
+        "tradingLink": null,
+        "businessShoppingCenter": null,
+        "rentByPartsDescription": null,
+        "coworking": null,
+        "isImported": true,
+        "isAuction": false,
+        "dealType": "sale",
+        "offerType": "flat",
+        "shareAmount": null,
+        "isExcludedFromAction": false,
+        "isStandard": false,
+        "descriptionWordsHighlighted": [],
+        "fullUrl": "https://www.cian.ru/sale/flat/331001739/?mlSearchSessionGuid=5de2db838918a063854e163ee9623af6",
+        "isNew": false,
+        "cadastralNumber": null,
+        "status": "published",
+        "permittedUseType": null,
+        "rosreestrCheck": null,
+        "basicProfiScore": 0,
+        "bedroomsCount": null,
+        "description": "Продается однокомнатная квартира  в 11 квартале города-парка \"Первый Московский\". \nОбщая площадь квартиры - 42,1 кв. м, этаж 7 из 22. \nПланируемый срок ввода в эксплуатацию - 1 квартал 2029 года. \nТип дома - монолитный. \n \nТОЛЬКО ДО 30 СЕНТЯБРЯ выгодные условия на приобретение квартиры в ипотеку. \nЗ",
+        "isApartments": false,
+        "isCianPartner": false,
+        "accessType": null,
+        "isBookedFromDeveloper": false,
+        "demolishedInMoscowProgramm": null,
+        "moderationInfo": {
+          "photoStub": null,
+          "warningMessage": null,
+          "showContactWarningMessage": false
+        },
+        "areaParts": null,
+        "isByCommercialOwner": null,
+        "formattedShortInfo": "1-комн.кв.  ·  7/22 этаж",
+        "publishedUserId": 134642318,
+        "booking": null,
+        "added": "1 сен, 21:58",
+        "newbuildingWithExtendedFeatures": false,
+        "category": "newBuildingFlatSale",
+        "offerInDeal": false,
+        "hasFurniture": null,
+        "isTop3": false,
+        "cianUserId": 134642318,
+        "land": null,
+        "addedTimestamp": 1788289122,
+        "newbuildingCplLayer": "otherPromoted",
+        "isInHiddenBase": false,
+        "minArea": null,
+        "workplaceCount": null,
+        "buildersIds": [
+          5956
+        ],
+        "workTimeInfo": {
+          "callFrom": "09:00:00",
+          "callTo": "21:00:00",
+          "timezoneText": "Московскому",
+          "isAvailable": false
+        },
+        "roomsCount": 1,
+        "offerFeatureLabelsV2": [],
+        "garage": null,
+        "jkUrl": "https://zhk-gorod-park-pervyy-moskovskiy-i.cian.ru/",
+        "kp": null,
+        "id": 331001739,
+        "videos": [
+          {
+            "type": "vk",
+            "id": "456239331",
+            "previewUrl": "https://iv.okcdn.ru/getVideoPreview?id=9276621916909&idx=12&type=39&tkn=7SPc820List5MGet0stC8R89t4A&fn=vid_w",
+            "url": "https://vkvideo.ru/video_ext.php?oid=-34496106&id=456239331&hd=2&hash=f1f6731c9fa8e20f",
+            "uploadDate": "2025-10-30T13:14:38+00:00",
+            "duration": 170
+          }
+        ],
+        "humanizedTimedelta": "неделю назад",
+        "photos": [
+          {
+            "id": 2953399021,
+            "fullUrl": "https://images.cdn-cian.ru/images/2953399021-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2953399021-2.jpg",
+            "rotateDegree": null,
+            "isLayout": true,
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2953399021-4.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/2953399021-3.jpg",
+            "isDefault": false
+          },
+          {
+            "id": 2951001719,
+            "fullUrl": "https://images.cdn-cian.ru/images/2951001719-1.jpg",
+            "thumbnailUrl": "https://images.cdn-cian.ru/images/2951001719-2.jpg",
+            "rotateDegree": null,
+            "isLayout": false,
+            "thumbnail2Url": "https://images.cdn-cian.ru/images/2951001719-4.jpg",
+            "miniUrl": "https://images.cdn-cian.ru/images/2951001719-3.jpg",
+            "isDefault": false
+          }
+        ],
+        "allFromOffrep": null,
+        "userId": 134642318,
+        "coworkingOfferType": null,
+        "geo": {
+          "undergrounds": [
+            {
+              "id": 377,
+              "lineId": 10,
+              "time": 9,
+              "name": "Филатов Луг",
+              "cianId": null,
+              "transportType": "transport",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=377&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "lineColor": "CF0000",
+              "releaseYear": null,
+              "isDefault": true,
+              "lineType": null
+            },
+            {
+              "id": 367,
+              "lineId": 4,
+              "time": 9,
+              "name": "Рассказовка",
+              "cianId": null,
+              "transportType": "transport",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=367&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "lineColor": "FFDF00",
+              "releaseYear": null,
+              "isDefault": null,
+              "lineType": null
+            },
+            {
+              "id": 535,
+              "lineId": 4,
+              "time": 9,
+              "name": "Аэропорт Внуково",
+              "cianId": null,
+              "transportType": "transport",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=535&minprice=10000000&offer_type=flat&room1=1",
+              "underConstruction": false,
+              "lineColor": "FFDF00",
+              "releaseYear": null,
+              "isDefault": null,
+              "lineType": null
+            }
+          ],
+          "address": [
+            {
+              "id": 1,
+              "type": "location",
+              "geoType": "location",
+              "name": "Москва",
+              "shortName": "Москва",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&region=1&room1=1",
+              "fullName": "Москва",
+              "locationTypeId": 1,
+              "isFormingAddress": true,
+              "title": "Москва"
+            },
+            {
+              "id": 325,
+              "type": "okrug",
+              "geoType": "district",
+              "name": "НАО (Новомосковский)",
+              "shortName": "НАО (Новомосковский)",
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=325&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "НАО (Новомосковский)",
+              "locationTypeId": null,
+              "isFormingAddress": null,
+              "title": "НАО (Новомосковский)"
+            },
+            {
+              "id": 377,
+              "type": "metro",
+              "geoType": "underground",
+              "name": "Филатов Луг",
+              "shortName": "м. Филатов Луг",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&metro%5B0%5D=377&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "м. Филатов Луг",
+              "locationTypeId": null,
+              "isFormingAddress": null,
+              "title": "м. Филатов Луг"
+            },
+            {
+              "id": 1224131,
+              "type": "location",
+              "geoType": "location",
+              "name": "Московский",
+              "shortName": "Московский",
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=1224131&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "Московский г.",
+              "locationTypeId": 1,
+              "isFormingAddress": true,
+              "title": "Московский г."
+            },
+            {
+              "id": 252280,
+              "type": "location",
+              "geoType": "location",
+              "name": "Первый Московский",
+              "shortName": "Первый Московский микрорайон",
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=252280&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "Первый Московский мкр",
+              "locationTypeId": 174,
+              "isFormingAddress": true,
+              "title": "Первый Московский мкр"
+            },
+            {
+              "id": 312653,
+              "type": "location",
+              "geoType": "location",
+              "name": "Первый Московский",
+              "shortName": "Первый Московский жилой комплекс",
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=312653&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "Первый Московский ЖК",
+              "locationTypeId": 213,
+              "isFormingAddress": true,
+              "title": "Первый Московский ЖК"
+            },
+            {
+              "id": 470077,
+              "type": "location",
+              "geoType": "location",
+              "name": "11-я",
+              "shortName": "11-я фаза",
+              "qs": "currency=2&deal_type=sale&engine_version=2&location%5B0%5D=470077&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "11-я фаза",
+              "locationTypeId": 308,
+              "isFormingAddress": true,
+              "title": "11-я фаза"
+            }
+          ],
+          "buildingAddress": null,
+          "highways": [
+            {
+              "id": 12,
+              "geoType": "highway",
+              "name": "Киевское",
+              "qs": "currency=2&deal_type=sale&engine_version=2&highway%5B0%5D=12&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "distance": "8.0",
+              "isDefault": true
+            },
+            {
+              "id": 2,
+              "geoType": "highway",
+              "name": "Боровское",
+              "qs": "currency=2&deal_type=sale&engine_version=2&highway%5B0%5D=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "distance": "12.0",
+              "isDefault": null
+            }
+          ],
+          "jk": {
+            "developer": {
+              "name": "Абсолют Недвижимость",
+              "id": null
+            },
+            "id": 1448,
+            "fullUrl": "https://zhk-gorod-park-pervyy-moskovskiy-i.cian.ru/",
+            "webSiteUrl": "https://www.absrealty.ru/projects/pervyj-moskovskij",
+            "name": "Город-парк Первый Московский",
+            "house": {
+              "name": "5 корпус (11 квартал)",
+              "id": 7538830
+            },
+            "displayName": "ЖК «Город-парк Первый Московский»",
+            "gaGeo": {
+              "oblId": 1,
+              "moId": 0,
+              "cityId": 1224131
+            },
+            "webSiteUrlUtm": "https://www.absrealty.ru/projects/pervyj-moskovskij?utm_source=cian&utm_medium=kartochka_cian&utm_campaign=1448"
+          },
+          "districts": [
+            {
+              "id": 332,
+              "type": "poselenie",
+              "geoType": "district",
+              "name": "Московский",
+              "locationId": 1,
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=332&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "Московский",
+              "title": "Московский",
+              "parentId": 325
+            },
+            {
+              "id": 325,
+              "type": "okrug",
+              "geoType": "district",
+              "name": "НАО (Новомосковский)",
+              "locationId": 1,
+              "qs": "currency=2&deal_type=sale&district%5B0%5D=325&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&room1=1",
+              "fullName": "НАО (Новомосковский)",
+              "title": "НАО (Новомосковский)",
+              "parentId": null
+            }
+          ],
+          "railways": [
+            {
+              "id": 848,
+              "geoType": "railway",
+              "time": 9,
+              "directionIds": [
+                14
+              ],
+              "name": "Аэропорт Внуково",
+              "distance": 6.0,
+              "travelType": "byCar",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=848&room1=1"
+            },
+            {
+              "id": 766,
+              "geoType": "railway",
+              "time": 9,
+              "directionIds": [
+                14
+              ],
+              "name": "Новопеределкино",
+              "distance": 7.0,
+              "travelType": "byCar",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=766&room1=1"
+            },
+            {
+              "id": 778,
+              "geoType": "railway",
+              "time": 17,
+              "directionIds": [
+                14
+              ],
+              "name": "Мичуринец",
+              "distance": 11.0,
+              "travelType": "byCar",
+              "qs": "currency=2&deal_type=sale&engine_version=2&maxprice=12000000&minprice=10000000&offer_type=flat&railway%5B0%5D=778&room1=1"
+            }
+          ],
+          "coordinates": {
+            "lat": 55.606695940061,
+            "lng": 37.3625227742378
+          },
+          "userInput": "Москва, Московский, микрорайон Первый Московский, жилой комплекс Первый Московский",
+          "countryId": 138,
+          "sortedGeoIds": [
+            {
+              "type": "underground",
+              "id": 377
+            },
+            {
+              "type": "underground",
+              "id": 367
+            },
+            {
+              "type": "underground",
+              "id": 535
+            },
+            {
+              "type": "railway",
+              "id": 848
+            },
+            {
+              "type": "railway",
+              "id": 766
+            },
+            {
+              "type": "railway",
+              "id": 778
+            },
+            {
+              "type": "highway",
+              "id": 12
+            },
+            {
+              "type": "highway",
+              "id": 2
+            },
+            {
+              "type": "district",
+              "id": 332
+            },
+            {
+              "type": "district",
+              "id": 325
+            }
+          ]
+        },
+        "roomArea": null,
+        "cianId": 331001739,
+        "buildingCadastralNumber": null,
+        "isSubsidisedMortgage": null,
+        "loggiasCount": null,
+        "creationDate": "2026-06-11T19:30:26.74",
+        "isColorized": false,
+        "isEarlyAccessEnabled": null,
+        "descriptionMinhash": [
+          18308017,
+          7301773,
+          13184479,
+          9618444,
+          14636232,
+          13162573,
+          3461634,
+          45820160,
+          33951044,
+          48014802,
+          7735558,
+          18733810,
+          2852019,
+          7517558,
+          47918621,
+          12481266,
+          15159853,
+          3574582,
+          20509280,
+          6351486,
+          117996751,
+          33389951,
+          26750612,
+          38130276,
+          30266932,
+          5740363,
+          30659955,
+          794253,
+          23909840,
+          31010081,
+          12218809,
+          18591719
+        ],
+        "title": null,
+        "layout": null,
+        "isNeedHideExactAddress": false,
+        "floorNumber": 7,
+        "roomsForSaleCount": null,
+        "isLayoutApproved": null,
+        "isByHomeowner": null,
+        "phones": [
+          {
+            "countryCode": "7",
+            "number": "9230727409"
+          }
+        ],
+        "bargainTerms": {
+          "mortgageAllowed": true,
+          "clientFee": null,
+          "priceRur": 11887164,
+          "agentFee": null,
+          "tags": [],
+          "saleType": "fz214",
+          "leaseTermType": null,
+          "currency": "rur",
+          "agentBonus": null,
+          "bargainAllowed": null,
+          "priceType": "all",
+          "leaseType": null,
+          "vatType": null,
+          "price": 11887164,
+          "utilitiesTerms": null,
+          "priceForWorkplace": null,
+          "paymentPeriod": null,
+          "vatPrice": null,
+          "deposit": null
+        },
+        "formattedAdditionalInfo": "Долевое участие (214-ФЗ), возможна ипотека",
+        "formattedFullPrice": "11 887 164 ₽",
+        "specialty": {
+          "specialties": [],
+          "types": [],
+          "additionalTypes": []
+        },
+        "totalArea": "42.1",
+        "dealRentVersion": null,
+        "officeType": null,
+        "readyBusinessType": null,
+        "isCalltrackingEnabled": true,
+        "building": {
+          "deadline": {
+            "quarter": "first",
+            "quarterEnd": "2029-03-31",
+            "year": 2029,
+            "isComplete": false
+          },
+          "type": null,
+          "parking": null,
+          "buildYear": null,
+          "materialType": "monolith",
+          "floorsCount": 22,
+          "classType": null,
+          "accessType": null,
+          "passengerLiftsCount": 2,
+          "cargoLiftsCount": 1,
+          "heatingType": null
+        },
+        "commercialOwnership": null,
+        "monthlyIncome": null,
+        "isCommercialOwnershipVerified": null,
+        "isRentByParts": false,
+        "isDuplicatedDescription": false,
+        "isFavorite": false,
+        "notes": {
+          "offer": null,
+          "realtor": null
+        },
+        "user": {
+          "cianUserId": "134642318",
+          "isAgent": true,
+          "isBuilder": true,
+          "isCallbackUser": true,
+          "isCianPartner": false,
+          "isHidden": false,
+          "isPassportVerified": false,
+          "isSubAgent": false,
+          "userId": 134642318,
+          "userTrustLevel": "notInvolved",
+          "accountType": "agency",
+          "agencyName": "Абсолют Недвижимость",
+          "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=72650908&t=2&p=2&timestamp=1766554569",
+          "agentModerationInfo": {
+            "isUserIdentified": false,
+            "isUserIdentifiedByDocuments": false,
+            "showUserIdentifiedByDocuments": false
+          },
+          "billingInfo": {
+            "accountType": 1,
+            "packages": [
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Москва и ближнее Подмосковье",
+                "locationId": 1,
+                "packageTypeId": 5,
+                "packageTypeName": "Застройщик"
+              },
+              {
+                "countryId": 138,
+                "depositRequired": false,
+                "geoName": "Дальнее Подмосковье",
+                "locationId": 4593,
+                "packageTypeId": 5,
+                "packageTypeName": "Застройщик"
+              }
+            ],
+            "removeCompetitor": false,
+            "replenishDisabled": true
+          },
+          "canShowOnline": false,
+          "cianProfileStatus": "approved",
+          "companyName": "Абсолют Недвижимость",
+          "isChatsEnabled": false,
+          "isSelfEmployed": false,
+          "phoneNumbers": [
+            {
+              "countryCode": "+7",
+              "number": "9253532887"
+            },
+            {
+              "countryCode": "+7",
+              "number": "9263483889"
+            }
+          ],
+          "userType": "developer",
+          "personalRating": null,
+          "agentAvailability": {
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "message": null,
+            "title": null,
+            "userId": 134642318,
+            "vacationTo": null
+          },
+          "agentLists": [],
+          "profileUri": "zastroishchik-absolyut-nedvizhimost-5956/"
+        },
+        "isPro": true,
+        "gaLabel": "/sale/flat/mo_id=0/obl_id=1/city_id=470077/object_type=2/ga_obj_type=1/spec=company/331001739/from_developer=1/repres=0/owner=0/pod_snos=0/nv=0/",
+        "adfoxParams": {
+          "puid1": "deal_type_sale",
+          "puid2": "offer_flat",
+          "puid3": "sale_type_first",
+          "puid4": "offer_type_1",
+          "puid5": "obl_id_1",
+          "puid6": "10001_15000",
+          "puid7": "2323",
+          "puid8": 11887164,
+          "puid9": 377,
+          "puid10": "no_agent",
+          "puid16": "false",
+          "puid17": "false",
+          "puid18": 1448,
+          "puid19": "not_video",
+          "puid36": 1,
+          "puid41": "business"
+        },
+        "chatId": null,
+        "chat": {
+          "chatId": null,
+          "canSendMessage": false
+        },
+        "isUnique": false,
+        "savedSearchLabels": [],
+        "isDealRequestSubstitutionPhone": false,
+        "contextToken": null,
+        "showGalleryThumbnails": true,
+        "isNewbuildingTourAvailable": true,
+        "isExternalTourAvailable": true,
+        "comparisonStatus": {
+          "status": "available",
+          "description": "Добавить к сравнению"
+        },
+        "photoFeatureIcons": [
+          {
+            "type": "has3dTour",
+            "text": "Объявление с 3D-туром",
+            "link": "https://www.cian.ru/sale/flat/331001739/"
+          },
+          {
+            "type": "hasVideo",
+            "text": "Объявление с видео",
+            "link": "https://www.cian.ru/sale/flat/331001739/"
+          }
+        ],
+        "factoids": [
+          {
+            "type": "houseFinishDate",
+            "title": "Сдача корпуса",
+            "text": "1 кв 2029"
+          },
+          {
+            "type": "house",
+            "title": "Корпус",
+            "text": "5 корпус (11 квартал)"
+          }
+        ],
+        "brandingLevel": null,
+        "isRosreestrChecked": false,
+        "bestPlaceAnalyticsAvailable": null,
+        "discount": null,
+        "mortgagePayment": {
+          "title": "В ипотеку от 55 427 ₽/мес",
+          "programTypeWithRate": "Семейная 5,75%",
+          "descriptionDialog": {
+            "title": "Семейная ипотека 5,75%"
+          }
+        },
+        "newbuildingBroker": {
+          "bookingEnabled": true
+        },
+        "offerFeatureLabels": [
+          "ЖК лидер продаж"
+        ],
+        "isNewLabel": false
+      }
+    ]
+  }
+}
