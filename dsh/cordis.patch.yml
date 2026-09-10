@@ -1,4 +1,4 @@
-# The 14 skills are always available and cost only their catalog rows.
+# The 15 skills are always available and cost only their catalog rows.
 # Both MCP rows stay disabled until RU_MARKETPLACE_MCP_DIR is set. Once
 # enabled they are paid on EVERY request; wire-measured figures (post output-
 # schema compaction, scripts/mcp_wire.py):

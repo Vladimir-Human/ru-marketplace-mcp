@@ -1,7 +1,7 @@
 # Architecture
 
-Twelve source servers (ten marketplaces, price comparison, and the optional
-MPStats analytics connector) plus a unified `marketplace-mcp`, all over one shared
+Fourteen source servers (twelve marketplaces, price comparison, and the
+optional MPStats analytics connector) plus a unified `marketplace-mcp`, all over one shared
 runtime. This document covers how they fit together and why the structure is what it
 is.
 
@@ -21,6 +21,8 @@ ru-marketplace-mcp/
 │   ├── lamoda-connector/       Lamoda               → lamoda-mcp
 │   ├── dns-connector/          DNS-Shop             → dns-mcp
 │   ├── citilink-connector/     Citilink             → citilink-mcp
+│   ├── aliexpress-connector/   AliExpress           → aliexpress-mcp
+│   ├── cian-connector/         Cian real estate     → cian-mcp
 │   ├── compare-connector/      cross-marketplace    → compare-mcp
 │   ├── mpstats-connector/      MPStats analytics (paid, optional) → mpstats-mcp
 │   └── marketplace-connector/  unified mount + CLI  → marketplace-mcp
@@ -212,7 +214,7 @@ Live tests are marked (`-m "not live and not cdp"`) and excluded from CI,
 which has neither a Russian-friendly IP nor a logged-in browser. Including them
 would produce noise instead of signal.
 
-Coverage is branch-measured over the fourteen packages' source and enforced at
+Coverage is branch-measured over the sixteen packages' source and enforced at
 a 70 % floor. `scripts/check_coverage_floor.py` measures the offline suite and
 compares it against that floor — the coverage analogue of
 `check_test_count.py`, so a quiet regression surfaces where the change was made

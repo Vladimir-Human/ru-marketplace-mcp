@@ -52,7 +52,7 @@
 
 MPStats стоит особняком: это единственный **платный** источник. Без
 `MPSTATS_MP_AUTH` сервер запускается, но инструменты отвечают `auth_missing` —
-поэтому он опционален и подключается по желанию, на остальные двенадцать
+поэтому он опционален и подключается по желанию, на остальные тринадцать
 серверов он не влияет никак.
 
 Всего 38 инструментов в 14 серверах на общем рантайме `mcp-core`. Плюс объединённый
@@ -190,7 +190,7 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-Сразу после установки появляются 14 навыков и **ни одного** MCP-инструмента: обе
+Сразу после установки появляются 15 навыков и **ни одного** MCP-инструмента: обе
 строки MCP выключены, пока не задана переменная `RU_MARKETPLACE_MCP_DIR` с путём к
 клону. Так сделано потому, что смонтированный сервер платится в каждом запросе:
 рекомендуемый режим сравнения цен стоит ~0,9 тыс. токенов, полный набор — ~13,6 тыс.
@@ -443,7 +443,7 @@ compare_prices("кроссовки мужские")
 
 ## Навыки для агента
 
-У каждого коннектора — свой навык в `skills/`: четырнадцать штук, по одному
+У каждого коннектора — свой навык в `skills/`: пятнадцать штук, по одному
 на источник плюс общий `marketplace`. Навык это не пересказ README: он объясняет агенту, когда за этот
 источник вообще браться, чего у источника нет, и каким его ответам нельзя верить
 без второго взгляда.
@@ -690,7 +690,7 @@ entry, from the [`dsh/`](dsh/README.md) subdirectory (`pnpm` must be on PATH):
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-That gives you 14 skills immediately and **no** MCP tools: both MCP rows stay
+That gives you 15 skills immediately and **no** MCP tools: both MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone. A mounted server is paid
 on every request — ~0.9k tokens for the recommended price-comparison mode, ~13.6k for
 the full set — so opting in is left to you. [dsh/README.md](dsh/README.md) covers
@@ -927,7 +927,7 @@ The token is a secret on a paid, quota-billed account: never log or commit it.
 
 ## Agent skills
 
-Every connector ships its own skill under `skills/` — fourteen of them — one per source plus a shared
+Every connector ships its own skill under `skills/` — fifteen of them — one per source plus a shared
 `marketplace` overview. A skill is not a restatement of this README: it tells the agent when to
 reach for that source at all, what the source does not have, and which of its
 answers should not be trusted without a second look.

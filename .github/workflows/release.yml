@@ -35,9 +35,9 @@ jobs:
         run: uv run python scripts/check_versions.py "${GITHUB_REF_NAME#v}"
 
       - name: Build wheels and sdists for all workspace packages
-        # --all-packages builds each of the 15 members (mcp-core plus the 14
+        # --all-packages builds each of the 16 members (mcp-core plus the 15
         # connectors, including the unified marketplace-connector) into a wheel
-        # and an sdist under dist/ — 30 files in all. Verified against the pinned
+        # and an sdist under dist/ — 32 files in all. Verified against the pinned
         # uv version.
         run: uv build --all-packages --out-dir dist
 
@@ -77,7 +77,7 @@ jobs:
           # into its output directory, and a bare wildcard uploads it as a
           # release asset called "default.gitignore" (v1.1.0 shipped with one).
           # Matching only the distribution extensions keeps the asset list to
-          # the 30 files a user would actually download — the 15 wheels and 15
+          # the 32 files a user would actually download — the 16 wheels and 16
           # sdists (.whl + .tar.gz) that `uv build --all-packages` produces.
           files: |
             dist/*.whl

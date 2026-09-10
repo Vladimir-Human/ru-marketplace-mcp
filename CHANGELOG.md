@@ -92,6 +92,24 @@
   The "registered in _mount_all, forgotten in pyproject" bug class is now a
   gate, not a reviewer's memory.
 
+### Изменено
+
+- Офлайн-счётчик тестов в документации обновлён до 1315: четыре теста
+  dependency-parity добавились к 1311. Заодно вычищен дрейф документации,
+  накопившийся с приходом AliExpress и Циана: дерево пакетов в
+  `docs/ARCHITECTURE.md`, счётчики навыков (15), источников (14), артефактов
+  релиза (32) и мест хранения версии (84) в README, `docs/DEPLOYMENT.md`,
+  `docs/RELEASE_CHECKLIST.md`, `release.yml` и dsh-бандле.
+
+### Changed
+
+- Documented offline test count is 1315: four dependency-parity tests on top
+  of 1311. The documentation drift that had accumulated since AliExpress and
+  Cian landed is swept in the same pass: the package tree in
+  `docs/ARCHITECTURE.md`, skill (15), source-server (14), release-artifact
+  (32) and version-location (84) counts across README, `docs/DEPLOYMENT.md`,
+  `docs/RELEASE_CHECKLIST.md`, `release.yml` and the dsh bundle.
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено
