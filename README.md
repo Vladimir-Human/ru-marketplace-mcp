@@ -69,7 +69,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1315 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1325 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -138,6 +138,34 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 команд — `wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `avito-mcp`,
 `taobao-mcp`, `megamarket-mcp`, `lamoda-mcp`, `dns-mcp`, `citilink-mcp`,
 `compare-mcp`, `marketplace-mcp`.
+
+### Только нужные площадки: `MARKETPLACE_SOURCES`
+
+Объединённый сервер монтирует все источники, а описания их инструментов уходят
+в контекст **в каждом запросе**. Переменная `MARKETPLACE_SOURCES` оставляет
+только перечисленные:
+
+```jsonc
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "uv",
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "marketplace-mcp"],
+      "env": {
+        "MARKETPLACE_SOURCES": "wildberries,ozon,yandex_market,avito,aliexpress,dns,compare",
+      },
+    },
+  },
+}
+```
+
+Имена — канонические (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`,
+`avito`, `taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`,
+`cian`, `compare`, `mpstats`); короткие псевдонимы `wb`, `ym`/`yandex`, `detmir`, `ali`
+тоже принимаются. Переменная не задана или пуста — монтируется всё, как раньше.
+Отключённые источники видно в `marketplace_sources`: они попадают в `skipped`
+с пометкой, что их сняли, а не что они не импортировались. `compare_prices`
+опрашивает ровно тот же набор.
 
 </details>
 
@@ -526,7 +554,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1325 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -589,7 +617,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1315 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1325 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -670,7 +698,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1325 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1006,11 +1034,22 @@ nothing to configure, nothing to leak. MPStats alone has `MPSTATS_MP_AUTH`, the 
 of a paid account — it belongs only in the client entry's env, never in code or
 commits.
 
+**Only the sources you use: `MARKETPLACE_SOURCES`.** The unified server mounts every
+source, and their tool schemas are sent to the client on every request. Set
+`MARKETPLACE_SOURCES` in the `marketplace-mcp` entry's env to a comma-separated list
+to mount only those, e.g. `wildberries,ozon,yandex_market,avito,aliexpress,dns,compare`.
+Names are canonical (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`, `avito`,
+`taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`,
+`mpstats`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. Unset or
+blank mounts everything, as before. Deselected sources show up in
+`marketplace_sources` under `skipped`, marked as deselected rather than failed to
+import, and `compare_prices` queries the same subset.
+
 ## Development
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1325 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1070,7 +1109,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1315 offline
+are confidently wrong, so the project is arranged around verification: 1325 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

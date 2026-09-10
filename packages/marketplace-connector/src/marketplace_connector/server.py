@@ -20,6 +20,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
+from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
 
@@ -165,7 +166,14 @@ def _mount_all() -> None:
         ("compare", "compare_connector.server"),
         ("mpstats", "mpstats_connector.server"),
     )
+    chosen = selected()
     for name, module_path in mounts:
+        if not wanted(name, chosen):
+            # Deselected, not broken. Recorded rather than dropped silently so
+            # marketplace_sources can tell "you turned this off" apart from
+            # "this failed to import".
+            _SKIPPED[name] = f"deselected: not listed in {ENV_VAR}"
+            continue
         try:
             module = __import__(module_path, fromlist=["mcp"])
             mcp.mount(module.mcp)
@@ -217,7 +225,10 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         skipped=dict(sorted(_SKIPPED.items())),
         mounted_count=len(_MOUNTED),
         skipped_count=len(_SKIPPED),
-        capabilities={name: {**metadata, "mounted": name in _MOUNTED} for name, metadata in _CAPABILITIES.items()},
+        capabilities={
+            name: {**metadata, "mounted": name in {canonical(m) for m in _MOUNTED}}
+            for name, metadata in _CAPABILITIES.items()
+        },
         server_version=SERVER_VERSION,
     )
 
