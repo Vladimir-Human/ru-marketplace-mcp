@@ -41,6 +41,18 @@ Diagnostics go to **stderr only**. Under stdio, stdout is the JSON-RPC stream an
 a single stray byte there corrupts the protocol; `scripts/check_no_print.py`
 enforces this across the connector source, `mcp_core.runtime` included.
 
+## Unified source selection
+
+The unified `marketplace-mcp` server mounts every source by default. Set
+`MARKETPLACE_SOURCES` to a comma-separated list of canonical names to reduce the
+tool surface and wire cost, for example
+`wildberries,ozon,yandex_market,compare`. The aliases `wb`, `ym`/`yandex`,
+`detmir`, and `ali` are accepted. Unset or blank means all sources; unknown
+names fail at startup with the supported-source list instead of silently
+starting a partial server. Deselected sources remain visible in
+`marketplace_sources.skipped` with a `deselected` reason, and `compare_prices`
+uses the same selected subset.
+
 ### stdio (default, unchanged)
 
 Nothing to configure. The README's client configs already do this:

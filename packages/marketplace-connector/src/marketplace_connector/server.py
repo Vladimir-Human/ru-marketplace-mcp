@@ -30,7 +30,10 @@ class MarketplaceSourcesResponse(BaseModel):
     mounted: list[str] = Field(default_factory=list, description="Sources whose tools are available in this server.")
     skipped: dict[str, str] = Field(
         default_factory=dict,
-        description="Source name mapped to the import error that removed it — usually a missing dependency.",
+        description=(
+            "Source name mapped to the reason it is unavailable: an import error or an explicit "
+            "MARKETPLACE_SOURCES deselection."
+        ),
     )
     mounted_count: int = Field(default=0, description="How many sources mounted.")
     skipped_count: int = Field(default=0, description="How many sources were skipped.")
@@ -212,8 +215,9 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     ## Return Format
 
     MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-    capabilities, server_version}. ``skipped`` maps source name to the import error that
-    removed it, which is usually a missing optional dependency.
+    capabilities, server_version}. ``skipped`` maps source name to the reason
+    it is unavailable: an import error (usually a missing optional dependency)
+    or an explicit ``MARKETPLACE_SOURCES`` deselection.
 
     ## Error Format
 

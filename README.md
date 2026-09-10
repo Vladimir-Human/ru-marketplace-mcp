@@ -162,7 +162,9 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 Имена — канонические (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`,
 `avito`, `taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`,
 `cian`, `compare`, `mpstats`); короткие псевдонимы `wb`, `ym`/`yandex`, `detmir`, `ali`
-тоже принимаются. Переменная не задана или пуста — монтируется всё, как раньше.
+тоже принимаются. Неизвестное имя отклоняется при запуске с перечнем
+поддерживаемых источников, чтобы опечатка не превратилась в частичный сервер.
+Переменная не задана или пуста — монтируется всё, как раньше.
 Отключённые источники видно в `marketplace_sources`: они попадают в `skipped`
 с пометкой, что их сняли, а не что они не импортировались. `compare_prices`
 опрашивает ровно тот же набор.
@@ -1040,8 +1042,10 @@ source, and their tool schemas are sent to the client on every request. Set
 to mount only those, e.g. `wildberries,ozon,yandex_market,avito,aliexpress,dns,compare`.
 Names are canonical (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`, `avito`,
 `taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`,
-`mpstats`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. Unset or
-blank mounts everything, as before. Deselected sources show up in
+`mpstats`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. An unknown
+name is rejected at startup with the supported-source list, so a typo cannot
+silently produce a partial server. Unset or blank mounts everything, as before.
+Deselected sources show up in
 `marketplace_sources` under `skipped`, marked as deselected rather than failed to
 import, and `compare_prices` queries the same subset.
 

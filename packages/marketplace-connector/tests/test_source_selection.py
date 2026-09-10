@@ -85,11 +85,9 @@ def test_unknown_source_is_rejected_instead_of_silently_dropped(monkeypatch):
         selected()
 
 
-def test_unified_server_rejects_invalid_selection(monkeypatch):
-    monkeypatch.setenv(ENV_VAR, "wildberries,typo_source")
-
+def test_unified_server_rejects_invalid_selection(unified_env):
     with pytest.raises(SourceSelectionError, match=r"unknown source.*typo_source"):
-        _reload_unified()
+        unified_env("wildberries,typo_source")
 
 
 def test_wanted_defaults_to_keeping_everything():

@@ -48,6 +48,9 @@
   Детского мира всегда был `false`, даже когда они смонтированы, — таблица
   монтирования называет их `yandex`/`detmir`, а метаданные —
   `yandex_market`/`detsky_mir`.
+- `MARKETPLACE_SOURCES` теперь отклоняет неизвестные имена при запуске и
+  перечисляет поддерживаемые источники: опечатка больше не создаёт частичный
+  сервер молча.
 
 ### Added
 
@@ -85,6 +88,8 @@
 - `marketplace_sources`: the `mounted` flag in `capabilities` always read
   `false` for Yandex Market and Detsky Mir, even when mounted — the mount table
   names them `yandex`/`detmir`, the metadata `yandex_market`/`detsky_mir`.
+- `MARKETPLACE_SOURCES` now rejects unknown names at startup and lists the
+  supported sources, so a typo cannot silently create a partial server.
 
 ### Исправлено
 

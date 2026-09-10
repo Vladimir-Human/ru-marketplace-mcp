@@ -65,7 +65,8 @@ def selected() -> set[str] | None:
 
     An empty or whitespace-only value is treated as unset: a client config that
     passes the variable through with nothing in it must not silently mount an
-    empty server.
+    empty server. Unknown names raise ``SourceSelectionError`` so a typo cannot
+    silently produce a partial server.
     """
     raw = os.environ.get(ENV_VAR, "").strip()
     if not raw:
