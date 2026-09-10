@@ -6,7 +6,7 @@ import asyncio
 import importlib
 
 import pytest
-from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
+from mcp_core.source_selection import ENV_VAR, SourceSelectionError, canonical, selected, wanted
 
 
 def _reload_unified():
@@ -76,6 +76,20 @@ def test_capabilities_flag_survives_the_naming_mismatch(unified_env):
 def test_aliases_and_spacing_are_accepted(monkeypatch):
     monkeypatch.setenv(ENV_VAR, " WB , Yandex-Market ,ali")
     assert selected() == {"wildberries", "yandex_market", "aliexpress"}
+
+
+def test_unknown_source_is_rejected_instead_of_silently_dropped(monkeypatch):
+    monkeypatch.setenv(ENV_VAR, "wildberries,typo_source")
+
+    with pytest.raises(SourceSelectionError, match=r"unknown source.*typo_source"):
+        selected()
+
+
+def test_unified_server_rejects_invalid_selection(monkeypatch):
+    monkeypatch.setenv(ENV_VAR, "wildberries,typo_source")
+
+    with pytest.raises(SourceSelectionError, match=r"unknown source.*typo_source"):
+        _reload_unified()
 
 
 def test_wanted_defaults_to_keeping_everything():

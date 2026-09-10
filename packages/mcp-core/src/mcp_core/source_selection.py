@@ -19,6 +19,28 @@ import os
 
 ENV_VAR = "MARKETPLACE_SOURCES"
 
+# Keep this list in the same canonical vocabulary as the unified mount table
+# and compare's source map.  A typo must fail at startup instead of producing a
+# plausible-looking server with one or zero marketplaces mounted.
+KNOWN_SOURCES = frozenset(
+    {
+        "wildberries",
+        "ozon",
+        "yandex_market",
+        "detsky_mir",
+        "avito",
+        "taobao",
+        "megamarket",
+        "lamoda",
+        "dns",
+        "citilink",
+        "aliexpress",
+        "cian",
+        "compare",
+        "mpstats",
+    }
+)
+
 _ALIASES = {
     "wb": "wildberries",
     "yandex": "yandex_market",
@@ -26,6 +48,10 @@ _ALIASES = {
     "detmir": "detsky_mir",
     "ali": "aliexpress",
 }
+
+
+class SourceSelectionError(ValueError):
+    """The selection names a source that this release does not provide."""
 
 
 def canonical(name: str) -> str:
@@ -44,7 +70,13 @@ def selected() -> set[str] | None:
     raw = os.environ.get(ENV_VAR, "").strip()
     if not raw:
         return None
-    return {canonical(part) for part in raw.split(",") if part.strip()}
+    chosen = {canonical(part) for part in raw.split(",") if part.strip()}
+    unknown = sorted(chosen - KNOWN_SOURCES)
+    if unknown:
+        names = ", ".join(unknown)
+        supported = ", ".join(sorted(KNOWN_SOURCES))
+        raise SourceSelectionError(f"{ENV_VAR} contains unknown source(s): {names}. Supported: {supported}")
+    return chosen
 
 
 def wanted(name: str, chosen: set[str] | None) -> bool:
