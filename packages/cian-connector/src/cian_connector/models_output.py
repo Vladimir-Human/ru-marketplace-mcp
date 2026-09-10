@@ -49,12 +49,23 @@ class CianSearchItemOut(BaseModel):
             "('цена не указана' / 'договорная') — never 0."
         ),
     )
+    price_unit: str | None = Field(
+        default=None,
+        description=(
+            "What price_rub buys: 'total' (a sale), 'month' (long-term rent) or 'day' (daily rent, a nightly "
+            "rate). Never compare prices across units — a 5 000 ₽ night is not cheaper than a 90 000 ₽ month."
+        ),
+    )
     price_period: str | None = Field(
-        default=None, description="Rent only: payment period the price refers to, usually 'monthly'."
+        default=None,
+        description="Long-term rent only: Cian's own payment period, usually 'monthly'. Null on daily offers.",
     )
     lease_term: str | None = Field(
         default=None,
-        description="Rent only: lease term type as Cian codes it ('longTerm', 'fewMonths'); None for sale.",
+        description=(
+            "Long-term rent only: lease term as Cian codes it — 'longTerm' (от года) or 'fewMonths' "
+            "(на несколько месяцев). Null for sale and for daily rent."
+        ),
     )
     deposit_rub: float | None = Field(default=None, description="Rent only: security deposit in rubles, if stated.")
     rooms: int | None = Field(default=None, description="Number of rooms; None for studios/free layouts and non-flats.")
@@ -130,10 +141,26 @@ class CianCardResponse(BaseModel):
     category: str | None = Field(default=None, description="Cian offer category (see cian_search).")
     price_rub: float | None = Field(
         default=None,
-        description="Price in rubles (total for sale, per period for rent). None when not stated — never 0.",
+        description=(
+            "Price in rubles: total for a sale, per month for long-term rent, per night for daily rent. "
+            "Read price_unit before comparing. None when not stated — never 0."
+        ),
     )
-    price_period: str | None = Field(default=None, description="Rent only: payment period, usually 'monthly'.")
-    lease_term: str | None = Field(default=None, description="Rent only: 'longTerm' or 'fewMonths'.")
+    price_unit: str | None = Field(
+        default=None,
+        description="What price_rub buys: 'total' (sale), 'month' (long-term rent) or 'day' (daily rent).",
+    )
+    price_period: str | None = Field(
+        default=None,
+        description="Long-term rent only: Cian's own payment period, usually 'monthly'. Null on daily offers.",
+    )
+    lease_term: str | None = Field(
+        default=None,
+        description=(
+            "Long-term rent only: 'longTerm' (от года) or 'fewMonths' (на несколько месяцев). "
+            "Null for sale and for daily rent."
+        ),
+    )
     deposit_rub: float | None = Field(default=None, description="Rent only: security deposit in rubles, if stated.")
     rooms: int | None = Field(default=None, description="Number of rooms; None for studios and non-flats.")
     flat_type: str | None = Field(default=None, description="Cian flat type: 'rooms', 'studio' or 'openPlan'.")

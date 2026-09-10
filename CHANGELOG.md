@@ -11,6 +11,18 @@
 
 ### Добавлено
 
+- `cian_search` умеет посуточную аренду: `deal="daily"` (рядом с `sale` и
+  `rent`). Это отдельный рынок Циана — тот же `_type`, но `for_day: "1"` вместо
+  `"!1"`; замер 2026-09-10 по Москве: 25 411 длительных квартир против 53 441
+  суточной, а без флага выдача их смешивает. Работает для квартир, комнат и
+  домов; коммерции посуточно у Циана нет, и такой запрос отклоняется как
+  `bad_request`, а не отдаёт пустую страницу под видом «сегодня ничего нет».
+- Новое поле `price_unit` в выдаче и карточке: `total` (продажа), `month`
+  (длительная аренда) или `day` (посуточно). У суточных объявлений Циан не
+  заполняет ни `paymentPeriod`, ни `leaseTermType` и не отдаёт `priceRur` —
+  без явной единицы 5 000 ₽ за ночь читались бы как более дешёвое предложение,
+  чем 90 000 ₽ за месяц.
+
 - Коннектор Циан (`cian-connector`, скрипт `cian-mcp`, тулы `cian_search` и
   `cian_card`) — недвижимость, а не товары: квартиры, комнаты, дома и коммерция
   на продажу и в долгосрочную аренду. Только второй ярус (CDP): WAF Циана режет
@@ -25,6 +37,16 @@
 
 ### Added
 
+- `cian_search` covers daily rent: `deal="daily"` alongside `sale` and `rent`.
+  It is a separate Cian market — same `_type`, `for_day: "1"` instead of `"!1"`;
+  measured in Moscow on 2026-09-10: 25 411 long-term flats against 53 441 daily
+  ones, and dropping the flag mixes them. Flats, rooms and houses only; Cian has
+  no daily commercial market, so that pair is refused as `bad_request` rather
+  than returning an empty page that reads as "nothing free today".
+- New `price_unit` field on search rows and cards: `total` (sale), `month`
+  (long-term rent) or `day` (daily). Cian fills in neither `paymentPeriod` nor
+  `leaseTermType` on daily offers and omits `priceRur` there, so without an
+  explicit unit a 5 000 ₽ night would read as cheaper than a 90 000 ₽ month.
 - Cian connector (`cian-connector`, `cian-mcp` console script, tools
   `cian_search` and `cian_card`) — real estate, not goods: flats, rooms, houses
   and commercial property for sale or long-term rent. Tier 2 only: Cian's WAF

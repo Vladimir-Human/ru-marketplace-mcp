@@ -27,8 +27,10 @@ def _load(name: str) -> dict:
 
 SEARCH_SALE = _load("search_sale_live.json")
 SEARCH_RENT = _load("search_rent_live.json")
+SEARCH_DAILY = _load("search_daily_live.json")
 CARD_SALE = _load("card_sale_live.json")
 CARD_RENT = _load("card_rent_live.json")
+CARD_DAILY = _load("card_daily_live.json")
 
 WAF_BODY = (
     "<!DOCTYPE html><html><head><title>Ошибка - Циан</title></head><body>"
@@ -176,6 +178,7 @@ async def test_search_parses_a_sale_page(monkeypatch):
     first = result.items[0]
     assert first.offer_id == 331002424
     assert first.price_rub == 11985439
+    assert first.price_unit == "total"
     assert first.deal_type == "sale"
     assert first.category == "newBuildingFlatSale"
     assert first.rooms == 1
@@ -205,6 +208,7 @@ async def test_search_parses_a_rent_page_with_period_and_deposit(monkeypatch):
     assert first.offer_id == 317754437
     assert first.deal_type == "rent"
     assert first.price_rub == 60000
+    assert first.price_unit == "month"
     assert first.price_period == "monthly"
     assert first.lease_term == "fewMonths"
     assert first.deposit_rub == 50000
@@ -565,6 +569,135 @@ async def test_selfcheck_reports_drift_when_the_card_lost_its_state(monkeypatch)
     assert result.status == "drift_detected"
     assert result.checks["search"].state == "healthy"
     assert result.checks["card"].state == "drift"
+
+
+# --------------------------------------------------------- daily rent ----
+
+
+def test_daily_queries_flip_the_for_day_flag_and_keep_the_rent_family():
+    """Daily and long-term are the same _type with opposite for_day values;
+    omitting the key would mix two markets that are not comparable."""
+    long_term = server._build_json_query(
+        deal="rent",
+        offer_type="flat",
+        region="1",
+        rooms=None,
+        price_min=None,
+        price_max=None,
+        area_min=None,
+        area_max=None,
+        page=1,
+    )
+    daily = server._build_json_query(
+        deal="daily",
+        offer_type="flat",
+        region="1",
+        rooms=[2],
+        price_min=None,
+        price_max=4000,
+        area_min=None,
+        area_max=None,
+        page=1,
+    )
+
+    assert long_term["for_day"] == {"type": "term", "value": "!1"}
+    assert daily["_type"] == "flatrent"
+    assert daily["for_day"] == {"type": "term", "value": "1"}
+    # Every other filter keeps working on the daily market (verified live).
+    assert daily["room"] == {"type": "terms", "value": [2]}
+    assert daily["price"] == {"type": "range", "value": {"lte": 4000}}
+
+
+def test_daily_rooms_and_houses_keep_their_own_families():
+    room = server._build_json_query(
+        deal="daily",
+        offer_type="room",
+        region="1",
+        rooms=None,
+        price_min=None,
+        price_max=None,
+        area_min=None,
+        area_max=None,
+        page=1,
+    )
+    house = server._build_json_query(
+        deal="daily",
+        offer_type="house",
+        region="1",
+        rooms=None,
+        price_min=None,
+        price_max=None,
+        area_min=None,
+        area_max=None,
+        page=1,
+    )
+
+    assert room["_type"] == "flatrent" and room["room"] == {"type": "terms", "value": [0]}
+    assert house["_type"] == "suburbanrent"
+    assert room["for_day"] == house["for_day"] == {"type": "term", "value": "1"}
+
+
+async def test_daily_commercial_is_refused_by_name_not_by_an_empty_page():
+    """Cian accepts the query and answers zero offers, which would read as
+    'nothing available today' instead of 'this market does not exist'."""
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_search("daily", offer_type="commercial")
+
+    assert "bad_request" in str(excinfo.value)
+    assert "daily" in str(excinfo.value).lower()
+
+
+async def test_daily_search_prices_are_per_night_and_say_so(monkeypatch):
+    calls: list = []
+    _patch_search(monkeypatch, _ok(SEARCH_DAILY), calls)
+
+    result = await server.cian_search("daily", region="1")
+
+    assert result.deal == "daily"
+    assert calls[0]["for_day"] == {"type": "term", "value": "1"}
+    first = result.items[0]
+    assert first.category == "dailyFlatRent"
+    assert first.deal_type == "rent"
+    # A daily offer carries no bargainTerms.priceRur at all — only .price.
+    assert first.price_rub is not None and first.price_rub > 0
+    assert first.price_unit == "day"
+    # Cian leaves both of these null on daily offers; price_unit is the only signal.
+    assert first.price_period is None
+    assert first.lease_term is None
+    assert all(item.price_unit == "day" for item in result.items)
+
+
+async def test_daily_card_reads_the_nightly_price(monkeypatch):
+    _patch_card(monkeypatch, (200, _card_body(CARD_DAILY, "https://www.cian.ru/rent/flat/191071633/"), "cdp"))
+
+    result = await server.cian_card("191071633")
+
+    assert result.offer_id == 191071633
+    assert result.category == "dailyFlatRent"
+    assert result.price_rub == 5000
+    assert result.price_unit == "day"
+    assert result.price_period is None and result.lease_term is None
+    assert result.meta.healthy is True
+
+
+@pytest.mark.parametrize(
+    ("category", "deal_type", "period", "expected"),
+    [
+        ("flatSale", "sale", None, "total"),
+        ("newBuildingFlatSale", "sale", None, "total"),
+        ("flatRent", "rent", "monthly", "month"),
+        ("roomRent", "rent", None, "month"),
+        ("dailyFlatRent", "rent", None, "day"),
+        ("dailyRoomRent", "rent", None, "day"),
+        ("dailyHouseRent", "rent", None, "day"),
+        # An unfamiliar period is passed through rather than flattened to a
+        # month the connector never saw.
+        ("flatRent", "rent", "weekly", "weekly"),
+        (None, None, None, None),
+    ],
+)
+def test_price_unit_derivation(category, deal_type, period, expected):
+    assert server._price_unit(category, deal_type, period) == expected
 
 
 # ------------------------------------------------------------ inventory ----

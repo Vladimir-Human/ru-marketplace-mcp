@@ -420,7 +420,7 @@ jobs:
           test -f "$installed/cordis.patch.yml"
           skills=$(find "$installed/skills" -name SKILL.md | wc -l)
           echo "vendored skills: $skills"
-          test "$skills" -eq 14
+          test "$skills" -eq 15
 
       - name: All MCP rows are still disabled by default
         # The safety promise of this bundle: skills are free, MCP tools are opt-in.

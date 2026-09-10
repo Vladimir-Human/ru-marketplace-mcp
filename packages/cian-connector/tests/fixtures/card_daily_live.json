@@ -1,0 +1,608 @@
+{
+  "offerData": {
+    "offer": {
+      "category": "dailyFlatRent",
+      "status": "published",
+      "dealType": "rent",
+      "offerType": "flat",
+      "geo": {
+        "address": [
+          {
+            "fullName": "Москва",
+            "id": 1,
+            "locationTypeId": 1,
+            "name": "Москва",
+            "shortName": "Москва",
+            "type": "location",
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno/"
+          },
+          {
+            "fullName": "ЗАО",
+            "id": 11,
+            "locationTypeId": -1,
+            "name": "ЗАО",
+            "shortName": "ЗАО",
+            "type": "okrug",
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-zao-0411/"
+          },
+          {
+            "fullName": "район Филевский парк",
+            "id": 123,
+            "locationTypeId": -1,
+            "name": "Филевский парк",
+            "shortName": "р-н Филевский парк",
+            "type": "raion",
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-filevskiy-park-04123/"
+          },
+          {
+            "fullName": "Береговой проезд",
+            "id": 684,
+            "locationTypeId": -1,
+            "name": "Береговой",
+            "shortName": "Береговой проезд",
+            "type": "street",
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-beregovoy-proezd-02684/"
+          },
+          {
+            "fullName": "5Ак2",
+            "id": 3067547,
+            "locationTypeId": -1,
+            "name": "5Ак2",
+            "shortName": "5Ак2",
+            "type": "house",
+            "url": "https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&house%5B0%5D=3067547&offer_type=flat&room1=1&type=2"
+          }
+        ],
+        "coordinates": {
+          "lat": 55.755459,
+          "lng": 37.509334
+        },
+        "highways": [],
+        "jk": {
+          "id": 5489,
+          "name": "Фили Град",
+          "house": {
+            "id": 2790,
+            "name": "Береговой, 5Ак2"
+          },
+          "gaGeo": {
+            "moId": 0,
+            "oblId": 1,
+            "cityId": 1
+          },
+          "fullUrl": "https://www.cian.ru/zhiloy-kompleks-fili-grad-moskva-5489/",
+          "fullUrlTemplate": "{request_scheme}://zhk-fili-grad-i.{host}/"
+        },
+        "railways": [
+          {
+            "id": 708,
+            "directionIds": [
+              11
+            ],
+            "distance": "1.0",
+            "time": 22,
+            "name": "Фили",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 708,
+            "directionIds": [
+              11
+            ],
+            "distance": "2.0",
+            "time": 5,
+            "name": "Фили",
+            "travelType": "byCar"
+          },
+          {
+            "id": 707,
+            "directionIds": [
+              11
+            ],
+            "distance": "2.0",
+            "time": 29,
+            "name": "Тестовская",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 707,
+            "directionIds": [
+              11
+            ],
+            "distance": "4.0",
+            "time": 8,
+            "name": "Тестовская",
+            "travelType": "byCar"
+          },
+          {
+            "id": 706,
+            "directionIds": [
+              14
+            ],
+            "distance": "4.0",
+            "time": 50,
+            "name": "Москва-Сортировочная",
+            "travelType": "byFoot"
+          },
+          {
+            "id": 706,
+            "directionIds": [
+              14
+            ],
+            "distance": "11.0",
+            "time": 18,
+            "name": "Москва-Сортировочная",
+            "travelType": "byCar"
+          }
+        ],
+        "undergrounds": [
+          {
+            "id": 142,
+            "name": "Фили",
+            "lineColor": "009BD5",
+            "travelType": "walk",
+            "travelTime": 14,
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-metro-fili-142/",
+            "underConstruction": false
+          },
+          {
+            "id": 453,
+            "name": "Шелепиха",
+            "lineColor": "7ACDCE",
+            "travelType": "walk",
+            "travelTime": 19,
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-metro-shelepiha-453/",
+            "underConstruction": false
+          },
+          {
+            "id": 311,
+            "name": "Шелепиха",
+            "lineColor": "FA6F9E",
+            "travelType": "walk",
+            "travelTime": 19,
+            "url": "https://www.cian.ru/snyat-1-komnatnuyu-kvartiru-posutochno-moskva-stanciya-mck-shelepiha-311/",
+            "underConstruction": false,
+            "lineType": "mck"
+          }
+        ]
+      },
+      "id": 191071633,
+      "objectGuid": "b9816532-3160-46c2-8038-a95f5ca887ec",
+      "cianId": 191071633,
+      "userId": 17548313,
+      "publishedUserId": 17548313,
+      "cianUserId": 17548313,
+      "isByHomeowner": false,
+      "description": "Сдается квартира - студия в современном комплексе бизнес класса ЖК Филиград. В квартире можно расположить до 4 человек. Оборудована всем необходимым для комфортного проживания:\n- Холодильник\n- Посудомоечная,стиральная машины,микроволновая \nпечь,эл.чайник .\n-кондиционер ( сплит - система )!!!\n-ТВ,Wi-",
+      "photos": [
+        {
+          "id": 2742596853,
+          "isDefault": true,
+          "fullUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/posutochnaja-kvartira-moskva-beregovoy-proezd-2742596853-3.jpg",
+          "isCianLayout": false
+        },
+        {
+          "id": 530398203,
+          "isDefault": false,
+          "fullUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-1.jpg",
+          "thumbnailUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-2.jpg",
+          "thumbnail2Url": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-4.jpg",
+          "miniUrl": "https://images.cdn-cian.ru/images/2/893/035/kvartira-moskva-beregovoy-proezd-530398203-3.jpg",
+          "isCianLayout": false
+        }
+      ],
+      "phones": [
+        {
+          "countryCode": "+7",
+          "number": "9230758879"
+        }
+      ],
+      "publishTerms": {
+        "terms": [
+          {
+            "services": [
+              "auction"
+            ],
+            "days": 1,
+            "type": "dailyLimited"
+          },
+          {
+            "services": [
+              "paid"
+            ],
+            "days": 30,
+            "type": "periodical",
+            "tariffIdentificator": {
+              "tariffId": 1239212,
+              "tariffGridType": "packageTariff"
+            }
+          }
+        ],
+        "autoprolong": true
+      },
+      "flatType": "rooms",
+      "isApartments": false,
+      "totalArea": "32.4",
+      "windowsViewType": "street",
+      "combinedWcsCount": 1,
+      "hasFridge": true,
+      "hasDishwasher": true,
+      "hasWasher": true,
+      "hasFurniture": true,
+      "hasKitchenFurniture": true,
+      "hasConditioner": true,
+      "hasTv": true,
+      "hasInternet": true,
+      "hasBathtub": false,
+      "hasShower": true,
+      "childrenAllowed": true,
+      "petsAllowed": false,
+      "hasBathhouse": false,
+      "hasPool": false,
+      "flags": {
+        "isArchived": false,
+        "isCommercialOwnershipVerified": false
+      },
+      "specialty": {
+        "types": [],
+        "additionalTypes": []
+      },
+      "isNeedHideExactAddress": false,
+      "areaParts": [],
+      "roomsCount": 1,
+      "floorNumber": 25,
+      "bedsCount": 4,
+      "bargainTerms": {
+        "price": 5000,
+        "priceType": "all",
+        "currency": "rur",
+        "utilitiesTerms": {
+          "includedInPrice": true,
+          "price": 0
+        },
+        "includedOptions": [],
+        "prices": {
+          "rur": 5000,
+          "usd": 59,
+          "eur": 51
+        },
+        "utilitiesTermsPrices": {
+          "rur": 0,
+          "usd": 0,
+          "eur": 0
+        },
+        "tags": []
+      },
+      "building": {
+        "materialType": "monolith",
+        "floorsCount": 25,
+        "buildYear": 2017,
+        "hasGarbageChute": false,
+        "totalArea": "32.4",
+        "liftTypes": [],
+        "cranageTypes": [],
+        "cargoLiftsCount": 2,
+        "houseMaterialType": "monolith"
+      },
+      "editDate": "2026-09-09T21:05:30.277000Z",
+      "humanizedEditDate": "вчера, 21:05",
+      "hasRamp": false,
+      "isInHiddenBase": false,
+      "isObjectHidden": false,
+      "isClosedVisibility": false,
+      "videos": [],
+      "exportLinks": {
+        "pdfUrl": "/export/pdf/rent/flat/191071633/",
+        "docxUrl": "/export/docx/rent/flat/191071633/"
+      },
+      "cargoLiftsCount": 2,
+      "added": "вчера, 21:05",
+      "valueAddedServices": {
+        "isStandard": false,
+        "isTop3": true,
+        "isPremium": false
+      },
+      "promotion": {
+        "isPerformanceVasPilot": false,
+        "promotionDescription": "",
+        "isCpcAuction": false
+      },
+      "categoriesIds": [
+        1000,
+        1100,
+        1110,
+        1113
+      ],
+      "publicationDate": 1532964833,
+      "creationDate": "2018-07-30T18:33:53.143",
+      "recoveryLink": "/razmestit-obyavlenie/191071633/",
+      "isFromBuilder": false,
+      "isFromSeller": false,
+      "isFromLeadFactory": false,
+      "trackingData": {
+        "moId": 0,
+        "oblId": 1,
+        "cityId": 1,
+        "fbRegion": "Москва",
+        "fbCity": "Москва"
+      },
+      "editPhoto": "/realty/add2.aspx?id=191071633",
+      "newEdit": "/razmestit-obyavlenie/?realty_id=191071633",
+      "certificate": "https://www.cian.ru/newobjects/cian/certification/get?announcementId=191071633",
+      "edit": "/realty/add1.aspx?id=191071633",
+      "similarOffersLink": "",
+      "similarOffersCount": 0,
+      "buildersIds": [
+        6008
+      ],
+      "builderId": 6008,
+      "isImported": false,
+      "userConfirmedFix": false,
+      "newbuilding": {
+        "id": 5489,
+        "name": "Фили Град",
+        "house": {
+          "isReliable": false,
+          "isFinished": true,
+          "finishDate": {
+            "quarter": 3,
+            "year": 2017
+          },
+          "id": 2790,
+          "name": "Береговой, 5Ак2"
+        },
+        "isFromDeveloper": false,
+        "isFromBuilder": false,
+        "isFromSeller": false,
+        "isFromLeadFactory": false,
+        "showJkReliableFlag": false,
+        "isFichering": false,
+        "isFicheringPlus": false,
+        "isPremium": false,
+        "newbuildingFeatures": {
+          "imagesCount": 11,
+          "firstImageUrl": "https://images.cdn-cian.ru/images/fili-grad-moskva-jk-2481105058-6.jpg",
+          "videosCount": 0,
+          "deadlineInfo": "Сдан"
+        },
+        "isReliable": false,
+        "isTariffPremium": false
+      },
+      "timezone": 3,
+      "isEnabledCallTracking": true,
+      "callTrackingProvider": "mtt",
+      "isRentByParts": false,
+      "isDuplicate": false,
+      "userTrust": "notInvolved",
+      "userTrustLevel": "notInvolved",
+      "showWarningMessage": false,
+      "moderationInfo": {
+        "showContactWarningMessage": false
+      },
+      "isUnique": false,
+      "isUniqueCheckDate": "2026-09-09",
+      "isCianPartner": false,
+      "isIllegalConstruction": false,
+      "dailyrent": {
+        "actionType": "otaCheckDates",
+        "hotelData": {
+          "isHotel": false
+        },
+        "isOnlineBooking": true,
+        "isVerifiedByCian": true,
+        "offerLabels": [
+          "instantBooking"
+        ],
+        "price": "от 5 000 ₽/сут.",
+        "priceInfo": {
+          "finalPrice": "5 000 ₽",
+          "finalPricePerNight": "от 5 000 ₽/сут."
+        },
+        "realtyId": 191071633,
+        "showBookingCalendar": true,
+        "showBookingCalendarSettings": false,
+        "showFullRating": true,
+        "guestsInfo": {
+          "guestsCount": 1,
+          "maxGuestsCount": 4
+        },
+        "offerButton": {
+          "actionType": "checkCalendar",
+          "text": "Проверить даты"
+        },
+        "rating": {
+          "moderationRulesUrl": "https://support.cian.ru/ru/knowledge_base/art/2192/cat/66/",
+          "scores": [
+            {
+              "fillingPercentage": 100,
+              "id": 1,
+              "name": "Вежливость",
+              "score": "5,0"
+            },
+            {
+              "fillingPercentage": 90,
+              "id": 2,
+              "name": "Цена / Качество",
+              "score": "4,5"
+            },
+            {
+              "fillingPercentage": 100,
+              "id": 3,
+              "name": "Расположение",
+              "score": "5,0"
+            },
+            {
+              "fillingPercentage": 100,
+              "id": 4,
+              "name": "Комфорт и техника",
+              "score": "5,0"
+            },
+            {
+              "fillingPercentage": 100,
+              "id": 5,
+              "name": "Чистота",
+              "score": "5,0"
+            }
+          ],
+          "rating": "5,0",
+          "reviewsCount": "7 отзывов"
+        }
+      },
+      "isVerifiedByCian": true,
+      "amenities": [],
+      "externalOfferUrl": "",
+      "cianLayouts": null,
+      "demolishedInMoscowProgramm": false
+    },
+    "agent": {
+      "id": 17548313,
+      "cianUserId": 17548313,
+      "realtyUserId": 17548313,
+      "accountType": "specialist",
+      "companyName": "Наталья  Ярышкина",
+      "creationDate": "2018-07-25T12:29:32.337000Z",
+      "name": "Наталья  Ярышкина",
+      "isPro": false,
+      "phones": [
+        {
+          "confirmed": true
+        },
+        {
+          "confirmed": true
+        }
+      ],
+      "skills": [],
+      "isDeveloper": false,
+      "firstName": "Наталья ",
+      "lastName": "Ярышкина ",
+      "isRecidivist": false,
+      "isUserOffersHasErrors": false,
+      "offersCount": 1,
+      "offersLink": "https://www.cian.ru/agents/17548313/",
+      "availableServices": {
+        "isUploadsAvailable": false,
+        "isCallTrackingAvailable": false,
+        "isPhoneChangingAvailable": false,
+        "isServicePackagesAvailable": true,
+        "canUseHiddenBase": false
+      },
+      "userType": "realtor_not_commerce",
+      "removeCompetitor": false,
+      "status": "published",
+      "isSubAgent": false,
+      "isMessagingEnabled": false,
+      "isPassportVerified": true,
+      "isSelfEmployed": false,
+      "isPrivateBroker": false,
+      "isCianPartner": false,
+      "canShowOnline": false,
+      "moderationInfo": {
+        "qualityLevelInfo": {
+          "levelSystemName": "max",
+          "levelName": "Суперхозяин",
+          "levelOrder": 4,
+          "hasVerifiedDocuments": true,
+          "highResponsibility": true,
+          "isSuperAgent": false,
+          "isSuperHost": true,
+          "isBlocked": false,
+          "showSuperHost": true,
+          "showSuperAgent": false,
+          "showHighResponsibility": true
+        },
+        "isUserIdentified": true,
+        "isUserIdentifiedByDocuments": true,
+        "showUserIdentifiedByDocuments": false
+      },
+      "isHidden": false,
+      "agentLists": []
+    },
+    "company": {
+      "buildersAuctionRank": 7810170942,
+      "buildingStatus": [
+        {
+          "count": 33,
+          "housesCount": 149,
+          "statusId": 5004
+        },
+        {
+          "count": 18,
+          "housesCount": 88,
+          "statusId": 5002
+        }
+      ],
+      "categoryId": 2002,
+      "description": "MR успешно работает на российском рынке с 2003 года и является одной из крупнейших компаний по объему продаж и строительству жилой и коммерческой недвижимости в России. Входит в число лидеров рынка по уровню цифровизации и инноваций в своих проектах, активно развивает направления трейд-ин и ЗПИФ.\r\n\r\n<p>Портфель компании — это 52 объекта общей площадью 9,5 миллионов кв. м в Москве, Московской области и Сочи.</p>\r\n\r\n<p>Компания сотрудничает с пулом российских и международных партнеров. MR входит в ТОП-3 девелоперов Московского региона по версии РБК и в ТОП-7 крупнейших застройщиков России по версии аналитического агентства Infoline и Национального объединения застройщиков жилья. Одиннадцатикратный «Девелопер года» — по версии Urban Awards, RREF Awards, ProEstate&CRE Awards, CRE Awards, Move Realty Awards и «Рекорды рынка недвижимости».</p>",
+      "fromDeveloperPropsCount": 5033,
+      "hasSpecProject": false,
+      "id": 6008,
+      "isTest": false,
+      "locationIds": [
+        1,
+        6529,
+        4998,
+        34452,
+        349595,
+        349596,
+        190236,
+        349597,
+        349598,
+        199840,
+        5922,
+        5044,
+        202935,
+        197816,
+        277177,
+        338625,
+        1231429,
+        349648,
+        86233,
+        366433,
+        133987,
+        4584,
+        4593,
+        395128
+      ],
+      "logoUrl": "/api/get-company-logo/?id=6008&rnd=149186",
+      "maxBet": 188000,
+      "name": "MR",
+      "newobjectsCount": 48,
+      "offersCount": 5033,
+      "phones": [],
+      "promoCount": 0,
+      "specProjectNewobjectsCount": 0,
+      "status": 12,
+      "website": "http://mr-group.ru/",
+      "yearFoundation": 2003,
+      "reviewStats": {
+        "reviewCount": 2844,
+        "reviewCountText": "2844 отзыва",
+        "totalRate": 4.5
+      },
+      "advantages": null,
+      "email": null,
+      "emailForRequest": null,
+      "headerImageUrl": null,
+      "isReliable": false,
+      "newbuildingIds": null,
+      "stats": null,
+      "url": "#",
+      "workYears": null
+    },
+    "priceChanges": [
+      {
+        "changeTime": "2026-07-11T09:33:57.490653Z",
+        "priceData": {
+          "currency": "rur",
+          "price": 5000
+        }
+      }
+    ],
+    "stats": {
+      "totalViewsFormattedString": "6200 просмотров, 29 за сегодня"
+    }
+  }
+}

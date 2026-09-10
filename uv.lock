@@ -317,7 +317,7 @@ wheels = [
 
 [[package]]
 name = "cian-connector"
-version = "2.0.2"
+version = "2.1.0"
 source = { editable = "packages/cian-connector" }
 dependencies = [
     { name = "fastmcp" },

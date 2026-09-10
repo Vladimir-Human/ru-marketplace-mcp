@@ -18,6 +18,12 @@ and every field decision happens in Python where a fixture can test it.
 Search is by filters (deal, property type, region, rooms, price, area), not by
 text — Cian has no free-text search worth exposing. Region ids are Cian's own;
 the four the connector knows are in ``KNOWN_REGIONS``.
+
+Rent comes in two markets that Cian keeps apart and that must not be averaged
+together: long-term (``for_day: "!1"``, priced per month) and daily
+(``for_day: "1"``, priced per night, its own dailyFlatRent categories). The
+``deal`` argument selects one; ``price_unit`` on every row says which reading a
+price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 """
 
 from __future__ import annotations
@@ -62,7 +68,7 @@ from cian_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.0.2"
+SERVER_VERSION = "2.1.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.cian.ru"
@@ -80,19 +86,28 @@ KNOWN_REGIONS: dict[str, str] = {
     "4588": "Ленинградская область",
 }
 
-DealType = Literal["sale", "rent"]
+DealType = Literal["sale", "rent", "daily"]
 OfferType = Literal["flat", "room", "house", "commercial"]
 
 # jsonQuery._type per (deal, property type). Rooms are flats with room=[0]
 # (verified: that query returns category roomSale). Houses and commercial
 # property have their own families (houseSale, officeSale … verified).
+#
+# Daily rent is the same ``*rent`` family with ``for_day: "1"`` instead of
+# "!1" — Cian answers with its own dailyFlatRent / dailyRoomRent /
+# dailyHouseRent categories. Commercial has no daily market at all (the query
+# is accepted and returns zero), so the pair is absent and rejected by name
+# rather than shipped as a tool call that always finds nothing.
 _QUERY_TYPE: dict[tuple[str, str], str] = {
     ("sale", "flat"): "flatsale",
     ("rent", "flat"): "flatrent",
+    ("daily", "flat"): "flatrent",
     ("sale", "room"): "flatsale",
     ("rent", "room"): "flatrent",
+    ("daily", "room"): "flatrent",
     ("sale", "house"): "suburbansale",
     ("rent", "house"): "suburbanrent",
+    ("daily", "house"): "suburbanrent",
     ("sale", "commercial"): "commercialsale",
     ("rent", "commercial"): "commercialrent",
 }
@@ -113,12 +128,13 @@ mcp = FastMCP(
     version=SERVER_VERSION,
     instructions=(
         "Cian real-estate listings (Russia): search flats, rooms, houses and "
-        "commercial property for sale or rent, and read one offer's card. "
-        "Read-only, no credentials; every read runs inside the operator's Chrome "
-        "over CDP because Cian's WAF blocks plain HTTP. Start with cian_search "
-        "(filters, not free text — region ids: 1 Москва, 2 Санкт-Петербург, "
-        "4593 Московская область, 4588 Ленинградская область); cian_card takes an "
-        "offer id or URL. Prices are rubles; a missing price is None, never 0."
+        "commercial property for sale, long-term rent or daily rent, and read "
+        "one offer's card. Read-only, no credentials; every read runs inside the "
+        "operator's Chrome over CDP because Cian's WAF blocks plain HTTP. Start "
+        "with cian_search (filters, not free text — region ids: 1 Москва, "
+        "2 Санкт-Петербург, 4593 Московская область, 4588 Ленинградская область); "
+        "cian_card takes an offer id or URL. Prices are rubles and price_unit "
+        "says what one buys (total / month / day); a missing price is None, never 0."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -441,6 +457,25 @@ def _compose_title(
     return ", ".join(bits) or None
 
 
+def _price_unit(category: str | None, deal_type: str | None, period: str | None) -> str | None:
+    """What one ``price_rub`` actually buys: the whole property, a month, a night.
+
+    Cian encodes this only in the category (``dailyFlatRent`` and friends) and
+    leaves ``paymentPeriod`` null on daily offers, so a caller comparing a
+    nightly 5 000 ₽ against a monthly 90 000 ₽ has nothing to go on unless the
+    connector says it outright.
+    """
+    if category and "daily" in category.lower():
+        return "day"
+    if deal_type == "sale":
+        return "total"
+    if deal_type == "rent":
+        # Long-term rent is quoted monthly; anything else Cian names, we pass
+        # through rather than flatten to a month we did not verify.
+        return "month" if period in (None, "monthly") else period
+    return None
+
+
 def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
     """The fields shared by a search hit and a card, read from one offer object."""
     terms = _d(offer.get("bargainTerms"))
@@ -461,6 +496,7 @@ def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
         "deal_type": _s(offer.get("dealType")),
         "category": _s(offer.get("category")),
         "price_rub": _price_of(offer),
+        "price_unit": _price_unit(_s(offer.get("category")), _s(offer.get("dealType")), _s(terms.get("paymentPeriod"))),
         "price_period": _s(terms.get("paymentPeriod")),
         "lease_term": _s(terms.get("leaseTermType")),
         "deposit_rub": R.coerce_price(terms.get("deposit")),
@@ -625,9 +661,11 @@ def _build_json_query(
         query["room"] = {"type": "terms", "value": [0]}
     elif offer_type == "flat" and rooms:
         query["room"] = {"type": "terms", "value": sorted(set(rooms))}
-    if deal == "rent":
-        # "!1" = not daily: long-term rent, the site's default for "Снять".
-        query["for_day"] = {"type": "term", "value": "!1"}
+    if deal in ("rent", "daily"):
+        # "!1" = not daily (the site's default for "Снять"); "1" = daily only.
+        # Omitting the key mixes both markets in one page, which is never what
+        # a caller means.
+        query["for_day"] = {"type": "term", "value": "1" if deal == "daily" else "!1"}
     if price_min is not None or price_max is not None:
         query["price"] = {"type": "range", "value": _range(price_min, price_max)}
     if area_min is not None or area_max is not None:
@@ -659,10 +697,24 @@ def _validate_region(region: str | None) -> str:
     ),
 )
 async def cian_search(
-    deal: Annotated[DealType, Field(description="'sale' (купить) or 'rent' (снять, long-term).")],
+    deal: Annotated[
+        DealType,
+        Field(
+            description=(
+                "'sale' (купить), 'rent' (снять на длительный срок) or 'daily' (снять посуточно). "
+                "'rent' and 'daily' are separate markets on Cian and never mix in one result page; "
+                "a 'daily' price is per night, a 'rent' price per month — read price_unit on each item."
+            )
+        ),
+    ],
     offer_type: Annotated[
         OfferType,
-        Field(description="Property type: 'flat' (квартира), 'room' (комната), 'house' (дом/участок), 'commercial'."),
+        Field(
+            description=(
+                "Property type: 'flat' (квартира), 'room' (комната), 'house' (дом/участок), 'commercial'. "
+                "'commercial' has no daily market on Cian and is rejected with deal='daily'."
+            )
+        ),
     ] = "flat",
     region: Annotated[
         str | None,
@@ -682,8 +734,14 @@ async def cian_search(
             )
         ),
     ] = None,
-    price_min: Annotated[int | None, Field(ge=1, description="Minimum price in rubles (per month for rent).")] = None,
-    price_max: Annotated[int | None, Field(ge=1, description="Maximum price in rubles (per month for rent).")] = None,
+    price_min: Annotated[
+        int | None,
+        Field(ge=1, description="Minimum price in rubles: total for sale, per month for rent, per night for daily."),
+    ] = None,
+    price_max: Annotated[
+        int | None,
+        Field(ge=1, description="Maximum price in rubles: total for sale, per month for rent, per night for daily."),
+    ] = None,
     area_min: Annotated[float | None, Field(gt=0, description="Minimum total area in m².")] = None,
     area_max: Annotated[float | None, Field(gt=0, description="Maximum total area in m².")] = None,
     page: Annotated[int, Field(ge=1, le=100, description="Result page (1-based), 28 offers per page.")] = 1,
@@ -691,22 +749,36 @@ async def cian_search(
 ) -> CianSearchResponse:
     """Search Cian offers by filters (there is no free-text search).
 
+    Long-term rent (``deal='rent'``) and daily rent (``deal='daily'``) are two
+    separate markets: one page never mixes them, and their prices are not
+    comparable — a daily offer is priced per night. ``price_unit`` on every
+    item says which it is.
+
     ## Return Format
 
     CianSearchResponse: {status, deal, offer_type, region, page, tier_used,
     count, total_count, items[], _meta}. Each item carries offer_id, title,
-    price_rub (None when Cian shows no price — never 0), rooms, areas, floor,
-    address, nearest metro, url, agency and publication data.
+    price_rub (None when Cian shows no price — never 0), price_unit
+    ('total' / 'month' / 'day'), rooms, areas, floor, address, nearest metro,
+    url, agency and publication data.
 
     ## Error Format
 
     ToolError: BadRequestError on malformed arguments (region not digits, room
-    code outside 1-6/7/9, min above max); TransportDownError when Cian's WAF
-    blocks the browser session or CDP is down (with the fix inline);
-    ParserDriftError when a 200 body is not the expected envelope.
+    code outside 1-6/7/9, min above max, deal='daily' with
+    offer_type='commercial'); TransportDownError when Cian's WAF blocks the
+    browser session or CDP is down (with the fix inline); ParserDriftError when
+    a 200 body is not the expected envelope.
     """
     log_event("cian_search.start", deal=deal, offer_type=offer_type, page=page)
     try:
+        if (deal, offer_type) not in _QUERY_TYPE:
+            raise_tool_error(
+                BadRequestError(
+                    f"Cian has no {deal} market for {offer_type}: the query is accepted upstream and returns "
+                    "nothing. Daily rent covers flat, room and house only."
+                )
+            )
         region_id = _validate_region(region)
         if rooms is not None:
             bad = sorted({r for r in rooms if r not in _ROOM_CHOICES})
@@ -793,7 +865,7 @@ async def cian_card(
     ## Return Format
 
     CianCardResponse: {status, offer_id, title, deal_type, category, price_rub,
-    price_period, lease_term, deposit_rub, rooms, areas, floor, floors_total,
+    price_unit, price_period, lease_term, deposit_rub, rooms, areas, floor, floors_total,
     build_year, building_material, ceiling_height_m, address, metro[],
     description, photos, created_at, updated_at, views, price_history[], agent,
     url, tier_used, _meta}. price_rub is None when not stated — never 0.

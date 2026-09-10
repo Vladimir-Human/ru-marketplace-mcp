@@ -205,6 +205,7 @@
         "price_history": {},
         "price_period": {},
         "price_rub": {},
+        "price_unit": {},
         "rooms": {},
         "seller_type": {},
         "status": {},
@@ -278,7 +279,8 @@
         "deal": {
           "enum": [
             "sale",
-            "rent"
+            "rent",
+            "daily"
           ],
           "type": "string"
         },

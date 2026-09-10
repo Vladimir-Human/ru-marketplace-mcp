@@ -1,6 +1,6 @@
 ---
 name: cian-connector
-description: Use this skill when the operator needs Russian real-estate data from Cian (cian.ru) — flats, rooms, houses or commercial property for sale or long-term rent, or one offer's card with price history and publisher. Trigger on Russian queries like "найди на циане", "квартира на циан", "снять квартиру", "купить однушку в Москве", "сколько стоит квартира на", "объявление циан", or English mentions of Cian. Needs the operator's Chrome over CDP (Cian's WAF blocks plain HTTP by IP). Skip for goods, marketplaces, and non-Cian real estate.
+description: Use this skill when the operator needs Russian real-estate data from Cian (cian.ru) — flats, rooms, houses or commercial property for sale, long-term rent or daily rent, or one offer's card with price history and publisher. Trigger on Russian queries like "найди на циане", "квартира на циан", "снять квартиру", "снять посуточно", "квартира на сутки", "купить однушку в Москве", "сколько стоит квартира на", "объявление циан", or English mentions of Cian. Needs the operator's Chrome over CDP (Cian's WAF blocks plain HTTP by IP). Skip for goods, marketplaces, and non-Cian real estate.
 ---
 
 # Cian Connector
@@ -12,8 +12,8 @@ HTTP is blocked by Cian's WAF on IP reputation (a 403 «Обнаружен по�
 трафик» page, no captcha), so there is no anonymous tier.
 
 ## When to use
-- Find offers by filters: deal (sale / rent), property type, region, rooms,
-  price range, total area
+- Find offers by filters: deal (sale / long-term rent / daily rent), property
+  type, region, rooms, price range, total area
 - One offer's price, its price history, layout, building, address, metro,
   description and publisher
 - Real estate only. For goods use the marketplace connectors; for price
@@ -21,9 +21,10 @@ HTTP is blocked by Cian's WAF on IP reputation (a 403 «Обнаружен по�
 
 ## Tools available
 - `cian_search(deal, offer_type="flat", region=None, rooms=None, price_min=None, price_max=None, area_min=None, area_max=None, page=1)`
-  — offers via `search-offers-desktop`, 28 per page. `deal` is `sale` or
-  `rent` (long-term); `offer_type` is `flat`, `room`, `house` or `commercial`.
-  `price_rub` is None for an offer without a stated price — never 0.
+  — offers via `search-offers-desktop`, 28 per page. `deal` is `sale`, `rent`
+  (long-term) or `daily` (посуточно); `offer_type` is `flat`, `room`, `house`
+  or `commercial`. `price_rub` is None for an offer without a stated price —
+  never 0, and `price_unit` says what it buys.
 - `cian_card(offer_id_or_url)` — one offer: price, `price_history`, rooms,
   areas, floor, building, address, `metro[]`, description, views, `agent`.
 
@@ -55,18 +56,41 @@ correct-looking prices. Default is `CIAN_REGION` (1, Moscow).
   планировка) and 9 (студия) — verified live, and easy to get backwards.
   Rooms (`offer_type="room"`) are searched as flats with Cian's room code 0 —
   the caller's `rooms` is ignored there.
-- **Rent is long-term** (`for_day: "!1"`); daily rent is not exposed.
-- **`price_min` / `price_max`** are rubles: total for sale, per month for rent.
+- **`price_min` / `price_max`** are rubles, in whatever unit the deal implies:
+  total for sale, per month for `rent`, **per night** for `daily`.
 - **`total_count`** is Cian's `aggregatedCount` — the de-duplicated figure the
   site shows, usually below the raw `offerCount`.
+
+## Long-term and daily are two markets, never one page
+
+`deal="rent"` and `deal="daily"` are separate on Cian and the connector keeps
+them separate (`for_day` `"!1"` vs `"1"`). Measured live in Moscow on
+2026-09-10: 25 411 long-term flats, 53 441 daily ones, and dropping the flag
+entirely returns a mixture, which is why the connector never does.
+
+- **A daily price is per night.** `price_unit` is `"day"`, and the category
+  comes back as `dailyFlatRent` / `dailyRoomRent` / `dailyHouseRent`. Cian
+  leaves `price_period` and `lease_term` null there, so `price_unit` is the
+  only honest signal — do not rank a 5 000 ₽ night against a 90 000 ₽ month.
+- **Daily covers flat, room and house only.** `offer_type="commercial"` with
+  `deal="daily"` is refused as a bad request: Cian accepts that query upstream
+  and answers zero, which would read as "nothing free today" rather than "this
+  market does not exist".
+- **For a stay of about a month**, both markets are worth a look: long-term
+  with `lease_term == "fewMonths"` (снять на несколько месяцев), and daily
+  where a monthly discount is usually negotiated in the description rather
+  than published as a field.
 
 ## What a row carries and how to read it
 
 Confirmed against live payloads captured 2026-09-09 (fixtures in the package):
 
 - **Price** comes from `bargainTerms.priceRur`, then `bargainTerms.price`, then
-  `priceTotalRur`. A new-building card has only the latter two — the parser
-  reads all three, so a `null` price means Cian shows none, not a missed key.
+  `priceTotalRur`. A new-building card has only the latter two, and a daily
+  offer has no `priceRur` at all — the parser reads all three, so a `null`
+  price means Cian shows none, not a missed key.
+- **`price_unit`** is computed by the connector, not Cian: `total`, `month` or
+  `day`. Quote it whenever you show a price, and never average across units.
 - **`title` is Cian's own only on some offers**; otherwise the short info line
   ("1-комн.кв. · 12/22 этаж") or a composed "rooms, area, floor" stands in.
   Do not treat the title as a marketing name.
@@ -77,9 +101,9 @@ Confirmed against live payloads captured 2026-09-09 (fixtures in the package):
 - **`category`** tells the market: `newBuildingFlatSale` is a developer's
   primary offer (`agent.user_type = developer`, `saleType fz214`), `flatSale`
   is resale, `roomSale`, `houseSale`, `officeSale` and friends for the rest.
-- **Rent rows** add `price_period` (`monthly`), `lease_term` (`longTerm` /
-  `fewMonths`) and `deposit_rub`. `is_by_homeowner` is True only when the
-  owner publishes without an agent; None means Cian did not say.
+- **Long-term rent rows** add `price_period` (`monthly`), `lease_term`
+  (`longTerm` / `fewMonths`) and `deposit_rub`. `is_by_homeowner` is True only
+  when the owner publishes without an agent; None means Cian did not say.
 - **`created_at`** is Cian's local ISO time without a zone; `updated_at` on the
   card is UTC. Do not compare them as if they were in one zone.
 - **`views`** on the card is parsed from Cian's own text

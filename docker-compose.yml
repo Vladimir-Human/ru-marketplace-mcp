@@ -245,7 +245,7 @@ services:
   # sidecar like the sources above.
   cian:
     build: .
-    image: ru-marketplace-mcp:2.0.2
+    image: ru-marketplace-mcp:2.1.0
     command: ["cian-mcp"]
     environment:
       MCP_TRANSPORT: http
