@@ -992,7 +992,7 @@ async def compare_verify_offer(
     """Verify one compared offer through its marketplace card tool.
 
     This is the cheap compare-server follow-up: it lets an agent confirm the
-    raw search price, stock and seller without enabling the 36-tool unified
+    raw search price, stock and seller without enabling the 39-tool unified
     mount. The returned card is source-native and therefore keeps fields the
     comparison intentionally normalises away.
 

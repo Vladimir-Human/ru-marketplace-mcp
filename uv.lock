@@ -1229,6 +1229,7 @@ version = "2.1.0"
 source = { editable = "packages/marketplace-connector" }
 dependencies = [
     { name = "avito-connector" },
+    { name = "cian-connector" },
     { name = "citilink-connector" },
     { name = "compare-connector" },
     { name = "detmir-connector" },
@@ -1248,6 +1249,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "avito-connector", editable = "packages/avito-connector" },
+    { name = "cian-connector", editable = "packages/cian-connector" },
     { name = "citilink-connector", editable = "packages/citilink-connector" },
     { name = "compare-connector", editable = "packages/compare-connector" },
     { name = "detmir-connector", editable = "packages/detmir-connector" },

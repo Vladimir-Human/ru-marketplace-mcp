@@ -51,7 +51,7 @@ def test_tool_names_keep_their_source_prefixes():
 def test_the_mounted_count_matches_the_imported_sources():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
-    # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 = 35 mounted tools across
+    # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 3 + 2 = 38 mounted tools across
     # 14 servers, plus marketplace_sources, which this server owns rather than
     # mounts. Operator-only *_selfcheck diagnostics are not MCP tools.
     own = {"marketplace_sources"}

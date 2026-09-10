@@ -77,7 +77,7 @@ export RU_MARKETPLACE_MCP_FULL=1     # POSIX shell
 ```
 
 The enabled row then changes from `compare-mcp` (3 tools) to `marketplace-mcp`
-(36 tools). Both rows share `serverName: rumarket`, and their `disabled`
+(39 tools). Both rows share `serverName: rumarket`, and their `disabled`
 conditions are mutually exclusive, so exactly one server instance runs at a
 time.
 

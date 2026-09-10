@@ -350,7 +350,7 @@ def cmd_doctor(argv: list[str]) -> int:
                 f"Chrome CDP: reachable on {probe['host']}:{probe['port']} ({probe.get('contexts', '?')} context(s))."
             )
         else:
-            cdp_note = f"Chrome CDP: NOT reachable — {probe.get('reason')}. Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink need it."
+            cdp_note = f"Chrome CDP: NOT reachable — {probe.get('reason')}. Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink/Cian need it."
     except Exception as exc:
         cdp_note = f"Chrome CDP: probe failed ({type(exc).__name__})."
     print(f"\n  {cdp_note}")

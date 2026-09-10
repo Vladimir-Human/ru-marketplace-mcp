@@ -324,8 +324,8 @@ jobs:
         # a red assertion abort the job — but we DO capture the exact pytest exit
         # code and hand it to the summary step, which is what makes the outcome
         # honest instead of a blanket green. Only wb, detmir and yandex carry
-        # @pytest.mark.live tests (3 of the 13 sources), so this canary covers 3
-        # of 11 — the summary spells that out so a pass is not mistaken for
+        # @pytest.mark.live tests (3 of the 14 sources), so this canary covers 3
+        # of 12 — the summary spells that out so a pass is not mistaken for
         # "everything works". Exit codes: 0 = all passed, 1 = failures (from a
         # datacenter runner with no Russian IP this usually means blocked, but it
         # is indistinguishable here from real drift), 5 = nothing collected, other
@@ -349,7 +349,7 @@ jobs:
           {
             echo "## Live endpoint canaries"
             echo ""
-            echo "Coverage: **3 of 13 sources** carry \`@pytest.mark.live\` tests — wb, detmir, yandex. The other 10 have none, so a green canary says nothing about them. AliExpress is CDP-only against x5sec: its drift signal comes from \`aliexpress_selfcheck\` on the operator's machine, not from this nightly job."
+            echo "Coverage: **3 of 14 sources** carry \`@pytest.mark.live\` tests — wb, detmir, yandex. The other 11 have none, so a green canary says nothing about them. AliExpress is CDP-only against x5sec: its drift signal comes from \`aliexpress_selfcheck\` on the operator's machine, not from this nightly job."
             echo ""
             echo "GitHub's runners have no Russian-friendly IP, so a blocked source and genuine drift both surface as test failures here; disambiguating needs a rerun from a Russian-friendly IP."
             echo ""

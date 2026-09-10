@@ -33,7 +33,7 @@ WORKDIR /app
 # re-resolve"; --no-install-project defers the workspace packages themselves to
 # the next step; --no-dev drops the test/lint toolchain from the runtime image.
 #
-# Every one of the 15 workspace members must be listed here. `uv sync
+# Every one of the 16 workspace members must be listed here. `uv sync
 # --all-packages` reads each member's pyproject.toml even under
 # --no-install-project (it still resolves their workspace deps), so a missing
 # manifest fails the resolve with "Distribution not found at:

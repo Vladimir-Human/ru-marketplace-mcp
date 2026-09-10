@@ -102,8 +102,8 @@ def probe(image: str) -> int:
         if result.get("isError"):
             raise RuntimeError(f"marketplace_sources returned an error: {result}")
         mounted = (result.get("structuredContent") or {}).get("mounted_count") or 0
-        if mounted != 13:
-            raise RuntimeError(f"expected 13 mounted sources, got {mounted}")
+        if mounted != 14:
+            raise RuntimeError(f"expected 14 mounted sources, got {mounted}")
         print(f"PASS: docker stdio MCP session, {len(tools)} tools, {mounted} sources mounted")
         return 0
     finally:

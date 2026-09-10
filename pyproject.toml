@@ -149,7 +149,7 @@ markers = [
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
-# Measure the fifteen workspace packages' source, not their tests. This is what the
+# Measure the sixteen workspace packages' source, not their tests. This is what the
 # `--cov` invocation in the CI coverage job reports against; the enforcing
 # --cov-fail-under floor is passed on that job's command line, not baked in here,
 # so the rest of the test matrix runs exactly as before.

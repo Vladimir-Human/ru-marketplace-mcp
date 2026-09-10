@@ -25,7 +25,7 @@ from mcp.client.stdio import stdio_client
 # script name -> how many model-facing tools it must expose. Operator-only
 # *_selfcheck canaries are no longer MCP tools (they run via
 # `marketplace-mcp doctor`), which is why every figure is one lower than the
-# pre-dsh contract and the marketplace server is 36, not 47.
+# pre-dsh contract and the marketplace server is 39, not 47.
 EXPECTED_TOOLS = {
     "wb-mcp": 8,
     "ozon-mcp": 3,
