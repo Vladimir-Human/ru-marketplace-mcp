@@ -60,6 +60,38 @@
   so there is no `cian_agent` tool — the agent ships inside the card
   (`docs/ANTI_BOT.md` § Cian).
 
+### Исправлено
+
+- `marketplace-connector` теперь объявляет `aliexpress-connector` жёсткой
+  зависимостью: отдельный wheel unified-сервера больше не теряет AliExpress
+  молча. `_mount_all` монтирует его с момента появления коннектора, но строк в
+  `[project].dependencies` и `[tool.uv.sources]` не было — вне ворксплейса
+  источник исчезал из mount, и единственной уликой оставался
+  `marketplace_sources.skipped`. PR #47 повторил ту же ошибку с
+  `cian-connector`, и её поймали только на ревью.
+- Новый тест dependency-parity
+  (`packages/marketplace-connector/tests/test_dependency_parity.py`) роняет
+  офлайн-набор, если источник из `_mount_all` не объявлен в зависимостях
+  пакета или в `[tool.uv.sources]` — и в обратную сторону тоже. Класс ошибки
+  «зарегистрирован в _mount_all, забыт в pyproject» теперь закрыт гейтом, а не
+  памятью ревьюера.
+
+### Fixed
+
+- `marketplace-connector` now declares `aliexpress-connector` as a hard
+  dependency, so a standalone unified-server wheel no longer silently drops
+  AliExpress. `_mount_all` has mounted it since the connector landed, but the
+  rows in `[project].dependencies` and `[tool.uv.sources]` were missing —
+  outside the workspace the source vanished from the mount, and the only
+  evidence was `marketplace_sources.skipped`. PR #47 repeated the same mistake
+  with `cian-connector`, caught only in review.
+- A new dependency-parity test
+  (`packages/marketplace-connector/tests/test_dependency_parity.py`) fails the
+  offline suite if a source mounted by `_mount_all` is missing from the package
+  dependencies or from `[tool.uv.sources]` — and in the reverse direction too.
+  The "registered in _mount_all, forgotten in pyproject" bug class is now a
+  gate, not a reviewer's memory.
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено
