@@ -44,6 +44,7 @@ from mcp_core.errors import BadRequestError, raise_tool_error
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.source_selection import selected
 from pydantic import Field
 
 from compare_connector.models_output import (
@@ -160,6 +161,10 @@ def _available_sources() -> dict[str, Any]:
         sources["aliexpress"] = aliexpress_server
     except Exception as exc:
         log_event("compare.source_unavailable", source="aliexpress", error=_redact(str(exc))[:120])
+
+    chosen = selected()
+    if chosen is not None:
+        sources = {name: module for name, module in sources.items() if name in chosen}
 
     return sources
 

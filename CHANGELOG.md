@@ -34,6 +34,23 @@
   публикатора. Цена без указания — `None`, не 0. В `compare_prices` источник не
   участвует. Страница агента структурированных данных не отдаёт, поэтому тула
   `cian_agent` нет — агент приходит внутри карточки (`docs/ANTI_BOT.md` § Cian).
+- Переменная `MARKETPLACE_SOURCES` выбирает, какие источники монтирует
+  `marketplace-mcp`: схемы всех тулов уходят клиенту в каждом запросе, и
+  оператор, которому нужны три площадки, не платит за остальные. Имена
+  канонические, псевдонимы `wb`, `ym`/`yandex`, `detmir`, `ali` тоже
+  принимаются. Не задана или пуста — монтируется всё, как раньше. Снятые
+  источники видны в `marketplace_sources` → `skipped` с пометкой
+  `deselected`, а `compare_prices` опрашивает тот же набор.
+
+### Исправлено
+
+- `marketplace_sources`: флаг `mounted` в `capabilities` у Яндекс Маркета и
+  Детского мира всегда был `false`, даже когда они смонтированы, — таблица
+  монтирования называет их `yandex`/`detmir`, а метаданные —
+  `yandex_market`/`detsky_mir`.
+- `MARKETPLACE_SOURCES` теперь отклоняет неизвестные имена при запуске и
+  перечисляет поддерживаемые источники: опечатка больше не создаёт частичный
+  сервер молча.
 
 ### Added
 
@@ -59,6 +76,20 @@
   takes no part in `compare_prices`. The agent page exposes no structured data,
   so there is no `cian_agent` tool — the agent ships inside the card
   (`docs/ANTI_BOT.md` § Cian).
+- `MARKETPLACE_SOURCES` selects which sources `marketplace-mcp` mounts: every
+  tool schema is sent to the client on every request, so an operator who needs
+  three marketplaces does not pay for the rest. Canonical names, plus the
+  aliases `wb`, `ym`/`yandex`, `detmir` and `ali`. Unset or blank mounts
+  everything, as before. Deselected sources appear in `marketplace_sources` →
+  `skipped` marked `deselected`, and `compare_prices` queries the same subset.
+
+### Fixed
+
+- `marketplace_sources`: the `mounted` flag in `capabilities` always read
+  `false` for Yandex Market and Detsky Mir, even when mounted — the mount table
+  names them `yandex`/`detmir`, the metadata `yandex_market`/`detsky_mir`.
+- `MARKETPLACE_SOURCES` now rejects unknown names at startup and lists the
+  supported sources, so a typo cannot silently create a partial server.
 
 ### Исправлено
 

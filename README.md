@@ -69,7 +69,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1315 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1325 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -138,6 +138,36 @@ macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 команд — `wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `avito-mcp`,
 `taobao-mcp`, `megamarket-mcp`, `lamoda-mcp`, `dns-mcp`, `citilink-mcp`,
 `compare-mcp`, `marketplace-mcp`.
+
+### Только нужные площадки: `MARKETPLACE_SOURCES`
+
+Объединённый сервер монтирует все источники, а описания их инструментов уходят
+в контекст **в каждом запросе**. Переменная `MARKETPLACE_SOURCES` оставляет
+только перечисленные:
+
+```jsonc
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "uv",
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "marketplace-mcp"],
+      "env": {
+        "MARKETPLACE_SOURCES": "wildberries,ozon,yandex_market,avito,aliexpress,dns,compare",
+      },
+    },
+  },
+}
+```
+
+Имена — канонические (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`,
+`avito`, `taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`,
+`cian`, `compare`, `mpstats`); короткие псевдонимы `wb`, `ym`/`yandex`, `detmir`, `ali`
+тоже принимаются. Неизвестное имя отклоняется при запуске с перечнем
+поддерживаемых источников, чтобы опечатка не превратилась в частичный сервер.
+Переменная не задана или пуста — монтируется всё, как раньше.
+Отключённые источники видно в `marketplace_sources`: они попадают в `skipped`
+с пометкой, что их сняли, а не что они не импортировались. `compare_prices`
+опрашивает ровно тот же набор.
 
 </details>
 
@@ -526,7 +556,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1325 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -589,19 +619,21 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1315 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1325 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
 
-Вопрос «кто набрал текст» кажется мне менее интересным, чем вопрос «чем это
-проверено». Второй здесь задокументирован, и проверить его может любой.
+Проверки важнее авторства текста, но авторство кода и идей тоже должно быть
+видно: полный список участников и их PR собран в [CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## Спасибо
 
-[@Xpos587](https://github.com/Xpos587) — коннектор MPStats
-([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)):
-разбор API плагина, структура парсеров и первая рабочая версия.
+- [@Xpos587](https://github.com/Xpos587) — коннектор MPStats, [PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5).
+- [@avxone](https://github.com/avxone) — исправление Avito selfcheck, [PR #37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37).
+- [@Khalmatov](https://github.com/Khalmatov) — provenance отзывов Ozon, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
+- [@fosteev](https://github.com/fosteev) — macOS CDP stealth и коннектор Циана, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
+- [@ilodezis](https://github.com/ilodezis) — выбор источников unified-сервера через `MARKETPLACE_SOURCES`, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
 
 ## Лицензия
 
@@ -670,7 +702,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1325 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1006,11 +1038,24 @@ nothing to configure, nothing to leak. MPStats alone has `MPSTATS_MP_AUTH`, the 
 of a paid account — it belongs only in the client entry's env, never in code or
 commits.
 
+**Only the sources you use: `MARKETPLACE_SOURCES`.** The unified server mounts every
+source, and their tool schemas are sent to the client on every request. Set
+`MARKETPLACE_SOURCES` in the `marketplace-mcp` entry's env to a comma-separated list
+to mount only those, e.g. `wildberries,ozon,yandex_market,avito,aliexpress,dns,compare`.
+Names are canonical (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`, `avito`,
+`taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`,
+`mpstats`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. An unknown
+name is rejected at startup with the supported-source list, so a typo cannot
+silently produce a partial server. Unset or blank mounts everything, as before.
+Deselected sources show up in
+`marketplace_sources` under `skipped`, marked as deselected rather than failed to
+import, and `compare_prices` queries the same subset.
+
 ## Development
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1315 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1325 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1070,19 +1115,22 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1315 offline
+are confidently wrong, so the project is arranged around verification: 1325 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
 
-Who typed the text seems a less interesting question than what checks it survived.
-The second one is documented here, and anyone can re-run it.
+Checks matter more than who typed the prose, but code and ideas deserve visible
+credit too: the full contributor and PR index is in
+[CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## Thanks
 
-[@Xpos587](https://github.com/Xpos587) for the MPStats connector
-([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)): the
-plugin API work, the parser structure and the first working version.
+- [@Xpos587](https://github.com/Xpos587) — MPStats connector, [PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5).
+- [@avxone](https://github.com/avxone) — Avito selfcheck fix, [PR #37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37).
+- [@Khalmatov](https://github.com/Khalmatov) — Ozon review provenance, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
+- [@fosteev](https://github.com/fosteev) — macOS CDP stealth and the Cian connector, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
+- [@ilodezis](https://github.com/ilodezis) — unified-server source selection, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
 
 ## License
 

@@ -49,6 +49,11 @@ everything else is unaffected.
 ## Gotchas
 - A source whose optional deps are missing is simply absent from the set —
   `marketplace_sources` says which and why.
+- Set `MARKETPLACE_SOURCES` on the unified server to mount only a comma-separated
+  subset (`wildberries,ozon,compare`); unset or blank keeps every source. The
+  aliases `wb`, `ym`/`yandex`, `detmir`, and `ali` work too. Unknown names fail
+  at startup instead of silently producing a partial server, and deselected
+  sources are reported with a `deselected` reason.
 - compare_prices ranks on everyday ruble prices; Taobao (CNY) is reported in
   `price_native` but never ranked against rubles.
 ## DSH activation

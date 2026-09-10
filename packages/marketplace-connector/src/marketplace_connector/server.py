@@ -20,6 +20,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
+from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
 
@@ -29,7 +30,10 @@ class MarketplaceSourcesResponse(BaseModel):
     mounted: list[str] = Field(default_factory=list, description="Sources whose tools are available in this server.")
     skipped: dict[str, str] = Field(
         default_factory=dict,
-        description="Source name mapped to the import error that removed it — usually a missing dependency.",
+        description=(
+            "Source name mapped to the reason it is unavailable: an import error or an explicit "
+            "MARKETPLACE_SOURCES deselection."
+        ),
     )
     mounted_count: int = Field(default=0, description="How many sources mounted.")
     skipped_count: int = Field(default=0, description="How many sources were skipped.")
@@ -165,7 +169,14 @@ def _mount_all() -> None:
         ("compare", "compare_connector.server"),
         ("mpstats", "mpstats_connector.server"),
     )
+    chosen = selected()
     for name, module_path in mounts:
+        if not wanted(name, chosen):
+            # Deselected, not broken. Recorded rather than dropped silently so
+            # marketplace_sources can tell "you turned this off" apart from
+            # "this failed to import".
+            _SKIPPED[name] = f"deselected: not listed in {ENV_VAR}"
+            continue
         try:
             module = __import__(module_path, fromlist=["mcp"])
             mcp.mount(module.mcp)
@@ -204,8 +215,9 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     ## Return Format
 
     MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-    capabilities, server_version}. ``skipped`` maps source name to the import error that
-    removed it, which is usually a missing optional dependency.
+    capabilities, server_version}. ``skipped`` maps source name to the reason
+    it is unavailable: an import error (usually a missing optional dependency)
+    or an explicit ``MARKETPLACE_SOURCES`` deselection.
 
     ## Error Format
 
@@ -217,7 +229,10 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         skipped=dict(sorted(_SKIPPED.items())),
         mounted_count=len(_MOUNTED),
         skipped_count=len(_SKIPPED),
-        capabilities={name: {**metadata, "mounted": name in _MOUNTED} for name, metadata in _CAPABILITIES.items()},
+        capabilities={
+            name: {**metadata, "mounted": name in {canonical(m) for m in _MOUNTED}}
+            for name, metadata in _CAPABILITIES.items()
+        },
         server_version=SERVER_VERSION,
     )
 
