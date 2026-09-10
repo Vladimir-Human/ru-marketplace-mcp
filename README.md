@@ -624,14 +624,16 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
 
-Вопрос «кто набрал текст» кажется мне менее интересным, чем вопрос «чем это
-проверено». Второй здесь задокументирован, и проверить его может любой.
+Проверки важнее авторства текста, но авторство кода и идей тоже должно быть
+видно: полный список участников и их PR собран в [CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## Спасибо
 
-[@Xpos587](https://github.com/Xpos587) — коннектор MPStats
-([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)):
-разбор API плагина, структура парсеров и первая рабочая версия.
+- [@Xpos587](https://github.com/Xpos587) — коннектор MPStats, [PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5).
+- [@avxone](https://github.com/avxone) — исправление Avito selfcheck, [PR #37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37).
+- [@Khalmatov](https://github.com/Khalmatov) — provenance отзывов Ozon, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
+- [@fosteev](https://github.com/fosteev) — macOS CDP stealth и коннектор Циана, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
+- [@ilodezis](https://github.com/ilodezis) — выбор источников unified-сервера через `MARKETPLACE_SOURCES`, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
 
 ## Лицензия
 
@@ -1118,14 +1120,17 @@ tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
 
-Who typed the text seems a less interesting question than what checks it survived.
-The second one is documented here, and anyone can re-run it.
+Checks matter more than who typed the prose, but code and ideas deserve visible
+credit too: the full contributor and PR index is in
+[CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## Thanks
 
-[@Xpos587](https://github.com/Xpos587) for the MPStats connector
-([PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5)): the
-plugin API work, the parser structure and the first working version.
+- [@Xpos587](https://github.com/Xpos587) — MPStats connector, [PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5).
+- [@avxone](https://github.com/avxone) — Avito selfcheck fix, [PR #37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37).
+- [@Khalmatov](https://github.com/Khalmatov) — Ozon review provenance, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
+- [@fosteev](https://github.com/fosteev) — macOS CDP stealth and the Cian connector, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
+- [@ilodezis](https://github.com/ilodezis) — unified-server source selection, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
 
 ## License
 
