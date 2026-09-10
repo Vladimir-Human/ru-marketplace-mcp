@@ -31,3 +31,15 @@ def test_wire_snapshot_is_machine_readable() -> None:
     assert snapshot["tool_count"] == 2
     assert snapshot["tools"][0]["name"] == "a"
     json.dumps(snapshot, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    # The documented invocation is `uv run python scripts/test_ops_gates.py`
+    # (README, Development section). Without this runner that command exits 0
+    # having collected nothing — a vacuous gate, the same bug class as a check
+    # that cannot fail. pytest.main runs the three tests above and propagates
+    # the real exit code; `uv run pytest scripts/test_ops_gates.py` keeps
+    # working unchanged.
+    import pytest
+
+    raise SystemExit(pytest.main([__file__, "-q"]))

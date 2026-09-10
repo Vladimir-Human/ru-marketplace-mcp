@@ -75,6 +75,12 @@
   пакета или в `[tool.uv.sources]` — и в обратную сторону тоже. Класс ошибки
   «зарегистрирован в _mount_all, забыт в pyproject» теперь закрыт гейтом, а не
   памятью ревьюера.
+- `scripts/test_ops_gates.py` получил `__main__`-раннер: задокументированная
+  команда `uv run python scripts/test_ops_gates.py` раньше выходила с кодом 0,
+  не выполнив ни одного из своих трёх тестов, — гейт, который не может упасть,
+  ничего не проверяет. Теперь команда прогоняет тесты через pytest и
+  пробрасывает настоящий код возврата; `uv run pytest scripts/test_ops_gates.py`
+  работает как прежде.
 
 ### Fixed
 
@@ -91,6 +97,11 @@
   dependencies or from `[tool.uv.sources]` — and in the reverse direction too.
   The "registered in _mount_all, forgotten in pyproject" bug class is now a
   gate, not a reviewer's memory.
+- `scripts/test_ops_gates.py` gained a `__main__` runner: the documented
+  invocation `uv run python scripts/test_ops_gates.py` used to exit 0 without
+  executing any of its three tests — a gate that cannot fail checks nothing.
+  It now runs them through pytest and propagates the real exit code;
+  `uv run pytest scripts/test_ops_gates.py` keeps working unchanged.
 
 ### Изменено
 
