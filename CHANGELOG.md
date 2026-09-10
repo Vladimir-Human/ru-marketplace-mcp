@@ -60,6 +60,56 @@
   so there is no `cian_agent` tool — the agent ships inside the card
   (`docs/ANTI_BOT.md` § Cian).
 
+### Исправлено
+
+- `marketplace-connector` теперь объявляет `aliexpress-connector` жёсткой
+  зависимостью: отдельный wheel unified-сервера больше не теряет AliExpress
+  молча. `_mount_all` монтирует его с момента появления коннектора, но строк в
+  `[project].dependencies` и `[tool.uv.sources]` не было — вне ворксплейса
+  источник исчезал из mount, и единственной уликой оставался
+  `marketplace_sources.skipped`. PR #47 повторил ту же ошибку с
+  `cian-connector`, и её поймали только на ревью.
+- Новый тест dependency-parity
+  (`packages/marketplace-connector/tests/test_dependency_parity.py`) роняет
+  офлайн-набор, если источник из `_mount_all` не объявлен в зависимостях
+  пакета или в `[tool.uv.sources]` — и в обратную сторону тоже. Класс ошибки
+  «зарегистрирован в _mount_all, забыт в pyproject» теперь закрыт гейтом, а не
+  памятью ревьюера.
+
+### Fixed
+
+- `marketplace-connector` now declares `aliexpress-connector` as a hard
+  dependency, so a standalone unified-server wheel no longer silently drops
+  AliExpress. `_mount_all` has mounted it since the connector landed, but the
+  rows in `[project].dependencies` and `[tool.uv.sources]` were missing —
+  outside the workspace the source vanished from the mount, and the only
+  evidence was `marketplace_sources.skipped`. PR #47 repeated the same mistake
+  with `cian-connector`, caught only in review.
+- A new dependency-parity test
+  (`packages/marketplace-connector/tests/test_dependency_parity.py`) fails the
+  offline suite if a source mounted by `_mount_all` is missing from the package
+  dependencies or from `[tool.uv.sources]` — and in the reverse direction too.
+  The "registered in _mount_all, forgotten in pyproject" bug class is now a
+  gate, not a reviewer's memory.
+
+### Изменено
+
+- Офлайн-счётчик тестов в документации обновлён до 1315: четыре теста
+  dependency-parity добавились к 1311. Заодно вычищен дрейф документации,
+  накопившийся с приходом AliExpress и Циана: дерево пакетов в
+  `docs/ARCHITECTURE.md`, счётчики навыков (15), источников (14), артефактов
+  релиза (32) и мест хранения версии (84) в README, `docs/DEPLOYMENT.md`,
+  `docs/RELEASE_CHECKLIST.md`, `release.yml` и dsh-бандле.
+
+### Changed
+
+- Documented offline test count is 1315: four dependency-parity tests on top
+  of 1311. The documentation drift that had accumulated since AliExpress and
+  Cian landed is swept in the same pass: the package tree in
+  `docs/ARCHITECTURE.md`, skill (15), source-server (14), release-artifact
+  (32) and version-location (84) counts across README, `docs/DEPLOYMENT.md`,
+  `docs/RELEASE_CHECKLIST.md`, `release.yml` and the dsh bundle.
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено

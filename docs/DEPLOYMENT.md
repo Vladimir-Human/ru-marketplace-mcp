@@ -16,7 +16,7 @@ anything.
 ## Transport selection
 
 Selection is environment-driven and lives in `mcp_core.runtime`, shared by all
-fourteen entry points (thirteen source servers plus the unified `marketplace-mcp`)
+fifteen entry points (fourteen source servers plus the unified `marketplace-mcp`)
 so they behave identically.
 
 | Variable | Default | Purpose |

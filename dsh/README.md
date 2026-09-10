@@ -38,7 +38,7 @@ published over MCP.
    dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
    ```
 
-   The 14 skills appear immediately. No MCP server starts yet.
+   The 15 skills appear immediately. No MCP server starts yet.
 
 2. Clone the server and install its locked environment once:
 

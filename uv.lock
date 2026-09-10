@@ -1228,6 +1228,7 @@ name = "marketplace-connector"
 version = "2.1.0"
 source = { editable = "packages/marketplace-connector" }
 dependencies = [
+    { name = "aliexpress-connector" },
     { name = "avito-connector" },
     { name = "cian-connector" },
     { name = "citilink-connector" },
@@ -1248,6 +1249,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aliexpress-connector", editable = "packages/aliexpress-connector" },
     { name = "avito-connector", editable = "packages/avito-connector" },
     { name = "cian-connector", editable = "packages/cian-connector" },
     { name = "citilink-connector", editable = "packages/citilink-connector" },
