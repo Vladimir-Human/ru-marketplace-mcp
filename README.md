@@ -69,7 +69,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1356 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1360 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -278,6 +278,12 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 требует подписку Яндекс Плюс и обычно на 25–30% ниже. Интерфейс Яндекса показывает
 вторую крупным шрифтом, поэтому назвать её без оговорки — значит пообещать цену,
 которую человек без подписки не получит.
+
+**Строка поиска — это оффер из выдачи, а не дефолтный оффер карточки.** Один
+`product_id` покрывает семейство товаров, и в выдаче может показываться один его
+представитель, а в карточке по тому же id — другой; сверяйте строки поиска с
+карточками по `sku_id`, а не по URL. `price_old_rub` в строках поиска — зачёркнутая
+базовая цена, контекст скидки; называть её ценой нельзя.
 
 `rating_stars` даёт распределение вида `{1: 10, 2: 3, 3: 10, 4: 19, 5: 502}`. Из
 него видно, честная ли средняя 4.8 или за ней прячется кучка единиц.
@@ -556,7 +562,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1356 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1360 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -622,7 +628,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1356 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1360 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -705,7 +711,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1356 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1360 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -778,6 +784,11 @@ feed at all; the tool says so instead of returning an empty list.
 **Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` needs a
 paid Yandex Plus subscription and runs 25–30% lower. Yandex leads with the subscriber
 price, so quoting it uncritically misstates the real cost.
+
+**A search row is the SERP's offer, not the card's default offer.** One `product_id`
+covers a product family, and search may show one member while the card for the same id
+defaults to another — reconcile rows with cards by `sku_id`, not by URL. `price_old_rub`
+on search rows is the struck-through reference price, never a price to quote.
 
 `rating_stars` gives the distribution, for example `{1: 10, 2: 3, 3: 10, 4: 19, 5: 502}`.
 That reveals whether a 4.8 average is earned or hides a cluster of complaints.
@@ -1058,7 +1069,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1356 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1360 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1120,7 +1131,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1356 offline
+are confidently wrong, so the project is arranged around verification: 1360 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

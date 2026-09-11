@@ -6,7 +6,9 @@ internal product endpoint speaks gRPC, and the old public Content API is dead
 server-rendered HTML that embeds its own widget state as JSON. This connector
 reads that state; the extraction rules live in ``yandex_connector.ssr``.
 
-Pages it depends on (all verified live Jul 2026 from a datacenter IP):
+Pages it depends on (all verified live Jul 2026 from a datacenter IP; the
+search price semantics re-verified live Sep 2026 from a residential IP
+against the product card for the same offer):
   - ``https://market.yandex.ru/search?text=…&page=N`` — search (~2 MB)
   - ``https://market.yandex.ru/product/{id}`` — card + first ~13 reviews (~2.5 MB)
 
@@ -14,7 +16,19 @@ Behaviours that shape this code:
 
 **Two prices, always.** Yandex leads with a subscriber price ("с Плюсом") that
 runs 25-30% below the everyday price. Both are reported separately, because
-quoting only the subscriber price misstates what most buyers pay.
+quoting only the subscriber price misstates what most buyers pay. A third
+figure rides along on discounted rows: the struck-through base price
+(``price_old_rub``). The SERP state stores exactly that figure in
+``offer.price.value`` and ``baobabPayload.price``, so the everyday price is
+read from the snippet's cart price instead — quoting those structural fields
+directly would quote the strike-through (Tuvio TKP2117S: 3698 vs the real
+2293, live-verified Sep 2026).
+
+**A search row is the SERP's offer, not the card's.** One product id covers a
+whole family, and Yandex may show one member in search while the card for the
+same id defaults to another (REDMOND: snippet KM243 sku 4668084807, card
+default KM245). The connector reports the SERP faithfully; search rows and
+cards reconcile by ``sku_id``, never by product URL alone.
 
 **Reviews come from the card, not /reviews.** The dedicated reviews URL renders
 zero reviews server-side (they load over XHR), while the product page ships the
@@ -237,9 +251,19 @@ async def yandex_search(
     single source for "what does this cost right now" across the Russian market —
     including goods Wildberries and Ozon do not carry.
 
-    Each result reports `price_rub` (what anyone pays) and `price_with_plus`
-    (requires a Yandex Plus subscription, typically 25-30% lower). Prefer
-    `price_rub` when quoting a price to a person.
+    Each result reports `price_rub` (what anyone pays — the price the SERP
+    snippet's cart button charges, cross-verified against product cards) and
+    `price_with_plus` (requires a Yandex Plus subscription, typically 25-30%
+    lower). Prefer `price_rub` when quoting a price to a person;
+    `price_old_rub` is the struck-through reference price and must never be
+    quoted as the price.
+
+    A search row describes the SERP snippet's offer, which may be a different
+    member of the product family than the offer `yandex_card` for the same
+    `product_id` defaults to (live example: search shows REDMOND KM243 sku
+    4668084807 while the card for that id defaults to a KM245 offer at another
+    price). The row is SERP-faithful — reconcile it with a card by `sku_id`,
+    not by the product URL.
 
     Note `rating_count` counts star ratings, not written reviews; the written
     count is available per product via `yandex_card`.
@@ -249,9 +273,9 @@ async def yandex_search(
     YandexSearchResponse: {query, page, page_count, total_available,
     has_next_page, returned, items, meta}. Items carry product_id, sku_id,
     title, brand, seller, price_rub (everyday — None when absent, never 0),
-    price_with_plus, price_old_rub, currency, rating, rating_count, in_stock,
-    is_express, url, image. Zero results is NOT an error — it is reported via
-    meta.warnings.
+    price_with_plus, price_old_rub (struck-through reference), currency,
+    rating, rating_count, in_stock, is_express, url, image. Zero results is
+    NOT an error — it is reported via meta.warnings.
 
     ## Error Format
 

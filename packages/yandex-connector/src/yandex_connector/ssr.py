@@ -25,7 +25,8 @@ Pure standard library on purpose — an HTML parser dependency would buy nothing
 here, since the payload is JSON once located.
 
 Verified against live pages Jul 2026 (search, cards across categories, empty
-results, pagination, A/B duplicates).
+results, pagination, A/B duplicates) and re-verified live Sep 2026 (search
+price semantics against the product card for the same offer).
 """
 
 from __future__ import annotations
@@ -256,6 +257,40 @@ def _amount_int(node: Any) -> float | None:
     return _to_number(amount.get("intPart"))
 
 
+def _cart_price(cart_button: Any) -> float | None:
+    """The price the snippet's cart button would actually charge.
+
+    ``productPayload.cartButton.price`` carries the everyday price the SERP
+    displays big: ``valueFmt`` in roubles, ``value`` in 1e-7 units. Verified live
+    2026-09-11 row by row against the product card for the same offer (Tuvio
+    TKP2117S: cart 2293 == card ``prices.price``) and against the baobab's
+    ``withDiscount`` additional price, which it equalled on every row. This is
+    the number any buyer pays, subscription or not.
+    """
+    if not isinstance(cart_button, dict):
+        return None
+    price = cart_button.get("price")
+    if not isinstance(price, dict):
+        return None
+    return _to_number(price.get("valueFmt"))
+
+
+def _additional_price(baobab: Any, price_type: str) -> float | None:
+    """One named price out of ``baobabPayload.additionalPrices``.
+
+    The SERP snippet ships its price breakdown there: ``withDiscount`` is the
+    discounted everyday price any buyer pays, ``yaBank`` is the green Yandex
+    Plus price. Both verified live 2026-09-11 to equal the product card's
+    ``prices.price`` / ``greenPrice`` for the same offer.
+    """
+    if not isinstance(baobab, dict):
+        return None
+    for entry in _as_list(baobab.get("additionalPrices")):
+        if isinstance(entry, dict) and entry.get("priceType") == price_type:
+            return _to_number(entry.get("priceValue"))
+    return None
+
+
 def _first_dict(collection: Any) -> dict[str, Any]:
     """First dict value in a collection, or an empty dict.
 
@@ -302,6 +337,23 @@ def parse_search(html: str) -> dict[str, Any]:
     ``price_rub`` is what anyone pays, while ``price_with_plus`` requires a
     Yandex Plus subscription and runs 25–30% lower. Reporting only the latter
     would quote a price most callers cannot get.
+
+    ``price_rub`` comes from the snippet's cart price
+    (``productPayload.cartButton.price``, mirrored by the baobab's
+    ``withDiscount`` additional price) — never from ``offer.price.value`` or
+    ``baobabPayload.price`` alone: on discounted rows both of those carry the
+    STRUCK-THROUGH base price. Verified live 2026-09-11 against the product
+    card for the same offer (Tuvio TKP2117S: SERP cart price 2293 == card
+    ``prices.price``, while ``offer.price.value`` and the baobab base price
+    both carry the struck-through ``initialPrice`` 3698). The struck-through
+    figure is surfaced separately as ``price_old_rub``.
+
+    A search row describes the SERP snippet's offer, which is not necessarily
+    the offer a card for the same product id defaults to: one id covers a
+    product family, and Yandex may show one member in search (REDMOND KM243,
+    sku 4668084807) while the card defaults to another (KM245). Rows are
+    SERP-faithful; reconcile them with cards by ``sku_id``, not by product
+    URL.
     """
     if looks_like_captcha(html):
         return {"status": ParseStatus.CAPTCHA, "items": [], "total": None}
@@ -374,6 +426,8 @@ def parse_search(html: str) -> dict[str, Any]:
         snippet = snippets.get(snippet_id) if snippet_id else None
         payload = snippet.get("productPayload") if isinstance(snippet, dict) else None
         payload = payload if isinstance(payload, dict) else {}
+        baobab = snippet.get("baobabPayload") if isinstance(snippet, dict) else None
+        baobab = baobab if isinstance(baobab, dict) else {}
 
         offer: dict[str, Any] = {}
         offer_place_id = place.get("defaultOfferShowPlaceId")
@@ -388,10 +442,33 @@ def parse_search(html: str) -> dict[str, Any]:
         product = product if isinstance(product, dict) else {}
 
         price_node = _as_dict(payload.get("price"))
-        price_with_plus = _amount_int(price_node.get("actualPrice"))
-        price_snippet_base = _amount_int(price_node.get("initialPrice"))
-        price_old = _amount_int(price_node.get("oldPrice"))
+        # The everyday price, in decreasing order of trust: what the snippet's
+        # cart button charges (== the figure displayed big on the page), the
+        # baobab's withDiscount price, and only then offer.price.value. The
+        # latter two structural fields both carry the STRUCK-THROUGH base price
+        # on discounted rows — quoting offer.price.value as the everyday price
+        # was the pre-fix bug (Tuvio TKP2117S: 3698 instead of 2293, live
+        # check 2026-09-11).
+        cart_price = _cart_price(payload.get("cartButton"))
+        with_discount = _additional_price(baobab, "withDiscount")
         offer_price = _to_number((_as_dict(offer.get("price"))).get("value"))
+        price_rub = next((price for price in (cart_price, with_discount, offer_price) if price is not None), None)
+
+        price_with_plus = _amount_int(price_node.get("actualPrice"))
+        if price_with_plus is None:
+            price_with_plus = _additional_price(baobab, "yaBank")
+
+        # Struck-through reference: the display node's own old/initial price
+        # when present, else the baobab base price — but only while it actually
+        # sits above the everyday price. On undiscounted rows the baobab price
+        # IS the everyday price and nothing is struck through.
+        price_old = _amount_int(price_node.get("oldPrice"))
+        if price_old is None:
+            price_old = _amount_int(price_node.get("initialPrice"))
+        if price_old is None:
+            baobab_price = _to_number(baobab.get("price"))
+            if baobab_price is not None and price_rub is not None and baobab_price > price_rub:
+                price_old = baobab_price
 
         rating_node = _as_dict(payload.get("rating"))
         delivery = _as_dict(offer.get("delivery"))
@@ -414,8 +491,10 @@ def parse_search(html: str) -> dict[str, Any]:
                 "title": title_node.get("value") or titles.get("raw") or offer_titles.get("raw") or "",
                 "brand": (vendor or {}).get("name") or "",
                 "seller": (shop or {}).get("name") or "",
-                # Base price first: offer.price is structural, the snippet's is display text.
-                "price_rub": offer_price if offer_price is not None else price_snippet_base,
+                # Cart price first: it is what the page displays and charges;
+                # offer.price.value is structural but carries the strike-through
+                # on discounted rows, so it is only a last-resort fallback.
+                "price_rub": price_rub,
                 "price_with_plus": price_with_plus,
                 "price_old_rub": price_old,
                 "currency": (_as_dict(offer.get("price"))).get("currency") or "RUR",

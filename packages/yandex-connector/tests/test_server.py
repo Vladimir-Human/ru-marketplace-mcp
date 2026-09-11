@@ -76,8 +76,32 @@ async def test_search_returns_products_with_both_prices(monkeypatch):
     assert result.meta.extraction == "ssr"
     first = result.items[0]
     assert first.brand == "Tuvio"
-    assert first.price_rub == 22600.0
+    # Re-read from this same Jul 2026 capture after the 2026-09-11 price
+    # mapping fix: 16724 is the displayed cart price; the old pin (22600) was
+    # the struck-through base price and now rides in price_old_rub.
+    assert first.price_rub == 16724.0
     assert first.price_with_plus == 16222.0
+    assert first.price_old_rub == 22600.0
+
+
+async def test_search_quotes_the_cart_price_not_the_strike_through(monkeypatch):
+    """End-to-end regression for the 2026-09-11 price-semantics fix.
+
+    The SERP state carries the struck-through initialPrice in offer.price.value
+    and baobabPayload.price (3698 for the Tuvio TKP2117S); the price any buyer
+    pays is the snippet's cart price (2293), verified the same day against the
+    product card. yandex_search must surface the latter as price_rub and keep
+    the former in price_old_rub.
+    """
+    stub_html(monkeypatch, {"/search": load("search_kettle.html")})
+
+    result = await server.yandex_search(query="чайник")
+
+    tuvio = next(item for item in result.items if item.product_id == "5929806453")
+    assert tuvio.price_rub == 2293.0
+    assert tuvio.price_old_rub == 3698.0
+    assert tuvio.price_with_plus == 2247.0
+    assert tuvio.sku_id == "5929806452"
 
 
 async def test_search_honours_the_limit(monkeypatch):
@@ -298,6 +322,10 @@ def _drifted_values_search_html() -> str:
     This is what a live re-layout looks like: items keep their product ids
     (collection keys) but lose every title and price (state values). The real
     parser returns them as title '' / price None — verified, not assumed.
+    Since the 2026-09-11 price mapping fix the everyday price also lives in
+    ``baobabPayload.additionalPrices`` (the withDiscount entry), so the
+    simulated rename has to cover that node too — otherwise the fallback
+    chain would mask the drift this test exists to detect.
     """
     html = load("search_washer.html")
     return (
@@ -306,6 +334,7 @@ def _drifted_values_search_html() -> str:
         .replace('"actualPrice"', '"actualPriceZ"')
         .replace('"initialPrice"', '"initialPriceZ"')
         .replace('"oldPrice"', '"oldPriceZ"')
+        .replace('"additionalPrices"', '"additionalPricesZ"')
         .replace('"price"', '"priceZ"')
     )
 

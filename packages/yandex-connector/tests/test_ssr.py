@@ -1,7 +1,8 @@
 """Tests for Yandex Market SSR extraction.
 
-Fixtures are real pages captured live in Jul 2026, trimmed to a few products and
-two reviews each so they stay reviewable in a diff (2 MB → ~60 KB). Trimming
+Fixtures are real pages captured live in Jul 2026 (plus a Sep 2026 search
+capture for the price-semantics regression), trimmed to a few products and two
+reviews each so they stay reviewable in a diff (2 MB → ~60 KB). Trimming
 preserves the exact nesting, so a structural change upstream still shows up here.
 """
 
@@ -27,6 +28,11 @@ def search_washer() -> str:
 @pytest.fixture(scope="module")
 def search_iphone() -> str:
     return load("search_iphone.html")
+
+
+@pytest.fixture(scope="module")
+def search_kettle() -> str:
+    return load("search_kettle.html")
 
 
 @pytest.fixture(scope="module")
@@ -56,12 +62,73 @@ def test_search_reports_both_prices_separately(search_washer):
 
     Quoting only the subscriber price would misstate the cost for anyone without
     a Yandex Plus subscription.
+
+    Values re-read from this same Jul 2026 capture after the 2026-09-11 price
+    mapping fix: the page displayed the cart price 16724 as the everyday price;
+    22600 is the struck-through base price (baobabPayload.price ==
+    offer.price.value) and now lives in price_old_rub.
     """
     item = ssr.parse_search(search_washer)["items"][0]
 
-    assert item["price_rub"] == 22600.0
+    assert item["price_rub"] == 16724.0
     assert item["price_with_plus"] == 16222.0
     assert item["price_with_plus"] < item["price_rub"]
+    assert item["price_old_rub"] == 22600.0
+    assert item["price_rub"] < item["price_old_rub"]
+
+
+def test_search_price_rub_is_the_cart_price_never_the_strike_through(search_kettle):
+    """Regression for the price-semantics bug (live check 2026-09-11).
+
+    On a discounted SERP row ``offer.price.value`` and ``baobabPayload.price``
+    both carry the struck-through ``initialPrice`` — 3698 for the Tuvio
+    TKP2117S — and the parser used to quote that as ``price_rub``. The price
+    any buyer pays is the snippet's cart price (``cartButton.price.valueFmt``,
+    mirrored by the ``withDiscount`` additional price): 2293, cross-checked the
+    same day against the product card (prices.price=2293, greenPrice=2247,
+    initialPrice=3698).
+    """
+    items = ssr.parse_search(search_kettle)["items"]
+    tuvio = next(item for item in items if item["product_id"] == "5929806453")
+
+    assert tuvio["price_rub"] == 2293.0
+    assert tuvio["price_rub"] != 3698.0  # the initialPrice must never leak into price_rub
+    assert tuvio["price_with_plus"] == 2247.0
+    assert tuvio["price_old_rub"] == 3698.0
+
+
+def test_search_price_rub_ignores_intermediate_seller_prices(search_kettle):
+    """offer.price.value is not a displayed price either.
+
+    The Midea row's offer carries 1350 — a seller-side figure the page shows
+    nowhere; the snippet displayed (and its cart button charged) 1089, with
+    2999 struck through.
+    """
+    items = ssr.parse_search(search_kettle)["items"]
+    midea = next(item for item in items if item["product_id"] == "6050907310")
+
+    assert midea["price_rub"] == 1089.0
+    assert midea["price_rub"] != 1350.0
+    assert midea["price_with_plus"] == 1067.0
+    assert midea["price_old_rub"] == 2999.0
+
+
+def test_search_row_describes_the_serp_offer_not_the_card_default(search_kettle):
+    """Documented quirk, not a bug: the SERP row and the card can name different
+    offers of one family.
+
+    The row for product 198679568 is the REDMOND KM243 offer (sku 4668084807),
+    while the card for the same product id defaults to a KM245 offer at another
+    price (live check 2026-09-11). The connector is SERP-faithful; reconcile
+    search rows with cards by ``sku_id``, never by product URL alone.
+    """
+    items = ssr.parse_search(search_kettle)["items"]
+    redmond = next(item for item in items if item["product_id"] == "198679568")
+
+    assert redmond["sku_id"] == "4668084807"
+    assert "КМ243" in redmond["title"]
+    assert redmond["price_rub"] == 2004.0
+    assert redmond["price_old_rub"] == 4999.0
 
 
 def test_search_resolves_brand_and_seller_through_id_references(search_washer):
