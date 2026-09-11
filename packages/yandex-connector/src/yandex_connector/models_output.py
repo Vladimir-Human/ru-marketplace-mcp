@@ -28,22 +28,43 @@ class MetaOut(MetaOutBase):
 
 
 class YandexProduct(BaseModel):
-    """One Yandex Market product as it appears in search results."""
+    """One Yandex Market product as it appears in search results.
+
+    A row describes the SERP snippet's offer, which may be a different member
+    of the product family than the offer a card for the same ``product_id``
+    defaults to; reconcile rows with cards by ``sku_id``, not by product URL.
+    """
 
     product_id: str = Field(default="", description="Yandex Market product id — pass to yandex_card for full detail.")
-    sku_id: str = Field(default="", description="SKU id of the specific offer shown.")
+    sku_id: str = Field(
+        default="",
+        description=(
+            "SKU id of the specific offer the SERP snippet shows. The card for the same product_id may "
+            "default to a different offer of the family — compare sku_id before trusting a card price for this row."
+        ),
+    )
     title: str = Field(default="", description="Product title.")
     brand: str = Field(default="", description="Brand name.")
     seller: str = Field(default="", description="Seller/shop name for the displayed offer.")
     price_rub: float | None = Field(
         default=None,
-        description="Everyday price in roubles — what a buyer without a subscription pays. None when absent, never 0.",
+        description=(
+            "Everyday price in roubles — what a buyer without a subscription pays (the price the SERP "
+            "snippet's cart button charges). None when absent, never 0. The struck-through base price "
+            "lives in price_old_rub, never here."
+        ),
     )
     price_with_plus: float | None = Field(
         default=None,
         description="Discounted price requiring a Yandex Plus/Pay subscription. Typically 25-30% below price_rub.",
     )
-    price_old_rub: float | None = Field(default=None, description="Struck-through reference price, when shown.")
+    price_old_rub: float | None = Field(
+        default=None,
+        description=(
+            "Struck-through reference price (the snippet's base/initial price), when shown. On discounted "
+            "rows it can sit far above price_rub — never quote it as the price."
+        ),
+    )
     currency: str = Field(default="RUR", description="Currency code as reported upstream.")
     rating: float | None = Field(default=None, description="Average rating, 1..5.")
     rating_count: int | None = Field(

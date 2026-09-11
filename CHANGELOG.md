@@ -255,6 +255,77 @@
   while the server read profile location data and personalized results with
   it (finding S4 of `work/v2-research/security.md`).
 
+### Исправлено
+
+- `yandex_search` возвращал зачёркнутую базовую цену вместо той, что
+  покупатель реально платит: `price_rub` строился из `offer.price.value`
+  SERP-состояния (а на скидочных строках там лежит `initialPrice`) с
+  фолбэком на тот же `initialPrice`. Живой замер 2026-09-11: Tuvio
+  TKP2117S — коннектор отдавал 3698 ₽ при фактических 2367 ₽ (завышение
+  +61%). Теперь `price_rub` берётся из корзины SERP
+  (`productPayload.cartButton.price.valueFmt`), затем из
+  `additionalPrices[withDiscount]`, и лишь в последнюю очередь из цены
+  оффера; `price_with_plus` — из `actualPrice`/`yaBank`; `price_old_rub` —
+  только когда зачёркнутая цена строго больше фактической. Побочный эффект
+  на `compare_prices`: раньше яндекс-строки ранжировались по зачёркнутой
+  цене и систематически проигрывали (завышение +24…+61%), из-за чего
+  «cheapest» мог доставаться другому маркетплейсу при фактически более
+  дешёвом Яндексе.
+- Провенанс июльских фикстур yandex-поиска записывал «displayed» цены с
+  выхода багованного парсера, а не с экрана (washer: записано 22600,
+  страница показывала 16724) — value-pinning тесты фактически пиннили баг.
+  Значения перечитаны из тех же снимков (HTML и sha256 не менялись),
+  provenance-заметка исправлена с явной пометкой о коррекции. Добавлена
+  новая живая фикстура `search_kettle` (снимок 2026-09-11) с тремя
+  строками: регрессия зачёркнутой цены, промежуточная цена продавца,
+  SERP-офер ≠ дефолт карточки.
+- Задокументирован quirk Яндекса (сайт, не коннектор): строка SERP описывает
+  офер сниппета, который может отличаться от дефолтного офера карточки
+  (REDMOND: KM243 sku 4668084807 @2004 в выдаче против KM245 sku
+  103808288420 @4146 на карточке того же pid). Строки поиска сверяются по
+  `sku_id`, а не по product-URL; docstring, SKILL.md (×2) и README (RU+EN)
+  это отражают.
+
+### Изменено
+
+- Офлайн-счётчик тестов в документации обновлён до 1360: четыре теста
+  ценового маппинга yandex-поиска добавились к 1356.
+
+### Fixed
+
+- `yandex_search` returned the strike-through base price instead of what a
+  buyer actually pays: `price_rub` was built from the SERP state's
+  `offer.price.value` (which carries `initialPrice` on discounted rows) with
+  a fallback to `initialPrice` itself. Measured live 2026-09-11: Tuvio
+  TKP2117S — the connector said 3698 ₽ while the real price was 2367 ₽ (a
+  +61 % overstatement). `price_rub` now comes from the SERP cart price
+  (`productPayload.cartButton.price.valueFmt`), then
+  `additionalPrices[withDiscount]`, and only then the offer price;
+  `price_with_plus` from `actualPrice`/`yaBank`; `price_old_rub` only when
+  the strike-through price is strictly greater. Side effect on
+  `compare_prices`: Yandex rows used to rank by the strike-through price and
+  lost systematically (+24…+61 % inflation), so "cheapest" could go to
+  another marketplace while Yandex was actually cheaper.
+- The July search fixtures' provenance recorded "displayed" prices from the
+  buggy parser's output rather than the screen (washer: recorded 22600, the
+  page showed 16724) — the value-pinning tests were pinning the bug. Values
+  re-read from the same captures (HTML and sha256 unchanged), the provenance
+  note corrected with an explicit annotation. New live fixture
+  `search_kettle` (captured 2026-09-11) covers three rows: the
+  strike-through regression, an intermediate seller price, and a SERP offer
+  differing from the card default.
+- Documented a Yandex site-side quirk (not a connector bug): a SERP row
+  describes the snippet's offer, which can differ from the card's default
+  offer (REDMOND: KM243 sku 4668084807 @2004 in search vs KM245 sku
+  103808288420 @4146 on the card for the same pid). Search rows verify
+  against `sku_id`, not the product URL; docstring, SKILL.md (×2) and README
+  (RU+EN) now say so.
+
+### Changed
+
+- Documented offline test count is 1360: four yandex-search price-mapping
+  tests on top of 1356.
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено

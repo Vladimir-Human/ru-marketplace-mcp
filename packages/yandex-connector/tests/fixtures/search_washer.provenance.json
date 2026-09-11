@@ -4,6 +4,6 @@
   "sha256": "2cfccc580c1f536b8b603bc66e41ff57f943c6ff8412c26034a07db608d4a732",
   "method": "real SSR page captured live Jul 2026, trimmed to a few products and two reviews each so it stays reviewable in a diff (2 MB -> ~60 KB); trimming preserves exact nesting so an upstream structural change still shows up",
   "ground_truth": {
-    "note": "search «стиральная машина»: total 1434, 3 products; first item brand Tuvio, seller «Яндекс Фабрика», price_rub 22600.0 with price_with_plus 16222.0 (both reported separately)."
+    "note": "search «стиральная машина»: total 1434, 3 products; first item brand Tuvio, seller «Яндекс Фабрика», displayed prices: everyday/cart 16724.0, green Plus 16222.0, strike-through base 22600.0. Corrected 2026-09-11: the original displayed-price note quoted the buggy parser output ('price_rub 22600.0 with price_with_plus 16222.0'); 22600 is baobabPayload.price == offer.price.value, i.e. the struck-through base price. A re-read of this same snapshot (HTML and its sha256 unchanged) shows the page displayed productPayload.cartButton.price.valueFmt=16724 (== baobabPayload.additionalPrices withDiscount=16724) as the everyday price, yaBank/green 16222, base 22600 — the same field semantics later cross-verified live against a product card (see search_kettle.provenance.json)."
   }
 }

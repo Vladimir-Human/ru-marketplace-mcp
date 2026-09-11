@@ -12,6 +12,9 @@ here surfaces as empty values and is covered by ``_guard_parse_status`` plus
 the selfcheck's priced-items/title checks instead.
 
 Never edit by hand: regenerate by re-running the parsers over a fresh capture.
+Regenerated over the same captures after the 2026-09-11 search price mapping
+fix: ``price_old_rub`` went from always-null (the parser never located the
+strike-through) to float on both search captures.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].image:str",
     "items[].in_stock:bool",
     "items[].is_express:bool",
-    "items[].price_old_rub:null",
+    "items[].price_old_rub:float",
     "items[].price_rub:float",
     "items[].price_with_plus:float",
     "items[].product_id:str",

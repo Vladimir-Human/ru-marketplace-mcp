@@ -34,13 +34,16 @@ run `marketplace-mcp doctor` after install and whenever results look wrong.
 
 **Every price appears twice, and the difference is not cosmetic:**
 
-- `price_rub` — what anyone pays. **Quote this one.**
+- `price_rub` — what anyone pays (on search rows: the price the SERP snippet's
+  cart button charges, verified against product cards). **Quote this one.**
 - `price_with_plus` — requires a paid Yandex Plus subscription, typically 25-30%
   lower.
 
 Yandex's own UI leads with the subscriber price, so it is easy to quote a number
-the operator cannot actually get. On a card there is also
-`price_before_discount_rub` (the pre-discount reference) and `discount_percent`.
+the operator cannot actually get. Discounted rows also carry the
+struck-through reference — `price_old_rub` on search rows,
+`price_before_discount_rub` plus `discount_percent` on cards. It is context for
+the discount, never a price to quote.
 
 ## Workflow patterns
 
@@ -61,6 +64,15 @@ sometimes returns cumulative results for later pages, so deduplicate by
 `product_id` if you page through.
 
 ## Gotchas
+
+**A search row is the SERP's offer, not the card's default offer.** One
+`product_id` covers a product family, and Yandex may show one member in search
+while `yandex_card` for the same id defaults to another (observed live: search
+showed REDMOND KM243, sku 4668084807, while the card for that product id
+defaulted to a KM245 offer at a different price). The connector reports the
+SERP faithfully — this is upstream behaviour, not a parsing bug. Never verify a
+search row's price through the product URL; compare `sku_id` first, and treat
+the card's numbers as the truth about the card's own default offer.
 
 **`rating_count` ≠ `review_count`.** `rating_count` counts star ratings (often
 hundreds); `review_count` counts written reviews (usually far fewer). Search

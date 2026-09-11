@@ -1,0 +1,9 @@
+{
+  "url": "https://market.yandex.ru/search?text=%D1%87%D0%B0%D0%B9%D0%BD%D0%B8%D0%BA",
+  "captured_at": "2026-09-11",
+  "sha256": "d5031e880fdfd24b2cd5d752df524c0ff183cb30b7185830a1dc9baf5f4506db",
+  "method": "real SSR page captured live 2026-09-11 over anonymous HTTP (residential RU IP), trimmed to three products on the template of the Jul 2026 fixtures (2.2 MB -> ~65 KB); trimming preserves exact nesting so an upstream structural change still shows up",
+  "ground_truth": {
+    "note": "search «чайник» (total 3327): the price-semantics regression fixture. Displayed prices re-read from this same snapshot: Tuvio TKP2117S (product 5929806453, sku 5929806452) — everyday/cart price 2293 (productPayload.cartButton.price.valueFmt, mirrored by baobabPayload.additionalPrices withDiscount=2293), green Plus price 2247 (productPayload.price.actualPrice, mirrored by additionalPrices yaBank=2247), strike-through 3698 (baobabPayload.price; offer.price.value carries the same 3698 — the trap that made the pre-fix parser quote the strike-through as price_rub). Same-day product-card cross-check for 5929806453: prices.price=2293, greenPrice=2247, initialPrice=3698. Midea MK-8091 (product 6050907310, sku 100861690955): cart 1089, plus 1067, strike-through 2999, while offer.price.value=1350 — evidence that offer.price.value can be an intermediate seller-side figure that is displayed nowhere. REDMOND (product 198679568): the SERP row is the KM243 offer, sku 4668084807 (cart 2004, plus 1964, strike-through 4999, offer.price.value 2559), while the card for the same product id defaults to a KM245 offer (live check 2026-09-11: KM245 @4146) — the «SERP offer != card default offer» quirk; a search row cannot be reconciled against a card through the product URL, only through sku_id."
+  }
+}
