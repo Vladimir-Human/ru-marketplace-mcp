@@ -13,6 +13,18 @@ Verified live July 2026 from a datacenter IP (docs/ANTI_BOT.md):
   - ``h5api.m.taobao.com`` unsigned — ``FAIL_SYS_TOKEN_EMPTY``
   - main page, 1688, AliExpress — 200, no IP-level block
 
+Since 2026-09-10 a LOGGED-OUT session on ``s.taobao.com/search`` no longer gets
+the results shell: it is served a login wall with an EMPTY document title, zero
+item.taobao.com anchors and /member/login.jhtml + /member/new_register.jhtml
+routes. The same-day live diagnose measured readyState interactive, a ~39 KB
+body and 33 links; the committed TRIMMED capture
+(tests/fixtures/search_login_wall_live.html) measures 29.5 KB and 32 anchors,
+and readyState/body size cannot be read back from a static file at all. A
+title-only wall check cannot see that variant, so wall detection is structural
+as well as titular (``_login_wall_markers``): tools answer ``transport_down``
+with the log-in fix inline and the selfcheck answers
+``inconclusive(login_wall)``, never drift.
+
 Prices stay in yuan (CNY). An agent comparing against ruble sources must
 convert explicitly — a baked-in rate would go silently stale.
 
@@ -236,9 +248,27 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    const bodyText = (document.body && document.body.textContent || '').toLowerCase();
-    const blocked = /验证|验证码|人机|captcha|are you human|access denied/.test(bodyText);
-    return JSON.stringify({items: out, title: blocked ? '__BLOCKED__' : (document.title || '')});
+    // Structural login-wall / anti-bot fields. The 2026-09-10 wall variant
+    // serves an EMPTY document title
+    // (tests/fixtures/search_login_wall_live.html), so the title check alone
+    // cannot see it. Transport ONLY: the raw document title, raw anchor counts
+    // and a bounded snippet of the VISIBLE body text (scripts/styles removed
+    // via cleanTextWithout, so inline JS strings cannot fake a marker). Every
+    // VERDICT is Python's: _login_wall_markers decides the login wall and
+    // _anti_bot_challenge the captcha, both from these fields. The JS used to
+    // bake title='__BLOCKED__' when challenge words matched
+    // document.body.textContent INCLUDING hidden script/widget text — healthy
+    // logged-out pages rendering 29-38 items were convicted by the hidden
+    // baxia widget's «人机» (live probe 2026-09-10) and the shape-drift canary
+    // never ran; the Python verdict gates the wording on zero extracted items.
+    const wallText = cleanTextWithout(document.body, ['script', 'style']) || '';
+    return JSON.stringify({
+        items: out,
+        title: document.title || '',
+        anchors_total: document.querySelectorAll('a[href]').length,
+        login_anchors: document.querySelectorAll('a[href*="login.jhtml"], a[href*="register.jhtml"]').length,
+        body_snippet: wallText.slice(0, 2000)
+    });
 }
 """
 
@@ -326,13 +356,20 @@ _CARD_EXTRACT_TEMPLATE = """
         }
     }
     const imgs = document.querySelectorAll('[class*="desc"] img, [class*="Desc"] img, #description img');
+    // Same structural wall markers as the search extractor (see the comment
+    // there): item pages redirect to the same title-less login wall variant,
+    // and the verdict is Python's, not the browser's.
+    const wallText = cleanTextWithout(document.body, ['script', 'style']) || '';
     return JSON.stringify({
         title: title,
         price_texts: priceTexts,
         shop_name: shop,
         sales: sales,
         description_images: imgs.length,
-        page_title: document.title || ''
+        page_title: document.title || '',
+        anchors_total: document.querySelectorAll('a[href]').length,
+        login_anchors: document.querySelectorAll('a[href*="login.jhtml"], a[href*="register.jhtml"]').length,
+        body_snippet: wallText.slice(0, 2000)
     });
 }
 """
@@ -382,10 +419,119 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     return data
 
 
+# The word test for the wall body snippet: the same markers
+# scripts/diagnose_drift.py proved on the live wall (its walls.login test is
+# /войти|log ?in|sign ?in|登录/i over page text; the Russian branch cannot fire
+# on taobao.com, so it stays out of the extractor's payload contract).
+_WALL_TEXT_RE = re.compile(r"登录|log ?in|sign ?in", re.IGNORECASE)
+
+# Calibrated on LIVE DOM readings, which no committed fixture reproduces — do
+# not "prove" this ceiling against the fixtures. What is recorded: the live
+# login wall of 2026-09-10 carried 33 links (same-day diagnose; the committed
+# trimmed fixture counts 32 anchors), while the healthy logged-out results
+# page read the same day carried 133 links (provenance comment on
+# SEARCH_EXTRACTED in tests/test_server.py, repeated in the wall fixture's
+# provenance file). The committed rendered captures are far poorer: the real
+# extractor counts 12 anchors on search_grid_live.html (and 45 on the card
+# capture item_card_live.html), so the ceiling sits ABOVE the tree's healthy
+# SEARCH capture — a healthy-but-link-poor page would be eligible for the
+# structural markers the moment it carries a header login link. On the live
+# DOM the margin is honest: the wall (33) sits just below 40, the healthy
+# reading (133) more than 3x above it. diagnose_drift.py uses the same
+# ceiling to tell "this IS a wall" from "a real page with a login link in the
+# header" — the gate is what keeps the structural markers from firing on a
+# healthy page that happens to mention 登录.
+_WALL_MAX_ANCHORS = 40
+
+
+def _login_wall_markers(data: dict[str, Any]) -> tuple[str, ...]:
+    """Which login-wall markers fired on an extractor payload.
+
+    The extractor JS is dumb transport: it surfaces ``anchors_total``,
+    ``login_anchors`` (anchors on the member/login.jhtml and register routes)
+    and a bounded ``body_snippet`` of the visible page text. Every verdict is
+    made here, where a fixture can test it. Markers:
+
+    * ``title``        — the classic wall: 登录/login in the DOCUMENT title,
+      read from the field that actually carries it for the payload kind. A
+      ``page_title`` key identifies a CARD payload, where ``title`` is the
+      PRODUCT name and ``page_title`` is document.title — only ``page_title``
+      is consulted, so a rendered card of a product whose name says 登录 is a
+      parsed page, not a wall. Search payloads carry document.title in
+      ``title`` and never emit ``page_title`` — only ``title`` is consulted.
+      The product name never decides this marker.
+    * ``login_routes`` — login/register anchors on a link-poor page. This is
+      the 2026-09-10 wall variant: EMPTY title, zero item anchors,
+      /member/login.jhtml + /member/new_register.jhtml routes — 33 links in
+      the live reading, 32 in the committed trimmed fixture.
+    * ``body_text``    — 登录/log in/sign in wording in the visible text of a
+      link-poor page (the structural test diagnose_drift.py proved live).
+
+    Payloads without the structural fields (a cache entry written by an older
+    build) fall back to the title marker alone — coerce_int(None) is None, so
+    the gated markers simply stay silent instead of guessing.
+    """
+    markers: list[str] = []
+    # The DOCUMENT title only, never the product name: card payloads carry the
+    # product name in `title` and document.title in `page_title` (see
+    # _CARD_EXTRACT_TEMPLATE); search payloads carry document.title in `title`
+    # and emit no `page_title`. Presence of the key IS the payload kind.
+    title_field = "page_title" if "page_title" in data else "title"
+    doc_title = str(data.get(title_field) or "")
+    if "登录" in doc_title or "login" in doc_title.lower():
+        markers.append("title")
+    anchors_total = R.coerce_int(data.get("anchors_total"))
+    if anchors_total is not None and anchors_total < _WALL_MAX_ANCHORS:
+        login_anchors = R.coerce_int(data.get("login_anchors"))
+        if login_anchors is not None and login_anchors > 0:
+            markers.append("login_routes")
+        snippet = data.get("body_snippet")
+        if isinstance(snippet, str) and _WALL_TEXT_RE.search(snippet):
+            markers.append("body_text")
+    return tuple(markers)
+
+
 def _login_wall(data: dict[str, Any]) -> bool:
-    """A redirected login wall reads as an empty extraction with a telling title."""
-    title = str(data.get("title") or data.get("page_title") or "")
-    return "登录" in title or "login" in title.lower()
+    """True when any login-wall marker fires (titled OR title-less variants)."""
+    return bool(_login_wall_markers(data))
+
+
+# The word test for an anti-bot challenge page: the same wording the extractor
+# JS used to match over document.body.textContent INCLUDING hidden script and
+# widget text, baking title='__BLOCKED__' into the payload. Live probe
+# 2026-09-10: healthy logged-out pages rendering 29-38 items answered
+# __BLOCKED__ because the hidden baxia widget's text says «人机» — the selfcheck
+# reported inconclusive(blocked) and the shape-drift canary never ran. The
+# verdict moved here and is gated on ZERO extracted items; it reads the same
+# visibility-filtered body_snippet the wall marker reads (scripts/styles
+# removed), so inline JS strings cannot fake a challenge either. (验证 also
+# covers 验证码, so the old alternation's extra branch is not needed.)
+_CHALLENGE_TEXT_RE = re.compile(r"验证|人机|captcha|are you human|access denied", re.IGNORECASE)
+
+
+def _anti_bot_challenge(data: dict[str, Any]) -> bool:
+    """True when the payload is an anti-bot challenge rather than a catalog.
+
+    A real challenge REPLACES the catalog with its widget, so the text match
+    is gated on zero extracted items: challenge wording (验证/人机/captcha/…)
+    in the visibility-filtered ``body_snippet`` of a page that rendered no
+    items. A payload WITH items is never a challenge whatever its hidden
+    widgets put in the text — exactly the gate the JS verdict lacked when it
+    convicted healthy pages carrying the hidden baxia widget.
+
+    ``title == "__BLOCKED__"`` — the marker an older build's extractor JS
+    baked in — is still honored, so a payload captured by that build reads
+    the same; the current JS emits the raw document title and decides
+    nothing. Zero items without challenge wording is NOT a challenge — that
+    is the selfcheck's drift question, answered elsewhere.
+    """
+    if str(data.get("title") or "") == "__BLOCKED__":
+        return True
+    items = data.get("items")
+    if isinstance(items, list) and items:
+        return False
+    snippet = data.get("body_snippet")
+    return isinstance(snippet, str) and bool(_CHALLENGE_TEXT_RE.search(snippet))
 
 
 @mcp.tool(
@@ -436,7 +582,9 @@ async def taobao_search(
             tier = "cdp"
             _cache.set(url, payload)
 
-        if _login_wall(payload):
+        wall_markers = _login_wall_markers(payload)
+        if wall_markers:
+            log_event("taobao_search.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
                 TransportDownError(
                     "Taobao served a login wall. Log into taobao.com in the Chrome scraping profile (scripts/start_chrome_cdp.sh), then retry."
@@ -516,7 +664,9 @@ async def taobao_card(
             tier = "cdp"
             _cache.set(url, payload)
 
-        if _login_wall(payload):
+        wall_markers = _login_wall_markers(payload)
+        if wall_markers:
+            log_event("taobao_card.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
                 TransportDownError(
                     "Taobao served a login wall. Log into taobao.com in the Chrome scraping profile, then retry."
@@ -578,8 +728,11 @@ async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckRespons
     """Structural drift canary for Taobao (tri-state). Renders one live search
     page in the operator's Chrome and checks the extractor still finds items.
 
-    CDP down or a login wall is ``inconclusive`` (transport/session), NEVER
-    drift. Only a rendered page that yields zero items is ``drift``.
+    CDP down, a login wall or an anti-bot challenge is ``inconclusive``
+    (transport/session — a wall of any variant, titled or title-less, carries
+    reason ``login_wall``; a challenge page carries ``blocked``), NEVER drift.
+    Only a rendered page that is neither and still yields zero items is
+    ``drift``.
 
     ## Return Format
 
@@ -627,21 +780,32 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
             notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
         )
     else:
-        if _login_wall(payload):
+        wall_markers = _login_wall_markers(payload)
+        if wall_markers:
+            # A login wall — titled OR title-less — is a session problem, never
+            # parser drift: inconclusive(login_wall), the doctrinal verdict for
+            # "we were not shown the catalog because we are not logged in".
             checks["search"] = R.selfcheck_entry(
                 "inconclusive",
                 baseline=baseline,
-                reason="auth_missing",
-                notes=["login wall — log into taobao.com in the scraping profile"],
+                reason="login_wall",
+                notes=[
+                    "login wall — log into taobao.com in the scraping profile",
+                    f"markers: {', '.join(wall_markers)}",
+                ],
+            )
+        elif _anti_bot_challenge(payload):
+            # An anti-bot challenge is a session/anti-bot event, never drift:
+            # the canary saw the widget, not the catalog, so it can say nothing
+            # about the catalog's shape. The Python verdict is gated on zero
+            # items, so a healthy page whose HIDDEN widget text says 人机 falls
+            # through to the shape check below — the old JS verdict stopped it
+            # at inconclusive(blocked) and the canary never ran.
+            checks["search"] = R.selfcheck_entry(
+                "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
             )
         else:
-            if payload.get("title") == "__BLOCKED__":
-                checks["search"] = R.selfcheck_entry(
-                    "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
-                )
-                items_raw = []
-            else:
-                items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
+            items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
             if items_raw:
                 # Items extract — now ask the second question: did the SHAPE
                 # move? The registry was measured on the captured page
@@ -669,7 +833,10 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                     checks["search"] = R.selfcheck_entry(
                         "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
                     )
-            elif payload.get("title") != "__BLOCKED__":
+            else:
+                # Rendered, no wall, no challenge, and still zero items — the
+                # only thing that means drift: the page was served and the
+                # parser could not read it.
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["rendered page yielded zero items"]
                 )

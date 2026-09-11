@@ -22,6 +22,8 @@ from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_req
 FIXTURES = Path(__file__).parent / "fixtures"
 
 SEARCH_GOLDEN = [
+    "anchors_total:int",
+    "body_snippet:str",
     "items[].item_id:str",
     "items[].location:null",
     "items[].price_texts.attached:empty_array",
@@ -31,15 +33,23 @@ SEARCH_GOLDEN = [
     "items[].shop_name:str",
     "items[].title:str",
     "items[].url:str",
+    "login_anchors:int",
     "title:str",
 ]
 # Measured again on 2026-08-07 after the price hunt was scoped to the price
 # wrapper (live capture cycle): the sales count «2000+人付款» used to leak into
 # price_texts.other[] and a naive read promoted it to a strikethrough price;
 # it is now a decoy outside the scoped hunt, so other[]:str left the shape.
+# Measured again 2026-09-10 (login-wall triage): the extractor now surfaces the
+# structural wall markers (anchors_total, login_anchors, body_snippet) that
+# catch the EMPTY-title wall variant — they are part of the golden so losing
+# them is loud, exactly like losing a price path.
 
 CARD_GOLDEN = [
+    "anchors_total:int",
+    "body_snippet:str",
     "description_images:int",
+    "login_anchors:int",
     "page_title:str",
     "price_texts.attached[]:str",
     "price_texts.other:empty_array",
@@ -51,6 +61,9 @@ CARD_GOLDEN = [
 # sales count «2000+人付款» used to double as a price_texts.other[] candidate;
 # it is now recognised as a sales decoy (still reported as sales), so the
 # card's other[] shrank to an empty array.
+# Measured again 2026-09-10: the card extractor carries the same three
+# structural wall markers as the search extractor (item pages redirect to the
+# same login wall).
 
 
 def _extract(js_source: str, fixture: Path, page_url: str) -> dict:
@@ -100,9 +113,12 @@ def test_missing_required_families_sees_a_lost_price_family() -> None:
     the parser can bind a price to.
     """
     drifted = [
+        "anchors_total:int",
+        "body_snippet:str",
         "items[].item_id:str",
         "items[].title:str",
         "items[].url:str",
+        "login_anchors:int",
         "title:str",
     ]
     assert missing_required_families(drifted) == [
@@ -111,3 +127,18 @@ def test_missing_required_families_sees_a_lost_price_family() -> None:
     # A legacy numeric price still satisfies the family.
     legacy = [*drifted, "items[].price_cny:float"]
     assert missing_required_families(legacy) == []
+
+
+def test_missing_required_families_sees_lost_wall_markers() -> None:
+    """The 2026-09-10 regression inverted: if a future extractor stops
+    emitting the structural wall markers, the title-less login wall silently
+    becomes readable as drift again. Losing any one of anchors_total /
+    login_anchors / body_snippet must be LOUD at runtime, not only in the
+    dev-time golden above."""
+    healthy = list(SEARCH_SHAPE_REFERENCE)
+    assert missing_required_families(healthy) == []
+    for lost in ("anchors_total:int", "login_anchors:int", "body_snippet:str"):
+        without = [entry for entry in healthy if entry != lost]
+        missing = missing_required_families(without)
+        assert missing, f"losing {lost} went silent"
+        assert any(lost.split(":")[0] in family for family in missing)
