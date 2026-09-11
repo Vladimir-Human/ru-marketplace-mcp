@@ -142,6 +142,8 @@
   `docs/ARCHITECTURE.md`, счётчики навыков (15), источников (14), артефактов
   релиза (32) и мест хранения версии (84) в README, `docs/DEPLOYMENT.md`,
   `docs/RELEASE_CHECKLIST.md`, `release.yml` и dsh-бандле.
+- Офлайн-счётчик тестов в документации обновлён до 1349: двадцать четыре
+  теста login-стены и анти-бот-вердикта Taobao добавились к 1325.
 
 ### Changed
 
@@ -151,6 +153,56 @@
   `docs/ARCHITECTURE.md`, skill (15), source-server (14), release-artifact
   (32) and version-location (84) counts across README, `docs/DEPLOYMENT.md`,
   `docs/RELEASE_CHECKLIST.md`, `release.yml` and the dsh bundle.
+- Documented offline test count is 1349: twenty-four Taobao login-wall and
+  anti-bot-verdict tests on top of 1325.
+
+### Исправлено
+
+- Классификация login-стены Taobao: стена с **пустым** `<title>` (живой замер
+  2026-09-10 — именно так она сейчас и выглядит) раньше доходила до вердикта
+  `drift_detected`, хотя по тристейт-доктрине сессия/IP/капча — это
+  `inconclusive`, а не дрейф парсера. Детектор дополнен структурными
+  маркерами: login-маршруты (`member/login.jhtml`, `register.jhtml`), общее
+  число анкоров (порог `< 40`; здоровая страница несёт 133), видимый текст
+  тела (`/登录|log ?in|sign ?in/i`). Решает Python, экстрактор-JS только
+  передаёт счётчики и сниппет. Тулы отвечают `transport_down` с инструкцией
+  про вход инлайн, `taobao_selfcheck` — `inconclusive` с причиной
+  `login_wall`. Регрессионная фикстура — настоящий снимок стены (trimmed,
+  с provenance и тестом на отсутствие сессионных данных).
+- Вердикт капчи Taobao переехал из экстрактор-JS в Python и гейтится на
+  пустой выдаче: скрытый текст виджета baxia («人机») раньше давал
+  `__BLOCKED__` даже на здоровых страницах с 29–38 товарами, из-за чего
+  shape-drift канарейка никогда не запускалась по-настоящему. Теперь страница
+  с товарами не заблокирована (канарейка работает), а страница без товаров
+  с текстом капчи — `inconclusive(blocked)`; старый JS-маркер
+  `__BLOCKED__` понимается для легаси-payload'ов.
+- Карточка товара, в **названии** которого есть «登录»/«login», больше не
+  принимается за login-стену: title-маркер на card-payload читает заголовок
+  документа (`page_title`), а не имя товара.
+
+### Fixed
+
+- Taobao login-wall classification: a wall with an **empty** `<title>` (the
+  shape observed live on 2026-09-10) used to reach the `drift_detected`
+  verdict, although the tri-state doctrine classes a session wall as
+  `inconclusive`, never drift. The detector gained structural markers —
+  login routes (`member/login.jhtml`, `register.jhtml`), total anchor count
+  (ceiling `< 40`; a healthy page carries 133) and the visible body text
+  (`/登录|log ?in|sign ?in/i`). Python decides; the extractor JS only
+  transports counts and a snippet. Tools answer `transport_down` with the
+  log-in fix inline, `taobao_selfcheck` answers `inconclusive` with reason
+  `login_wall`. The regression fixture is a real trimmed capture of the wall
+  with provenance and a test asserting it carries no session data.
+- Taobao's captcha verdict moved from the extractor JS into Python and is
+  gated on a zero-item extraction: the hidden baxia widget text («人机») used
+  to bake `__BLOCKED__` even into healthy pages rendering 29–38 items, so the
+  shape-drift canary never actually ran. A page with items is now not blocked
+  (the canary runs); a zero-item page carrying captcha text is
+  `inconclusive(blocked)`; the legacy JS `__BLOCKED__` marker is still
+  honored for replayed older-build payloads.
+- A card whose product **name** contains «登录»/«login» is no longer
+  mistaken for a login wall: on card payloads the title marker reads the
+  document title (`page_title`), never the product name.
 
 ## [2.1.0] — 2026-09-09
 

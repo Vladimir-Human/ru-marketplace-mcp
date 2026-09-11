@@ -3,7 +3,11 @@
 Generated from the LIVE capture (``tests/fixtures/search_grid_live.html``,
 captured 2026-08-07 through the operator's logged-in Chrome; provenance
 recorded alongside) by running the real extractor over it and fingerprinting
-the payload with ``mcp_core.resilience.shape_signature``. Two consumers:
+the payload with ``mcp_core.resilience.shape_signature``. Re-measured
+2026-09-10 (login-wall triage) after the extractor gained the structural
+wall-marker fields (``anchors_total`` / ``login_anchors`` / ``body_snippet``)
+by re-running the same extractor over the same committed capture. Two
+consumers:
 
 * ``taobao_selfcheck`` compares a live payload against
   ``SEARCH_REQUIRED_FAMILIES`` and reports drift with paths when a
@@ -20,6 +24,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
+    "anchors_total:int",
+    "body_snippet:str",
     "items[].item_id:str",
     "items[].location:str",
     "items[].price_texts.attached[]:str",
@@ -29,6 +35,7 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].shop_name:str",
     "items[].title:str",
     "items[].url:str",
+    "login_anchors:int",
     "title:str",
 )
 
@@ -44,6 +51,15 @@ SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
         "items[].price_cny",
     ),
     ("items[].url",),
+    # The structural login-wall markers (2026-09-10): the wall classifier
+    # reads all three, and losing them silently degrades detection to the
+    # title-only check that missed the EMPTY-title wall variant
+    # (tests/fixtures/search_login_wall_live.html). Each is its own family —
+    # anchors_total gates the other two markers, so any one vanishing is
+    # parser-critical drift and must be loud.
+    ("anchors_total",),
+    ("login_anchors",),
+    ("body_snippet",),
 )
 
 
