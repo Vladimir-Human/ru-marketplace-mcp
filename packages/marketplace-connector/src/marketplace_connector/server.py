@@ -46,7 +46,7 @@ class MarketplaceSourcesResponse(BaseModel):
     server_version: str = Field(default="", description="Unified server version.")
 
 
-SERVER_VERSION = "2.1.0"
+SERVER_VERSION = "2.2.0"
 
 mcp = FastMCP(
     "marketplace",
