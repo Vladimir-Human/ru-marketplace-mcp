@@ -28,7 +28,18 @@ class MegamarketSettings(BaseSettings):
         description=(
             "Delivery address used to resolve an addressId. Megamarket answers a search without one "
             "with listingSize>0 and an empty items array: it finds the products but no deliverable "
-            "offer. A logged-in profile's default address wins over this value."
+            "offer. A logged-in profile's default address wins over this value only when "
+            "use_profile_address is enabled; by default this city is what search uses."
+        ),
+    )
+    use_profile_address: bool = Field(
+        default=False,
+        description=(
+            "Opt-in: resolve the delivery address from the logged-in profile's default address by "
+            "reading the private account endpoint /profileService/address/list in the operator's "
+            "Chrome. On = prices and availability exactly as the operator's own profile sees them, "
+            "but a private account endpoint is read. Off (default) = only the public city-level "
+            "suggest endpoint is used, driven by MEGAMARKET_ADDRESS."
         ),
     )
 

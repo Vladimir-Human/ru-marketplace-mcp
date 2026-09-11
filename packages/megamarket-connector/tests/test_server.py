@@ -7,6 +7,8 @@ the code-7 ServicePipe refusal that must never be read as data.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastmcp.exceptions import ToolError
 from megamarket_connector import server
@@ -60,6 +62,11 @@ def _no_cache(monkeypatch):
     # has to be forgotten between tests or they become order-dependent.
     monkeypatch.setattr(server, "_address_id", None)
     monkeypatch.setattr(server, "_address_resolved", False)
+    monkeypatch.setattr(server, "_address_source", None)
+    # The privacy posture is pinned to the shipped default: a test asserting
+    # "profile is not read" must not flip just because the machine running the
+    # suite happens to export MEGAMARKET_USE_PROFILE_ADDRESS=1.
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", False)
     monkeypatch.setattr(server, "_search_params_cache", {})
     # The pacer is real and its gap is seconds; an offline suite must not sleep it.
     monkeypatch.setattr(server, "_min_gap", 0.0)
@@ -400,6 +407,11 @@ def test_stock_is_none_when_the_payload_omits_it():
 # address there is no deliverable offer and the array comes back empty while
 # listingSize still counts what the catalog matched. The maintained
 # xob0t/mmparser resolves an address three ways before it ever searches.
+#
+# Privacy (S4, work/v2-research/security.md): source 1, the profile default
+# address, lives behind a private account-gated endpoint. Reading it is
+# opt-in via MEGAMARKET_USE_PROFILE_ADDRESS (default off); off, only the
+# public suggest endpoint is consulted and search stays city-wide.
 
 PROFILE_ADDRESSES = {
     "profileAddresses": [
@@ -425,15 +437,62 @@ def _patch_routes(monkeypatch, routes: dict[str, object]):
     monkeypatch.setattr(server, "_post", fake_post)
 
 
-async def test_the_profile_default_address_wins(monkeypatch):
-    """The operator's own default address makes prices match what they see."""
+async def test_the_profile_default_address_wins_when_opted_in(monkeypatch):
+    """The operator's own default address makes prices match what they see.
+
+    The profile lookup is opt-in now, so this behaviour — previously the
+    unconditional default — must be enabled explicitly.
+    """
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
     _patch_routes(monkeypatch, {"/profileService/address/list": PROFILE_ADDRESSES})
 
     assert await server._resolve_address_id(None) == "a-222"
+    assert server._address_source == "profile"
+
+
+async def test_the_profile_endpoint_is_never_read_by_default(monkeypatch):
+    """The privacy boundary itself: opt-in off means /profileService/address/list
+    is not called even when a logged-in profile would answer it successfully."""
+    calls: list[str] = []
+
+    async def tracking_post(api_path, body, ctx, what):
+        calls.append(api_path)
+        if "profileService" in api_path:
+            return PROFILE_ADDRESSES
+        if "addressSuggest" in api_path:
+            return SUGGESTED_ADDRESSES
+        raise AssertionError(f"unexpected endpoint {api_path}")
+
+    monkeypatch.setattr(server, "_post", tracking_post)
+
+    assert await server._resolve_address_id(None) == "s-999"
+    assert server._address_source == "suggest"
+    assert not any("profileService" in c for c in calls), (
+        "the private profile endpoint must not be read unless MEGAMARKET_USE_PROFILE_ADDRESS is set"
+    )
 
 
 async def test_the_suggest_endpoint_is_the_fallback(monkeypatch):
-    """Without a session the public suggest endpoint still yields an address."""
+    """Default mode: the public suggest endpoint resolves the configured city.
+
+    When the profile branch is skipped (or opted in but refused), suggest still
+    yields an address without any session.
+    """
+    _patch_routes(
+        monkeypatch,
+        {
+            "/profileService/address/list": PROFILE_ADDRESSES,
+            "/addressSuggestService/address/suggest": SUGGESTED_ADDRESSES,
+        },
+    )
+
+    assert await server._resolve_address_id(None) == "s-999"
+    assert server._address_source == "suggest"
+
+
+async def test_opted_in_but_logged_out_falls_back_to_suggest(monkeypatch):
+    """Opt-in requests the profile address; it does not require it to exist."""
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
     _patch_routes(
         monkeypatch,
         {
@@ -443,6 +502,7 @@ async def test_the_suggest_endpoint_is_the_fallback(monkeypatch):
     )
 
     assert await server._resolve_address_id(None) == "s-999"
+    assert server._address_source == "suggest"
 
 
 async def test_the_address_is_resolved_once_per_process(monkeypatch):
@@ -453,6 +513,7 @@ async def test_the_address_is_resolved_once_per_process(monkeypatch):
         return PROFILE_ADDRESSES
 
     monkeypatch.setattr(server, "_post", counting_post)
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
 
     first = await server._resolve_address_id(None)
     second = await server._resolve_address_id(None)
@@ -471,6 +532,7 @@ async def test_an_unresolvable_address_is_not_fatal(monkeypatch):
     )
 
     assert await server._resolve_address_id(None) is None
+    assert server._address_source == "none"
 
 
 def test_the_address_reaches_the_search_body():
@@ -506,7 +568,7 @@ async def test_a_genuine_zero_result_stays_a_success(monkeypatch):
     _patch_routes(
         monkeypatch,
         {
-            "/profileService/address/list": PROFILE_ADDRESSES,
+            "/addressSuggestService/address/suggest": SUGGESTED_ADDRESSES,
             "/catalogService/catalog/search": {"success": True, "listingSize": 0, "items": []},
         },
     )
@@ -515,6 +577,141 @@ async def test_a_genuine_zero_result_stays_a_success(monkeypatch):
 
     assert result.count == 0
     assert any("empty_result" in w for w in result.meta.warnings)
+
+
+# --------------------------------------------- address-source disclosure ----
+#
+# A warning flips _meta.healthy to false (attach_meta), so the address source
+# is disclosed in _meta warnings only when it changes what the prices mean:
+# profile (a private endpoint was read — personalized prices) and none
+# (nothing deliverable resolved). The default suggest path is the normal
+# healthy case — no address warning, _meta.healthy true — with the source
+# still visible in the megamarket.address log event. The raw addressId itself
+# never leaves the process, on the success path or the error path.
+
+ONE_ITEM_SEARCH = {
+    "success": True,
+    "listingSize": 1,
+    "items": [
+        {
+            "goods": {"goodsId": "1_2", "title": "Ноутбук", "webUrl": "u"},
+            "favoriteOffer": {"finalPrice": 50000},
+            "isAvailable": True,
+        }
+    ],
+}
+
+
+async def test_the_default_suggest_path_is_healthy_and_warning_free(monkeypatch):
+    """A clean default search must self-report _meta.healthy=true.
+
+    _address_warnings used to emit an address_source:suggest warning on every
+    resolution path, so every successful megamarket_search answered
+    healthy=false — contradicting the envelope semantics in mcp-core
+    ("healthy=False ... something about it was off"). The default city-level
+    address is the normal case, not a degraded one.
+    """
+    _patch_routes(
+        monkeypatch,
+        {
+            "/addressSuggestService/address/suggest": SUGGESTED_ADDRESSES,
+            "/urlService/url/parse": URL_PARSE_SEARCH,
+            "/catalogService/catalog/search": ONE_ITEM_SEARCH,
+        },
+    )
+
+    result = await server.megamarket_search("ноутбук")
+
+    assert result.count == 1
+    assert result.meta.healthy is True, result.meta.warnings
+    assert not any(w.startswith("address_source:") for w in result.meta.warnings), result.meta.warnings
+    assert not any("profile_address_read" in w for w in result.meta.warnings), (
+        "default mode never read the profile, so it must not claim it did"
+    )
+
+
+async def test_search_discloses_the_profile_read_when_opted_in(monkeypatch):
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
+    _patch_routes(
+        monkeypatch,
+        {
+            "/profileService/address/list": PROFILE_ADDRESSES,
+            "/urlService/url/parse": URL_PARSE_SEARCH,
+            "/catalogService/catalog/search": ONE_ITEM_SEARCH,
+        },
+    )
+
+    result = await server.megamarket_search("ноутбук")
+
+    warnings = result.meta.warnings
+    assert result.meta.healthy is False, "the profile read is the one state that must mark the response"
+    assert any(w.startswith("address_source:profile") for w in warnings), warnings
+    assert any(w.startswith("profile_address_read") for w in warnings), warnings
+    # Only the source is disclosed; the raw addressId never leaves the process.
+    dumped = json.dumps(result.model_dump(by_alias=True), ensure_ascii=False)
+    assert "a-222" not in dumped
+
+
+async def test_search_discloses_when_no_address_resolved(monkeypatch):
+    _patch_routes(
+        monkeypatch,
+        {
+            "/addressSuggestService/address/suggest": ToolError("nope"),
+            "/urlService/url/parse": URL_PARSE_SEARCH,
+            "/catalogService/catalog/search": ONE_ITEM_SEARCH,
+        },
+    )
+
+    result = await server.megamarket_search("ноутбук")
+
+    assert result.meta.healthy is False
+    assert any(w.startswith("address_source:none") for w in result.meta.warnings), result.meta.warnings
+
+
+async def test_the_zero_offers_error_hides_the_raw_address_id(monkeypatch):
+    """The error path keeps the privacy promise the success path makes.
+
+    The refusal used to embed the resolved addressId verbatim ("...no offers
+    for address a-222"), crossing the process boundary in the one place the
+    guard never looked — only the success-path serialization was tested. The
+    message must say how the address was resolved (source), never what it
+    resolved to (the id).
+    """
+    _patch_routes(
+        monkeypatch,
+        {
+            "/addressSuggestService/address/suggest": SUGGESTED_ADDRESSES,
+            "/urlService/url/parse": URL_PARSE_SEARCH,
+            "/catalogService/catalog/search": {"success": True, "listingSize": 44, "items": []},
+        },
+    )
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_search("ноутбук")
+
+    message = str(excinfo.value)
+    assert "44" in message
+    assert "s-999" not in message, "the raw addressId must not cross into the agent-facing error"
+    assert "address_source:suggest" in message, "the source stands in for the id"
+
+
+async def test_the_disclosure_survives_the_process_address_cache(monkeypatch):
+    """The source is remembered with the address, not re-derived per search."""
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
+    _patch_routes(
+        monkeypatch,
+        {
+            "/profileService/address/list": PROFILE_ADDRESSES,
+            "/urlService/url/parse": URL_PARSE_SEARCH,
+            "/catalogService/catalog/search": ONE_ITEM_SEARCH,
+        },
+    )
+
+    first = await server.megamarket_search("ноутбук")
+    second = await server.megamarket_search("ноутбук")
+
+    assert any(w.startswith("address_source:profile") for w in second.meta.warnings)
+    assert second.count == first.count
 
 
 # ---------------------------------------------- url/parse before the search ----
@@ -622,6 +819,8 @@ async def test_search_calls_url_parse_before_searching(monkeypatch):
         calls.append(api_path)
         if "url/parse" in api_path:
             return URL_PARSE_SEARCH
+        if "addressSuggest" in api_path:
+            return SUGGESTED_ADDRESSES
         if "address" in api_path:
             return PROFILE_ADDRESSES
         return {

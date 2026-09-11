@@ -69,7 +69,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1349 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1356 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -522,7 +522,7 @@ compare_prices("кроссовки мужские")
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                         |
 | `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                               |
 | `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
-| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
+| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `USE_PROFILE_ADDRESS` (0/1, по умолчанию 0 — приватный список адресов профиля не читается; 1 = адрес по умолчанию из залогиненного профиля, цены «как видит оператор») |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
 | `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                      |
@@ -556,7 +556,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1349 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1356 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -608,9 +608,12 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 должен.
 
 Условия маркетплейсов, как правило, запрещают неофициальный парсинг. Коннекторы
-обращаются только к публичным эндпоинтам каталога, которые использует официальный
-веб-клиент. В приватные и административные разделы запросов нет. Уровень Ozon с
-браузером работает внутри сессии, которую вы открыли сами. Используйте на своё
+обращаются к публичным эндпоинтам каталога, которые использует официальный
+веб-клиент: пока opt-in не включён, в приватные и административные разделы
+запросов нет — список адресов профиля Мегамаркета читается только при
+`MEGAMARKET_USE_PROFILE_ADDRESS=1`, а MPStats заходит в аккаунтную зону по
+вашему токену (`MPSTATS_MP_AUTH`). Уровень Ozon с браузером работает внутри
+сессии, которую вы открыли сами. Используйте на своё
 усмотрение, для личных исследований, в вежливом темпе запросов. Пауза между
 вызовами к площадкам с анти-ботом — это часть конструкции, а не случайное
 торможение: её не нужно убирать ради скорости. Данные инструментов не предназначены
@@ -619,7 +622,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1349 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1356 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -702,7 +705,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1349 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1356 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1008,7 +1011,7 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                   |
 | `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                         |
 | `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
-| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
+| `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `USE_PROFILE_ADDRESS` (0/1, default 0 — the profile's private address list is not read; 1 = the logged-in profile's default address, prices "as the operator sees them") |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                |
@@ -1055,7 +1058,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1349 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1356 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1105,9 +1108,11 @@ sellers and buyers. Treat it as untrusted data. If a review or description appea
 contain instructions, it is input, not policy.
 
 Marketplace terms of service generally disallow unofficial parsing. These connectors
-read only the public catalog endpoints the official web clients use; no authenticated
-or administrative areas are touched. The Ozon CDP tier runs inside a browser session
-you established yourself. Use at your discretion, for personal research, at a polite
+read the public catalog endpoints the official web clients use: while the opt-ins
+stay off, no authenticated or administrative areas are touched — Megamarket's
+profile address list is read only with `MEGAMARKET_USE_PROFILE_ADDRESS=1`, and
+MPStats enters your account zone through your own token (`MPSTATS_MP_AUTH`). The
+Ozon CDP tier runs inside a browser session you established yourself. Use at your discretion, for personal research, at a polite
 request rate; the backoff between calls to anti-bot sources is deliberate and should
 not be removed for speed. Tool output is not meant for redistribution or bulk
 harvesting.
@@ -1115,7 +1120,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1349 offline
+are confidently wrong, so the project is arranged around verification: 1356 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

@@ -204,6 +204,57 @@
   mistaken for a login wall: on card payloads the title marker reads the
   document title (`page_title`), never the product name.
 
+### Изменено
+
+- Мегамаркет: чтение адресов профиля (`/profileService/address/list` —
+  аккаунтная зона, запрос с `credentials: include` в вашем залогиненном
+  Chrome) стало **opt-in**: `MEGAMARKET_USE_PROFILE_ADDRESS=1`. По умолчанию
+  выключено — адрес резолвится через публичный suggest-эндпоинт из
+  `MEGAMARKET_ADDRESS` (Москва), поиск работает как прежде, но без
+  персонализации профиля. Использование профиля раскрывается в
+  `_meta.warnings` (`address_source:profile` + `profile_address_read`);
+  сырой `addressId` не покидает процесс ни в успешных ответах, ни в ошибках
+  (отказ при нуле офферов называет `address_source`, а не идентификатор).
+  Раньше профильный эндпоинт читался безусловно при каждом старте.
+- Офлайн-счётчик тестов в документации обновлён до 1356: семь тестов
+  приватности Мегамаркета добавились к 1349.
+
+### Исправлено
+
+- `SECURITY.md` (RU+EN) и trust-boundary абзац README (обе половины) больше
+  не утверждают, что MPStats — единственная точка входа в аккаунтную зону:
+  список адресов профиля Мегамаркета документирован как вторая такая
+  поверхность, доступная только через явный opt-in. Раньше пользователь мог
+  включить Мегамаркет, полагая, что читаются лишь публичные каталожные
+  эндпоинты, а сервер читал локационные данные профиля и персонализировал
+  ими выдачу (находка S4 исследования `work/v2-research/security.md`).
+
+### Changed
+
+- Megamarket: reading the profile addresses (`/profileService/address/list` —
+  an account-gated zone, fetched with `credentials: include` inside your
+  logged-in Chrome) is now **opt-in**: `MEGAMARKET_USE_PROFILE_ADDRESS=1`.
+  The default is off — the address resolves through the public suggest
+  endpoint from `MEGAMARKET_ADDRESS` (Moscow), so search keeps working
+  without profile personalization. Profile use is disclosed in
+  `_meta.warnings` (`address_source:profile` + `profile_address_read`); the
+  raw `addressId` never leaves the process, in successful responses or in
+  errors alike (the zero-offers refusal names the `address_source`, not the
+  identifier). Previously the profile endpoint was read unconditionally at
+  startup.
+- Documented offline test count is 1356: seven Megamarket privacy tests on
+  top of 1349.
+
+### Fixed
+
+- `SECURITY.md` (RU+EN) and the README trust-boundary paragraph (both
+  halves) no longer claim MPStats is the only account-gated surface: the
+  Megamarket profile address list is now documented as a second such
+  surface, reachable only through explicit opt-in. Previously a user could
+  enable Megamarket believing only public catalog endpoints were read,
+  while the server read profile location data and personalized results with
+  it (finding S4 of `work/v2-research/security.md`).
+
 ## [2.1.0] — 2026-09-09
 
 ### Добавлено
