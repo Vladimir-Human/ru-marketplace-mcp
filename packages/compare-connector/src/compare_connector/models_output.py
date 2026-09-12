@@ -87,6 +87,14 @@ class SourceOutcome(BaseModel):
     detail: str = Field(default="", description="Human-readable outcome detail; the error text when it failed.")
     offers_returned: int = Field(default=0, description="How many offers this marketplace contributed.")
     elapsed_ms: int = Field(default=0, description="Round-trip time for this marketplace, in milliseconds.")
+    error_code: str | None = Field(default=None, description="Structured connector error code, if known.")
+    retryable: bool = Field(
+        default=False, description="Retry may succeed; user action must be completed first if required."
+    )
+    requires_user_action: bool = Field(
+        default=False, description="Pause retries for this source until browser action completes."
+    )
+    challenge_type: str | None = Field(default=None, description="captcha, login, or login_or_captcha when known.")
 
 
 class CompareResponse(BaseModel):

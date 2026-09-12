@@ -47,6 +47,11 @@ everything else is unaffected.
   `2`, never a `0`.
 
 ## Gotchas
+- Recovery-aware clients should read `source_outcomes.requires_user_action`
+  before scheduling retries. Keep answered sources visible, show the affected
+  marketplace and `challenge_type`, and retry that source after the browser
+  interaction completes. A challenge is not an empty product search. See the
+  compare-prices skill for the retry contract and current tab-retention limits.
 - A source whose optional deps are missing is simply absent from the set —
   `marketplace_sources` says which and why.
 - Set `MARKETPLACE_SOURCES` on the unified server to mount only a comma-separated

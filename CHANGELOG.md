@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### Browser recovery
+
+- Taobao login/CAPTCHA walls and Lamoda search challenges return
+  `challenge_required`. Comparison outcomes now retain `error_code`, `retryable`,
+  `requires_user_action`, and `challenge_type`, even when error detail is truncated.
+  Successful sources remain available while the client waits for browser action.
+- DSH guidance retries only affected sources after action completes, preserving
+  query settings and disclosing that old and retried offers have different
+  observation times. Temporary-tab retention and automatic resume remain pending.
+- Corrected the documented offline-test count that failed the previous CI run.
+
 ### Идентификация / Identity
 
 - `compare_verify_offer` принимает необязательный `expected_identity` и
