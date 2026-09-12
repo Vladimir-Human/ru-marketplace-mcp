@@ -15,6 +15,7 @@ import json
 import math
 from pathlib import Path
 
+import pytest
 from wb_connector import server
 from wb_connector.models_output import WbCardItem
 
@@ -55,6 +56,7 @@ CARD_EXPECTED = {
     "nm_id": 1280469586,
     "name": "Ноутбук 16 дюймов Ryzen 5-7535HS 16Гб 1ТБ WUXGA Win11 K16SFA",
     "brand": "TECNO",
+    "color": "серый",
     "price_rub": 54676.0,
     "price_original_rub": 70824.0,
     "total_quantity": 26,
@@ -99,7 +101,28 @@ def test_live_items_build_the_wire_model() -> None:
     """The same dict flows into WbCardItem in wb_search/wb_card — build it."""
     for name in ("search_v9_live.json", "card_v4_live.json"):
         for raw in _load(name)["products"]:
-            WbCardItem(**server._card_item_dict(raw))
+            item = WbCardItem(**server._card_item_dict(raw))
+            assert item.color == raw["colors"][0]["name"]
+
+
+@pytest.mark.parametrize(
+    "colors",
+    [
+        None,
+        {},
+        "gray",
+        [],
+        [None],
+        [{"name": None}],
+        [{"name": 7}],
+        [{"name": " "}],
+        [{"name": "gray"}, {"name": "white"}],
+        [{"name": "gray"}, None],
+    ],
+)
+def test_ambiguous_or_malformed_colors_do_not_select_a_variant(colors) -> None:
+    item = WbCardItem(**server._card_item_dict({"colors": colors, "name": "Gray product"}))
+    assert item.color == ""
 
 
 def test_the_fixture_pair_freezes_the_search_vs_card_gap() -> None:

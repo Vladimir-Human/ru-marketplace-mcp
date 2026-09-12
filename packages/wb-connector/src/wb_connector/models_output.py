@@ -23,6 +23,9 @@ class WbCardItem(BaseModel):
     nm_id: int | None = Field(default=None, description="WB product nmId.")
     name: str = Field(default="", description="Product name (mojibake-decoded).")
     brand: str = Field(default="", description="Brand name (mojibake-decoded).")
+    color: str = Field(
+        default="", description="Single explicitly reported product color; empty when ambiguous or absent."
+    )
     supplier: str = Field(default="", description="Supplier name (mojibake-decoded).")
     supplier_id: int | None = Field(default=None, description="Supplier id.")
     supplier_rating: float | None = Field(default=None, description="Supplier rating.")
