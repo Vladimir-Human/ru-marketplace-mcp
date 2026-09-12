@@ -47,6 +47,7 @@ from mcp_core.redact import redact_error_text as _redact
 from mcp_core.source_selection import selected
 from pydantic import Field
 
+from compare_connector.identity import ProductIdentity, identity_from_mapping, match_product_identity
 from compare_connector.models_output import (
     CompareResponse,
     MarketOffer,
@@ -993,6 +994,10 @@ async def compare_verify_offer(
         float | None,
         Field(default=None, ge=0, description="Price returned by compare_prices; used to report a live card delta."),
     ] = None,
+    expected_identity: Annotated[
+        ProductIdentity | None,
+        Field(description="Optional manufacturer identifiers and variant attributes to verify against the card."),
+    ] = None,
 ) -> dict[str, Any]:
     """Verify one compared offer through its marketplace card tool.
 
@@ -1005,7 +1010,9 @@ async def compare_verify_offer(
 
     JSON object: `{source, product_id_or_url, card}`. `card` is the native
     source response, preserving price, availability, seller, and source-specific
-    fields when the marketplace exposes them.
+    fields when the marketplace exposes them. `identity_verification`, when
+    requested, carries the observed typed identifiers and a match verdict;
+    absent manufacturer evidence yields unknown, never a title-derived exact match.
 
     ## Error Format
 
@@ -1024,11 +1031,13 @@ async def compare_verify_offer(
     if tool is None:
         raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
 
+    requested_wb_id = ""
     if name == "wildberries":
         digits = re.search(r"\d+", product_id_or_url)
         if digits is None:
             raise_tool_error(BadRequestError("wildberries verification needs a numeric nm_id"))
-        result = await tool(nm_ids=[int(digits.group(0))])
+        requested_wb_id = str(int(digits.group(0)))
+        result = await tool(nm_ids=[int(requested_wb_id)])
     elif name == "yandex_market":
         result = await tool(product_id=product_id_or_url, include_reviews=False)
     elif name == "detsky_mir":
@@ -1064,7 +1073,31 @@ async def compare_verify_offer(
                 "delta_rub": None,
                 "matches": None,
             }
-    return {"source": name, "product_id_or_url": product_id_or_url, "card": payload, "price_verification": verification}
+    response = {
+        "source": name,
+        "product_id_or_url": product_id_or_url,
+        "card": payload,
+        "price_verification": verification,
+    }
+    if expected_identity is not None:
+        record = payload if isinstance(payload, dict) else {}
+        if name == "wildberries" and isinstance(record.get("items"), list):
+            # wb_card is a batch response. Select the requested id, never the
+            # first row, which may describe another variant or returned item.
+            record = next(
+                (
+                    item
+                    for item in record["items"]
+                    if isinstance(item, dict) and str(item.get("nm_id")) == requested_wb_id
+                ),
+                {},
+            )
+        observed_identity = identity_from_mapping(record, source=name)
+        response["identity_verification"] = {
+            "observed": observed_identity.model_dump(),
+            "match": match_product_identity(expected_identity, observed_identity).model_dump(),
+        }
+    return response
 
 
 @mcp.tool(

@@ -9,6 +9,26 @@
 
 ## [Unreleased]
 
+### Идентификация / Identity
+
+- `compare_verify_offer` принимает необязательный `expected_identity` и
+  возвращает сведения из карточки вместе с вердиктом сопоставления. Артикул
+  продавца не считается MPN; совпадение MPN требует марки. Отсутствующие
+  характеристики варианта дают `unknown`, кириллические и китайские значения
+  сохраняются при сопоставлении. Проверка формата GTIN отклоняет знаки,
+  дробные числа и нулевой заполнитель; ведущие нули до 14 знаков не меняют
+  идентичность GTIN. Проверка не меняет ранжирование цен; извлечение
+  manufacturer-полей из живых источников ещё не подтверждено.
+- `compare_verify_offer` accepts optional `expected_identity` and returns
+  observed card evidence with a match verdict. Seller articles are not MPNs;
+  MPN equality requires a brand. Incomplete variant evidence stays `unknown`,
+  and non-Latin variant values retain their meaning. Malformed GTINs are
+  rejected and leading-zero GTIN representations compare equally. Price
+  ranking is unchanged; live manufacturer-field extraction remains unverified.
+- The deliberate optional-input expansion adds about 196 estimated tokens:
+  compare profile 1355 → 1551; unified profile 15834 → 16030. The stored
+  wire baseline is updated for this contract change; the 10% gate is unchanged.
+
 ### Исправлено
 
 - Lamoda больше не принимает слова `captcha` и «не робот» внутри скриптов,
