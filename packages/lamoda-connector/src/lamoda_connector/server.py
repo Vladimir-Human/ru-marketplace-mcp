@@ -352,7 +352,8 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
         payload = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         raise_tool_error(TransportDownError(f"CDP timeout after {TIMEOUT}s"))
-    _cache.set(cache_key, payload)
+    if not _anti_bot_challenge(payload):
+        _cache.set(cache_key, payload)
     return payload
 
 
@@ -375,8 +376,9 @@ async def lamoda_search(
 
     ## Error Format
 
-    ToolError: TransportDownError on CDP/nav failures; ParserDriftError when a
-    rendered page yields zero SKUs, which means the tile shape moved.
+    ToolError: challenge_required on a visible challenge (not cached);
+    TransportDownError on CDP/nav failures; ParserDriftError when a rendered
+    page yields zero SKUs without challenge evidence.
     """
     log_event("lamoda_search.start", query=query[:60])
     try:

@@ -698,44 +698,53 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
         create_params: dict[str, Any] = {"url": "about:blank"}
         if STEALTH:
             create_params["background"] = True
-        created = await _RawCdpPage(bws, "")._send("Target.createTarget", create_params, timeout=_RAW_CONNECT_TIMEOUT_S)
+        browser = _RawCdpPage(bws, "")
+        created = await browser._send("Target.createTarget", create_params, timeout=_RAW_CONNECT_TIMEOUT_S)
         target_id = created.get("targetId")
         if not isinstance(target_id, str) or not target_id:
             raise RuntimeError("CDP Target.createTarget returned no targetId")
 
-    import urllib.request
-
-    try:
-        with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
-            targets = json.loads(resp.read())
-    except Exception as exc:
-        raise RuntimeError(f"CDP target list unavailable: {exc}") from exc
-    page_ws = next(
-        (t.get("webSocketDebuggerUrl") for t in targets if isinstance(t, dict) and t.get("id") == target_id),
-        None,
-    )
-    if not isinstance(page_ws, str) or not page_ws.startswith("ws"):
-        raise RuntimeError("CDP target has no websocket URL")
-    parts = urlsplit(page_ws)
-    page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
-
-    async with _websockets.connect(page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S) as pws:
-        page = _RawCdpPage(pws, target_id)
+        # Keep the browser connection alive until the owned target is closed.
+        # Discovery and page attachment may fail before there is a page socket
+        # through which to clean up, so ownership starts at createTarget.
         try:
-            await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
-            await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
-            await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
-            status = await page.goto_and_status(url)
-            if status in _NAV_FAIL_STATUSES:
-                raise NavBlocked(status, page.url)
-            if wait_ms > 0:
-                await asyncio.sleep(wait_ms / 1000)
-            if STEALTH and sys.platform in ("win32", "darwin"):
-                await asyncio.to_thread(_hide_chrome_windows)
-            yield page
+            import urllib.request
+
+            try:
+                with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
+                    targets = json.loads(resp.read())
+            except Exception as exc:
+                raise RuntimeError(f"CDP target list unavailable: {exc}") from exc
+            page_ws = next(
+                (t.get("webSocketDebuggerUrl") for t in targets if isinstance(t, dict) and t.get("id") == target_id),
+                None,
+            )
+            if not isinstance(page_ws, str) or not page_ws.startswith("ws"):
+                raise RuntimeError("CDP target has no websocket URL")
+            parts = urlsplit(page_ws)
+            page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+
+            async with _websockets.connect(
+                page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+            ) as pws:
+                page = _RawCdpPage(pws, target_id)
+                await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                status = await page.goto_and_status(url)
+                if status in _NAV_FAIL_STATUSES:
+                    raise NavBlocked(status, page.url)
+                if wait_ms > 0:
+                    await asyncio.sleep(wait_ms / 1000)
+                if STEALTH and sys.platform in ("win32", "darwin"):
+                    await asyncio.to_thread(_hide_chrome_windows)
+                yield page
         finally:
             try:
-                await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
+                await asyncio.wait_for(
+                    browser._send("Target.closeTarget", {"targetId": target_id}, timeout=_RAW_CONNECT_TIMEOUT_S),
+                    timeout=_TAB_OP_TIMEOUT_S,
+                )
             except Exception:
                 pass
             # Closing the tab un-hides the app again; tuck it away between calls.

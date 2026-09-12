@@ -7,6 +7,9 @@ GraphQL product JSON, and the search-tile extraction from a rendered page.
 
 from __future__ import annotations
 
+import json
+from contextlib import asynccontextmanager
+
 import pytest
 from fastmcp.exceptions import ToolError
 from lamoda_connector import server
@@ -164,6 +167,35 @@ async def test_search_empty_visible_challenge_is_transport_down(monkeypatch):
     with pytest.raises(ToolError) as excinfo:
         await server.lamoda_search("кроссовки")
     assert "challenge" in str(excinfo.value).lower()
+
+
+async def test_challenge_recovery_bypasses_failed_payload_cache(monkeypatch):
+    from mcp_core.cache import TTLCache
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+    reads = []
+
+    class Page:
+        async def evaluate(self, expression):
+            reads.append(expression)
+            payload = (
+                {"items": [], "body_snippet": "Подтвердите, что вы не робот"} if len(reads) == 1 else SEARCH_EXTRACTED
+            )
+            return json.dumps(payload)
+
+    @asynccontextmanager
+    async def open_page(url, wait_ms):
+        yield Page()
+
+    monkeypatch.setattr(server, "open_page", open_page)
+    with pytest.raises(ToolError) as excinfo:
+        await server.lamoda_search("кроссовки")
+    assert json.loads(str(excinfo.value))["error"] == "challenge_required"
+    assert len(server._cache) == 0
+    recovered = await server.lamoda_search("кроссовки")
+    assert recovered.count > 0
+    await server.lamoda_search("кроссовки")
+    assert len(reads) == 2  # the successful payload still uses the normal cache
 
 
 # ---------------------------------------------------------- lamoda_selfcheck ----
