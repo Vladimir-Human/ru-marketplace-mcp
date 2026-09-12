@@ -1,5 +1,6 @@
 from compare_connector.identity import (
     ProductIdentity,
+    identity_from_mapping,
     match_product_identity,
     normalize_gtin,
 )
@@ -42,3 +43,32 @@ def test_same_model_without_manufacturer_identifier_is_only_likely():
 
 def test_no_identity_evidence_explicitly_abstains():
     assert match_product_identity(ProductIdentity(), ProductIdentity()).status == "unknown"
+
+
+def test_mapping_uses_typed_identifiers_and_variants_only():
+    identity = identity_from_mapping(
+        {
+            "brand_name": "ACME",
+            "manufacturer_part_number": "AB-12",
+            "barcode": "4006381333931",
+            "color": "Black",
+            "size": "128GB",
+            "title": "ACME AB-12 128GB",
+            "id": 42,
+        },
+        source="fixture",
+    )
+
+    assert identity.brand == "ACME"
+    assert identity.mpn == "AB12"
+    assert identity.gtin == "4006381333931"
+    assert identity.variant_attributes == {"color": "Black", "size": "128GB"}
+    assert identity.native_product_id == "42"
+    assert identity.source == "fixture"
+
+
+def test_mapping_discards_invalid_gtin_instead_of_guessing():
+    identity = identity_from_mapping({"gtin": "4006381333932", "title": "AB-12"})
+
+    assert identity.gtin == ""
+    assert identity.mpn == ""

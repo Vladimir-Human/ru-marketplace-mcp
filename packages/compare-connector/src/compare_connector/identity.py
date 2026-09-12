@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -59,6 +60,33 @@ def normalize_gtin(value: Any) -> str:
 
 def normalize_model(value: Any) -> str:
     return " ".join(re.findall(r"[A-Z0-9]+", str(value or "").upper()))
+
+
+def identity_from_mapping(raw: Mapping[str, Any], *, source: str = "") -> ProductIdentity:
+    """Build identity evidence from typed upstream fields only.
+
+    Free-form titles are intentionally excluded: a model-like substring in a
+    seller title is not manufacturer evidence. Invalid GTINs are discarded by
+    ``normalize_gtin`` and therefore cannot create an exact match.
+    """
+    brand = raw.get("brand") or raw.get("brand_name") or ""
+    model = raw.get("model") or raw.get("model_name") or ""
+    mpn = raw.get("mpn") or raw.get("manufacturer_part_number") or raw.get("vendor_code") or ""
+    gtin = raw.get("gtin") or raw.get("barcode") or raw.get("ean") or ""
+    variants: dict[str, str] = {}
+    for key in ("color", "colour", "size", "storage", "memory", "capacity"):
+        value = raw.get(key)
+        if value is not None and str(value).strip():
+            variants[key] = str(value).strip()
+    return ProductIdentity(
+        brand=str(brand).strip(),
+        model=str(model).strip(),
+        mpn=normalize_mpn(mpn),
+        gtin=normalize_gtin(gtin),
+        variant_attributes=variants,
+        native_product_id=str(raw.get("product_id") or raw.get("id") or "").strip(),
+        source=source,
+    )
 
 
 def _variants_equal(left: dict[str, str], right: dict[str, str]) -> bool:
