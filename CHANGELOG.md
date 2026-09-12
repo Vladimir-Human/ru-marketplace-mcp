@@ -7,6 +7,24 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Исправлено
+
+- Lamoda больше не принимает слова `captcha` и «не робот» внутри скриптов,
+  скрытых виджетов или названий товаров за блокировку; challenge определяется
+  только по видимому тексту пустой выдачи.
+- Параллельные CDP-коннекторы теперь сопоставляют созданную вкладку с её
+  `targetId`, чтобы один вызов не получил вкладку другого.
+
+### Fixed
+
+- Lamoda no longer treats `captcha` or bot wording in scripts, hidden widgets,
+  or product names as a block; a challenge is classified only from visible text
+  on an empty result.
+- Concurrent CDP connectors now correlate a created page with its `targetId`,
+  preventing one call from claiming another call's tab.
+
 ## [2.2.0] — 2026-09-11
 
 ### Добавлено
