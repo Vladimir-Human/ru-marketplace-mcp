@@ -58,6 +58,7 @@ ENV_HTTP_HOST = "MCP_HTTP_HOST"
 ENV_HTTP_PORT = "MCP_HTTP_PORT"
 ENV_HTTP_PATH = "MCP_HTTP_PATH"
 ENV_HTTP_AUTH_TOKEN = "MCP_HTTP_AUTH_TOKEN"
+ENV_HTTP_TENANT_ID = "MCP_HTTP_TENANT_ID"
 
 # Hosts that keep the server reachable only from the machine it runs on. Any
 # other value exposes it to the network and earns a warning.
@@ -95,8 +96,9 @@ class BearerAuthMiddleware(Middleware):
     connector and browser profile. Separate tenants require separate processes.
     """
 
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, tenant_id: str | None = None) -> None:
         self._token = token
+        self._tenant_id = tenant_id
 
     async def __call__(self, context, call_next):
         request = get_http_request()
@@ -105,6 +107,12 @@ class BearerAuthMiddleware(Middleware):
             from fastmcp.exceptions import AuthorizationError
 
             raise AuthorizationError("HTTP bearer authentication required")
+        if self._tenant_id is not None:
+            supplied_tenant = request.headers.get("x-mcp-tenant", "")
+            if not secrets.compare_digest(supplied_tenant, self._tenant_id):
+                from fastmcp.exceptions import AuthorizationError
+
+                raise AuthorizationError("HTTP tenant identity mismatch")
         return await call_next(context)
 
 
@@ -202,12 +210,17 @@ def run_server(mcp: FastMCP, *, server_name: str) -> int:
     try:
         if config.is_http:
             auth_token = os.environ.get(ENV_HTTP_AUTH_TOKEN, "").strip()
+            tenant_id = os.environ.get(ENV_HTTP_TENANT_ID, "").strip() or None
             if not config.is_loopback and not auth_token:
                 raise ValueError(
                     f"{ENV_HTTP_AUTH_TOKEN} must be set when {ENV_HTTP_HOST}={config.host!r} is not loopback"
                 )
+            if not config.is_loopback and tenant_id is None:
+                raise ValueError(
+                    f"{ENV_HTTP_TENANT_ID} must be set when {ENV_HTTP_HOST}={config.host!r} is not loopback"
+                )
             if auth_token:
-                mcp.add_middleware(BearerAuthMiddleware(auth_token))
+                mcp.add_middleware(BearerAuthMiddleware(auth_token, tenant_id))
             _warn_if_exposed(config, server_name=server_name)
             log_event(
                 "server_start",
