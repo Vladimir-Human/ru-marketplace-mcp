@@ -249,15 +249,51 @@ async def test_new_tab_detaches_the_session_even_when_no_page_arrives(monkeypatc
     assert cdp.detached is True
 
 
-async def test_new_tab_serializes_target_ownership_for_concurrent_callers(monkeypatch):
-    """Each waiter must own the page event it caused, even under fan-out."""
-
-    monkeypatch.setattr(chrome_cdp, "STEALTH", True)
-    ctx = _FakeContext(_FakeBrowser(_FakeCdp()))
-
+async def test_new_tab_matches_distinct_targets_under_interleaved_creation(monkeypatch):
+    """Broadcast pages arrive out of order while all six callers are pending."""
     import asyncio
 
-    pages = await asyncio.gather(*(chrome_cdp._new_tab(ctx) for _ in range(6)))  # type: ignore[arg-type]
+    created = []
+    all_created = asyncio.Event()
 
-    assert len(pages) == 6
-    assert all(page == "background-page" for page in pages)
+    class Cdp(_FakeCdp):
+        def __init__(self, target_id):
+            super().__init__()
+            self.target_id = target_id
+
+        async def send(self, method, params=None):
+            self.sent.append((method, params))
+            assert method == "Target.createTarget"
+            created.append(self.target_id)
+            if len(created) == 6:
+                ctx.pages.extend(reversed(created))
+                all_created.set()
+            await all_created.wait()
+            return {"targetId": self.target_id}
+
+    class Browser:
+        def __init__(self):
+            self.sessions = []
+
+        async def new_browser_cdp_session(self):
+            cdp = Cdp(f"target-{len(self.sessions)}")
+            self.sessions.append(cdp)
+            return cdp
+
+    class Context(_FakeContext):
+        async def new_cdp_session(self, page):
+            await asyncio.sleep(0)
+            return _FakePageCdp(page)
+
+    monkeypatch.setattr(chrome_cdp, "STEALTH", True)
+    browser = Browser()
+    ctx = Context(browser)
+    ctx.pages = ["foreign-user-tab"]
+
+    pages = await asyncio.wait_for(asyncio.gather(*(chrome_cdp._new_tab(ctx) for _ in range(6))), timeout=1)
+
+    assert pages == [f"target-{index}" for index in range(6)]
+    assert len(set(pages)) == 6
+    assert ctx.pages == ["foreign-user-tab", *reversed(created)]
+    assert all(session.detached for session in browser.sessions)
+    assert ctx.plain_pages == 0

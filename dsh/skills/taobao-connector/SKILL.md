@@ -28,8 +28,10 @@ connector's canary at once.
 ## Gotchas
 - Prices stay in yuan. Comparing against ruble sources needs an explicit rate;
   a baked-in one would go silently stale.
-- A login wall (title 登录) means the scraping profile is logged out of
-  taobao.com — log in there, then retry.
+- A detected login/CAPTCHA wall returns `challenge_required` and
+  `requires_user_action=true`. Complete it in the scraping profile before retrying
+  the same operation. Failed payloads are not cached; a retry reads the browser
+  again. Successful results still use the normal TTL cache.
 - The operator's Chrome must be running with CDP (scripts/start_chrome_cdp.sh).
 ## DSH activation
 

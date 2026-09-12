@@ -11,6 +11,17 @@
 
 ### Browser recovery
 
+- Raw CDP now attempts bounded cleanup of its exact owned target even when
+  target discovery or page-websocket attachment fails. Cancellation and cleanup
+  errors preserve the original failure. Concurrent ownership tests now use six
+  distinct targets and a foreign tab rather than a single shared fake target.
+- Taobao search/card failures no longer enter the successful-result cache, and
+  Lamoda search does not cache detected challenge pages. After browser action,
+  a new call reads fresh evidence instead of replaying a cached block for up to
+  the default 120-second TTL. Successful payloads still use the normal cache.
+- Taobao search now uses its existing CAPTCHA detector in the public tool, not
+  only in selfcheck. Empty cards with challenge evidence return the same
+  structured error; ordinary product cards mentioning CAPTCHA remain data.
 - Taobao login/CAPTCHA walls and Lamoda search challenges return
   `challenge_required`. Comparison outcomes now retain `error_code`, `retryable`,
   `requires_user_action`, and `challenge_type`, even when error detail is truncated.

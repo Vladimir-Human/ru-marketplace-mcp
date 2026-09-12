@@ -559,10 +559,10 @@ async def taobao_search(
 
     ## Error Format
 
-    ToolError: TransportDownError when Chrome/CDP is unreachable or the page
-    lands on a login wall (log into taobao.com in the scraping profile, then
-    retry); ParserDriftError when a rendered page yields zero items, which means
-    the DOM shape moved.
+    ToolError: challenge_required when a login/CAPTCHA wall needs browser action;
+    retry after completing it in the scraping profile. TransportDownError when
+    Chrome/CDP is unreachable; ParserDriftError for unexplained empty extraction.
+    Challenge pages are never cached as successful search results.
     """
     log_event("taobao_search.start", query=query[:60], page=page)
     try:
@@ -581,7 +581,6 @@ async def taobao_search(
                     )
                 )
             tier = "cdp"
-            _cache.set(url, payload)
 
         wall_markers = _login_wall_markers(payload)
         if wall_markers:
@@ -591,6 +590,13 @@ async def taobao_search(
                     "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
                     provider="taobao",
                     challenge_type="login_or_captcha",
+                )
+            )
+        if _anti_bot_challenge(payload):
+            raise_tool_error(
+                ChallengeRequiredError(
+                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
+                    provider="taobao",
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
@@ -608,6 +614,8 @@ async def taobao_search(
         result = TaobaoSearchResponse(query=query, page=page, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="taobao_search")
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -639,8 +647,9 @@ async def taobao_card(
     ## Error Format
 
     ToolError: BadRequestError when no id can be extracted; NotFoundError when
-    the item page reports itself gone; TransportDownError on login walls and CDP
-    failures; ParserDriftError when a rendered card has neither title nor price.
+    the item page reports itself gone; challenge_required on login/CAPTCHA walls;
+    TransportDownError on CDP failures; ParserDriftError when a rendered card has
+    neither title nor price and no detected challenge. Only successful cards are cached.
     """
     log_event("taobao_card.start", input=item_id_or_url[:80])
     try:
@@ -665,7 +674,6 @@ async def taobao_card(
                     )
                 )
             tier = "cdp"
-            _cache.set(url, payload)
 
         wall_markers = _login_wall_markers(payload)
         if wall_markers:
@@ -684,6 +692,13 @@ async def taobao_card(
         price, _old = prices_from_tile(payload)
         if price is None:
             price = R.coerce_price(payload.get("price_cny"))
+        if not title and price is None and _anti_bot_challenge(payload):
+            raise_tool_error(
+                ChallengeRequiredError(
+                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
+                    provider="taobao",
+                )
+            )
         if title is None and price is None:
             raise_tool_error(
                 ParserDriftError(
@@ -717,6 +732,8 @@ async def taobao_card(
             result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="taobao_card"
         )
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise

@@ -136,6 +136,50 @@ async def test_search_maps_a_login_wall_to_transport_down(monkeypatch):
     assert "login" in str(excinfo.value).lower() or "登录" in str(excinfo.value)
 
 
+@pytest.mark.parametrize("kind", ["search_login", "search_captcha", "card_login", "card_captcha"])
+async def test_challenge_recovery_reads_browser_again_and_caches_only_success(monkeypatch, kind):
+    from mcp_core.cache import TTLCache
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+    blocked = (
+        {"title": "Security check", "items": [], "body_snippet": "Please complete CAPTCHA"}
+        if kind.endswith("captcha")
+        else LOGIN_WALL
+    )
+    if kind == "card_captcha":
+        blocked = {"title": None, "page_title": "Security check", "body_snippet": "Please complete CAPTCHA"}
+    healthy = CARD_EXTRACTED if kind.startswith("card") else SEARCH_EXTRACTED
+    reads = []
+
+    async def render(url, extract_js, wait_ms, ctx):
+        reads.append(url)
+        return blocked if len(reads) == 1 else healthy
+
+    monkeypatch.setattr(server, "_cdp_render", render)
+    call = server.taobao_card if kind.startswith("card") else server.taobao_search
+    query = "123456789012" if kind.startswith("card") else "手机"
+    with pytest.raises(ToolError) as excinfo:
+        await call(query)
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert len(server._cache) == 0
+
+    recovered = await call(query)
+    assert recovered.tier_used == "cdp"
+    assert recovered.status == "success"
+    cached = await call(query)
+    assert cached.tier_used == "cache"
+    assert len(reads) == 2
+
+
+async def test_product_card_mentioning_captcha_remains_product_data(monkeypatch):
+    _patch_render(monkeypatch, {**CARD_EXTRACTED, "body_snippet": "Please complete CAPTCHA"})
+    result = await server.taobao_card("123456789012")
+    assert result.title == CARD_EXTRACTED["title"]
+    assert result.price_cny == CARD_EXTRACTED["price_cny"]
+
+
 async def test_search_maps_zero_items_to_parser_drift(monkeypatch):
     _patch_render(monkeypatch, {"title": "手机-淘宝搜索", "items": []})
 

@@ -26,7 +26,10 @@ Chrome over CDP.
 ## Gotchas
 - Lamoda exposes NO ratings anywhere — `rating` is not in the GraphQL schema.
   No review tools exist here by design.
-- A search page yielding zero SKUs is drift, not "no results" — verify manually.
+- An empty search with a detected visible challenge returns `challenge_required`;
+  it is not cached. Complete the interaction in the connected Chrome profile,
+  then retry. Empty extraction without challenge evidence remains parser drift,
+  not proof of "no results".
 - A missing price is `null`, never `0`: `price_rub: null` means Lamoda had no
   usable price — treat it as no data, never as a free item.
 ## DSH activation
