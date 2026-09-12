@@ -51,7 +51,10 @@ everything else is unaffected.
   before scheduling retries. Keep answered sources visible, show the affected
   marketplace and `challenge_type`, and retry that source after the browser
   interaction completes. A challenge is not an empty product search. See the
-  compare-prices skill for the retry contract and current tab-retention limits.
+  compare-prices skill for the retry contract. `handoff_expires_at` confirms that
+  the source retained its tab; repeat the same operation in the same MCP session
+  after browser action and before that expiry. See docs/CDP_SETUP.md for opt-in
+  configuration and supported sources.
 - A source whose optional deps are missing is simply absent from the set —
   `marketplace_sources` says which and why.
 - Set `MARKETPLACE_SOURCES` on the unified server to mount only a comma-separated

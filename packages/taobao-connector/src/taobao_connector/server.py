@@ -42,6 +42,7 @@ import urllib.parse
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
+from fastmcp.server.dependencies import get_context as current_context
 from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
@@ -60,6 +61,8 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.runtime import browser_handoff_lifespan
+from mcp_core.transport.browser_handoff import read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -91,6 +94,7 @@ _ITEM_ID_RE = re.compile(r"[?&]id=(\d{9,13})\b")
 
 mcp = FastMCP(
     name="taobao-connector",
+    lifespan=browser_handoff_lifespan,
     version=SERVER_VERSION,
     instructions=(
         "Taobao listings: search and item cards, prices in yuan (CNY). Every "
@@ -408,16 +412,37 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     operator's browser. The extracted JSON is capped like any HTTP body — an
     inflated page would otherwise cross the CDP serialization pipeline raw.
     """
+
+    async def read(page):
+        raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
+        if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
+            raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise_tool_error(ParserDriftError("page extractor returned a non-object payload"))
+        data.pop("_handoff_expires_at", None)
+        return data
+
+    try:
+        scope = (ctx or current_context()).session_id
+    except RuntimeError:
+        scope = None
     async with _cdp_lock:
         await _polite_wait()
-        async with open_page(url, wait_ms=wait_ms) as page:
-            raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
-    if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
-        raise ToolError(TransportDownError("extracted page data missing or over the body cap"))
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        raise ToolError(ParserDriftError("page extractor returned a non-object payload"))
-    return data
+        if scope is None:
+            async with open_page(url, wait_ms=wait_ms) as page:
+                return await read(page)
+        data, expires_at = await read_with_handoff(
+            url=url,
+            wait_ms=wait_ms,
+            scope=scope,
+            operation="taobao_card" if url.startswith(ITEM_BASE) else "taobao_search",
+            read=read,
+            challenge=_page_challenge_kind,
+        )
+        if expires_at:
+            data["_handoff_expires_at"] = expires_at
+        return data
 
 
 # The word test for the wall body snippet: the same markers
@@ -535,6 +560,16 @@ def _anti_bot_challenge(data: dict[str, Any]) -> bool:
     return isinstance(snippet, str) and bool(_CHALLENGE_TEXT_RE.search(snippet))
 
 
+def _page_challenge_kind(data: dict[str, Any]) -> str | None:
+    if _login_wall_markers(data):
+        return "login_or_captcha"
+    if "page_title" in data:
+        price, _ = prices_from_tile(data)
+        if data.get("title") or price is not None or R.coerce_price(data.get("price_cny")) is not None:
+            return None
+    return "captcha" if _anti_bot_challenge(data) else None
+
+
 @mcp.tool(
     name="taobao_search",
     annotations=ToolAnnotations(
@@ -590,6 +625,7 @@ async def taobao_search(
                     "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
                     provider="taobao",
                     challenge_type="login_or_captcha",
+                    handoff_expires_at=payload.get("_handoff_expires_at"),
                 )
             )
         if _anti_bot_challenge(payload):
@@ -597,6 +633,7 @@ async def taobao_search(
                 ChallengeRequiredError(
                     "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
                     provider="taobao",
+                    handoff_expires_at=payload.get("_handoff_expires_at"),
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
@@ -683,6 +720,7 @@ async def taobao_card(
                     "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
                     provider="taobao",
                     challenge_type="login_or_captcha",
+                    handoff_expires_at=payload.get("_handoff_expires_at"),
                 )
             )
         title = payload.get("title")
@@ -697,6 +735,7 @@ async def taobao_card(
                 ChallengeRequiredError(
                     "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
                     provider="taobao",
+                    handoff_expires_at=payload.get("_handoff_expires_at"),
                 )
             )
         if title is None and price is None:

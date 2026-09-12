@@ -269,6 +269,12 @@ def test_challenge_metadata_does_not_leak_credentials_or_upstream_instructions()
     assert result["requires_user_action"] is True
 
 
+@pytest.mark.parametrize("expiry", [None, [], "https://example.invalid/?token=secret", "2026-09-12T00:00:00"])
+def test_invalid_handoff_expiry_does_not_become_recovery_instructions(expiry):
+    result = server._source_error(ToolError(json.dumps({"error": "challenge_required", "handoff_expires_at": expiry})))
+    assert result["handoff_expires_at"] is None
+
+
 async def test_a_generic_failure_is_reported_as_error_not_blocked(monkeypatch):
     """Anti-bot blocks and ordinary bugs need different responses, so they differ."""
 

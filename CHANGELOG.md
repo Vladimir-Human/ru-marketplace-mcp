@@ -11,6 +11,16 @@
 
 ### Browser recovery
 
+- Optional `CHROME_CHALLENGE_HANDOFF_S` retains DOM-detected Lamoda search and
+  Taobao search/card challenge tabs. Same-session repeats read the owned page
+  without navigating again. Expiry is capped at 300 seconds from initial attach,
+  does not extend, and at most four leases are active. Error/comparison metadata
+  exposes `handoff_expires_at` only when retained. No new MCP tools are required.
+- Owned tabs close on success, failure, expiry, caller cancellation and graceful
+  shutdown. Active handoffs suppress profile hiding; owned-window foreground
+  activation is best-effort. Default behavior, browser-less compare installations,
+  and headless operation retain their existing behavior. Hard process-kill expiry
+  and HTTP failures rejected before DOM extraction are outside this feature.
 - Raw CDP now attempts bounded cleanup of its exact owned target even when
   target discovery or page-websocket attachment fails. Cancellation and cleanup
   errors preserve the original failure. Concurrent ownership tests now use six
@@ -28,7 +38,8 @@
   Successful sources remain available while the client waits for browser action.
 - DSH guidance retries only affected sources after action completes, preserving
   query settings and disclosing that old and retried offers have different
-  observation times. Temporary-tab retention and automatic resume remain pending.
+  observation times. Opt-in retention now supports explicit same-session repeats;
+  autonomous challenge completion remains outside this implementation.
 - Corrected the documented offline-test count that failed the previous CI run.
 
 ### Идентификация / Identity

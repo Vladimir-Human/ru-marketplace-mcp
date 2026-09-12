@@ -95,6 +95,10 @@ class SourceOutcome(BaseModel):
         default=False, description="Pause retries for this source until browser action completes."
     )
     challenge_type: str | None = Field(default=None, description="captcha, login, or login_or_captcha when known.")
+    handoff_expires_at: str | None = Field(
+        default=None,
+        description="UTC expiry when the challenged tab is retained; repeat the same request after action.",
+    )
 
 
 class CompareResponse(BaseModel):

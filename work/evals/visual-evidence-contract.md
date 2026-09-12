@@ -59,29 +59,31 @@ metadata, with no automatic retries. Taobao and Lamoda search use the new code;
 other adapters can still return legacy transport failures. A subset retry uses
 the existing `sources` argument and does not merge old observations on the server.
 
-Remaining implementation: an opt-in, bounded browser handoff must retain only
-the challenged owned tab, stop navigation by other tasks into that tab, expose
-the same profile to the operator, expire abandoned handoffs, and resume once
-after completion. Both Playwright and raw-CDP paths currently close temporary
-tabs in `finally`; claiming exact-tab resume today would be incorrect. Test
-success, cancellation, expiration, concurrent source queries, and process restart
-before advertising seamless resume. Compare latency, requests, challenge rate,
-and completion rate on the same task set before claiming an improvement over
-the existing parser/CDP flow.
+Implemented opt-in handoff: `CHROME_CHALLENGE_HANDOFF_S` retains the owned page
+context for Lamoda search and Taobao search/card DOM challenges. Same-session
+repeats with the same operation, URL and profile read the retained page without
+`goto`. Four process-local leases are allowed, capped at 300 seconds including
+initial attachment. `handoff_expires_at` is reported only when retained; repeated
+challenges never extend it. Success, failure, cancellation, expiry and graceful
+shutdown release the context. Foreground activation is best-effort. Raw HTTP
+errors rejected before DOM extraction cannot be handed off by this version.
+
+Still pending: native-vision image delivery in the host, autonomous challenge
+completion, and identical-task comparisons of latency, requests, challenge rate
+and completion rate. No universal improvement over parser/CDP operation is claimed.
 
 ### Implementation constraints from the lifecycle audit
 
-Challenge detection in Lamoda and Taobao currently runs after the page context
-has closed. Move decoding and classification inside the owned context before
-introducing retention; changing `finally` alone cannot retain the right page.
-Keep handles scoped to the MCP session, provider, original input and CDP endpoint.
-Resume must atomically claim the exact target ID, avoid `goto`, recheck the current
-host policy, and retain the original expiry rather than extending it on every
-retry. A retry in another session must not adopt a tab by matching its URL.
+The lifecycle audit found that challenge detection ran after the page context
+closed. Decoding and classification now run inside the retained context. The
+runtime binds leases to the MCP session, provider operation, original URL and CDP
+endpoint/profile. Resume atomically claims that context, avoids `goto`, rechecks
+the current host policy before and after reading, and retains the original expiry.
+A retry in another session never adopts the page by matching its URL.
 
 Ordinary connector cleanup hides the scraping-profile browser globally on Windows
-and macOS. Active handoffs must suppress this hiding, and explicit handoff must
-reveal the owned window; activating a target alone does not prove visibility.
+and macOS. Active handoffs now suppress this hiding and attempt to restore the
+owned window's bounds; a successful protocol command is not proof of OS visibility.
 Expiry, cancellation and shutdown may close only recorded owned targets. An
 in-memory lease cannot guarantee cleanup after a hard process kill while Chrome
 survives: document this limit and reject stale handles after restart rather than
@@ -103,3 +105,19 @@ normal context exit. Injecting failure into `/json` discovery after real target
 creation also removed the owned target. Pre-existing target IDs were unchanged
 in both cases. This covers normal operation and one attachment failure; it is
 not a guarantee of cleanup when Chrome itself becomes unreachable.
+
+The retained-context runtime was exercised on real Chrome with a local HTML
+fixture: a marker set before the challenge remained present on resume, proving
+there was no new navigation. An independent browser request completed while the
+lease remained intact. Clicking the fixture's continue button and repeating the
+read closed only the retained target; all pre-existing target IDs were preserved.
+This is a lifecycle test, not a solved marketplace CAPTCHA. MCP Client tests also
+cover actual Lamoda/Taobao dispatch, session isolation, expiry propagation and
+graceful shutdown. Native vision remains a host-side integration task.
+
+A real MCP Client → compare → Lamoda probe on 2026-09-12 also returned
+`challenge_required` with a retained expiry and one live owned page. Chrome
+additionally exposed two worker targets, so verification counts page targets
+separately rather than assuming every CDP target is a tab. Graceful MCP shutdown
+removed the owned page and preserved all pre-existing pages. The marketplace
+challenge itself was not completed in this probe.

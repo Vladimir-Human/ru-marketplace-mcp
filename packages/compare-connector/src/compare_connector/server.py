@@ -46,6 +46,7 @@ from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, raise_to
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.runtime import browser_handoff_lifespan
 from mcp_core.source_selection import selected
 from pydantic import Field
 
@@ -63,7 +64,7 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 # a slow source must not hold the whole comparison hostage.
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
 
-mcp = FastMCP(name="compare-connector", version=SERVER_VERSION)
+mcp = FastMCP(name="compare-connector", version=SERVER_VERSION, lifespan=browser_handoff_lifespan)
 
 _CARD_TOOL_NAMES = {
     "wildberries": "wb_card",
@@ -770,6 +771,16 @@ def _source_error(exc: Exception) -> dict[str, Any]:
         status = "blocked"
     elif code == ErrorCode.TIMEOUT:
         status = "timeout"
+    handoff_expires_at = None
+    raw_expiry = payload.get("handoff_expires_at")
+    if challenge and isinstance(raw_expiry, str):
+        try:
+            expiry = datetime.datetime.fromisoformat(raw_expiry)
+        except ValueError:
+            pass
+        else:
+            if expiry.tzinfo is not None:
+                handoff_expires_at = expiry.astimezone(datetime.UTC).isoformat().replace("+00:00", "Z")
     return {
         "status": status,
         "detail": _redact(str(payload.get("message", str(exc))))[:200],
@@ -777,6 +788,7 @@ def _source_error(exc: Exception) -> dict[str, Any]:
         "retryable": code.retryable,
         "requires_user_action": challenge,
         "challenge_type": challenge_type if challenge else None,
+        "handoff_expires_at": handoff_expires_at,
     }
 
 
