@@ -16,6 +16,7 @@
   только по видимому тексту пустой выдачи.
 - Параллельные CDP-коннекторы теперь сопоставляют созданную вкладку с её
   `targetId`, чтобы один вызов не получил вкладку другого.
+- В CI добавлен гейт роста MCP wire-схем относительно сохранённого baseline.
 
 ### Fixed
 
@@ -24,6 +25,7 @@
   on an empty result.
 - Concurrent CDP connectors now correlate a created page with its `targetId`,
   preventing one call from claiming another call's tab.
+- CI now gates MCP schema wire-cost growth against the stored baseline.
 
 ## [2.2.0] — 2026-09-11
 

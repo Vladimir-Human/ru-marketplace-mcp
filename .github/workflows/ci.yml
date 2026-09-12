@@ -84,6 +84,13 @@ jobs:
         # audit that fixed it was adding tests of its own.
         run: uv run python scripts/check_test_count.py
 
+      - name: MCP wire-cost baseline
+        # Keep the model-facing surface measurable. A schema expansion over the
+        # stored baseline is a review signal, not an invisible context-cost
+        # regression. Latency is intentionally reported by the probe but is not
+        # gated because hosted runner load is variable.
+        run: uv run python scripts/mcp_wire.py --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
+
       - name: One version, everywhere
         # A release version is written down in seventy-two places. Preparing
         # 1.2.1 moved fourteen pyproject.toml files and left thirteen

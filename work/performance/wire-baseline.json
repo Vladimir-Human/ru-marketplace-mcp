@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "profiles": {
+    "compare-mcp": {
+      "script": "compare-mcp",
+      "tool_count": 3,
+      "wire_tokens": 1355,
+      "latency_ms": 2520.3,
+      "schema_sha256": "f5062aed8fc0d6607528c700b5986c5ba7423ac8051f4375196a8db6ce0c13d9",
+      "tools": [
+        {
+          "name": "compare_prices",
+          "tokens": 709
+        },
+        {
+          "name": "compare_sources",
+          "tokens": 250
+        },
+        {
+          "name": "compare_verify_offer",
+          "tokens": 396
+        }
+      ]
+    },
+    "marketplace-mcp": {
+      "script": "marketplace-mcp",
+      "tool_count": 39,
+      "wire_tokens": 15834,
+      "latency_ms": 2257.1,
+      "schema_sha256": "4536ea61559baaa463bfb3e2163c7408ecb101d4cdc7e686f3646faafb696b4c",
+      "tools": [
+        {
+          "name": "aliexpress_card",
+          "tokens": 323
+        },
+        {
+          "name": "aliexpress_search",
+          "tokens": 234
+        },
+        {
+          "name": "avito_card",
+          "tokens": 280
+        },
+        {
+          "name": "avito_search",
+          "tokens": 379
+        },
+        {
+          "name": "avito_seller",
+          "tokens": 259
+        },
+        {
+          "name": "cian_card",
+          "tokens": 461
+        },
+        {
+          "name": "cian_search",
+          "tokens": 859
+        },
+        {
+          "name": "citilink_card",
+          "tokens": 263
+        },
+        {
+          "name": "citilink_search",
+          "tokens": 221
+        },
+        {
+          "name": "compare_prices",
+          "tokens": 709
+        },
+        {
+          "name": "compare_sources",
+          "tokens": 250
+        },
+        {
+          "name": "compare_verify_offer",
+          "tokens": 396
+        },
+        {
+          "name": "detmir_card",
+          "tokens": 453
+        },
+        {
+          "name": "detmir_categories",
+          "tokens": 425
+        },
+        {
+          "name": "detmir_category",
+          "tokens": 438
+        },
+        {
+          "name": "dns_card",
+          "tokens": 258
+        },
+        {
+          "name": "dns_search",
+          "tokens": 219
+        },
+        {
+          "name": "lamoda_card",
+          "tokens": 276
+        },
+        {
+          "name": "lamoda_search",
+          "tokens": 241
+        },
+        {
+          "name": "marketplace_sources",
+          "tokens": 351
+        },
+        {
+          "name": "megamarket_card",
+          "tokens": 263
+        },
+        {
+          "name": "megamarket_search",
+          "tokens": 381
+        },
+        {
+          "name": "mpstats_item",
+          "tokens": 544
+        },
+        {
+          "name": "mpstats_warehouses",
+          "tokens": 427
+        },
+        {
+          "name": "ozon_card",
+          "tokens": 397
+        },
+        {
+          "name": "ozon_reviews",
+          "tokens": 763
+        },
+        {
+          "name": "ozon_search",
+          "tokens": 285
+        },
+        {
+          "name": "taobao_card",
+          "tokens": 321
+        },
+        {
+          "name": "taobao_search",
+          "tokens": 304
+        },
+        {
+          "name": "wb_card",
+          "tokens": 384
+        },
+        {
+          "name": "wb_categories",
+          "tokens": 425
+        },
+        {
+          "name": "wb_category_products",
+          "tokens": 691
+        },
+        {
+          "name": "wb_questions",
+          "tokens": 583
+        },
+        {
+          "name": "wb_reviews",
+          "tokens": 515
+        },
+        {
+          "name": "wb_root_info",
+          "tokens": 302
+        },
+        {
+          "name": "wb_search",
+          "tokens": 391
+        },
+        {
+          "name": "wb_seller",
+          "tokens": 387
+        },
+        {
+          "name": "yandex_card",
+          "tokens": 512
+        },
+        {
+          "name": "yandex_search",
+          "tokens": 664
+        }
+      ]
+    }
+  }
+}

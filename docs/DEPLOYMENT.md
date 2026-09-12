@@ -53,6 +53,11 @@ starting a partial server. Deselected sources remain visible in
 `marketplace_sources.skipped` with a `deselected` reason, and `compare_prices`
 uses the same selected subset.
 
+CI also checks the model-facing wire cost against the committed
+`work/performance/wire-baseline.json` snapshot. The gate allows at most 10%
+growth per profile; update the snapshot deliberately when a tool schema change
+is intended and review the resulting diff.
+
 ### stdio (default, unchanged)
 
 Nothing to configure. The README's client configs already do this:
