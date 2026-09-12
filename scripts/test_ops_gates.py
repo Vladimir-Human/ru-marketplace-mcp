@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from mcp_wire import _check_gate, _snapshot
+from model_routing_eval import evaluate as evaluate_model_routing
 from routing_eval import evaluate, route
 
 
@@ -31,6 +32,11 @@ def test_wire_snapshot_is_machine_readable() -> None:
     assert snapshot["tool_count"] == 2
     assert snapshot["tools"][0]["name"] == "a"
     json.dumps(snapshot, ensure_ascii=False)
+
+
+def test_model_routing_matrix_is_complete() -> None:
+    report = evaluate_model_routing()
+    assert report["ok"] is True
 
 
 if __name__ == "__main__":

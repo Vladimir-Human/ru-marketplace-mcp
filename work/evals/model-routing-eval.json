@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "captured_at": "2026-09-10T13:43:00+03:00",
+  "provider": "dashscope2",
+  "evidence": "archived DSH route probe; one-shot capability evidence, not a quality ranking",
+  "models": [
+    {"id": "kimi/kimi-k3", "text": "ok", "structured": "ok", "role": "adversarial_review"},
+    {"id": "qwen3.8-max-0902", "text": "ok", "structured": "ok", "role": "deep_implementation"},
+    {"id": "qwen3.8-flash", "text": "ok", "structured": "ok", "role": "fast_triage"},
+    {"id": "ZHIPU/GLM-5.3", "text": "ok", "structured": "ok", "role": "structured_integration"},
+    {"id": "ZHIPU/GLM-5.3-Flash", "text": "ok", "structured": "ok", "role": "structured_triage"},
+    {"id": "deepseek-v4-pro-0813", "text": "ok", "structured": "ok", "role": "adversarial_verification"}
+  ],
+  "cases": [
+    {"id": "implementation", "expected_role": "deep_implementation"},
+    {"id": "security_review", "expected_role": "adversarial_verification"},
+    {"id": "fast_triage", "expected_role": "fast_triage"},
+    {"id": "structured_integration", "expected_role": "structured_integration"}
+  ]
+}
