@@ -58,6 +58,7 @@ async def _no_redirect(url, ctx=None):
 @pytest.fixture(autouse=True)
 def _no_cache(monkeypatch):
     server._cache._data.clear()
+    server._address_cache.clear()
     # The resolved delivery address is cached for the process lifetime, so it
     # has to be forgotten between tests or they become order-dependent.
     monkeypatch.setattr(server, "_address_id", None)
@@ -520,6 +521,23 @@ async def test_the_address_is_resolved_once_per_process(monkeypatch):
 
     assert first == second == "a-222"
     assert len(calls) == 1, "a second search must not re-resolve the address"
+
+
+async def test_address_cache_is_scoped_to_the_attached_profile(monkeypatch):
+    calls: list[str] = []
+
+    async def counting_post(api_path, body, ctx, what):
+        calls.append(api_path)
+        return PROFILE_ADDRESSES
+
+    monkeypatch.setattr(server, "_post", counting_post)
+    monkeypatch.setattr(server, "_USE_PROFILE_ADDRESS", True)
+    monkeypatch.setenv("CHROME_SCRAPING_PROFILE", "profile-a")
+    assert await server._resolve_address_id(None) == "a-222"
+    monkeypatch.setenv("CHROME_SCRAPING_PROFILE", "profile-b")
+    assert await server._resolve_address_id(None) == "a-222"
+
+    assert len(calls) == 2, "switching profiles must not reuse the prior profile cache entry"
 
 
 async def test_an_unresolvable_address_is_not_fatal(monkeypatch):

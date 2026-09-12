@@ -17,6 +17,8 @@
 - Параллельные CDP-коннекторы теперь сопоставляют созданную вкладку с её
   `targetId`, чтобы один вызов не получил вкладку другого.
 - В CI добавлен гейт роста MCP wire-схем относительно сохранённого baseline.
+- Кэш адреса Megamarket теперь разделён по CDP endpoint и scraping profile;
+  смена профиля не использует старый адресный идентификатор.
 - Добавлена датированная матрица model-level routing с отдельной проверкой
   text/structured capability и явной оговоркой, что one-shot probe не является
   универсальным рейтингом моделей.
@@ -29,6 +31,8 @@
 - Concurrent CDP connectors now correlate a created page with its `targetId`,
   preventing one call from claiming another call's tab.
 - CI now gates MCP schema wire-cost growth against the stored baseline.
+- Megamarket address caching is now scoped to the CDP endpoint and scraping
+  profile, so switching profiles cannot reuse the previous address identifier.
 - Added a dated model-level routing matrix with separate text/structured
   capability checks; the one-shot probe is explicitly not a universal model ranking.
 

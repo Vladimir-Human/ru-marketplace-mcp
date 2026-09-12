@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import os
 import re
 import urllib.parse
 from typing import Annotated, Any
@@ -84,6 +85,7 @@ _PAGE_SIZE = 44
 _ADDRESS = _settings.address
 _address_id: str | None = None
 _address_resolved = False
+_address_cache: dict[str, tuple[str | None, str | None]] = {}
 # Which of the three sources produced the address: "profile" | "suggest" |
 # "none". _address_warnings() turns it into _meta warnings only for the states
 # that change what the prices mean (the opted-in profile read, or nothing
@@ -94,6 +96,15 @@ _address_source: str | None = None
 # global — the same seam _min_gap uses — so a test can flip the privacy posture
 # without rebuilding the settings object.
 _USE_PROFILE_ADDRESS = _settings.use_profile_address
+
+
+def _address_cache_key() -> str:
+    """Return a non-secret identity for the currently attached Chrome profile."""
+    host = os.environ.get("CHROME_CDP_HOST", "127.0.0.1").strip()
+    port = os.environ.get("CHROME_CDP_PORT", "9222").strip()
+    profile = os.environ.get("CHROME_SCRAPING_PROFILE", "").strip()
+    return f"{host}:{port}|{profile}"
+
 
 mcp = FastMCP(
     name="megamarket-connector",
@@ -266,7 +277,11 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
     result is reported honestly rather than as a mysterious zero.
     """
     global _address_id, _address_resolved, _address_source
-    if _address_resolved:
+    cache_key = _address_cache_key()
+    cached = _address_cache.get(cache_key)
+    if cached is not None:
+        _address_id, _address_source = cached
+        _address_resolved = True
         return _address_id
 
     _address_resolved = True
@@ -282,6 +297,7 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
                 if preferred and preferred.get("addressId"):
                     _address_id = str(preferred["addressId"])
                     _address_source = "profile"
+                    _address_cache[cache_key] = (_address_id, _address_source)
                     log_event("megamarket.address", source="profile", region=str(preferred.get("region") or "")[:40])
                     return _address_id
         except Exception as exc:
@@ -306,12 +322,14 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
             if candidate:
                 _address_id = str(candidate)
                 _address_source = "suggest"
+                _address_cache[cache_key] = (_address_id, _address_source)
                 log_event("megamarket.address", source="suggest", query=_ADDRESS[:40])
                 return _address_id
     except Exception as exc:
         log_event("megamarket.address_suggest_failed", error=_redact(str(exc))[:120])
 
     _address_source = "none"
+    _address_cache[cache_key] = (None, _address_source)
     log_event("megamarket.address_unresolved", configured=_ADDRESS[:40])
     return None
 
