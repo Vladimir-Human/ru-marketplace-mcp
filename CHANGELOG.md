@@ -9,6 +9,19 @@
 
 ## [Unreleased]
 
+### 2.3.0 candidate
+
+- `compare_browser_snapshot(handoff_id)` exposes the retained browser viewport as
+  standard MCP image content for native-vision clients. The handle is bound to the
+  MCP session and lease expiry; no OCR or external vision service is invoked.
+- DSH profile selection is mutually exclusive (`full > decision > compare`), and
+  the stored wire baselines cover all three profiles.
+- Offer verification now selects the requested WB row, unwraps Detsky Mir cards,
+  checks Ozon's regular price, and can require the Yandex search-row `sku_id`
+  before comparing a card price. Seller article fields remain non-MPN evidence.
+- WB preserves unambiguous typed color evidence. MPN/GTIN remain `unknown` when
+  the source does not provide manufacturer identifiers.
+
 ### Browser recovery
 
 - Optional `CHROME_CHALLENGE_HANDOFF_S` retains DOM-detected Lamoda search and

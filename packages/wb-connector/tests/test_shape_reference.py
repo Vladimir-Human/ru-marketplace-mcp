@@ -11,6 +11,7 @@ from wb_connector import server
 FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH_GOLDEN = [
     "products[].brand:str",
+    "products[].color:str",
     "products[].feedbacks:int",
     "products[].in_stock:bool",
     "products[].name:str",

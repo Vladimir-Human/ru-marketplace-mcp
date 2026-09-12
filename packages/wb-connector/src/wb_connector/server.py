@@ -78,7 +78,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.2.0"
+SERVER_VERSION = "2.3.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -352,6 +352,14 @@ def _decode_mojibake(s: object) -> str:
         return s
 
 
+def _single_product_color(value: Any) -> str:
+    """Keep only unambiguous typed color evidence, never infer it from a title."""
+    if not isinstance(value, list) or len(value) != 1 or not isinstance(value[0], dict):
+        return ""
+    name = value[0].get("name")
+    return _decode_mojibake(name).strip() if isinstance(name, str) else ""
+
+
 def _card_item_dict(p: dict[str, Any]) -> dict[str, Any]:
     """Flatten one WB product object into the shared card-item shape.
 
@@ -368,6 +376,7 @@ def _card_item_dict(p: dict[str, Any]) -> dict[str, Any]:
         "nm_id": p.get("id"),
         "name": _decode_mojibake(p.get("name", "")),
         "brand": _decode_mojibake(p.get("brand", "")),
+        "color": _single_product_color(p.get("colors")),
         "supplier": _decode_mojibake(p.get("supplier", "")),
         "supplier_id": p.get("supplierId"),
         "supplier_rating": p.get("supplierRating"),

@@ -37,6 +37,7 @@ import re
 import time
 from collections.abc import Iterable
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
@@ -58,7 +59,7 @@ from compare_connector.models_output import (
     SourceOutcome,
 )
 
-SERVER_VERSION = "2.2.0"
+SERVER_VERSION = "2.3.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
@@ -477,6 +478,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
             MarketOffer(
                 source="yandex_market",
                 product_id=item.product_id,
+                variant_id=getattr(item, "sku_id", "") or "",
                 title=item.title,
                 brand=item.brand,
                 seller=item.seller,
@@ -1043,6 +1045,36 @@ async def compare_prices(
     )
 
 
+def _numeric_card_id(source: str, value: str) -> int:
+    """Accept the source's numeric ID or canonical product path, never a stray digit."""
+    candidate = value.strip()
+    if re.fullmatch(r"[0-9]+", candidate):
+        number = int(candidate)
+        if number > 0:
+            return number
+    else:
+        hosts, path = {
+            "wildberries": ({"wildberries.ru", "www.wildberries.ru"}, r"/catalog/([0-9]+)/detail\.aspx/?"),
+            "detsky_mir": ({"detmir.ru", "www.detmir.ru"}, r"/product/index/id/([0-9]+)/?"),
+        }[source]
+        try:
+            parsed = urlsplit(candidate)
+            valid_origin = (
+                parsed.scheme in {"https", "http"}
+                and parsed.hostname in hosts
+                and parsed.username is None
+                and parsed.password is None
+                and parsed.port is None
+            )
+        except ValueError:
+            valid_origin = False
+        if valid_origin:
+            match = re.fullmatch(path, parsed.path)
+            if match and int(match[1]) > 0:
+                return int(match[1])
+    raise_tool_error(BadRequestError(f"{source} verification needs a positive numeric id or a canonical product URL"))
+
+
 @mcp.tool(
     name="compare_verify_offer",
     annotations=ToolAnnotations(
@@ -1060,7 +1092,21 @@ async def compare_verify_offer(
     ],
     expected_price_rub: Annotated[
         float | None,
-        Field(default=None, ge=0, description="Price returned by compare_prices; used to report a live card delta."),
+        Field(
+            default=None,
+            ge=0,
+            allow_inf_nan=False,
+            description="Price returned by compare_prices; used to report a live card delta.",
+        ),
+    ] = None,
+    expected_variant_id: Annotated[
+        str | None,
+        Field(
+            default=None,
+            min_length=1,
+            max_length=100,
+            description="Optional sellable variant/SKU id from the search row.",
+        ),
     ] = None,
     expected_identity: Annotated[
         ProductIdentity | None,
@@ -1070,7 +1116,7 @@ async def compare_verify_offer(
     """Verify one compared offer through its marketplace card tool.
 
     This is the cheap compare-server follow-up: it lets an agent confirm the
-    raw search price, stock and seller without enabling the 39-tool unified
+    raw search price, stock and seller without enabling the full unified
     mount. The returned card is source-native and therefore keeps fields the
     comparison intentionally normalises away.
 
@@ -1088,6 +1134,10 @@ async def compare_verify_offer(
     identifier cannot be validated; native card errors are returned as tool
     errors with their source-specific taxonomy.
     """
+    if expected_price_rub is not None and (
+        isinstance(expected_price_rub, bool) or not math.isfinite(expected_price_rub) or expected_price_rub < 0
+    ):
+        raise_tool_error(BadRequestError("expected_price_rub must be a finite non-negative price"))
     name = source.strip().lower()
     if name not in _CARD_TOOL_NAMES:
         raise_tool_error(BadRequestError(f"source {source!r} has no supported card verifier"))
@@ -1099,17 +1149,15 @@ async def compare_verify_offer(
     if tool is None:
         raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
 
-    requested_wb_id = ""
+    requested_numeric_id = ""
     if name == "wildberries":
-        digits = re.search(r"\d+", product_id_or_url)
-        if digits is None:
-            raise_tool_error(BadRequestError("wildberries verification needs a numeric nm_id"))
-        requested_wb_id = str(int(digits.group(0)))
-        result = await tool(nm_ids=[int(requested_wb_id)])
+        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
+        result = await tool(nm_ids=[int(requested_numeric_id)])
     elif name == "yandex_market":
         result = await tool(product_id=product_id_or_url, include_reviews=False)
     elif name == "detsky_mir":
-        result = await tool(product_id=int(product_id_or_url))
+        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
+        result = await tool(product_id=int(requested_numeric_id))
     else:
         argument = {
             "ozon": "sku_or_path",
@@ -1123,11 +1171,34 @@ async def compare_verify_offer(
         }[name]
         result = await tool(**{argument: product_id_or_url})
     payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    if name == "yandex_market" and expected_variant_id:
+        observed_variant = str(payload.get("sku_id") or "") if isinstance(payload, dict) else ""
+        if observed_variant != expected_variant_id:
+            raise_tool_error(
+                BadRequestError(
+                    f"yandex variant mismatch: expected sku_id {expected_variant_id!r}, card returned {observed_variant or '<missing>'}"
+                )
+            )
+    record = payload if isinstance(payload, dict) else {}
+    if name == "wildberries":
+        # Price and identity must describe the same requested row, never an
+        # arbitrary first item from a batch envelope.
+        items = record.get("items")
+        candidates = (
+            [item for item in items if isinstance(item, dict) and str(item.get("nm_id")) == requested_numeric_id]
+            if isinstance(items, list)
+            else []
+        )
+        record = candidates[0] if len(candidates) == 1 else {}
+    elif name == "detsky_mir":
+        product = record.get("product")
+        record = product if isinstance(product, dict) and str(product.get("product_id")) == requested_numeric_id else {}
     verification: dict[str, object] | None = None
     if expected_price_rub is not None:
-        observed = payload.get("price_rub") if isinstance(payload, dict) else None
-        if isinstance(observed, (int, float)):
-            delta = round(float(observed) - expected_price_rub, 2)
+        price_field = "price" if name == "ozon" else "price_rub"
+        observed = R.coerce_price(record.get(price_field))
+        if observed is not None:
+            delta = round(observed - expected_price_rub, 2)
             verification = {
                 "expected_price_rub": expected_price_rub,
                 "observed_price_rub": observed,
@@ -1148,18 +1219,6 @@ async def compare_verify_offer(
         "price_verification": verification,
     }
     if expected_identity is not None:
-        record = payload if isinstance(payload, dict) else {}
-        if name == "wildberries" and isinstance(record.get("items"), list):
-            # wb_card is a batch response. Select the requested id, never the
-            # first row, which may describe another variant or returned item.
-            record = next(
-                (
-                    item
-                    for item in record["items"]
-                    if isinstance(item, dict) and str(item.get("nm_id")) == requested_wb_id
-                ),
-                {},
-            )
         observed_identity = identity_from_mapping(record, source=name)
         response["identity_verification"] = {
             "observed": observed_identity.model_dump(),

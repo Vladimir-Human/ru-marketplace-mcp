@@ -18,6 +18,7 @@ class MarketOffer(BaseModel):
 
     source: str = Field(default="", description="Marketplace the offer came from (wildberries, yandex_market, ozon).")
     product_id: str = Field(default="", description="Marketplace-native product id, for a follow-up card lookup.")
+    variant_id: str = Field(default="", description="Sellable variant/SKU id when the source exposes one separately.")
     title: str = Field(default="", description="Product title as the marketplace names it.")
     brand: str = Field(default="", description="Brand name, when reported.")
     seller: str = Field(default="", description="Seller/shop name, when reported.")
