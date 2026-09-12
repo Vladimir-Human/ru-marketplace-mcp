@@ -39,6 +39,33 @@ yourself via env; it is never stored by the project either.)
 
 ## Setup
 
+### Optional challenge handoff
+
+Set `CHROME_CHALLENGE_HANDOFF_S=120` in the MCP server's environment to retain
+DOM-detected Lamoda search and Taobao search/card challenge tabs for up to two
+minutes. Default `0` disables retention; the hard maximum is 300 seconds, including
+initial browser attachment/navigation. A headed Chrome and an active MCP session
+are required. This mode does not solve CAPTCHA or log into accounts.
+
+An error with `handoff_expires_at` confirms a retained tab. Complete the interaction
+in that tab, then repeat the same operation and arguments in the same MCP session.
+The connector reads that exact page without navigating again; a successful read
+closes it. For comparison, repeat the original query with only the affected source.
+Pending handoffs take precedence over successful-result caches, so another
+session's cached response cannot bypass the retained page.
+The original expiry never extends on retries. Different sessions and operations
+receive independent tabs; at most four handoffs are active per process. Concurrent
+reads of one lease or a full registry report a busy transport error.
+
+The runtime attempts to reveal the owned browser window and prevents unrelated
+connector calls from hiding it while the handoff is active. Foreground activation
+is best-effort, especially for remote browsers. Expiry, errors, cancellation and
+graceful shutdown close owned tabs; a hard process kill cannot guarantee expiry
+in an external Chrome. Without `handoff_expires_at`, use the ordinary retry flow:
+HTTP errors rejected before DOM extraction, headless runs and calls without an
+MCP session do not retain a tab. No cookies, screenshots or browser profile copies
+are written by the handoff runtime.
+
 ### 1. Start Chrome with remote debugging
 
 **Windows (PowerShell):**

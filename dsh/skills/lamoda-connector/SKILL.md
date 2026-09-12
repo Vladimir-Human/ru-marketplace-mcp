@@ -30,6 +30,9 @@ Chrome over CDP.
   it is not cached. Complete the interaction in the connected Chrome profile,
   then retry. Empty extraction without challenge evidence remains parser drift,
   not proof of "no results".
+- With `CHROME_CHALLENGE_HANDOFF_S` enabled, `handoff_expires_at` confirms a
+  retained search tab. Complete its interaction, then repeat the same query in
+  the same MCP session before expiry to read that tab without a new navigation.
 - A missing price is `null`, never `0`: `price_rub: null` means Lamoda had no
   usable price — treat it as no data, never as a free item.
 ## DSH activation

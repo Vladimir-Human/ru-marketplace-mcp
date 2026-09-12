@@ -26,16 +26,39 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from fastmcp.server.dependencies import get_http_request
+from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
 
 from mcp_core.logging import log_event
 
 if TYPE_CHECKING:
-    from fastmcp import FastMCP
+    from fastmcp import Context, FastMCP
+
+
+def current_mcp_session_id(ctx: Context | None = None) -> str | None:
+    """Resolve direct and mounted tool calls; CLI probes have no MCP session."""
+    try:
+        return (ctx or get_context()).session_id
+    except RuntimeError:
+        return None
+
+
+@asynccontextmanager
+async def browser_handoff_lifespan(server: FastMCP) -> AsyncIterator[dict]:
+    """Release loaded CDP leases without requiring the optional browser extra."""
+    try:
+        yield {}
+    finally:
+        handoff = sys.modules.get("mcp_core.transport.browser_handoff")
+        if handoff is not None:
+            await handoff.close_handoffs()
+
 
 # The transport strings FastMCP 3.x accepts for these servers. "stdio" is the
 # default and the only one existing client configs rely on. "http" is the

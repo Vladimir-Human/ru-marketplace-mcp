@@ -32,6 +32,10 @@ connector's canary at once.
   `requires_user_action=true`. Complete it in the scraping profile before retrying
   the same operation. Failed payloads are not cached; a retry reads the browser
   again. Successful results still use the normal TTL cache.
+- With `CHROME_CHALLENGE_HANDOFF_S` enabled, `handoff_expires_at` confirms that
+  the challenged search/card tab is retained. Complete its interaction, then
+  repeat the same tool arguments in the same MCP session before expiry. No new
+  navigation is issued for that resume; expiry never extends on retries.
 - The operator's Chrome must be running with CDP (scripts/start_chrome_cdp.sh).
 ## DSH activation
 

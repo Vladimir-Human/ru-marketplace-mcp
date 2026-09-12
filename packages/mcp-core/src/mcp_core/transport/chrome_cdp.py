@@ -143,6 +143,10 @@ STEALTH = os.environ.get("CHROME_STEALTH", "1") != "0"
 # headless Chrome readily, so this stays off by default.
 HEADLESS = os.environ.get("CHROME_HEADLESS", "0") == "1"
 
+# Owned challenge workers hold a guard throughout their lifecycle. Other reads
+# must not hide a profile window while the operator is using a retained tab.
+_HANDOFF_VISIBILITY_GUARDS: set[object] = set()
+
 
 def _chrome_candidates() -> list[str]:
     """Chrome/Chromium executables to try, most preferred first."""
@@ -357,6 +361,8 @@ def _hide_chrome_windows() -> None:
     the app the way ⌘H does — the window keeps its Space and never takes focus,
     which is what stops the desktop from switching mid-call.
     """
+    if _HANDOFF_VISIBILITY_GUARDS:
+        return
     if sys.platform == "darwin":
         for pid in _scraping_profile_pids():
             try:
@@ -678,6 +684,53 @@ class _RawCdpPage:
             await self._send("Target.closeTarget", {"targetId": self._target_id}, timeout=10.0)
         except Exception:
             pass
+
+
+async def current_page_url(page: PageLike) -> str:
+    """Refresh raw-CDP navigation state without reading document content."""
+    if isinstance(page, _RawCdpPage):
+        result = await page._send("Page.getFrameTree")
+        url = result.get("frameTree", {}).get("frame", {}).get("url")
+        if not isinstance(url, str) or not url:
+            raise RuntimeError("CDP returned no current main frame URL")
+        page._url = url
+        return url
+    return page.url
+
+
+async def reveal_owned_page(page: PageLike) -> bool:
+    """Best-effort reveal of the owned target's window, never all profile windows."""
+    session: Any = None
+    try:
+        async with asyncio.timeout(_RAW_CONNECT_TIMEOUT_S):
+            if isinstance(page, _RawCdpPage):
+                send = page._send
+                target_id = page._target_id
+            elif isinstance(page, Page):
+                session = await page.context.new_cdp_session(page)
+                send = session.send
+                target_id = (await send("Target.getTargetInfo"))["targetInfo"]["targetId"]
+            else:
+                return False
+            info = await send("Browser.getWindowForTarget", {"targetId": target_id})
+            window_id = info["windowId"]
+            await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "normal"}})
+            bounds = info.get("bounds", {})
+            if bounds.get("left", 0) < -10000 or bounds.get("top", 0) < -10000:
+                await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"left": 80, "top": 80}})
+            if isinstance(page, Page):
+                await page.bring_to_front()
+            else:
+                await send("Page.bringToFront")
+            return True
+    except Exception:
+        return False
+    finally:
+        if session is not None:
+            try:
+                await asyncio.wait_for(session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+            except Exception:
+                pass
 
 
 @asynccontextmanager

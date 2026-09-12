@@ -49,7 +49,9 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
 from mcp_core.transport import build_client
+from mcp_core.transport.browser_handoff import has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -100,6 +102,7 @@ _HEADERS = {
 
 mcp = FastMCP(
     name="lamoda-connector",
+    lifespan=browser_handoff_lifespan,
     version=SERVER_VERSION,
     instructions=(
         "Lamoda fashion catalog: text search runs in the operator's Chrome over "
@@ -331,22 +334,40 @@ async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
 async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
     """Tier-2: render the search page in the operator's Chrome, extract tiles."""
     cache_key = f"search:{query}"
-    cached = _cache.get(cache_key)
+    url = f"{SITE_BASE}/catalogsearch/result/?q={urllib.parse.quote(query)}"
+    scope = current_mcp_session_id(ctx)
+    pending = has_pending_handoff(scope=scope, operation="lamoda_search", url=url)
+    cached = None if pending else _cache.get(cache_key)
     if cached is not None:
         return cached
-    url = f"{SITE_BASE}/catalogsearch/result/?q={urllib.parse.quote(query)}"
 
     async def _attempt() -> dict[str, Any]:
+        async def read(page):
+            raw = await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0)
+            if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
+                raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise_tool_error(ParserDriftError("search extractor returned a non-object payload"))
+            data.pop("_handoff_expires_at", None)
+            return data
+
         async with _cdp_lock:
             await _polite_wait()
-            async with open_page(url, wait_ms=8000) as page:
-                raw = await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0)
-        if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
-            raise ToolError(TransportDownError("extracted page data missing or over the body cap"))
-        data = json.loads(raw)
-        if not isinstance(data, dict):
-            raise ToolError(ParserDriftError("search extractor returned a non-object payload"))
-        return data
+            if scope is None:
+                async with open_page(url, wait_ms=8000) as page:
+                    return await read(page)
+            data, expires_at = await read_with_handoff(
+                url=url,
+                wait_ms=8000,
+                scope=scope,
+                operation="lamoda_search",
+                read=read,
+                challenge=lambda payload: "captcha" if _anti_bot_challenge(payload) else None,
+            )
+            if expires_at:
+                data["_handoff_expires_at"] = expires_at
+            return data
 
     try:
         payload = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
@@ -391,6 +412,7 @@ async def lamoda_search(
                 ChallengeRequiredError(
                     "Lamoda requires user action in the connected Chrome. Complete the visible challenge, then retry.",
                     provider="lamoda",
+                    handoff_expires_at=payload.get("_handoff_expires_at"),
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []

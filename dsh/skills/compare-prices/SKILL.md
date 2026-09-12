@@ -96,8 +96,13 @@ from listings whose marketplace explicitly reports stock.
    source. `retryable=true` means a later retry can succeed after the challenge
    clears; it does not authorize a retry loop. Complete the required interaction
    in the connected scraping profile. A different browser profile has different
-   cookies. The connector closes its temporary tab; retaining the exact challenge
-   tab and automatically resuming are not implemented.
+   cookies. If `handoff_expires_at` is present, the challenged tab is retained:
+   complete the interaction there and repeat in the same MCP session before
+   expiry. The source reads that exact page without new navigation. Otherwise
+   the temporary tab closes normally. Retention is opt-in through
+   `CHROME_CHALLENGE_HANDOFF_S` and currently covers Lamoda search and Taobao
+   search/card DOM challenges. Do not change the original query or arguments
+   when resuming, and do not assume automatic CAPTCHA completion.
 3. After the browser action completes, call `compare_prices` with the same query,
    filters and limit, and `sources` restricted to the failed sources. Do not
    re-query healthy sources merely to recover one marketplace. This retry's
