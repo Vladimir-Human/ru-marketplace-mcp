@@ -23,6 +23,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "search_grid.html"
 LIVE_FIXTURE = Path(__file__).parent / "fixtures" / "search_grid_live.html"
 
 SEARCH_GOLDEN = [
+    "body_snippet:str",
     "items[].brand:null",
     "items[].price_texts.attached[]:str",
     "items[].price_texts.other:empty_array",

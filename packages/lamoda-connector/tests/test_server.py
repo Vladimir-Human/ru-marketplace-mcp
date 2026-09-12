@@ -151,6 +151,21 @@ async def test_search_maps_zero_skus_to_parser_drift(monkeypatch):
         await server.lamoda_search("кроссовки")
 
 
+async def test_search_empty_visible_challenge_is_transport_down(monkeypatch):
+    _patch_render(
+        monkeypatch,
+        {
+            "title": "Lamoda",
+            "items": [],
+            "body_snippet": "Подтвердите, что вы не робот и пройдите проверку",
+        },
+    )
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.lamoda_search("кроссовки")
+    assert "challenge" in str(excinfo.value).lower()
+
+
 # ---------------------------------------------------------- lamoda_selfcheck ----
 
 
@@ -220,6 +235,31 @@ async def test_selfcheck_cries_shape_drift_when_the_price_family_vanishes(monkey
     assert search.state == "drift"
     assert search.reason == "shape_drift"
     assert any("price" in note for note in search.notes)
+
+
+async def test_selfcheck_price_shape_drift_survives_challenge_copy(monkeypatch):
+    """Visible challenge wording in product copy cannot suppress shape drift."""
+    _patch_graphql(monkeypatch, GRAPHQL_PRODUCT)
+    _patch_render(
+        monkeypatch,
+        {
+            "title": "Кроссовки — Lamoda",
+            "body_snippet": "Кроссовки с защитой от робота; пройти проверку размера",
+            "items": [
+                {
+                    "sku": "MP002XM1RMM3",
+                    "title": "Кроссовки без цены",
+                    "url": "https://www.lamoda.ru/p/mp002xm1rmm3/",
+                }
+            ],
+        },
+    )
+
+    result = await server.lamoda_selfcheck()
+
+    assert result.status == "drift_detected"
+    assert result.checks["search"].state == "drift"
+    assert result.checks["search"].reason == "shape_drift"
 
 
 # ------------------------------------------------------------------- helpers ----

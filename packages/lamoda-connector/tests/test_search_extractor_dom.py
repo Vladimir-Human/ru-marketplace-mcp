@@ -47,11 +47,16 @@ def _items() -> list[dict]:
     return payload["items"]
 
 
-def _extract(js_source: str) -> dict:
+def _extract(js_source: str, html: str | None = None, tmp_path: Path | None = None) -> dict:
     try:
+        fixture = FIXTURE
+        if html is not None:
+            assert tmp_path is not None
+            fixture = tmp_path / "challenge.html"
+            fixture.write_text(html, encoding="utf-8")
         return run_extractor(
             js_source,
-            FIXTURE,
+            fixture,
             page_url="https://www.lamoda.ru/catalogsearch/result/?q=%D0%BA%D1%80%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BA%D0%B8",
         )
     except JsdomUnavailable as exc:
@@ -103,3 +108,63 @@ def test_the_extractor_uses_shared_helpers_not_legacy_heuristics() -> None:
     assert "Math.min" not in code, "price picking went back to Math.min"
     assert "tileRootFor" in code, "shared tileRootFor vanished from the extractor"
     assert "priceTextsIn" in code, "shared priceTextsIn vanished from the extractor"
+
+
+def test_challenge_words_in_scripts_or_hidden_widgets_do_not_block_products(tmp_path: Path) -> None:
+    html = FIXTURE.read_text(encoding="utf-8").replace(
+        "</body>",
+        '<script>captcha; "не робот"</script><div hidden>access denied</div>'
+        '<div style="display:none">пройти проверку</div></body>',
+    )
+    payload = _extract(server._SEARCH_EXTRACT_JS, html, tmp_path)
+
+    assert len(payload["items"]) == 2
+    assert payload["title"] != "__BLOCKED__"
+    assert server._anti_bot_challenge(payload) is False
+
+
+def test_visible_challenge_blocks_only_an_empty_result(tmp_path: Path) -> None:
+    html = "<html><body><div>Подтвердите, что вы не робот</div></body></html>"
+    payload = _extract(server._SEARCH_EXTRACT_JS, html, tmp_path)
+
+    assert payload["items"] == []
+    assert payload["title"] == ""
+    assert server._anti_bot_challenge(payload) is True
+
+
+def test_script_only_challenge_is_not_a_blocked_page(tmp_path: Path) -> None:
+    html = "<html><body><script>captcha</script></body></html>"
+    payload = _extract(server._SEARCH_EXTRACT_JS, html, tmp_path)
+
+    assert payload["items"] == []
+    assert payload["title"] != "__BLOCKED__"
+    assert server._anti_bot_challenge(payload) is False
+
+
+def test_hidden_and_css_hidden_widgets_on_an_empty_page_are_not_a_challenge(tmp_path: Path) -> None:
+    html = """<html><body>
+      <script>captcha are you human</script>
+      <div hidden>Подтвердите, что вы не робот</div>
+      <div style="display:none">пройти проверку</div>
+      <div style="visibility: hidden">access denied</div>
+    </body></html>"""
+    payload = _extract(server._SEARCH_EXTRACT_JS, html, tmp_path)
+
+    assert payload["items"] == []
+    assert payload["body_snippet"] == ""
+    assert server._anti_bot_challenge(payload) is False
+
+
+async def test_extractor_payload_flows_through_lamoda_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the real extractor payload through the public tool mapping."""
+    payload = _extract(server._SEARCH_EXTRACT_JS)
+
+    async def fake_render(query: str, ctx: object) -> dict:
+        return payload
+
+    monkeypatch.setattr(server, "_cdp_render_search", fake_render)
+    result = await server.lamoda_search("кроссовки")
+
+    assert result.count == len(payload["items"])
+    assert result.items[0].title == payload["items"][0]["title"]
+    assert result.items[0].price_rub == 5990.0

@@ -20,6 +20,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
+    "body_snippet:str",
     "items[].brand:null",
     "items[].price_texts.attached[]:str",
     "items[].price_texts.other[]:str",

@@ -9,7 +9,6 @@ back", never a real browser.
 from __future__ import annotations
 
 import subprocess
-from contextlib import asynccontextmanager
 
 import pytest
 from mcp_core.transport import chrome_cdp
@@ -143,6 +142,18 @@ class _FakeCdp:
         self.detached = True
 
 
+class _FakePageCdp:
+    def __init__(self, target_id: str) -> None:
+        self.target_id = target_id
+
+    async def send(self, method: str, params=None):
+        assert method == "Target.getTargetInfo"
+        return {"targetInfo": {"targetId": self.target_id}}
+
+    async def detach(self) -> None:
+        pass
+
+
 class _FakeBrowser:
     def __init__(self, cdp: _FakeCdp | None) -> None:
         self._cdp = cdp
@@ -170,15 +181,14 @@ class _FakeContext:
         self.browser = browser
         self.plain_pages = 0
         self.expect_timeouts: list[float | None] = []
+        self.pages = ["background-page"]
+
+    async def new_cdp_session(self, page: str) -> _FakePageCdp:
+        return _FakePageCdp("T1")
 
     async def new_page(self) -> str:
         self.plain_pages += 1
         return "foreground-page"
-
-    @asynccontextmanager
-    async def expect_page(self, timeout: float | None = None):
-        self.expect_timeouts.append(timeout)
-        yield _FakeEventInfo("background-page")
 
 
 async def test_new_tab_creates_the_target_in_the_background_when_stealth_is_on(monkeypatch):
@@ -192,7 +202,7 @@ async def test_new_tab_creates_the_target_in_the_background_when_stealth_is_on(m
     assert cdp.sent == [("Target.createTarget", {"url": "about:blank", "background": True})]
     assert cdp.detached is True
     assert ctx.plain_pages == 0
-    assert ctx.expect_timeouts == [chrome_cdp._TAB_OP_TIMEOUT_S * 1000]
+    assert ctx.expect_timeouts == []
 
 
 async def test_new_tab_uses_plain_new_page_when_stealth_is_off(monkeypatch):
@@ -225,10 +235,9 @@ async def test_new_tab_falls_back_to_new_page_when_the_cdp_session_fails(monkeyp
 
 async def test_new_tab_detaches_the_session_even_when_no_page_arrives(monkeypatch):
     class _NoPageContext(_FakeContext):
-        @asynccontextmanager
-        async def expect_page(self, timeout: float | None = None):
-            raise TimeoutError("no page event")
-            yield  # pragma: no cover
+        def __init__(self, browser):
+            super().__init__(browser)
+            self.pages = []
 
     monkeypatch.setattr(chrome_cdp, "STEALTH", True)
     cdp = _FakeCdp()
@@ -238,3 +247,17 @@ async def test_new_tab_detaches_the_session_even_when_no_page_arrives(monkeypatc
         await chrome_cdp._new_tab(ctx)  # type: ignore[arg-type]
 
     assert cdp.detached is True
+
+
+async def test_new_tab_serializes_target_ownership_for_concurrent_callers(monkeypatch):
+    """Each waiter must own the page event it caused, even under fan-out."""
+
+    monkeypatch.setattr(chrome_cdp, "STEALTH", True)
+    ctx = _FakeContext(_FakeBrowser(_FakeCdp()))
+
+    import asyncio
+
+    pages = await asyncio.gather(*(chrome_cdp._new_tab(ctx) for _ in range(6)))  # type: ignore[arg-type]
+
+    assert len(pages) == 6
+    assert all(page == "background-page" for page in pages)
