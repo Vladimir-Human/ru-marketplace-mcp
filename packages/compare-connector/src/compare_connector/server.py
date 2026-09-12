@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import json
 import math
 import os
 import re
@@ -38,9 +39,10 @@ from collections.abc import Iterable
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
+from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
-from mcp_core.errors import BadRequestError, raise_tool_error
+from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, raise_tool_error
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
@@ -730,6 +732,54 @@ _SEARCH_IMPLS = {
 }
 
 
+def _source_error(exc: Exception) -> dict[str, Any]:
+    """Preserve typed recovery signals before truncating/redacting error detail.
+
+    Only connector exceptions and MCP ToolError envelopes carry this contract.
+    Arbitrary upstream text must not become an instruction to the client.
+    """
+    payload: dict[str, Any] = {}
+    if isinstance(exc, ConnectorError):
+        payload = exc.to_dict()
+    elif isinstance(exc, ToolError):
+        try:
+            decoded = json.loads(str(exc))
+        except (ValueError, RecursionError):
+            pass
+        else:
+            if isinstance(decoded, dict):
+                payload = decoded
+    raw_code = payload.get("error")
+    try:
+        code = ErrorCode(raw_code if isinstance(raw_code, str) else "")
+    except (ValueError, TypeError):
+        detail = _redact(str(exc))[:200]
+        return {
+            "status": "blocked"
+            if any(word in detail for word in ("transport_down", "rate_limited", "403"))
+            else "error",
+            "detail": detail,
+        }
+
+    challenge = code == ErrorCode.CHALLENGE_REQUIRED
+    challenge_type = payload.get("challenge_type")
+    if challenge_type not in ("captcha", "login", "login_or_captcha"):
+        challenge_type = None
+    status = "error"
+    if code in (ErrorCode.CHALLENGE_REQUIRED, ErrorCode.RATE_LIMITED, ErrorCode.TRANSPORT_DOWN):
+        status = "blocked"
+    elif code == ErrorCode.TIMEOUT:
+        status = "timeout"
+    return {
+        "status": status,
+        "detail": _redact(str(payload.get("message", str(exc))))[:200],
+        "error_code": code.value,
+        "retryable": code.retryable,
+        "requires_user_action": challenge,
+        "challenge_type": challenge_type if challenge else None,
+    }
+
+
 async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome, list[MarketOffer]]:
     """Query one marketplace, converting any failure into a reported outcome.
 
@@ -745,18 +795,17 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
                 source=name,
                 status="timeout",
                 detail=f"no response within {SOURCE_TIMEOUT_S:.0f}s",
+                error_code=ErrorCode.TIMEOUT.value,
+                retryable=True,
                 elapsed_ms=round((time.monotonic() - started) * 1000),
             ),
             [],
         )
     except Exception as exc:
-        detail = _redact(str(exc))[:200]
-        status = "blocked" if any(word in detail for word in ("transport_down", "rate_limited", "403")) else "error"
         return (
             SourceOutcome(
                 source=name,
-                status=status,
-                detail=detail,
+                **_source_error(exc),
                 elapsed_ms=round((time.monotonic() - started) * 1000),
             ),
             [],

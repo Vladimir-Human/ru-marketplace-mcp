@@ -16,6 +16,7 @@ from compare_connector import server
 from compare_connector.models_output import MarketOffer
 from fastmcp.exceptions import ToolError
 from mcp_core import resilience as R
+from mcp_core.errors import ChallengeRequiredError, ParserDriftError, RateLimitedError, raise_tool_error
 from pydantic import ValidationError
 
 
@@ -190,6 +191,82 @@ async def test_a_timeout_is_reported_as_a_timeout(monkeypatch):
     assert outcomes["yandex_market"].status == "timeout"
     assert result.complete is False
     assert result.total_offers == 1
+    assert outcomes["yandex_market"].retryable is True
+    assert outcomes["yandex_market"].requires_user_action is False
+
+
+@pytest.mark.parametrize("wire_error", [False, True])
+async def test_challenge_keeps_partial_results_and_recovers_only_failed_source(monkeypatch, wire_error):
+    calls = []
+    blocked = True
+
+    async def wb(query, limit):
+        calls.append("wildberries")
+        return [offer("wildberries", 500.0)]
+
+    async def taobao(query, limit):
+        calls.append("taobao")
+        if blocked:
+            error = ChallengeRequiredError("visible challenge " * 40, challenge_type="login_or_captcha")
+            if wire_error:
+                raise_tool_error(error)
+            raise error
+        return [offer("taobao", None, currency="cny", price_native=35)]
+
+    stub_sources(monkeypatch, {"wildberries": wb, "taobao": taobao})
+    result = await server.compare_prices(query="тест")
+    outcome = next(o for o in result.source_outcomes if o.source == "taobao")
+    assert result.complete is False
+    assert result.cheapest.source == "wildberries"
+    assert outcome.status == "blocked"
+    assert outcome.error_code == "challenge_required"
+    assert outcome.retryable is True
+    assert outcome.requires_user_action is True
+    assert outcome.challenge_type == "login_or_captcha"
+    assert len(outcome.detail) <= 200
+    assert calls.count("taobao") == 1  # no blind challenge retry loop
+
+    blocked = False  # a later call after browser action completed
+    resumed = await server.compare_prices(query="тест", sources=["taobao"])
+    assert resumed.complete is True  # only for this retry's requested sources
+    assert resumed.sources_ok == ["taobao"]
+    assert resumed.source_outcomes[0].requires_user_action is False
+    assert calls.count("wildberries") == 1
+
+
+@pytest.mark.parametrize(
+    ("error", "status", "code", "retryable"),
+    [
+        (RateLimitedError("ozon"), "blocked", "rate_limited", True),
+        (ParserDriftError("field 403 missing"), "error", "parser_drift", False),
+    ],
+)
+def test_structured_error_code_takes_precedence_over_message(error, status, code, retryable):
+    result = server._source_error(ToolError(json.dumps(error.to_dict())))
+    assert result["status"] == status
+    assert result["error_code"] == code
+    assert result["retryable"] is retryable
+    assert result["requires_user_action"] is False
+
+
+@pytest.mark.parametrize("message", ["broken", "[]", "null", '{"error": []}', '{"error": "new_code"}'])
+def test_malformed_error_envelope_does_not_break_comparison(message):
+    result = server._source_error(ToolError(message))
+    assert result["status"] == "error"
+    assert not result.get("requires_user_action", False)
+
+
+def test_challenge_metadata_does_not_leak_credentials_or_upstream_instructions():
+    payload = {
+        "error": "challenge_required",
+        "message": "failed at https://user:secret@example.com/?token=private",
+        "challenge_type": "visit https://untrusted.invalid/?token=private",
+    }
+    result = server._source_error(ToolError(json.dumps(payload)))
+    assert "secret" not in result["detail"]
+    assert "private" not in result["detail"]
+    assert result["challenge_type"] is None
+    assert result["requires_user_action"] is True
 
 
 async def test_a_generic_failure_is_reported_as_error_not_blocked(monkeypatch):

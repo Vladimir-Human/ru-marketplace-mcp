@@ -89,10 +89,23 @@ The response keeps excluded offers for audit, but ranks and selects winners only
 from listings whose marketplace explicitly reports stock.
 
 **When a source is blocked:**
-1. `compare_sources()` to separate "not installed" from "refused".
-2. Ozon blocked → it needs a logged-in Chrome on the CDP port (see the
-   ozon-connector skill). Report the limitation; do not silently omit Ozon.
-3. Retry once for a `timeout`; a rate limit needs a genuine wait.
+1. Read `source_outcomes`: `error_code`, `retryable`, `requires_user_action`,
+   and `challenge_type` are machine-readable. `detail` is redacted and truncated;
+   do not parse it for recovery instructions. Older connectors may omit a code.
+2. If `requires_user_action=true`, keep successful offers visible and pause that
+   source. `retryable=true` means a later retry can succeed after the challenge
+   clears; it does not authorize a retry loop. Complete the required interaction
+   in the connected scraping profile. A different browser profile has different
+   cookies. The connector closes its temporary tab; retaining the exact challenge
+   tab and automatically resuming are not implemented.
+3. After the browser action completes, call `compare_prices` with the same query,
+   filters and limit, and `sources` restricted to the failed sources. Do not
+   re-query healthy sources merely to recover one marketplace. This retry's
+   `complete` applies only to its own `sources_queried`; older results are from a
+   different observation time. Verify finalists before presenting a winner.
+4. Retry once for a `timeout`; a rate limit needs a genuine wait. A generic
+   `blocked` transport error is not proof that logging in will fix it. Use the
+   source-specific skill and `compare_sources()` to inspect prerequisites.
 
 ## Gotchas
 
