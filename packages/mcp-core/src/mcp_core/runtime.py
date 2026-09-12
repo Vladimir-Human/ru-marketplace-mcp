@@ -32,13 +32,21 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from fastmcp.server.dependencies import get_http_request
+from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
 
 from mcp_core.logging import log_event
 
 if TYPE_CHECKING:
-    from fastmcp import FastMCP
+    from fastmcp import Context, FastMCP
+
+
+def current_mcp_session_id(ctx: Context | None = None) -> str | None:
+    """Resolve direct and mounted tool calls; CLI probes have no MCP session."""
+    try:
+        return (ctx or get_context()).session_id
+    except RuntimeError:
+        return None
 
 
 @asynccontextmanager

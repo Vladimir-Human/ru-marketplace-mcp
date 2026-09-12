@@ -100,6 +100,14 @@ async def test_distinct_mcp_sessions_do_not_share_challenge_tabs(browser):
         recovered = (await first.call_tool("compare_prices", arguments)).structured_content
         assert recovered["complete"] is True
         assert browser[0].closed and not browser[1].closed
+        blocked = (await second.call_tool("compare_prices", arguments)).structured_content
+        assert blocked["complete"] is False  # A's success cache must not bypass B's owned page
+        assert blocked["source_outcomes"][0]["handoff_expires_at"]
+        assert not browser[1].closed
+        browser[1].solved = True
+        recovered_b = (await second.call_tool("compare_prices", arguments)).structured_content
+        assert recovered_b["complete"] is True
+        assert len(browser) == 2 and browser[1].closed
     assert all(page.closed for page in browser)
 
 
@@ -113,17 +121,28 @@ async def test_mcp_shutdown_closes_pending_handoff(browser):
 @pytest.mark.parametrize("kind", ["search", "card"])
 async def test_taobao_tools_resume_the_retained_page(browser, kind):
     arguments = {"query": "test"} if kind == "search" else {"item_id_or_url": "123456789012"}
-    async with Client(taobao.mcp) as client:
+    async with Client(taobao.mcp) as client, Client(taobao.mcp) as second:
         with pytest.raises(ToolError) as excinfo:
             await client.call_tool(f"taobao_{kind}", arguments)
         error = json.loads(str(excinfo.value))
         assert error["handoff_expires_at"]
         assert error["challenge_type"] == "captcha"
         assert len(browser) == 1 and not browser[0].closed
+        with pytest.raises(ToolError):
+            await second.call_tool(f"taobao_{kind}", arguments)
+        assert len(browser) == 2
         browser[0].solved = True
         recovered = (await client.call_tool(f"taobao_{kind}", arguments)).structured_content
         assert recovered["status"] == "success"
-        assert len(browser) == 1 and browser[0].closed
+        assert len(browser) == 2 and browser[0].closed
+        with pytest.raises(ToolError) as second_error:
+            await second.call_tool(f"taobao_{kind}", arguments)
+        assert json.loads(str(second_error.value))["handoff_expires_at"]
+        assert not browser[1].closed
+        browser[1].solved = True
+        recovered_b = (await second.call_tool(f"taobao_{kind}", arguments)).structured_content
+        assert recovered_b["status"] == "success"
+        assert len(browser) == 2 and browser[1].closed
 
 
 def test_compare_import_does_not_require_browser_extra():

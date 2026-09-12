@@ -62,8 +62,21 @@ class _Lease:
 _leases: dict[Key, _Lease] = {}
 
 
+def _key(scope: str, operation: str, url: str) -> Key:
+    return scope, operation, url, chrome_cdp.CDP_URL, chrome_cdp.SCRAPING_PROFILE
+
+
+def has_pending_handoff(*, scope: str | None, operation: str, url: str) -> bool:
+    """Whether this exact operation owns a lease, including busy/expiring cleanup."""
+    if not scope:
+        return False
+    return _key(scope, operation, url) in _leases
+
+
 async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
     current: _Request | None = None
+    terminal_error: Exception = TransportDownError("Browser handoff ended; retry the operation")
+    cancelled = False
     guard = object()
     chrome_cdp._HANDOFF_VISIBILITY_GUARDS.add(guard)
     try:
@@ -90,25 +103,38 @@ async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
                 finally:
                     lease.cleaning = True
     except TimeoutError:
+        terminal_error = UpstreamTimeoutError("Browser handoff deadline expired")
         if current is not None and not current.result.done():
-            current.result.set_exception(UpstreamTimeoutError("Browser handoff deadline expired"))
+            current.result.set_exception(terminal_error)
     except asyncio.CancelledError:
+        cancelled = True
         if current is not None and not current.result.done():
             current.result.cancel()
         raise
     except Exception as exc:
+        terminal_error = exc
         if current is not None and not current.result.done():
             current.result.set_exception(exc)
     finally:
         lease.cleaning = True
         chrome_cdp._HANDOFF_VISIBILITY_GUARDS.discard(guard)
+        if _leases.get(key) is lease:
+            del _leases[key]
+        # A retry may wake Queue.get just before deadline cancellation. In that
+        # case get has not dequeued it, and ``current`` is still None. Settle
+        # every queued caller on all exits, before cleanup yields again.
+        while not lease.requests.empty():
+            pending = lease.requests.get_nowait()
+            if not pending.result.done():
+                if cancelled:
+                    pending.result.cancel()
+                else:
+                    pending.result.set_exception(terminal_error)
         if chrome_cdp.STEALTH and not chrome_cdp._HANDOFF_VISIBILITY_GUARDS:
             try:
                 await asyncio.wait_for(asyncio.to_thread(chrome_cdp._hide_chrome_windows), timeout=8)
             except Exception:
                 pass
-        if _leases.get(key) is lease:
-            del _leases[key]
 
 
 async def _stop(lease: _Lease) -> None:
@@ -124,13 +150,16 @@ async def _stop(lease: _Lease) -> None:
         finally:
             # A task cancelled before its first instruction never enters _run's
             # finally block. Remove only that lease, never its replacement.
-            for key, registered in tuple(_leases.items()):
-                if registered is lease:
-                    del _leases[key]
-            while not lease.requests.empty():
-                pending = lease.requests.get_nowait()
-                if not pending.result.done():
-                    pending.result.cancel()
+            # A second caller cancellation may interrupt this shield while
+            # transport cleanup continues; _run still owns that registry slot.
+            if lease.task.done():
+                for key, registered in tuple(_leases.items()):
+                    if registered is lease:
+                        del _leases[key]
+                while not lease.requests.empty():
+                    pending = lease.requests.get_nowait()
+                    if not pending.result.done():
+                        pending.result.cancel()
 
 
 async def close_handoffs() -> None:
@@ -160,7 +189,7 @@ async def read_with_handoff(
         async with chrome_cdp.open_page(url, wait_ms, allowed_hosts=allowed_hosts) as page:
             return await read(page), None
 
-    key = (scope, operation, url, chrome_cdp.CDP_URL, chrome_cdp.SCRAPING_PROFILE)
+    key = _key(scope, operation, url)
     loop = asyncio.get_running_loop()
     lease = _leases.get(key)
     if lease is not None and lease.busy:

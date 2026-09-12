@@ -369,3 +369,82 @@ async def test_cancel_during_success_cleanup_waits_for_exact_owned_close(browser
         await caller
     assert closed.is_set()
     assert not handoff._leases
+
+
+async def test_idle_expiry_settles_retry_queued_before_getter_resumes(browser, monkeypatch):
+    original_timeout_at = asyncio.timeout_at
+    deadlines = []
+
+    def capture_timeout(when):
+        timeout = original_timeout_at(when)
+        deadlines.append(timeout)
+        return timeout
+
+    monkeypatch.setattr(handoff.asyncio, "timeout_at", capture_timeout)
+    await call()
+    lease = next(iter(handoff._leases.values()))
+    original_put = lease.requests.put_nowait
+    reader = AsyncMock(return_value={"products": ["should not run"]})
+
+    def put_at_deadline(request):
+        original_put(request)
+        # Deliver the real timeout cancellation after waking Queue.get, before
+        # the worker can dequeue/assign ``current``. No timing sleeps required.
+        deadlines[0]._on_timeout()
+
+    monkeypatch.setattr(lease.requests, "put_nowait", put_at_deadline)
+    with pytest.raises(UpstreamTimeoutError, match="deadline expired"):
+        await asyncio.wait_for(call(read=reader), timeout=1)
+    reader.assert_not_called()
+    assert lease.requests.empty()
+    assert browser[0].closed
+    assert not handoff._leases
+
+
+async def test_pending_lookup_includes_busy_expired_lease_without_mutation(browser, monkeypatch):
+    lookup = {"scope": "session-1", "operation": "search", "url": "https://shop.test/search?q=a"}
+    assert not handoff.has_pending_handoff(**lookup)
+    await call()
+    lease = next(iter(handoff._leases.values()))
+    assert handoff.has_pending_handoff(**lookup)
+    lease.busy = True
+    lease.deadline = asyncio.get_running_loop().time() - 1
+    assert handoff.has_pending_handoff(**lookup)
+    assert next(iter(handoff._leases.values())) is lease
+    for changes in ({"scope": None}, {"scope": "other"}, {"operation": "card"}, {"url": "https://shop.test/"}):
+        assert not handoff.has_pending_handoff(**{**lookup, **changes})
+    monkeypatch.setattr(chrome_cdp, "CDP_URL", "http://different.test:9222")
+    assert not handoff.has_pending_handoff(**lookup)
+
+
+async def test_second_caller_cancellation_keeps_lease_until_worker_closes(browser, monkeypatch):
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    closed = asyncio.Event()
+
+    @asynccontextmanager
+    async def delayed_close(url, wait_ms=0, *, allowed_hosts=None):
+        try:
+            yield SimpleNamespace(url=url, extracted=0)
+        finally:
+            entered.set()
+            await release.wait()
+            closed.set()
+
+    monkeypatch.setattr(chrome_cdp, "open_page", delayed_close)
+    caller = asyncio.create_task(call(read=success))
+    await entered.wait()
+    lease = next(iter(handoff._leases.values()))
+    caller.cancel()
+    await asyncio.sleep(0)
+    caller.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await caller
+    assert not closed.is_set()
+    assert next(iter(handoff._leases.values())) is lease
+    assert not lease.task.done()
+    assert chrome_cdp._HANDOFF_VISIBILITY_GUARDS
+    release.set()
+    await asyncio.wait_for(lease.task, timeout=1)
+    assert closed.is_set()
+    assert not handoff._leases

@@ -51,6 +51,8 @@ An error with `handoff_expires_at` confirms a retained tab. Complete the interac
 in that tab, then repeat the same operation and arguments in the same MCP session.
 The connector reads that exact page without navigating again; a successful read
 closes it. For comparison, repeat the original query with only the affected source.
+Pending handoffs take precedence over successful-result caches, so another
+session's cached response cannot bypass the retained page.
 The original expiry never extends on retries. Different sessions and operations
 receive independent tabs; at most four handoffs are active per process. Concurrent
 reads of one lease or a full registry report a busy transport error.

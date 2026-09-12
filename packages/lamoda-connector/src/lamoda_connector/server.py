@@ -31,7 +31,6 @@ from typing import Annotated, Any
 
 import httpx
 from fastmcp import Context, FastMCP
-from fastmcp.server.dependencies import get_context as current_context
 from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
@@ -50,9 +49,9 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
-from mcp_core.runtime import browser_handoff_lifespan
+from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
 from mcp_core.transport import build_client
-from mcp_core.transport.browser_handoff import read_with_handoff
+from mcp_core.transport.browser_handoff import has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -335,10 +334,12 @@ async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
 async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
     """Tier-2: render the search page in the operator's Chrome, extract tiles."""
     cache_key = f"search:{query}"
-    cached = _cache.get(cache_key)
+    url = f"{SITE_BASE}/catalogsearch/result/?q={urllib.parse.quote(query)}"
+    scope = current_mcp_session_id(ctx)
+    pending = has_pending_handoff(scope=scope, operation="lamoda_search", url=url)
+    cached = None if pending else _cache.get(cache_key)
     if cached is not None:
         return cached
-    url = f"{SITE_BASE}/catalogsearch/result/?q={urllib.parse.quote(query)}"
 
     async def _attempt() -> dict[str, Any]:
         async def read(page):
@@ -351,10 +352,6 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
             data.pop("_handoff_expires_at", None)
             return data
 
-        try:
-            scope = (ctx or current_context()).session_id
-        except RuntimeError:
-            scope = None
         async with _cdp_lock:
             await _polite_wait()
             if scope is None:
