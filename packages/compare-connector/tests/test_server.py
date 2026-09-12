@@ -53,7 +53,7 @@ async def test_registered_tools_are_stable():
 async def test_compare_verify_offer_dispatches_to_source_card(monkeypatch):
     class FakeCard:
         async def __call__(self, *, nm_ids):
-            return {"nm_ids": nm_ids, "price_rub": 1234}
+            return {"items": [{"nm_id": nm_ids[0], "price_rub": 1234}]}
 
     class FakeSource:
         wb_card = FakeCard()
@@ -65,7 +65,7 @@ async def test_compare_verify_offer_dispatches_to_source_card(monkeypatch):
     )
 
     assert result["source"] == "wildberries"
-    assert result["card"]["nm_ids"] == [123]
+    assert result["card"]["items"][0]["nm_id"] == 123
     assert result["price_verification"]["matches"] is True
 
 

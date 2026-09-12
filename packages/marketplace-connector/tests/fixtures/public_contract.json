@@ -562,6 +562,19 @@
           ],
           "default": null
         },
+        "expected_variant_id": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "product_id_or_url": {
           "maxLength": 400,
           "minLength": 1,
