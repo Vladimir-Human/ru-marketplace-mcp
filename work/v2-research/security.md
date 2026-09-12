@@ -3,6 +3,24 @@
 Date: 2026-09-09  
 Scope: read-only repository review at commit `5f34b90c2583e48b03dc6d1985d7a8ffb05626ce`, plus offline synthetic probes. No live authenticated/private marketplace calls were made. The workspace already had unrelated uncommitted v1.9.0 changes; this report does not modify implementation.
 
+## Implementation status addendum — 2026-09-12
+
+This document is a historical v2 review snapshot. The current tree has since
+implemented the following mitigations:
+
+- **S2:** `mcp_core.runtime` requires `MCP_HTTP_AUTH_TOKEN` for non-loopback
+  HTTP binds and installs bearer middleware when configured. The process is
+  intentionally single-tenant: authenticated callers share one connector and
+  browser profile; separate tenants require separate processes and profiles.
+  Regression coverage lives in `packages/mcp-core/tests/test_runtime.py`.
+- **S3:** `open_page` checks the final URL host after both Playwright and raw-CDP
+  navigation, using caller-provided allowlists and an origin-host default.
+- **S5:** raw-CDP browser and page websocket connections use the bounded
+  `_RAW_MAX_FRAME_BYTES` limit.
+
+The original findings below remain as rationale and regression guidance; they do
+not, by themselves, describe the current implementation state.
+
 ## Executive findings
 
 | ID | Severity | Confidence | Finding |
