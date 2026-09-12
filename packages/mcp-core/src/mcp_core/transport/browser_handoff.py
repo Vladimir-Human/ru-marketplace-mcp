@@ -9,13 +9,14 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import secrets
 from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
-from mcp_core.errors import TransportDownError, UpstreamTimeoutError
+from mcp_core.errors import NotFoundError, TransportDownError, UpstreamTimeoutError
 from mcp_core.transport import chrome_cdp
 from mcp_core.transport.chrome_cdp import PageLike
 
@@ -47,12 +48,15 @@ class _Request:
     challenge: Challenge
     hosts: frozenset[str]
     result: asyncio.Future[Result]
+    snapshot: bool = False
 
 
 @dataclass
 class _Lease:
     deadline: float
     expires_at: str
+    handoff_id: str = field(default_factory=lambda: secrets.token_urlsafe(18))
+    hosts: frozenset[str] = frozenset()
     requests: asyncio.Queue[_Request] = field(default_factory=asyncio.Queue)
     busy: bool = True
     cleaning: bool = False
@@ -73,6 +77,14 @@ def has_pending_handoff(*, scope: str | None, operation: str, url: str) -> bool:
     return _key(scope, operation, url) in _leases
 
 
+def get_handoff_id(*, scope: str | None, operation: str, url: str) -> str | None:
+    """Return an opaque handle only for this exact live operation's lease."""
+    lease = _leases.get(_key(scope, operation, url)) if scope else None
+    if lease is None or lease.cleaning or lease.deadline <= asyncio.get_running_loop().time():
+        return None
+    return lease.handoff_id
+
+
 async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
     current: _Request | None = None
     terminal_error: Exception = TransportDownError("Browser handoff ended; retry the operation")
@@ -85,10 +97,29 @@ async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
             async with chrome_cdp.open_page(url, wait_ms, allowed_hosts=current.hosts) as page:
                 try:
                     while True:
-                        chrome_cdp._check_final_host(await chrome_cdp.current_page_url(page), current.hosts)
+                        hosts = lease.hosts if current.snapshot else current.hosts
+                        chrome_cdp._check_final_host(await chrome_cdp.current_page_url(page), hosts)
                         payload = await current.read(page)
                         # Navigation during extraction also invalidates the result.
-                        chrome_cdp._check_final_host(await chrome_cdp.current_page_url(page), current.hosts)
+                        final_url = await chrome_cdp.current_page_url(page)
+                        chrome_cdp._check_final_host(final_url, hosts)
+                        if current.snapshot:
+                            parsed = urlsplit(final_url)
+                            host = parsed.hostname or ""
+                            origin_host = f"[{host}]" if ":" in host else host
+                            payload.update(
+                                captured_at=datetime.now(UTC).isoformat(),
+                                handoff_expires_at=lease.expires_at,
+                                operation=key[1],
+                                page_origin=f"{parsed.scheme}://{origin_host}"
+                                + (f":{parsed.port}" if parsed.port else ""),
+                            )
+                            current.result.set_result((payload, lease.expires_at))
+                            del payload
+                            current = None
+                            lease.busy = False
+                            current = await lease.requests.get()
+                            continue
                         blocked = current.challenge(payload)
                         if not blocked:
                             current.result.set_result((payload, None))
@@ -167,6 +198,39 @@ async def close_handoffs() -> None:
     await asyncio.gather(*(_stop(lease) for lease in tuple(_leases.values())))
 
 
+async def snapshot_handoff(*, scope: str | None, handoff_id: str) -> dict[str, Any]:
+    """Capture a retained page in this session; never open or navigate a tab."""
+    if not handoff_id.isascii():
+        raise NotFoundError("Browser handoff is unavailable")
+    loop = asyncio.get_running_loop()
+    found = next(
+        (
+            lease
+            for key, lease in _leases.items()
+            if scope
+            and key[0] == scope
+            and key[3:] == (chrome_cdp.CDP_URL, chrome_cdp.SCRAPING_PROFILE)
+            and secrets.compare_digest(lease.handoff_id, handoff_id)
+        ),
+        None,
+    )
+    if found is None or found.cleaning or found.deadline <= loop.time():
+        raise NotFoundError("Browser handoff is unavailable")
+    if found.busy:
+        raise HandoffBusyError()
+    found.busy = True
+    result: asyncio.Future[Result] = loop.create_future()
+    found.requests.put_nowait(_Request(chrome_cdp.capture_owned_viewport, lambda _: None, found.hosts, result, True))
+    try:
+        response = await asyncio.shield(result)
+        return response[0]
+    except BaseException:
+        await _stop(found)
+        if result.done() and not result.cancelled():
+            result.exception()
+        raise
+
+
 async def read_with_handoff(
     *,
     url: str,
@@ -190,6 +254,7 @@ async def read_with_handoff(
             return await read(page), None
 
     key = _key(scope, operation, url)
+    hosts = frozenset(allowed_hosts or {urlsplit(url).hostname or ""})
     loop = asyncio.get_running_loop()
     lease = _leases.get(key)
     if lease is not None and lease.busy:
@@ -205,10 +270,10 @@ async def read_with_handoff(
         lease = _Lease(
             deadline=loop.time() + duration,
             expires_at=(datetime.now(UTC) + timedelta(seconds=duration)).isoformat(),
+            hosts=hosts,
         )
         _leases[key] = lease
     lease.busy = True
-    hosts = frozenset(allowed_hosts or {urlsplit(url).hostname or ""})
     result: asyncio.Future[Result] = loop.create_future()
     lease.requests.put_nowait(_Request(read, challenge, hosts, result))
     if lease.task is None:

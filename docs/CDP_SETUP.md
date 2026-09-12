@@ -64,7 +64,10 @@ graceful shutdown close owned tabs; a hard process kill cannot guarantee expiry
 in an external Chrome. Without `handoff_expires_at`, use the ordinary retry flow:
 HTTP errors rejected before DOM extraction, headless runs and calls without an
 MCP session do not retain a tab. No cookies, screenshots or browser profile copies
-are written by the handoff runtime.
+are written by the handoff runtime. A retained error also carries an opaque
+`handoff_id`; a vision-capable MCP client may pass it to
+`compare_browser_snapshot(handoff_id)` to receive the current viewport as an
+image plus metadata. The snapshot does not solve or interpret the challenge.
 
 ### 1. Start Chrome with remote debugging
 

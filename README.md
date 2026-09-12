@@ -42,7 +42,7 @@
 | **Ситилинк**      | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
 | **AliExpress**    | 2            | ваш Chrome (x5sec)                                                       | Поиск и карточки, цены в рублях                            |
 | **Циан**          | 2            | ваш Chrome (WAF по IP)                                                     | Недвижимость: поиск по фильтрам (продажа, аренда, посуточно) и карточка объявления         |
-| **Сравнение**     | 3            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
+| **Сравнение**     | 4            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
 | **MPStats**       | 2            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
 
 Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
@@ -60,10 +60,10 @@ MPStats стоит особняком: это единственный **пла�
 поэтому он опционален и подключается по желанию, на остальные тринадцать
 серверов он не влияет никак.
 
-Всего 38 инструментов в 14 серверах на общем рантайме `mcp-core`. Плюс объединённый
+Всего 39 инструментов в 14 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
 вместо четырнадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что в нём 39 инструментов: 38
+поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
 ## Быстрый старт
@@ -74,7 +74,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1485 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1589 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -567,7 +567,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1485 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1589 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -633,7 +633,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1485 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1589 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -684,7 +684,7 @@ it every other server is unaffected.
 | **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
 | **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
 | **Cian**          | 2     | your Chrome (WAF by IP)                                                      | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
-| **Compare**       | 3     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
+| **Compare**       | 4     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
 | **MPStats**       | 2     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
 Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
@@ -701,10 +701,10 @@ MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
 server boots but its tools answer `auth_missing`. It is therefore optional —
 plug it in if you have an account; the other thirteen servers never notice.
 
-38 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+39 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds its
 own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 39 tools: the 38 mounted plus that one. stdio is the default;
+why — so it exposes 40 tools: the 39 mounted plus that one. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -716,7 +716,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1485 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1589 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1074,7 +1074,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1485 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1589 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1136,7 +1136,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1485 offline
+are confidently wrong, so the project is arranged around verification: 1589 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

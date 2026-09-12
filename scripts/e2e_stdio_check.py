@@ -24,15 +24,14 @@ from mcp.client.stdio import stdio_client
 
 # script name -> how many model-facing tools it must expose. Operator-only
 # *_selfcheck canaries are no longer MCP tools (they run via
-# `marketplace-mcp doctor`), which is why every figure is one lower than the
-# pre-dsh contract and the marketplace server is 39, not 47.
+# `marketplace-mcp doctor`). The unified server exposes 40 model-facing tools.
 EXPECTED_TOOLS = {
     "wb-mcp": 8,
     "ozon-mcp": 3,
     "detmir-mcp": 3,
     "yandex-mcp": 2,
-    "compare-mcp": 3,
-    "decision-mcp": 4,  # compare trio + decision_inspect
+    "compare-mcp": 4,
+    "decision-mcp": 5,  # compare tools + decision_inspect
     "avito-mcp": 3,
     "taobao-mcp": 2,
     "megamarket-mcp": 2,
@@ -42,7 +41,7 @@ EXPECTED_TOOLS = {
     "aliexpress-mcp": 2,
     "cian-mcp": 2,
     "mpstats-mcp": 2,
-    "marketplace-mcp": 39,  # 38 mounted + marketplace_sources
+    "marketplace-mcp": 40,  # 39 mounted + marketplace_sources
 }
 
 TIMEOUT_S = 60.0

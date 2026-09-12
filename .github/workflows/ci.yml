@@ -89,7 +89,7 @@ jobs:
         # stored baseline is a review signal, not an invisible context-cost
         # regression. Latency is intentionally reported by the probe but is not
         # gated because hosted runner load is variable.
-        run: uv run python scripts/mcp_wire.py --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
+        run: uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 
       - name: One version, everywhere
         # A release version is written down in seventy-two places. Preparing
@@ -207,7 +207,7 @@ jobs:
               "ozon": 3,
               "detmir": 3,
               "yandex": 2,
-              "compare": 3,
+              "compare": 4,
               "avito": 3,
               "taobao": 2,
               "megamarket": 2,

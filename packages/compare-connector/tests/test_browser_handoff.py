@@ -1,5 +1,6 @@
 """A real MCP client can recover a source on the same owned browser page."""
 
+import base64
 import json
 import subprocess
 import sys
@@ -37,6 +38,7 @@ async def browser(monkeypatch):
                     "page_title": "Test shoes" if self.solved else "Security check",
                     "price_cny": 500 if self.solved else None,
                     "_handoff_expires_at": "untrusted page value",
+                    "_handoff_id": "untrusted-page-identifier",
                 }
             )
 
@@ -80,6 +82,7 @@ async def test_compare_mcp_retains_source_session_and_resumes_without_navigation
         assert outcome["requires_user_action"] is True
         assert outcome["handoff_expires_at"].endswith("Z")
         assert "untrusted" not in outcome["handoff_expires_at"]
+        assert outcome["handoff_id"] and "untrusted" not in outcome["handoff_id"]
         assert len(browser) == 1 and not browser[0].closed
         browser[0].solved = True
         second = (await client.call_tool("compare_prices", arguments)).structured_content
@@ -159,3 +162,49 @@ assert server.mcp.name == 'compare-connector'
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
+
+
+async def test_snapshot_mcp_transmits_image_without_ending_or_extending_handoff(browser, monkeypatch):
+    captured = []
+    image_data = base64.b64encode(b"\xff\xd8fixture\xff\xd9").decode()
+
+    async def capture(page):
+        captured.append(page)
+        return {"image_data": image_data, "mime_type": "image/jpeg", "width": 640, "height": 360}
+
+    monkeypatch.setattr(handoff.chrome_cdp, "capture_owned_viewport", capture)
+    async with Client(compare.mcp) as client:
+        first = (await client.call_tool("compare_prices", {"query": "test", "sources": ["lamoda"]})).structured_content
+        outcome = first["source_outcomes"][0]
+        before_expiry = outcome["handoff_expires_at"]
+        result = await client.call_tool("compare_browser_snapshot", {"handoff_id": outcome["handoff_id"]})
+        images = [content for content in result.content if content.type == "image"]
+        assert len(images) == 1
+        assert images[0].data == image_data and images[0].mimeType == "image/jpeg"
+        metadata = result.structured_content
+        assert "image_data" not in metadata
+        assert metadata["page_origin"] == "https://www.lamoda.ru"
+        assert metadata["captured_at"]
+        from datetime import datetime
+
+        assert datetime.fromisoformat(metadata["handoff_expires_at"]) == datetime.fromisoformat(before_expiry)
+        assert captured == [browser[0]]
+        assert len(browser) == 1 and not browser[0].closed
+        browser[0].solved = True
+        second = (await client.call_tool("compare_prices", {"query": "test", "sources": ["lamoda"]})).structured_content
+        assert second["complete"] is True and browser[0].closed
+
+
+async def test_snapshot_rejects_other_session_and_unknown_handle_without_capture(browser, monkeypatch):
+    async def capture(page):
+        pytest.fail("foreign or missing handle must not capture any page")
+
+    monkeypatch.setattr(handoff.chrome_cdp, "capture_owned_viewport", capture)
+    async with Client(compare.mcp) as owner, Client(compare.mcp) as other:
+        result = (await owner.call_tool("compare_prices", {"query": "test", "sources": ["lamoda"]})).structured_content
+        handle = result["source_outcomes"][0]["handoff_id"]
+        for client, candidate in [(other, handle), (owner, "unknown-handoff-123456")]:
+            with pytest.raises(ToolError) as excinfo:
+                await client.call_tool("compare_browser_snapshot", {"handoff_id": candidate})
+            assert json.loads(str(excinfo.value))["error"] == "not_found"
+        assert len(browser) == 1 and not browser[0].closed

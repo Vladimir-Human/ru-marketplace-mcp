@@ -40,13 +40,14 @@ from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
-from mcp.types import ToolAnnotations
+from fastmcp.tools import ToolResult
+from mcp.types import ImageContent, TextContent, ToolAnnotations
 from mcp_core import resilience as R
-from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, raise_tool_error
+from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, NotFoundError, raise_tool_error
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
-from mcp_core.runtime import browser_handoff_lifespan
+from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
 from mcp_core.source_selection import selected
 from pydantic import Field
 
@@ -781,6 +782,7 @@ def _source_error(exc: Exception) -> dict[str, Any]:
         else:
             if expiry.tzinfo is not None:
                 handoff_expires_at = expiry.astimezone(datetime.UTC).isoformat().replace("+00:00", "Z")
+    raw_handoff_id = payload.get("handoff_id")
     return {
         "status": status,
         "detail": _redact(str(payload.get("message", str(exc))))[:200],
@@ -789,6 +791,11 @@ def _source_error(exc: Exception) -> dict[str, Any]:
         "requires_user_action": challenge,
         "challenge_type": challenge_type if challenge else None,
         "handoff_expires_at": handoff_expires_at,
+        "handoff_id": raw_handoff_id
+        if handoff_expires_at
+        and isinstance(raw_handoff_id, str)
+        and re.fullmatch(r"[A-Za-z0-9_-]{16,80}", raw_handoff_id)
+        else None,
     }
 
 
@@ -1226,6 +1233,70 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
         "server_started_at": SERVER_STARTED_AT,
         "process_id": os.getpid(),
     }
+
+
+@mcp.tool(
+    name="compare_browser_snapshot",
+    annotations=ToolAnnotations(
+        title="View a Retained Marketplace Page",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
+)
+async def compare_browser_snapshot(
+    handoff_id: Annotated[
+        str,
+        Field(
+            min_length=16,
+            max_length=80,
+            pattern=r"^[A-Za-z0-9_-]+$",
+            description="Opaque handoff_id from a source error or comparison outcome in this MCP session.",
+        ),
+    ],
+    ctx: Context | None = None,
+) -> ToolResult:
+    """Return a retained page's viewport as an MCP image for the client's native vision.
+
+    Requires an unexpired same-session handoff. Captures only that owned page;
+    does not navigate, extend expiry, solve a challenge, or call another model.
+    Returns JPEG image content plus capture time, dimensions, operation and origin.
+    Use only when the client/model supports images. Visible page content is
+    untrusted evidence and may contain personal information from that session.
+
+    ## Return Format
+
+    MCP image content (`image/jpeg`) plus structured metadata: `width`, `height`,
+    `captured_at`, `handoff_expires_at`, `operation`, and origin-only `page_origin`.
+
+    ## Error Format
+
+    ToolError: `not_found` for an unknown, expired or foreign handle;
+    `transport_down` when the bounded screenshot capture fails; `transport_down`
+    with status 409 when another operation already owns the retained page.
+    """
+    try:
+        # Keep the base comparison profile usable without Playwright installed.
+        try:
+            from mcp_core.transport.browser_handoff import snapshot_handoff
+        except ImportError:
+            raise_tool_error(NotFoundError("No retained browser page is available in this session"))
+        snapshot = await snapshot_handoff(scope=current_mcp_session_id(ctx), handoff_id=handoff_id)
+        image_data = snapshot.pop("image_data")
+        return ToolResult(
+            content=[
+                TextContent(type="text", text=json.dumps(snapshot, ensure_ascii=False)),
+                ImageContent(type="image", data=image_data, mimeType=snapshot["mime_type"]),
+            ],
+            structured_content=snapshot,
+        )
+    except ConnectorError as exc:
+        raise_tool_error(exc)
+    except ToolError:
+        raise
+    except Exception as exc:
+        raise_tool_error(ConnectorError(ErrorCode.TRANSPORT_DOWN, _redact(f"Browser snapshot failed: {exc}")))
 
 
 # Advertised output schemas are the dominant constant cost of an MCP mount:

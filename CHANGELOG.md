@@ -15,7 +15,16 @@
   Taobao search/card challenge tabs. Same-session repeats read the owned page
   without navigating again. Expiry is capped at 300 seconds from initial attach,
   does not extend, and at most four leases are active. Error/comparison metadata
-  exposes `handoff_expires_at` only when retained. No new MCP tools are required.
+  exposes `handoff_expires_at` and an opaque `handoff_id` only when retained.
+- New `compare_browser_snapshot(handoff_id)` returns a bounded JPEG viewport and
+  capture metadata through standard MCP image content. It never navigates or
+  invokes an OCR/vision service; a capable MCP client can use its own native
+  vision. Handles are same-session and expire with the retained lease.
+- DSH mounts exactly one profile with precedence full, decision, compare. This
+  fixes duplicate compare/decision mounts and the full+decision flag conflict.
+- The snapshot tool deliberately adds about 265 wire tokens: compare 1816,
+  decision 2071, unified 16342. Baselines and the public tool contract were
+  updated for this addition; CI now gates the middle profile too.
 - Owned tabs close on success, failure, expiry, caller cancellation and graceful
   shutdown. Active handoffs suppress profile hiding; owned-window foreground
   activation is best-effort. Default behavior, browser-less compare installations,

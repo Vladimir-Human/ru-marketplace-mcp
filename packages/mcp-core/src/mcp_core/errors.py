@@ -113,10 +113,12 @@ class ChallengeRequiredError(ConnectorError):
         provider: str | None = None,
         challenge_type: str = "captcha",
         handoff_expires_at: str | None = None,
+        handoff_id: str | None = None,
     ) -> None:
         super().__init__(ErrorCode.CHALLENGE_REQUIRED, message, provider=provider, status_code=403)
         self.challenge_type = challenge_type
         self.handoff_expires_at = handoff_expires_at
+        self.handoff_id = handoff_id
 
     def to_dict(self) -> dict:
         return {
@@ -124,6 +126,7 @@ class ChallengeRequiredError(ConnectorError):
             "requires_user_action": True,
             "challenge_type": self.challenge_type,
             **({"handoff_expires_at": self.handoff_expires_at} if self.handoff_expires_at else {}),
+            **({"handoff_id": self.handoff_id} if self.handoff_id else {}),
         }
 
 

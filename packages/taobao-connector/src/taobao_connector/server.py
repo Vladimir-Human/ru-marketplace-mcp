@@ -61,7 +61,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
-from mcp_core.transport.browser_handoff import has_pending_handoff, read_with_handoff
+from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -420,6 +420,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         if not isinstance(data, dict):
             raise_tool_error(ParserDriftError("page extractor returned a non-object payload"))
         data.pop("_handoff_expires_at", None)
+        data.pop("_handoff_id", None)
         return data
 
     scope = current_mcp_session_id(ctx)
@@ -438,6 +439,9 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         )
         if expires_at:
             data["_handoff_expires_at"] = expires_at
+            data["_handoff_id"] = get_handoff_id(
+                scope=scope, operation="taobao_card" if url.startswith(ITEM_BASE) else "taobao_search", url=url
+            )
         return data
 
 
@@ -623,6 +627,7 @@ async def taobao_search(
                     provider="taobao",
                     challenge_type="login_or_captcha",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
+                    handoff_id=payload.get("_handoff_id"),
                 )
             )
         if _anti_bot_challenge(payload):
@@ -631,6 +636,7 @@ async def taobao_search(
                     "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
                     provider="taobao",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
+                    handoff_id=payload.get("_handoff_id"),
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
@@ -719,6 +725,7 @@ async def taobao_card(
                     provider="taobao",
                     challenge_type="login_or_captcha",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
+                    handoff_id=payload.get("_handoff_id"),
                 )
             )
         title = payload.get("title")
@@ -734,6 +741,7 @@ async def taobao_card(
                     "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
                     provider="taobao",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
+                    handoff_id=payload.get("_handoff_id"),
                 )
             )
         if title is None and price is None:

@@ -46,6 +46,10 @@ rank its rows against rouble sources.
 - `decision_inspect(source, product_id_or_url)` — return a native shortlisted
   card through the decision profile; use `compare_verify_offer` for an explicit
   identity verdict.
+- `compare_browser_snapshot(handoff_id)` — returns the current retained viewport
+  as MCP image content plus metadata for a same-session, unexpired handle. It
+  never solves, OCRs, or sends the image to another service. Skip it when the
+  client has no image input capability; a missing or foreign handle is `not_found`.
 
 ## Reading the result correctly
 

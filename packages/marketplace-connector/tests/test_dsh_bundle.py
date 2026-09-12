@@ -13,6 +13,7 @@ contain only YAML, JSON and Markdown — never an executable.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -104,3 +105,49 @@ def test_dsh_manifest_points_at_the_patch_and_has_no_scoped_name():
     assert patch.is_file(), f"dsh manifest patch path does not exist: {patch}"
     assert "skills" in manifest["files"]
     assert "cordis.patch.yml" in manifest["files"]
+
+
+@pytest.mark.parametrize("source", ["bundle", "cli"])
+@pytest.mark.parametrize(
+    ("directory", "decision", "full", "expected"),
+    [
+        ("", "", "", []),
+        ("", "1", "", []),
+        ("", "", "1", []),
+        ("", "1", "1", []),
+        ("checkout", "", "", ["compare"]),
+        ("checkout", "1", "", ["decision"]),
+        ("checkout", "", "1", ["full"]),
+        ("checkout", "1", "1", ["full"]),
+    ],
+)
+def test_dsh_profile_flags_activate_exactly_the_requested_mount(source, directory, decision, full, expected):
+    """Evaluate the shipped guards: full wins, then decision, then compare."""
+    if source == "bundle":
+        patch = (DSH_ROOT / "cordis.patch.yml").read_text(encoding="utf-8")
+    else:
+        from marketplace_connector.cli import _dsh_patch_block
+
+        patch, _ = _dsh_patch_block()
+
+    env = {"DIR": directory, "DECISION": decision, "FULL": full}
+    guards = re.findall(
+        r'- id: ru-marketplace-(compare|decision|full)\s+.*?disabled: !!js "([^"]+)"',
+        patch,
+        flags=re.DOTALL,
+    )
+    assert len(guards) == 3
+    enabled = []
+    for name, expression in guards:
+        # These guards deliberately use only OR and JS string truthiness.
+        # Reject unsupported syntax instead of silently approximating it.
+        terms = expression.split(" || ")
+        disabled = []
+        for term in terms:
+            match = re.fullmatch(r"(!{1,2})process\.env\.RU_MARKETPLACE_MCP_(DIR|DECISION|FULL)", term)
+            assert match, f"unsupported DSH guard: {term}"
+            value = bool(env[match[2]])
+            disabled.append(value if match[1] == "!!" else not value)
+        if not any(disabled):
+            enabled.append(name)
+    assert enabled == expected

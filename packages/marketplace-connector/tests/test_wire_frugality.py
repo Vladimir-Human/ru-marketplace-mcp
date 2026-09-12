@@ -24,8 +24,9 @@ def test_no_operator_selfcheck_is_registered_as_a_tool():
     assert not leaked, f"operator-only selfchecks leaked into the MCP surface: {leaked}"
     # The count changed from 45 to 34 on purpose (11 selfchecks left), from
     # 34 to 36 when the aliexpress connector (2 tools) joined the mount, and
-    # from 37 to 39 when the cian connector (2 tools) joined.
-    assert len(tools) == 39
+    # from 37 to 39 when the cian connector (2 tools) joined, then to 40 with
+    # the comparison browser snapshot tool.
+    assert len(tools) == 40
 
 
 def test_every_output_schema_is_wire_frugal():

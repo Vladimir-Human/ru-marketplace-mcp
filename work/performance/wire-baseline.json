@@ -3,11 +3,15 @@
   "profiles": {
     "compare-mcp": {
       "script": "compare-mcp",
-      "tool_count": 3,
-      "wire_tokens": 1551,
-      "latency_ms": 1977.4,
-      "schema_sha256": "dda9fa27247f4819b8ff61f0a7ba3ee2eeac92f4cb9bd77eb2b7cb9b117cea7d",
+      "tool_count": 4,
+      "wire_tokens": 1816,
+      "latency_ms": 2706.4,
+      "schema_sha256": "ec75910a4c462e90a7bfb39531fab4e1d1e4edafb76bb4efceb958ecf40ee99b",
       "tools": [
+        {
+          "name": "compare_browser_snapshot",
+          "tokens": 265
+        },
         {
           "name": "compare_prices",
           "tokens": 709
@@ -22,12 +26,41 @@
         }
       ]
     },
+    "decision-mcp": {
+      "script": "decision-mcp",
+      "tool_count": 5,
+      "wire_tokens": 2071,
+      "latency_ms": 2163.7,
+      "schema_sha256": "b2c52ab6e9b6372ddc0f649f590e0ead77de05ba401ac7d138ff69bb01f112de",
+      "tools": [
+        {
+          "name": "compare_browser_snapshot",
+          "tokens": 265
+        },
+        {
+          "name": "compare_prices",
+          "tokens": 709
+        },
+        {
+          "name": "compare_sources",
+          "tokens": 250
+        },
+        {
+          "name": "compare_verify_offer",
+          "tokens": 592
+        },
+        {
+          "name": "decision_inspect",
+          "tokens": 255
+        }
+      ]
+    },
     "marketplace-mcp": {
       "script": "marketplace-mcp",
-      "tool_count": 39,
-      "wire_tokens": 16030,
-      "latency_ms": 2044.8,
-      "schema_sha256": "60d3fd965526d146a4cd37a7e9413c5acdc05657190832025bec8ffdbcfb60ca",
+      "tool_count": 40,
+      "wire_tokens": 16342,
+      "latency_ms": 1998.0,
+      "schema_sha256": "324fdf63fe5236dabf6232e884d336c966fbe471453c6514471935c31c6ce012",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -64,6 +97,10 @@
         {
           "name": "citilink_search",
           "tokens": 221
+        },
+        {
+          "name": "compare_browser_snapshot",
+          "tokens": 265
         },
         {
           "name": "compare_prices",
@@ -103,7 +140,7 @@
         },
         {
           "name": "lamoda_search",
-          "tokens": 241
+          "tokens": 253
         },
         {
           "name": "marketplace_sources",
@@ -139,11 +176,11 @@
         },
         {
           "name": "taobao_card",
-          "tokens": 321
+          "tokens": 343
         },
         {
           "name": "taobao_search",
-          "tokens": 304
+          "tokens": 317
         },
         {
           "name": "wb_card",

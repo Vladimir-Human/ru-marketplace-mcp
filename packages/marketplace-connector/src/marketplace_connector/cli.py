@@ -168,24 +168,25 @@ def _dsh_command(script: str, root: pathlib.Path | None) -> tuple[str, list[str]
 
 
 def _dsh_patch_block() -> tuple[str, str]:
-    """The dsh ``cordis.patch.yml`` rows for the two supported mounts.
+    """The dsh ``cordis.patch.yml`` rows for the three supported mounts.
 
     Unlike Claude/Cursor, DeepSeek Harness does not consume an ``mcpServers``
     JSON block: a plugin patch inserts ``@deepseek-ai/dsh-mcp-client`` rows.
-    Both rows ship disabled at zero context cost until the operator opts in
+    All rows ship disabled at zero context cost until the operator opts in
     (measured cost of the enabled rows is paid on EVERY client request).
 
-    The two rows deliberately share one ``serverName``. Their ``disabled``
+    The three rows deliberately share one ``serverName``. Their ``disabled``
     expressions are mutually exclusive, so only one instance is ever alive:
-    ``RU_MARKETPLACE_MCP_FULL`` unset selects the cheap ``compare-mcp`` row,
-    and set selects the unified row in its place.
+    ``RU_MARKETPLACE_MCP_FULL`` selects the unified row, otherwise
+    ``RU_MARKETPLACE_MCP_DECISION`` selects the middle row, and with neither
+    switch set the cheap ``compare-mcp`` row is selected.
     """
     root = _workspace_root()
     compare_cmd, compare_args, compare_note = _dsh_command("compare-mcp", root)
     compare_row = _dsh_row(
         "ru-marketplace-compare",
         compare_cmd,
-        f"!process.env.{DSH_ENV_DIR} || !!process.env.{DSH_ENV_FULL}",
+        f"!process.env.{DSH_ENV_DIR} || !!process.env.{DSH_ENV_FULL} || !!process.env.{DSH_ENV_DECISION}",
         compare_args,
     )
     decision_cmd, decision_args, decision_note = _dsh_command("decision-mcp", root)
@@ -205,7 +206,7 @@ def _dsh_patch_block() -> tuple[str, str]:
 
     block = (
         "# Add these rows to the `- insert:` list of your cordis.patch.yml (dsh).\n"
-        "# Both rows start disabled (zero tool-schema cost until the env gates are\n"
+        "# All rows start disabled (zero tool-schema cost until the env gates are\n"
         "# set) and their conditions are mutually exclusive.\n"
         "- insert:\n" + compare_row + "\n" + decision_row + "\n" + full_row
     )

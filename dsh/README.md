@@ -1,8 +1,8 @@
 # ru-marketplace-mcp for DeepSeek Harness
 
 Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews
-and cross-marketplace price comparison. This bundle ships 14 Agent Skills plus
-two MCP server rows that are **off by default**.
+and cross-marketplace price comparison. This bundle ships 15 Agent Skills plus
+three mutually exclusive MCP server rows that are **off by default**.
 
 ## Why off by default
 
@@ -12,9 +12,10 @@ over the stdio MCP wire with `scripts/mcp_wire.py`:
 
 | Mode | Cost while mounted | Model-facing tools |
 |---|---|---|
-| Skills only (default) | ~390 tokens for 14 catalog rows | 0 |
-| `compare-mcp` (recommended) | ~0.9k tokens per request | 3 |
-| `marketplace-mcp` (full) | ~13.6k tokens per request | 36 |
+| Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |
+| `compare-mcp` (recommended) | ~1.8k tokens per request | 4 |
+| `decision-mcp` (shortlist inspection) | ~2.1k tokens per request | 5 |
+| `marketplace-mcp` (full) | ~16.3k tokens per request | 40 |
 
 The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools
 are now CLI-only (`marketplace-mcp doctor`); only model-facing tools are
@@ -62,7 +63,21 @@ published over MCP.
    ```
 
    With only `RU_MARKETPLACE_MCP_DIR` set, the recommended compare mode
-   activates: `mcp__rumarket__compare_prices` and `mcp__rumarket__compare_sources`.
+   activates: `compare_prices`, `compare_sources`, `compare_verify_offer`, and
+   `compare_browser_snapshot` (under the client's `rumarket` namespace).
+
+## Middle profile and native vision
+
+Set `RU_MARKETPLACE_MCP_DECISION=1` to add `decision_inspect` without mounting
+every source tool. If both decision and full flags are set, full wins. Only one
+MCP row is active: full, otherwise decision, otherwise compare.
+
+With `CHROME_CHALLENGE_HANDOFF_S=120`, supported DOM challenges can retain their
+owned browser tab. A client/model that accepts MCP images can call
+`compare_browser_snapshot(handoff_id)` using the handle in the error or comparison
+outcome. It receives a bounded JPEG viewport and capture metadata directly;
+no separate OCR model or service is invoked. The handle only works in the same
+MCP session and does not extend expiry. Text-only clients should skip this tool.
 
 ## Enabling the full server
 
@@ -76,8 +91,8 @@ $env:RU_MARKETPLACE_MCP_FULL = "1"   # PowerShell
 export RU_MARKETPLACE_MCP_FULL=1     # POSIX shell
 ```
 
-The enabled row then changes from `compare-mcp` (3 tools) to `marketplace-mcp`
-(39 tools). Both rows share `serverName: rumarket`, and their `disabled`
+The enabled row then changes from `compare-mcp` (4 tools) to `marketplace-mcp`
+(40 tools). All three rows share `serverName: rumarket`, and their `disabled`
 conditions are mutually exclusive, so exactly one server instance runs at a
 time.
 
@@ -95,7 +110,7 @@ No MCP process survives profile restart without `RU_MARKETPLACE_MCP_DIR`.
 
 Since v1.8.0 every release tag builds a stdio image and proves it with a real
 MCP session over `docker run --rm -i` before publishing to the MCP Registry:
-initialize, `tools/list` (37 tools) and a `marketplace_sources` call. Use the
+initialize, `tools/list` and a `marketplace_sources` call. Use the
 published GHCR image instead of a local clone:
 
 ```yaml
@@ -114,8 +129,8 @@ published GHCR image instead of a local clone:
     failOnStartupError: false
 ```
 
-The image defaults to the unified server; full-mode wire cost applies
-(~13.6k tokens per request), so opt in deliberately.
+The image defaults to the unified server. Its tool set matches that release tag;
+unreleased tools in this source checkout are not present in older images.
 
 ## Source
 
