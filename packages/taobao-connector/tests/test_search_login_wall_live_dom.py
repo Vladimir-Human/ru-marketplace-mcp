@@ -99,9 +99,10 @@ async def test_search_over_the_live_wall_is_transport_down_never_drift(monkeypat
         await server.taobao_search("手机")
 
     error = _tool_error_payload(excinfo)
-    assert error["error"] == "transport_down"
-    assert "login wall" in error["message"].lower()
-    assert "log into taobao.com" in error["message"].lower()
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert "user action" in error["message"].lower()
+    assert "chrome scraping profile" in error["message"].lower()
     assert error["retryable"] is True
 
 

@@ -245,9 +245,10 @@ async def test_search_maps_the_title_less_wall_to_transport_down(monkeypatch):
         await server.taobao_search("手机")
 
     error = _error_payload(excinfo)
-    assert error["error"] == "transport_down"
-    assert "login wall" in error["message"].lower()
-    assert "log into taobao.com" in error["message"].lower()
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert "user action" in error["message"].lower()
+    assert "chrome scraping profile" in error["message"].lower()
 
 
 async def test_card_maps_the_title_less_wall_to_transport_down(monkeypatch):
@@ -272,8 +273,9 @@ async def test_card_maps_the_title_less_wall_to_transport_down(monkeypatch):
         await server.taobao_card("123456789012")
 
     error = _error_payload(excinfo)
-    assert error["error"] == "transport_down"
-    assert "login wall" in error["message"].lower()
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert "user action" in error["message"].lower()
 
 
 # ------------------------------------------------------ anti-bot challenge ----
@@ -462,7 +464,7 @@ async def test_titled_and_title_less_walls_classify_identically(monkeypatch):
         with pytest.raises(ToolError) as excinfo:
             await server.taobao_search("手机")
         error = _error_payload(excinfo)
-        assert error["error"] == "transport_down", payload.get("title")
+        assert error["error"] == "challenge_required", payload.get("title")
 
         result = await server.taobao_selfcheck()
         assert result.status == "inconclusive"

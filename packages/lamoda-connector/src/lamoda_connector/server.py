@@ -38,6 +38,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.dom import JS_HELPERS, prices_from_tile, title_from_tile
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     NotFoundError,
     ParserDriftError,
     ToolError,
@@ -385,7 +386,10 @@ async def lamoda_search(
             raise_tool_error(TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status})."))
         if _anti_bot_challenge(payload):
             raise_tool_error(
-                TransportDownError("Lamoda search is behind an anti-bot challenge in the connected Chrome.")
+                ChallengeRequiredError(
+                    "Lamoda requires user action in the connected Chrome. Complete the visible challenge, then retry.",
+                    provider="lamoda",
+                )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:

@@ -15,11 +15,17 @@ class ErrorCode(StrEnum):
     PARSER_DRIFT = "parser_drift"
     BAD_REQUEST = "bad_request"
     PERMISSION_DENIED = "permission_denied"
+    CHALLENGE_REQUIRED = "challenge_required"
     NOT_FOUND = "not_found"
 
     @property
     def retryable(self) -> bool:
-        return self in (ErrorCode.RATE_LIMITED, ErrorCode.TIMEOUT, ErrorCode.TRANSPORT_DOWN)
+        return self in (
+            ErrorCode.RATE_LIMITED,
+            ErrorCode.TIMEOUT,
+            ErrorCode.TRANSPORT_DOWN,
+            ErrorCode.CHALLENGE_REQUIRED,
+        )
 
 
 class ConnectorError(Exception):
@@ -95,6 +101,21 @@ class NotFoundError(ConnectorError):
 class PermissionDeniedError(ConnectorError):
     def __init__(self, message: str = "permission denied") -> None:
         super().__init__(ErrorCode.PERMISSION_DENIED, message, status_code=403)
+
+
+class ChallengeRequiredError(ConnectorError):
+    """A marketplace requires a user-mediated browser challenge completion."""
+
+    def __init__(self, message: str, *, provider: str | None = None, challenge_type: str = "captcha") -> None:
+        super().__init__(ErrorCode.CHALLENGE_REQUIRED, message, provider=provider, status_code=403)
+        self.challenge_type = challenge_type
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "requires_user_action": True,
+            "challenge_type": self.challenge_type,
+        }
 
 
 def raise_tool_error(err: ConnectorError) -> NoReturn:

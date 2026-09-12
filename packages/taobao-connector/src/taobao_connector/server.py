@@ -49,6 +49,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.dom import JS_HELPERS, prices_from_tile
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     NotFoundError,
     ParserDriftError,
     ToolError,
@@ -586,8 +587,10 @@ async def taobao_search(
         if wall_markers:
             log_event("taobao_search.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
-                TransportDownError(
-                    "Taobao served a login wall. Log into taobao.com in the Chrome scraping profile (scripts/start_chrome_cdp.sh), then retry."
+                ChallengeRequiredError(
+                    "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
+                    provider="taobao",
+                    challenge_type="login_or_captcha",
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
@@ -668,8 +671,10 @@ async def taobao_card(
         if wall_markers:
             log_event("taobao_card.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
-                TransportDownError(
-                    "Taobao served a login wall. Log into taobao.com in the Chrome scraping profile, then retry."
+                ChallengeRequiredError(
+                    "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
+                    provider="taobao",
+                    challenge_type="login_or_captcha",
                 )
             )
         title = payload.get("title")
