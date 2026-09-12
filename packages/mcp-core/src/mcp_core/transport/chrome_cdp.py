@@ -750,7 +750,9 @@ async def _new_tab(ctx: BrowserContext) -> Page:
     activates the Chrome window on every call (and drags macOS along to the
     Space that window lives on). With stealth on, create the target over a
     browser-level CDP session with ``background: true`` and pick up the Page
-    Playwright attaches for it. If the CDP session itself cannot be opened,
+    Playwright attaches for that exact target id. Page events are broadcast
+    to every CDP client, so accepting the first event can claim another
+    connector's tab. If the CDP session itself cannot be opened,
     fall back to the plain call: a visible tab beats no tab.
     """
     browser = ctx.browser
@@ -760,13 +762,45 @@ async def _new_tab(ctx: BrowserContext) -> Page:
         cdp = await browser.new_browser_cdp_session()
     except Exception:
         return await ctx.new_page()
+    target_id: str | None = None
+    claimed = False
     try:
-        async with ctx.expect_page(timeout=_TAB_OP_TIMEOUT_S * 1000) as new_page:
-            await cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
-        return await new_page.value
+        async with asyncio.timeout(_TAB_OP_TIMEOUT_S):
+            created = await cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+            created_id = created.get("targetId")
+            if not isinstance(created_id, str) or not created_id:
+                raise RuntimeError("CDP Target.createTarget returned no targetId")
+            target_id = created_id
+            while True:
+                # BrowserContext emits pages to every connected Playwright
+                # client. Correlate against the CDP target id returned above
+                # instead of accepting the first broadcast event.
+                for page in tuple(ctx.pages):
+                    try:
+                        page_cdp = await ctx.new_cdp_session(page)
+                        try:
+                            info = await page_cdp.send("Target.getTargetInfo")
+                        finally:
+                            try:
+                                await asyncio.wait_for(page_cdp.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+                            except Exception:
+                                pass
+                    except Exception:
+                        continue
+                    if info.get("targetInfo", {}).get("targetId") == target_id:
+                        claimed = True
+                        return page
+                await asyncio.sleep(0.01)
     finally:
+        if target_id is not None and not claimed:
+            try:
+                await asyncio.wait_for(
+                    cdp.send("Target.closeTarget", {"targetId": target_id}), timeout=_RAW_CONNECT_TIMEOUT_S
+                )
+            except Exception:
+                pass
         try:
-            await cdp.detach()
+            await asyncio.wait_for(cdp.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
         except Exception:
             pass
 

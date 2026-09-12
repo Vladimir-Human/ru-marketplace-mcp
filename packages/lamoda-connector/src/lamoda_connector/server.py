@@ -188,15 +188,50 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    const bodyText = (document.body && document.body.textContent || '').toLowerCase();
-    const blocked = /проверку|не робот|бота|captcha|are you human|access denied/.test(bodyText);
-    return JSON.stringify({items: out, title: blocked ? '__BLOCKED__' : (document.title || '')});
+    // Challenge words also occur in scripts, hidden anti-bot widgets and even
+    // product copy. Keep this as raw transport data; the Python classifier
+    // decides whether an empty page is a challenge. In particular, never let
+    // a hidden/script marker override a healthy product grid.
+    const bodyCopy = document.body ? document.body.cloneNode(true) : null;
+    if (bodyCopy) {
+        for (const node of bodyCopy.querySelectorAll('script, style, noscript, [hidden]')) node.remove();
+        for (const node of bodyCopy.querySelectorAll('[style]')) {
+            const style = node.getAttribute('style') || '';
+            if (/display\\s*:\\s*none|visibility\\s*:\\s*hidden/i.test(style)) node.remove();
+        }
+    }
+    const bodyText = (bodyCopy && bodyCopy.textContent || '').replace(/\\s+/g, ' ').trim();
+    return JSON.stringify({items: out, title: document.title || '', body_snippet: bodyText.slice(0, 2000)});
 }
 """
 
 # Spliced rather than duplicated: one fix to tile resolution or price selection
 # lands on every CDP source at once.
 _SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS_HELPERS)
+
+
+# The extractor only transports a bounded visible-text sample. Keep challenge
+# wording in one Python classifier so product copy and hidden widgets cannot
+# change the verdict while a healthy grid is present. ``бота`` on its own is
+# deliberately absent: it occurs in ordinary product copy and is not evidence
+# of a challenge.
+_CHALLENGE_TEXT_RE = re.compile(r"провер|не\s+робот|captcha|are\s+you\s+human|access\s+denied", re.IGNORECASE)
+
+
+def _anti_bot_challenge(data: dict[str, Any]) -> bool:
+    """Return whether an empty rendered page is an anti-bot challenge.
+
+    ``__BLOCKED__`` is retained only for the legacy cached payload shape and
+    only when it carried no items. Current extractor payloads carry a raw
+    ``body_snippet`` and the wording is classified here in Python.
+    """
+    items = data.get("items")
+    if isinstance(items, list) and items:
+        return False
+    if str(data.get("title") or "") == "__BLOCKED__":
+        return True
+    snippet = data.get("body_snippet")
+    return isinstance(snippet, str) and bool(_CHALLENGE_TEXT_RE.search(snippet))
 
 
 def _search_item_from_tile(tile: dict[str, Any]) -> LamodaSearchItemOut:
@@ -348,7 +383,7 @@ async def lamoda_search(
             payload = await _cdp_render_search(query.strip(), ctx)
         except NavBlocked as exc:
             raise_tool_error(TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status})."))
-        if payload.get("title") == "__BLOCKED__":
+        if _anti_bot_challenge(payload):
             raise_tool_error(
                 TransportDownError("Lamoda search is behind an anti-bot challenge in the connected Chrome.")
             )
@@ -495,44 +530,43 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render_search("кроссовки", ctx)
-        if payload.get("title") == "__BLOCKED__":
+        if _anti_bot_challenge(payload):
             checks["search"] = R.selfcheck_entry(
                 "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
             )
-            items_raw = []
         else:
             items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
-        if items_raw:
-            # Tiles extract — now ask the second question: did the SHAPE move?
-            # The registry was measured on the captured page (2026-08-07); a
-            # live payload that loses a parser-critical key family is
-            # structural drift even while tiles still come back.
-            live_signature = R.shape_signature(payload)
-            drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
-            missing = missing_required_families(live_signature)
-            if missing:
-                checks["search"] = R.selfcheck_entry(
-                    "drift",
-                    baseline=baseline,
-                    reason="shape_drift",
-                    notes=[
-                        f"{len(items_raw)} tiles extracted",
-                        "required key families missing: " + "; ".join(", ".join(family) for family in missing),
-                    ],
-                    shape_missing=drift["missing"],
-                    shape_added=drift["added"],
-                )
+            if items_raw:
+                # Tiles extract — now ask the second question: did the SHAPE move?
+                # The registry was measured on the captured page (2026-08-07); a
+                # live payload that loses a parser-critical key family is
+                # structural drift even while tiles still come back.
+                live_signature = R.shape_signature(payload)
+                drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+                missing = missing_required_families(live_signature)
+                if missing:
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason="shape_drift",
+                        notes=[
+                            f"{len(items_raw)} tiles extracted",
+                            "required key families missing: " + "; ".join(", ".join(family) for family in missing),
+                        ],
+                        shape_missing=drift["missing"],
+                        shape_added=drift["added"],
+                    )
+                else:
+                    notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                    if drift["added"]:
+                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                    checks["search"] = R.selfcheck_entry(
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                    )
             else:
-                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
-                if drift["added"]:
-                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
                 checks["search"] = R.selfcheck_entry(
-                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                    "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]
                 )
-        elif payload.get("title") != "__BLOCKED__":
-            checks["search"] = R.selfcheck_entry(
-                "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]
-            )
     except ToolError as exc:
         checks["search"] = R.selfcheck_entry(
             "inconclusive", baseline=baseline, reason="transport_down", notes=[str(exc)[:160]]
