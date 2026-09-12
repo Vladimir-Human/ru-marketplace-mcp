@@ -51,7 +51,7 @@ from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
 from mcp_core.transport import build_client
-from mcp_core.transport.browser_handoff import has_pending_handoff, read_with_handoff
+from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -350,6 +350,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
             if not isinstance(data, dict):
                 raise_tool_error(ParserDriftError("search extractor returned a non-object payload"))
             data.pop("_handoff_expires_at", None)
+            data.pop("_handoff_id", None)
             return data
 
         async with _cdp_lock:
@@ -367,6 +368,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
             )
             if expires_at:
                 data["_handoff_expires_at"] = expires_at
+                data["_handoff_id"] = get_handoff_id(scope=scope, operation="lamoda_search", url=url)
             return data
 
     try:
@@ -413,6 +415,7 @@ async def lamoda_search(
                     "Lamoda requires user action in the connected Chrome. Complete the visible challenge, then retry.",
                     provider="lamoda",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
+                    handoff_id=payload.get("_handoff_id"),
                 )
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []

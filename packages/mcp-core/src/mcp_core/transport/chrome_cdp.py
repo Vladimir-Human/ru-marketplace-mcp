@@ -35,7 +35,10 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import json
+import math
 import os
 import re
 import shutil
@@ -684,6 +687,116 @@ class _RawCdpPage:
             await self._send("Target.closeTarget", {"targetId": self._target_id}, timeout=10.0)
         except Exception:
             pass
+
+
+_MAX_HANDOFF_IMAGE_BYTES = 2 * 1024 * 1024
+
+
+def _handoff_jpeg(encoded: Any) -> tuple[int, int]:
+    """Read the encoded image dimensions, not CSS dimensions (which ignore DPR)."""
+    encoded_limit = 4 * ((_MAX_HANDOFF_IMAGE_BYTES + 2) // 3)
+    if not isinstance(encoded, str) or len(encoded) > encoded_limit:
+        raise RuntimeError("CDP screenshot returned no image data within the size limit")
+    try:
+        data = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise RuntimeError("CDP screenshot returned invalid base64") from exc
+    if not data or len(data) > _MAX_HANDOFF_IMAGE_BYTES:
+        raise RuntimeError("CDP screenshot exceeds the bounded image size")
+    if not data.startswith(b"\xff\xd8\xff") or not data.endswith(b"\xff\xd9"):
+        raise RuntimeError("CDP screenshot returned invalid JPEG data")
+    offset = 2
+    while offset < len(data) - 2:
+        if data[offset] != 0xFF:
+            break
+        while offset < len(data) and data[offset] == 0xFF:
+            offset += 1
+        if offset >= len(data):
+            break
+        marker = data[offset]
+        offset += 1
+        # Stop before compressed image data; it cannot contain a frame header.
+        if marker in (0xDA, 0xD9) or offset + 2 > len(data):
+            break
+        length = int.from_bytes(data[offset : offset + 2], "big")
+        if length < 2 or offset + length > len(data) - 2:
+            break
+        # SOF markers exclude DHT (C4), JPG (C8), and DAC (CC).
+        if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+            if length < 8:
+                break
+            height = int.from_bytes(data[offset + 3 : offset + 5], "big")
+            width = int.from_bytes(data[offset + 5 : offset + 7], "big")
+            components = data[offset + 7]
+            if width > 0 and height > 0 and components > 0 and length == 8 + 3 * components:
+                return width, height
+            break
+        offset += length
+    raise RuntimeError("CDP screenshot returned invalid JPEG dimensions")
+
+
+async def capture_owned_viewport(page: PageLike) -> dict[str, Any]:
+    """Capture only the current owned viewport through CDP.
+
+    This deliberately avoids DOM/content extraction and never writes the image
+    to disk.  A bounded JPEG makes the result safe to pass to a vision model.
+    """
+    session: Any = None
+    try:
+        # One budget covers attach, metrics and capture, including event-heavy
+        # raw-CDP streams whose individual recv timeout can otherwise restart.
+        async with asyncio.timeout(_RAW_CONNECT_TIMEOUT_S):
+            if isinstance(page, _RawCdpPage):
+                send = page._send
+            elif isinstance(page, Page):
+                session = await page.context.new_cdp_session(page)
+                send = session.send
+            else:
+                raise TypeError("unsupported page implementation")
+            metrics = await send("Page.getLayoutMetrics")
+            viewport = metrics.get("cssVisualViewport") or metrics.get("cssLayoutViewport") or {}
+            dimensions = [viewport.get("clientWidth"), viewport.get("clientHeight")]
+            offsets = [viewport.get("pageX", 0), viewport.get("pageY", 0)]
+            if any(
+                not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)
+                for value in dimensions + offsets
+            ):
+                raise RuntimeError("CDP returned invalid viewport geometry")
+            width, height = viewport["clientWidth"], viewport["clientHeight"]
+            x, y = offsets
+            if not (0 < width <= 10000 and 0 < height <= 10000 and x >= 0 and y >= 0):
+                raise RuntimeError("CDP returned invalid viewport geometry")
+            scale = min(1.0, 1440 / width, 900 / height)
+            for _attempt in range(2):
+                result = await send(
+                    "Page.captureScreenshot",
+                    {
+                        "format": "jpeg",
+                        "quality": 70,
+                        "fromSurface": True,
+                        "captureBeyondViewport": False,
+                        "clip": {"x": x, "y": y, "width": width, "height": height, "scale": scale},
+                    },
+                )
+                encoded = result.get("data")
+                image_width, image_height = _handoff_jpeg(encoded)
+                if image_width <= 1440 and image_height <= 900:
+                    return {
+                        "image_data": encoded,
+                        "mime_type": "image/jpeg",
+                        "width": image_width,
+                        "height": image_height,
+                    }
+                # CDP may multiply CSS clip dimensions by device pixel ratio.
+                # Correct once using the real frame size, never guessed CSS DPR.
+                scale *= min(1440 / image_width, 900 / image_height)
+            raise RuntimeError("CDP screenshot exceeds the bounded pixel dimensions")
+    finally:
+        if session is not None:
+            try:
+                await asyncio.wait_for(session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+            except Exception:
+                pass
 
 
 async def current_page_url(page: PageLike) -> str:

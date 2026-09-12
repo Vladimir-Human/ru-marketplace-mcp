@@ -10,8 +10,8 @@ One server mounting every installed connector as a namespaced toolset:
 `lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `cian_*`, `mpstats_*` plus
 `compare_prices` / `compare_sources` and its own `marketplace_sources`. Tool
 names keep their prefixes, so habits and configs carry over — but the operator
-wires a single `marketplace` entry instead of fourteen. The server exposes 39
-tools: 38 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
+wires a single `marketplace` entry instead of fourteen. The server exposes 40
+tools: 39 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
 source: without `MPSTATS_MP_AUTH` its tools answer `auth_missing` while
 everything else is unaffected.
 

@@ -30,7 +30,10 @@ MPN/GTIN match from a title or replace structured pagination. A visible CAPTCHA 
 login wall is recorded as `blocked`; the client must not attempt to bypass it.
 
 This contract is deliberately optional and client-side: native vision capability
-is runtime-specific and is not silently assumed by the MCP server.
+is runtime-specific and is not silently assumed by the MCP server. The
+`compare_browser_snapshot(handoff_id)` tool now supplies a bounded JPEG viewport
+through standard MCP image content when a retained page exists. The server does
+not OCR, classify or send the image to another model.
 
 ## Browser recovery direction (2026-09-12)
 

@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from mcp_core.errors import UpstreamTimeoutError
+from mcp_core.errors import NotFoundError, UpstreamTimeoutError
 from mcp_core.transport import browser_handoff as handoff
 from mcp_core.transport import chrome_cdp
 
@@ -448,3 +448,193 @@ async def test_second_caller_cancellation_keeps_lease_until_worker_closes(browse
     await asyncio.wait_for(lease.task, timeout=1)
     assert closed.is_set()
     assert not handoff._leases
+
+
+def snapshot_id():
+    return handoff.get_handoff_id(scope="session-1", operation="search", url="https://shop.test/search?q=a")
+
+
+async def test_snapshot_keeps_exact_lease_deadline_page_and_returns_sanitized_origin(browser, monkeypatch):
+    _, expiry = await call()
+    lease = next(iter(handoff._leases.values()))
+    deadline = lease.deadline
+    identifier = snapshot_id()
+    assert identifier and "session-1" not in identifier
+    browser[0].url = "https://shop.test:8443/private?token=must-not-escape#secret"
+    capture = AsyncMock(side_effect=lambda page: {"image_data": "encoded"})
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", capture)
+    for _ in range(2):
+        payload = await handoff.snapshot_handoff(scope="session-1", handoff_id=identifier)
+        assert payload["page_origin"] == "https://shop.test:8443"
+        assert payload["operation"] == "search"
+        assert payload["handoff_expires_at"] == expiry
+        assert payload["captured_at"]
+        assert next(iter(handoff._leases.values())) is lease
+        assert lease.deadline == deadline
+        assert snapshot_id() == identifier
+        assert len(browser) == 1 and not browser[0].closed
+    assert all(args.args == (browser[0],) for args in capture.await_args_list)
+    assert (await call(read=success))[1] is None
+    assert browser[0].closed
+    assert snapshot_id() is None
+
+
+@pytest.mark.parametrize(
+    "scenario", ["unknown", "foreign", "no-session", "expired", "cleaning", "profile", "endpoint", "unicode"]
+)
+async def test_unavailable_snapshot_never_opens_or_captures(browser, monkeypatch, scenario):
+    await call()
+    identifier = snapshot_id()
+    lease = next(iter(handoff._leases.values()))
+    scope = "session-1"
+    if scenario == "unknown":
+        identifier = "unknown"
+    elif scenario == "unicode":
+        identifier = "невозможный-id"
+    elif scenario == "foreign":
+        scope = "session-2"
+    elif scenario == "no-session":
+        scope = None
+    elif scenario == "expired":
+        lease.deadline = asyncio.get_running_loop().time() - 1
+    elif scenario == "cleaning":
+        lease.cleaning = True
+    elif scenario == "profile":
+        monkeypatch.setattr(chrome_cdp, "SCRAPING_PROFILE", "different")
+    elif scenario == "endpoint":
+        monkeypatch.setattr(chrome_cdp, "CDP_URL", "http://different.test")
+    capture = AsyncMock()
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", capture)
+    with pytest.raises(NotFoundError):
+        await handoff.snapshot_handoff(scope=scope, handoff_id=identifier)
+    capture.assert_not_called()
+    assert len(browser) == 1
+    # The synthetic cleaning flag must not disable fixture shutdown cancellation.
+    lease.cleaning = False
+
+
+async def test_snapshot_and_resume_cannot_overlap(browser, monkeypatch):
+    await call()
+    identifier = snapshot_id()
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def capture(page):
+        entered.set()
+        await release.wait()
+        return {"image_data": "encoded"}
+
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", capture)
+    task = asyncio.create_task(handoff.snapshot_handoff(scope="session-1", handoff_id=identifier))
+    await entered.wait()
+    with pytest.raises(handoff.HandoffBusyError):
+        await handoff.snapshot_handoff(scope="session-1", handoff_id=identifier)
+    with pytest.raises(handoff.HandoffBusyError):
+        await call(read=success)
+    release.set()
+    await task
+    entered.clear()
+    release.clear()
+
+    async def read(page):
+        entered.set()
+        await release.wait()
+        return await blocked(page)
+
+    task = asyncio.create_task(call(read=read))
+    await entered.wait()
+    with pytest.raises(handoff.HandoffBusyError):
+        await handoff.snapshot_handoff(scope="session-1", handoff_id=identifier)
+    release.set()
+    await task
+    assert len(browser) == 1
+
+
+@pytest.mark.parametrize("during", [False, True])
+async def test_snapshot_rechecks_original_host_policy_before_and_after_capture(browser, monkeypatch, during):
+    await call(allowed_hosts=["shop.test", "login.shop.test"])
+    identifier = snapshot_id()
+    browser[0].url = "https://login.shop.test/challenge"
+
+    async def capture(page):
+        page.url = "https://outside.test/private"
+        return {"image_data": "must not escape"}
+
+    mock = AsyncMock(side_effect=capture)
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", mock)
+    if not during:
+        browser[0].url = "https://outside.test/private"
+    with pytest.raises(chrome_cdp.NavigationPolicyError):
+        await handoff.snapshot_handoff(scope="session-1", handoff_id=identifier)
+    assert mock.await_count == int(during)
+    assert browser[0].closed and not handoff._leases
+
+
+@pytest.mark.parametrize("stop", ["cancel", "expire"])
+async def test_snapshot_cancellation_or_deadline_cleans_exact_page(browser, monkeypatch, stop):
+    timeout_contexts = []
+    original_timeout_at = asyncio.timeout_at
+
+    def record(when):
+        timeout = original_timeout_at(when)
+        timeout_contexts.append(timeout)
+        return timeout
+
+    monkeypatch.setattr(handoff.asyncio, "timeout_at", record)
+    await call()
+    entered = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def capture(page):
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", capture)
+    task = asyncio.create_task(handoff.snapshot_handoff(scope="session-1", handoff_id=snapshot_id()))
+    await entered.wait()
+    if stop == "cancel":
+        task.cancel()
+        error = asyncio.CancelledError
+    else:
+        timeout_contexts[0]._on_timeout()
+        error = UpstreamTimeoutError
+    with pytest.raises(error):
+        await asyncio.wait_for(task, timeout=1)
+    assert cancelled.is_set()
+    assert len(browser) == 1 and browser[0].closed
+    assert not handoff._leases
+
+
+@pytest.mark.parametrize("stop", ["expire", "cancel"])
+async def test_termination_settles_queued_snapshot_before_getter_resumes(browser, monkeypatch, stop):
+    timeouts = []
+    original_timeout_at = asyncio.timeout_at
+
+    def record(when):
+        timeout = original_timeout_at(when)
+        timeouts.append(timeout)
+        return timeout
+
+    monkeypatch.setattr(handoff.asyncio, "timeout_at", record)
+    await call()
+    lease = next(iter(handoff._leases.values()))
+    original_put = lease.requests.put_nowait
+    capture = AsyncMock()
+    monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", capture)
+
+    def put_at_deadline(request):
+        original_put(request)
+        if stop == "expire":
+            timeouts[0]._on_timeout()
+        else:
+            lease.task.cancel()
+
+    monkeypatch.setattr(lease.requests, "put_nowait", put_at_deadline)
+    with pytest.raises(UpstreamTimeoutError if stop == "expire" else asyncio.CancelledError):
+        await asyncio.wait_for(handoff.snapshot_handoff(scope="session-1", handoff_id=snapshot_id()), timeout=1)
+    capture.assert_not_called()
+    assert lease.requests.empty()
+    assert browser[0].closed and not handoff._leases

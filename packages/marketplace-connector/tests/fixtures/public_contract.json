@@ -413,6 +413,26 @@
       "type": "object"
     }
   },
+  "compare_browser_snapshot": {
+    "output": {
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "handoff_id": {
+          "maxLength": 80,
+          "minLength": 16,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "handoff_id"
+      ],
+      "type": "object"
+    }
+  },
   "compare_prices": {
     "output": {
       "properties": {

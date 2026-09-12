@@ -99,6 +99,9 @@ class SourceOutcome(BaseModel):
         default=None,
         description="UTC expiry when the challenged tab is retained; repeat the same request after action.",
     )
+    handoff_id: str | None = Field(
+        default=None, description="Opaque same-session handle for an optional browser snapshot."
+    )
 
 
 class CompareResponse(BaseModel):
