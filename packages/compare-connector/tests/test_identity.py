@@ -1,3 +1,4 @@
+import pytest
 from compare_connector.identity import (
     ProductIdentity,
     identity_from_mapping,
@@ -72,3 +73,73 @@ def test_mapping_discards_invalid_gtin_instead_of_guessing():
 
     assert identity.gtin == ""
     assert identity.mpn == ""
+
+
+@pytest.mark.parametrize("value", ["00000000", "-4006381333931", "400638133393.1", [4006381333931], True])
+def test_gtin_rejects_malformed_values(value):
+    assert normalize_gtin(value) == ""
+
+
+def test_zero_padded_gtin_represents_the_same_trade_item():
+    match = match_product_identity(ProductIdentity(gtin="4006381333931"), ProductIdentity(gtin="04006381333931"))
+    assert match.status == "exact"
+
+
+def test_mapping_does_not_promote_seller_article_to_manufacturer_id():
+    result = identity_from_mapping({"vendor_code": "AB12", "article": "AB12", "sku": "AB12"})
+    assert result.mpn == ""
+    assert result.native_product_id == "AB12"
+
+
+def test_mapping_discards_structures_instead_of_stringifying_them():
+    result = identity_from_mapping({"mpn": {"value": "AB12"}, "brand": ["ACME"], "size": True})
+    assert result.mpn == result.brand == ""
+    assert result.variant_attributes == {}
+
+
+def test_mpn_without_manufacturer_brand_does_not_prove_identity():
+    result = match_product_identity(ProductIdentity(mpn="AB12"), ProductIdentity(mpn="AB12"))
+    assert result.status == "unknown"
+    assert result.reasons == ["mpn_requires_brand"]
+
+
+@pytest.mark.parametrize("left,right", [("чёрный", "белый"), ("красный", "синий"), ("蓝色", "红色")])
+def test_non_latin_variant_conflicts_are_not_erased(left, right):
+    result = match_product_identity(
+        ProductIdentity(gtin="4006381333931", variant_attributes={"color": left}),
+        ProductIdentity(gtin="4006381333931", variant_attributes={"color": right}),
+    )
+    assert result.status == "mismatch"
+    assert result.reasons == ["variant_mismatch"]
+
+
+def test_matching_one_variant_attribute_does_not_prove_the_missing_other():
+    result = match_product_identity(
+        ProductIdentity(brand="ACME", mpn="AB12", variant_attributes={"color": "black", "storage": "256GB"}),
+        ProductIdentity(brand="ACME", mpn="AB12", variant_attributes={"color": "black"}),
+    )
+    assert result.status == "unknown"
+    assert result.reasons == ["incomplete_variant_evidence"]
+
+
+def test_colour_alias_and_case_keep_variant_identity():
+    result = match_product_identity(
+        ProductIdentity(gtin="4006381333931", variant_attributes={"colour": "Чёрный"}),
+        ProductIdentity(gtin="4006381333931", variant_attributes={"color": "чёрный"}),
+    )
+    assert result.status == "exact"
+
+
+def test_model_name_does_not_override_brand_conflict():
+    result = match_product_identity(
+        ProductIdentity(model="X100", brand="Альфа"), ProductIdentity(model="X100", brand="Бета")
+    )
+    assert result.status == "mismatch"
+
+
+def test_matching_gtin_does_not_override_conflicting_mpn():
+    result = match_product_identity(
+        ProductIdentity(gtin="4006381333931", mpn="A12"),
+        ProductIdentity(gtin="4006381333931", mpn="B12"),
+    )
+    assert result.status == "mismatch"

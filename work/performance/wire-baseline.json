@@ -4,9 +4,9 @@
     "compare-mcp": {
       "script": "compare-mcp",
       "tool_count": 3,
-      "wire_tokens": 1355,
-      "latency_ms": 2520.3,
-      "schema_sha256": "f5062aed8fc0d6607528c700b5986c5ba7423ac8051f4375196a8db6ce0c13d9",
+      "wire_tokens": 1551,
+      "latency_ms": 1977.4,
+      "schema_sha256": "dda9fa27247f4819b8ff61f0a7ba3ee2eeac92f4cb9bd77eb2b7cb9b117cea7d",
       "tools": [
         {
           "name": "compare_prices",
@@ -18,16 +18,16 @@
         },
         {
           "name": "compare_verify_offer",
-          "tokens": 396
+          "tokens": 592
         }
       ]
     },
     "marketplace-mcp": {
       "script": "marketplace-mcp",
       "tool_count": 39,
-      "wire_tokens": 15834,
-      "latency_ms": 2257.1,
-      "schema_sha256": "4536ea61559baaa463bfb3e2163c7408ecb101d4cdc7e686f3646faafb696b4c",
+      "wire_tokens": 16030,
+      "latency_ms": 2044.8,
+      "schema_sha256": "60d3fd965526d146a4cd37a7e9413c5acdc05657190832025bec8ffdbcfb60ca",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -75,7 +75,7 @@
         },
         {
           "name": "compare_verify_offer",
-          "tokens": 396
+          "tokens": 592
         },
         {
           "name": "detmir_card",
