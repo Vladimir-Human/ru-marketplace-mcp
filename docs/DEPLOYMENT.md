@@ -24,7 +24,7 @@ so they behave identically.
 | `MCP_TRANSPORT` | `stdio` | `stdio`, `http`, `streamable-http`, or `sse`. `http` is the modern streamable-HTTP transport; the other two are FastMCP's own aliases, kept for operators who know them. |
 | `MCP_HTTP_HOST` | `127.0.0.1` | Bind address. HTTP only. Loopback by default — see below. |
 | `MCP_HTTP_PORT` | `8000` | Bind port. HTTP only. |
-| `MCP_HTTP_PATH` | `/mcp` | Endpoint path. HTTP only. |
+| `MCP_HTTP_PATH` | `/mcp` | Endpoint path. HTTP only. |`r`n| `MCP_HTTP_AUTH_TOKEN` | unset | Bearer token. Required for non-loopback HTTP binds; one process remains single-tenant. |
 
 An unset or empty `MCP_TRANSPORT` is stdio. An unrecognised value is rejected at
 startup rather than falling back, because a silent fallback would start a stdio

@@ -24,6 +24,10 @@ class _FakeMCP:
 
     def __init__(self) -> None:
         self.run_calls: list[dict] = []
+        self.middlewares: list[object] = []
+
+    def add_middleware(self, middleware) -> None:
+        self.middlewares.append(middleware)
 
     def run(self, **kwargs) -> None:
         self.run_calls.append(kwargs)
@@ -223,6 +227,7 @@ def test_run_server_warns_when_bound_beyond_loopback(monkeypatch, caplog):
     """
     monkeypatch.setenv(runtime.ENV_TRANSPORT, "http")
     monkeypatch.setenv(runtime.ENV_HTTP_HOST, "0.0.0.0")
+    monkeypatch.setenv(runtime.ENV_HTTP_AUTH_TOKEN, "test-token")
     fake = _FakeMCP()
 
     with caplog.at_level(logging.WARNING, logger="mcp_connector"):
@@ -241,3 +246,12 @@ def test_run_server_does_not_warn_on_loopback(monkeypatch, caplog):
         runtime.run_server(fake, server_name="ozon")
 
     assert not any("http_bind_exposed" in rec.getMessage() for rec in caplog.records)
+
+
+def test_run_server_rejects_non_loopback_without_auth(monkeypatch):
+    monkeypatch.setenv(runtime.ENV_TRANSPORT, "http")
+    monkeypatch.setenv(runtime.ENV_HTTP_HOST, "0.0.0.0")
+    monkeypatch.delenv(runtime.ENV_HTTP_AUTH_TOKEN, raising=False)
+
+    with pytest.raises(ValueError, match="MCP_HTTP_AUTH_TOKEN"):
+        runtime.run_server(_FakeMCP(), server_name="wb")

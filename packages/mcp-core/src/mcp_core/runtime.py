@@ -25,8 +25,12 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
+
+from fastmcp.server.dependencies import get_http_request
+from fastmcp.server.middleware import Middleware
 
 from mcp_core.logging import log_event
 
@@ -53,6 +57,7 @@ ENV_TRANSPORT = "MCP_TRANSPORT"
 ENV_HTTP_HOST = "MCP_HTTP_HOST"
 ENV_HTTP_PORT = "MCP_HTTP_PORT"
 ENV_HTTP_PATH = "MCP_HTTP_PATH"
+ENV_HTTP_AUTH_TOKEN = "MCP_HTTP_AUTH_TOKEN"
 
 # Hosts that keep the server reachable only from the machine it runs on. Any
 # other value exposes it to the network and earns a warning.
@@ -81,6 +86,26 @@ class TransportConfig:
     def is_loopback(self) -> bool:
         """True when the HTTP bind host is reachable only from this machine."""
         return self.host in _LOOPBACK_HOSTS
+
+
+class BearerAuthMiddleware(Middleware):
+    """Require one configured bearer token for HTTP requests.
+
+    The process remains single-tenant: authenticated callers share the same
+    connector and browser profile. Separate tenants require separate processes.
+    """
+
+    def __init__(self, token: str) -> None:
+        self._token = token
+
+    async def __call__(self, context, call_next):
+        request = get_http_request()
+        supplied = request.headers.get("authorization", "")
+        if not secrets.compare_digest(supplied, f"Bearer {self._token}"):
+            from fastmcp.exceptions import AuthorizationError
+
+            raise AuthorizationError("HTTP bearer authentication required")
+        return await call_next(context)
 
 
 def _parse_transport(raw: str | None) -> Transport:
@@ -176,6 +201,13 @@ def run_server(mcp: FastMCP, *, server_name: str) -> int:
 
     try:
         if config.is_http:
+            auth_token = os.environ.get(ENV_HTTP_AUTH_TOKEN, "").strip()
+            if not config.is_loopback and not auth_token:
+                raise ValueError(
+                    f"{ENV_HTTP_AUTH_TOKEN} must be set when {ENV_HTTP_HOST}={config.host!r} is not loopback"
+                )
+            if auth_token:
+                mcp.add_middleware(BearerAuthMiddleware(auth_token))
             _warn_if_exposed(config, server_name=server_name)
             log_event(
                 "server_start",
