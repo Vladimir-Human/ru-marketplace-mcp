@@ -1,9 +1,9 @@
-"""Transport selection shared by all five connector entry points.
+"""Transport selection shared by all connector entry points.
 
 Every connector is launched the same way — ``mcp.run(...)`` — and every
 connector must default to stdio, because that is the transport MCP clients
 speak and the only one the existing client configs know about. Rather than
-copy the env-var parsing into five ``__main__.py`` files, it lives here once.
+copy the env-var parsing into every ``__main__.py`` file, it lives here once.
 
 Two rules this module exists to enforce, both protocol- or security-critical:
 
@@ -13,12 +13,10 @@ Two rules this module exists to enforce, both protocol- or security-critical:
    ``log_event`` — never ``print``, never ``sys.stdout``. ``scripts/check_no_print``
    guards this, and this module is in its scan path.
 
-2. **HTTP binds to loopback by default.** These servers carry no
-   authentication of their own; the tools are read-only, but an HTTP endpoint
-   on ``0.0.0.0`` is still an unauthenticated scraper anyone on the network can
-   drive. Binding to ``127.0.0.1`` keeps it local until the operator
-   deliberately puts a reverse proxy with auth in front. Choosing a non-loopback
-   host is allowed, but it is logged loudly as a warning so it is never silent.
+2. **HTTP binds to loopback by default.** Non-loopback binds require a bearer
+   token and static tenant id before the server can start. They also log an
+   exposure warning: authentication does not supply TLS or isolate browser
+   profiles between tenants. Each tenant needs its own process and profile.
 """
 
 from __future__ import annotations
@@ -271,10 +269,9 @@ def run_server(mcp: FastMCP, *, server_name: str) -> int:
 def _warn_if_exposed(config: TransportConfig, *, server_name: str) -> None:
     """Log a loud warning when an HTTP server binds beyond loopback.
 
-    These servers ship no authentication. On ``0.0.0.0`` (or any routable host)
-    that makes them an unauthenticated, read-only scraper anyone who can reach
-    the port may drive. We do not refuse to start — an operator behind a
-    reverse proxy has a legitimate reason — but the choice is never silent.
+    ``run_server`` has already required bearer auth and a static tenant id.
+    A non-loopback bind still needs a protected network path, since the server
+    does not terminate TLS or separate multiple tenants' browser profiles.
     """
     if config.is_loopback:
         return
@@ -285,7 +282,7 @@ def _warn_if_exposed(config: TransportConfig, *, server_name: str) -> None:
         host=config.host,
         port=config.port,
         message=(
-            "HTTP transport is bound beyond loopback and this server has no built-in auth. "
-            "Put a reverse proxy that enforces authentication in front of it before exposing it."
+            "HTTP transport is bound beyond loopback with bearer authentication and a static tenant id. "
+            "Use TLS for remote access and a separate process/browser profile per tenant."
         ),
     )

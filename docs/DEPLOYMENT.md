@@ -7,16 +7,16 @@ Two ways to run the connectors. Both are optional; neither changes the default.
   and it is unchanged — if you do nothing here, nothing about your setup moves.
 - **HTTP** (opt-in): the server listens on a port and speaks MCP over
   streamable HTTP, for running it remotely or in a container. You turn it on
-  with one environment variable.
+  with `MCP_TRANSPORT=http` and configure authentication for network binds.
 
-The servers are read-only catalog scrapers with **no authentication of their
-own**. That fact drives every security note below; read them before you expose
-anything.
+HTTP servers support bearer authentication and a static tenant header. Binding
+beyond loopback requires both credentials at startup, including inside Docker.
+Each process and its browser profile serve one tenant.
 
 ## Transport selection
 
 Selection is environment-driven and lives in `mcp_core.runtime`, shared by all
-fifteen entry points (fourteen source servers plus the unified `marketplace-mcp`)
+connector entry points, including the unified `marketplace-mcp`,
 so they behave identically.
 
 | Variable | Default | Purpose |
@@ -26,7 +26,7 @@ so they behave identically.
 | `MCP_HTTP_PORT` | `8000` | Bind port. HTTP only. |
 | `MCP_HTTP_PATH` | `/mcp` | Endpoint path. HTTP only. |
 | `MCP_HTTP_AUTH_TOKEN` | unset | Bearer token. Required for non-loopback HTTP binds. |
-| `MCP_HTTP_TENANT_ID` | unset | Static tenant id, matched against `X-MCP-Tenant`; use one process/profile per tenant. |
+| `MCP_HTTP_TENANT_ID` | unset | Required for non-loopback binds. With bearer auth enabled, matched against `X-MCP-Tenant`; use one process/profile per tenant. |
 
 An unset or empty `MCP_TRANSPORT` is stdio. An unrecognised value is rejected at
 startup rather than falling back, because a silent fallback would start a stdio
@@ -70,35 +70,46 @@ Nothing to configure. The README's client configs already do this:
 
 ### HTTP (opt-in)
 
+Set these once in the shell that starts the server or Docker. The token command
+generates a secret locally without printing it. Configure the same values in
+your MCP client; keep the token out of source control and shared logs.
+
 ```bash
+export MCP_HTTP_AUTH_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export MCP_HTTP_TENANT_ID=marketplace-local
 MCP_TRANSPORT=http MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=8000 wb-mcp
 ```
 
-The endpoint is then `http://127.0.0.1:8000/mcp`. A client initialize over that
-endpoint returns the server info; a bare `GET /mcp` without a session returns a
-well-formed JSON-RPC 400 (`Missing session ID`), which is the endpoint telling
-you it is alive and speaking MCP.
+The endpoint is `http://127.0.0.1:8000/mcp`. Configure the client to send these
+headers on its MCP requests, substituting the actual environment values:
+
+```http
+Authorization: Bearer <value of MCP_HTTP_AUTH_TOKEN>
+X-MCP-Tenant: <value of MCP_HTTP_TENANT_ID>
+```
+
+A successful MCP initialize returns the server info. A bare `GET /mcp` is not
+a health check: it does not perform the MCP initialization/session exchange.
 
 ## Security posture
 
-**The default bind host is `127.0.0.1` on purpose.** These servers carry no auth.
-On `0.0.0.0` — or any routable address — an HTTP MCP server is an
-unauthenticated scraper that anyone who can reach the port may drive. The tools
-only read public catalog data, so this is not a data-exfiltration hole, but it
-is still an open egress endpoint running requests on your behalf and against a
-marketplace's terms. Loopback keeps it on your machine until you decide
-otherwise.
+**The default bind host is `127.0.0.1`.** Loopback can run without auth for local
+client compatibility; setting `MCP_HTTP_AUTH_TOKEN` enables bearer checking
+there too. A non-loopback bind refuses to start unless both
+`MCP_HTTP_AUTH_TOKEN` and `MCP_HTTP_TENANT_ID` are nonblank. Authenticated MCP
+requests must match the configured bearer token and tenant id.
 
-If you bind beyond loopback, the server starts but logs a loud `http_bind_exposed`
-warning to stderr — exposure is never silent. Before you expose one for real:
+The tenant id is an access check, not a namespace for per-user state. Callers
+with the same credentials share connector state and the configured Chrome
+profile. Deploy a separate process/container, credentials, browser profile,
+profile volume, and CDP endpoint for each tenant. A shared Chrome sidecar must
+only be used by services belonging to that same tenant.
 
-- Put an **authenticating reverse proxy** (nginx, Caddy, an API gateway) in
-  front and let it terminate TLS and enforce auth. The MCP server itself will
-  not.
-- Keep the server bound to loopback and point the proxy at it, or bind it to a
-  private interface the proxy can reach — not to `0.0.0.0` on a public host.
-- Rate-limit at the proxy. A polite request rate is a condition of reading these
-  endpoints at all.
+Successful non-loopback startup still logs `http_bind_exposed` to stderr.
+For remote clients, use a TLS reverse proxy and rate limits, and keep the MCP
+port on loopback or a private interface reachable only by that proxy. Forward
+both client headers unchanged; the built-in checks do not provide TLS or
+per-tenant browser isolation.
 
 ## Docker
 
@@ -124,42 +135,54 @@ so the image's dependency set matches local development bit for bit.
 
 ### Run one server
 
-HTTP is the only transport that makes sense in a detached container: stdio needs
-a client attached to the process's stdin/stdout, and nothing is attached. (If you
-genuinely want stdio in a container, a client has to `docker exec -i` into it and
-speak JSON-RPC over that pipe — niche, and not what these files set up.)
+The root `Dockerfile` runs HTTP for detached containers. For a client that speaks
+over stdin/stdout, build `Dockerfile.stdio` and run it with `docker run --rm -i`
+instead.
 
 The image defaults to `MCP_TRANSPORT=http` and, **inside the container**,
 `MCP_HTTP_HOST=0.0.0.0`. That is deliberate and is not a contradiction of the
 loopback rule: inside the container `127.0.0.1` would be unreachable from the
 host, so the container binds to all of its *own* interfaces and the perimeter
-moves to the **published port**. Publish it to the host's loopback:
+moves to the **published port**. The non-loopback auth requirements still
+apply. Set the two environment variables as shown above, pass them into the
+container, and publish the port to the host's loopback:
 
 ```bash
-docker run --rm -p 127.0.0.1:8000:8000 ru-marketplace-mcp:2.3.0
+docker run --rm -p 127.0.0.1:8000:8000 \
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.3.0
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
 Run a different marketplace by overriding the command:
 
 ```bash
-docker run --rm -p 127.0.0.1:8001:8000 ru-marketplace-mcp:2.3.0 yandex-mcp
+docker run --rm -p 127.0.0.1:8001:8000 \
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.3.0 yandex-mcp
 ```
 
-`-p 127.0.0.1:8000:8000` is the security boundary. `-p 8000:8000` would publish
-on all host interfaces and put the unauthenticated server on your LAN; do not.
+`-p 127.0.0.1:8000:8000` keeps access local in addition to the MCP auth checks.
+`-p 8000:8000` publishes on all host interfaces and exposes an unencrypted
+endpoint on your LAN. Keep the loopback binding and use a TLS proxy for remote
+access.
 
 ### Compose
 
 `docker-compose.yml` runs several servers at once — the same image with a
 different command each, each on its own host port, every port published to
-`127.0.0.1` only:
+`127.0.0.1` only. Every service inherits the required token and tenant id from
+the shell environment above (or a protected local `.env` file). Compose rejects
+missing or empty values before starting containers. This stack serves one
+tenant; separate tenants need separate stacks and Chrome profiles.
 
 ```bash
 docker compose up -d          # wb:8000 yandex:8001 detmir:8002 ozon:8003 compare:8004 … mpstats:8012
 docker compose logs -f wb
 docker compose down
 ```
+
+Use the same `Authorization` and `X-MCP-Tenant` headers shown above for each
+service. `docker compose config --quiet` validates configuration without
+printing the expanded secret values.
 
 The `mpstats` service is the optional paid source: it starts without
 `MPSTATS_MP_AUTH`, but its tools answer `auth_missing` until you set the token

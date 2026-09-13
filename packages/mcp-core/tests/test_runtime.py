@@ -81,8 +81,8 @@ def test_http_family_transports_are_accepted(value):
 def test_http_defaults_bind_to_loopback():
     """HTTP with no host/port set must default to 127.0.0.1 — never 0.0.0.0.
 
-    The default bind host is a security boundary: these servers have no auth, so
-    the safe default is loopback-only until the operator opts into exposure.
+    Auth is optional on loopback; the safe default stays local until the
+    operator opts into exposure and supplies the required credentials.
     """
     config = runtime.resolve_transport({runtime.ENV_TRANSPORT: "http"})
 
@@ -221,9 +221,8 @@ def test_run_server_treats_broken_pipe_as_clean_exit(monkeypatch):
 def test_run_server_warns_when_bound_beyond_loopback(monkeypatch, caplog):
     """Binding to 0.0.0.0 must emit a warning — exposure is never silent.
 
-    The server still starts (an operator behind an authenticating proxy has a
-    real reason), but an unauthenticated scraper going onto the network without
-    a trace would be the wrong default.
+    The server starts with credentials, but still needs TLS and network access
+    controls when the operator exposes it to remote clients.
     """
     monkeypatch.setenv(runtime.ENV_TRANSPORT, "http")
     monkeypatch.setenv(runtime.ENV_HTTP_HOST, "0.0.0.0")
@@ -236,6 +235,8 @@ def test_run_server_warns_when_bound_beyond_loopback(monkeypatch, caplog):
 
     assert any(rec.levelno == logging.WARNING for rec in caplog.records)
     assert any("http_bind_exposed" in rec.getMessage() for rec in caplog.records)
+    assert "no built-in auth" not in caplog.text
+    assert "test-token" not in caplog.text
 
 
 def test_run_server_does_not_warn_on_loopback(monkeypatch, caplog):

@@ -203,7 +203,7 @@ FOREIGN_CURRENCY_SOURCES = ("taobao",)
 
 
 def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
-    """Drop repeats of the same listing, keyed on (source, product_id).
+    """Drop repeats of the same listing, retaining explicitly distinct variants.
 
     A marketplace can return the same product twice — colour variants sharing
     an id, a pagination overlap — and every copy would otherwise rank
@@ -215,13 +215,13 @@ def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
     survives. Offers with no product_id cannot be compared this way and are all
     kept: dropping them on a blank key would silently merge distinct listings.
     """
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
     out: list[MarketOffer] = []
     for offer in offers:
         if not offer.product_id:
             out.append(offer)
             continue
-        key = (offer.source, offer.product_id)
+        key = (offer.source, offer.product_id, offer.variant_id)
         if key in seen:
             continue
         seen.add(key)
@@ -1099,18 +1099,18 @@ async def compare_verify_offer(
             description="Price returned by compare_prices; used to report a live card delta.",
         ),
     ] = None,
+    expected_identity: Annotated[
+        ProductIdentity | None,
+        Field(description="Optional manufacturer identifiers and variant attributes to verify against the card."),
+    ] = None,
     expected_variant_id: Annotated[
         str | None,
         Field(
             default=None,
             min_length=1,
             max_length=100,
-            description="Optional sellable variant/SKU id from the search row.",
+            description="Yandex variant_id from the search row; rejects a different card SKU.",
         ),
-    ] = None,
-    expected_identity: Annotated[
-        ProductIdentity | None,
-        Field(description="Optional manufacturer identifiers and variant attributes to verify against the card."),
     ] = None,
 ) -> dict[str, Any]:
     """Verify one compared offer through its marketplace card tool.
@@ -1127,6 +1127,9 @@ async def compare_verify_offer(
     fields when the marketplace exposes them. `identity_verification`, when
     requested, carries the observed typed identifiers and a match verdict;
     absent manufacturer evidence yields unknown, never a title-derived exact match.
+    For Yandex, pass the search row's `variant_id` as `expected_variant_id`:
+    a different or missing card SKU is rejected before computing a price delta.
+    Without it, only the current default card price is checked.
 
     ## Error Format
 
@@ -1139,6 +1142,8 @@ async def compare_verify_offer(
     ):
         raise_tool_error(BadRequestError("expected_price_rub must be a finite non-negative price"))
     name = source.strip().lower()
+    if expected_variant_id is not None and name != "yandex_market":
+        raise_tool_error(BadRequestError("expected_variant_id is supported only for yandex_market"))
     if name not in _CARD_TOOL_NAMES:
         raise_tool_error(BadRequestError(f"source {source!r} has no supported card verifier"))
     module = SOURCES.get(name)

@@ -99,8 +99,9 @@ ENV PATH="/app/.venv/bin:$PATH" \
 # is. Bind to 0.0.0.0 so the port is reachable from OUTSIDE the container —
 # the container boundary plus a locked-down published port is the perimeter
 # here, NOT the in-process bind host. Publish this to 127.0.0.1 on the host
-# (see docker-compose.yml) and front it with an authenticating reverse proxy
-# before exposing it anywhere: these servers have no auth of their own.
+# (see docker-compose.yml). Pass MCP_HTTP_AUTH_TOKEN and MCP_HTTP_TENANT_ID at
+# launch; both are required for this bind. Use a TLS reverse proxy for remote
+# access. Each process and browser profile belongs to one tenant.
 ENV MCP_TRANSPORT=http \
     MCP_HTTP_HOST=0.0.0.0 \
     MCP_HTTP_PORT=8000 \

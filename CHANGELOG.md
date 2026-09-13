@@ -7,9 +7,7 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
-## [Unreleased]
-
-### 2.3.0 candidate
+## [2.3.0] - 2026-09-13
 
 - `compare_browser_snapshot(handoff_id)` exposes the retained browser viewport as
   standard MCP image content for native-vision clients. The handle is bound to the

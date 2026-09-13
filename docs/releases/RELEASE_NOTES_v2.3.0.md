@@ -16,6 +16,8 @@ card verification stricter about which offer is being checked.
 - Yandex verification can require the search-row `sku_id`, preventing a card for
   a different family offer from being presented as a live price delta.
 - Stored wire baselines now cover compare, decision, and unified profiles.
+- HTTP containers now require `MCP_HTTP_AUTH_TOKEN` and `MCP_HTTP_TENANT_ID` for
+  their non-loopback bind; Compose passes these through mandatory substitutions.
 
 ## Evidence and limits
 
@@ -29,4 +31,3 @@ card verification stricter about which offer is being checked.
 
 Contributors are credited in `CONTRIBUTORS.md`; this release contains maintainer
 work and the continued contributions already listed there.
-

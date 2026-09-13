@@ -8,17 +8,24 @@
 # what this file sets up.)
 #
 # SECURITY: every port below is published as "127.0.0.1:PORT:PORT", so it is
-# reachable only from the host, not the LAN. These servers have NO built-in
-# auth — the tools are read-only, but an open port is still an unauthenticated
-# scraper anyone who can reach it may drive. To expose one deliberately, put an
-# authenticating reverse proxy in front and point IT at the published port;
-# do not change these to 0.0.0.0:PORT.
+# reachable only from the host, not the LAN. The runtime also requires a bearer
+# token and tenant id because the container binds beyond loopback. Supply both
+# through the environment; Compose rejects missing or empty values. For remote
+# clients, keep these host bindings and put a TLS reverse proxy in front.
 #
 # No `healthcheck:` on these services on purpose — see the HEALTHCHECK note in
 # the Dockerfile. The only HTTP route is FastMCP's streamable-HTTP /mcp
 # endpoint, which does not answer a bare GET with a plain 200, so any check we
 # could write here would flap. A real /healthz route in mcp-core is the fix; it
 # is a code change in packages/, out of scope for this file.
+
+x-http-environment: &http-environment
+  MCP_TRANSPORT: http
+  MCP_HTTP_HOST: 0.0.0.0 # inside the container; published ports stay on host loopback
+  MCP_HTTP_PORT: 8000
+  MCP_HTTP_PATH: /mcp
+  MCP_HTTP_AUTH_TOKEN: ${MCP_HTTP_AUTH_TOKEN:?Set MCP_HTTP_AUTH_TOKEN to a strong bearer token}
+  MCP_HTTP_TENANT_ID: ${MCP_HTTP_TENANT_ID:?Set MCP_HTTP_TENANT_ID for this single-tenant deployment}
 
 services:
   # START HERE. marketplace-mcp is the unified server: every source's tools in
@@ -32,10 +39,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["marketplace-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0 # inside the container; the host binding below is what gates access
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # Chrome sidecar on this compose network:
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
@@ -48,10 +52,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["wb-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0 # inside the container; the host binding below is what gates access
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
     ports:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
@@ -61,10 +62,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["yandex-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
     ports:
       - "127.0.0.1:8001:8000"
     restart: unless-stopped
@@ -74,10 +72,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["detmir-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       DETMIR_REGION: RU-MOW
     ports:
       - "127.0.0.1:8002:8000"
@@ -102,10 +97,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["ozon-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # Chrome sidecar on this compose network:
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
@@ -140,10 +132,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["avito-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -155,10 +144,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["taobao-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -170,10 +156,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["megamarket-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -185,10 +168,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["lamoda-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -200,10 +180,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["dns-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -215,10 +192,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["citilink-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -230,10 +204,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["aliexpress-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -248,10 +219,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["cian-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # CHROME_CDP_HOST: chrome
       # CHROME_CDP_PORT: "9222"
     ports:
@@ -265,10 +233,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["mpstats-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
       # MPSTATS_MP_AUTH: "eyJ0eXAi..."  # JWT from a logged-in mpstats.io plugin session
     ports:
       - "127.0.0.1:8012:8000"
@@ -296,10 +261,7 @@ services:
     image: ru-marketplace-mcp:2.3.0
     command: ["compare-mcp"]
     environment:
-      MCP_TRANSPORT: http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
+      <<: *http-environment
     ports:
       - "127.0.0.1:8004:8000"
     restart: unless-stopped

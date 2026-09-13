@@ -14,6 +14,8 @@ from fastmcp.exceptions import ToolError
 from ozon_connector.models_output import OzonCardResponse
 from wb_connector import server as wb
 from wb_connector.models_output import WbCardItem, WbCardResponse
+from yandex_connector import ssr as yandex_ssr
+from yandex_connector.models_output import YandexProduct, YandexSearchResponse
 
 
 async def test_wb_price_and_identity_use_the_same_requested_fixture_row(monkeypatch):
@@ -137,3 +139,72 @@ async def test_yandex_matching_variant_can_verify_price(monkeypatch):
         "yandex_market", "198679568", expected_price_rub=2004, expected_variant_id="4668084807"
     )
     assert result["price_verification"]["matches"] is True
+
+
+async def test_yandex_live_fixture_variant_survives_comparison(monkeypatch):
+    fixture = Path(__file__).parents[2] / "yandex-connector/tests/fixtures/search_kettle.html"
+    items = yandex_ssr.parse_search(fixture.read_text(encoding="utf-8"))["items"]
+    row = next(item for item in items if item["product_id"] == "198679568")
+
+    async def search(**kwargs):
+        return YandexSearchResponse(items=[YandexProduct(**row)])
+
+    monkeypatch.setattr(server, "SOURCES", {"yandex_market": SimpleNamespace(yandex_search=search)})
+    result = await server.compare_prices(query="чайник", sources=["yandex_market"])
+    assert result.cheapest.variant_id == "4668084807"
+    assert result.cheapest.price_rub == 2004
+
+
+def test_dedupe_keeps_distinct_known_variants_of_same_product():
+    from compare_connector.models_output import MarketOffer
+
+    variants = [
+        MarketOffer(source="yandex_market", product_id="198679568", variant_id=sku) for sku in ("243", "245", "243")
+    ]
+    assert [offer.variant_id for offer in server._dedupe(variants)] == ["243", "245"]
+
+
+@pytest.mark.parametrize(
+    "source,value",
+    [
+        ("wildberries", "https://123.example/catalog/456/detail.aspx"),
+        ("wildberries", "https://www.wildberries.ru/catalog/x/detail.aspx?nm=123"),
+        ("wildberries", "item-123"),
+        ("wildberries", "-123"),
+        ("detsky_mir", "https://detmir.ru.evil.invalid/product/index/id/123/"),
+        ("detsky_mir", "0"),
+    ],
+)
+def test_numeric_card_identifier_does_not_pick_unrelated_digits(source, value):
+    with pytest.raises(ToolError, match="positive numeric id"):
+        server._numeric_card_id(source, value)
+
+
+async def test_detmir_canonical_url_dispatches_requested_id(monkeypatch):
+    async def card(*, product_id):
+        assert product_id == 123
+        return {"product": {"product_id": product_id, "price_rub": 500}}
+
+    monkeypatch.setattr(server, "SOURCES", {"detsky_mir": SimpleNamespace(detmir_card=card)})
+    result = await server.compare_verify_offer(
+        "detsky_mir", "https://www.detmir.ru/product/index/id/123/?tracking=9", 500
+    )
+    assert result["price_verification"]["matches"] is True
+
+
+@pytest.mark.parametrize(
+    "source,record",
+    [
+        ("wildberries", {"items": [{"nm_id": 123, "price_rub": 100}, {"nm_id": 123, "price_rub": 200}]}),
+        ("detsky_mir", {"product": {"product_id": 999, "price_rub": 100}}),
+    ],
+)
+async def test_ambiguous_or_wrong_record_never_verifies_price(monkeypatch, source, record):
+    async def card(**kwargs):
+        return record
+
+    tool_name = server._CARD_TOOL_NAMES[source]
+    monkeypatch.setattr(server, "SOURCES", {source: SimpleNamespace(**{tool_name: card})})
+    result = await server.compare_verify_offer(source, "123", 100, ProductIdentity())
+    assert result["price_verification"]["matches"] is None
+    assert result["identity_verification"]["match"]["status"] == "unknown"
