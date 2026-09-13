@@ -4,13 +4,13 @@
     "compare-mcp": {
       "script": "compare-mcp",
       "tool_count": 4,
-      "wire_tokens": 1816,
-      "latency_ms": 2706.4,
-      "schema_sha256": "ec75910a4c462e90a7bfb39531fab4e1d1e4edafb76bb4efceb958ecf40ee99b",
+      "wire_tokens": 2023,
+      "latency_ms": 1721.9,
+      "schema_sha256": "1a86ba7d05a2da14a588b5cbf3c6553a06c1e9dee7bfc992ed755b48df89dd51",
       "tools": [
         {
           "name": "compare_browser_snapshot",
-          "tokens": 265
+          "tokens": 370
         },
         {
           "name": "compare_prices",
@@ -22,20 +22,20 @@
         },
         {
           "name": "compare_verify_offer",
-          "tokens": 592
+          "tokens": 694
         }
       ]
     },
     "decision-mcp": {
       "script": "decision-mcp",
       "tool_count": 5,
-      "wire_tokens": 2071,
-      "latency_ms": 2163.7,
-      "schema_sha256": "b2c52ab6e9b6372ddc0f649f590e0ead77de05ba401ac7d138ff69bb01f112de",
+      "wire_tokens": 2278,
+      "latency_ms": 1720.7,
+      "schema_sha256": "2f230ff34a3e15fda8491614fdb12a46a868e27fa180a03840e30b4ad6f08d4a",
       "tools": [
         {
           "name": "compare_browser_snapshot",
-          "tokens": 265
+          "tokens": 370
         },
         {
           "name": "compare_prices",
@@ -47,7 +47,7 @@
         },
         {
           "name": "compare_verify_offer",
-          "tokens": 592
+          "tokens": 694
         },
         {
           "name": "decision_inspect",
@@ -58,9 +58,9 @@
     "marketplace-mcp": {
       "script": "marketplace-mcp",
       "tool_count": 40,
-      "wire_tokens": 16342,
-      "latency_ms": 1998.0,
-      "schema_sha256": "324fdf63fe5236dabf6232e884d336c966fbe471453c6514471935c31c6ce012",
+      "wire_tokens": 16549,
+      "latency_ms": 1793.6,
+      "schema_sha256": "2f22553e7ad814641ffba1ac877ca35451c425203ecf362ac83f5c689a7e3870",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -100,7 +100,7 @@
         },
         {
           "name": "compare_browser_snapshot",
-          "tokens": 265
+          "tokens": 370
         },
         {
           "name": "compare_prices",
@@ -112,7 +112,7 @@
         },
         {
           "name": "compare_verify_offer",
-          "tokens": 592
+          "tokens": 694
         },
         {
           "name": "detmir_card",
