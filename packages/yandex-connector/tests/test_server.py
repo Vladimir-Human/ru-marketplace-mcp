@@ -264,6 +264,46 @@ async def test_card_raises_drift_when_no_title_is_found(monkeypatch):
     assert error_payload(excinfo.value)["error"] == "parser_drift"
 
 
+async def test_card_empty_shell_is_not_reported_as_parser_drift(monkeypatch):
+    """The live 2026-09-13 hollow frame: a retryable upstream condition.
+
+    Reporting it as parser_drift would page a maintainer about parsers that
+    are fine (and fail `marketplace-mcp doctor` with exit 1), while the real
+    state of the world is Yandex serving the product frame with no product
+    inside — degraded serving or a delisting, neither of which is a code bug.
+    """
+    stub_html(monkeypatch, {"/product/": load("card_empty_shell.html")})
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.yandex_card(product_id="4315891968")
+
+    payload = error_payload(excinfo.value)
+    assert payload["error"] == "transport_down"
+    assert payload["retryable"] is True
+    assert "empty_product_shell" in payload["message"]
+    assert "4315891968" in payload["message"]
+
+
+async def test_card_renamed_field_families_still_report_drift(monkeypatch):
+    """Drift stays reserved for pages that reshaped known field families.
+
+    Same missing title as the hollow frame, but the collections are populated:
+    the state is there and no longer understood — a maintainer must look.
+    """
+    html = (
+        '<noframes data-apiary="patch">{"collections":{"pageParams":{"current":'
+        '{"id":"current","pageId":"market:product","params":{"productId":"42"}}}}}</noframes>'
+        '<noframes data-apiary="patch">{"collections":{"titleV2":{"t1":{"titleRenamed":"Товар"}},'
+        '"price":{"p1":{"mainPriceRenamed":{}}}}}</noframes>'
+    )
+    stub_html(monkeypatch, {"/product/": html})
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.yandex_card(product_id="42")
+
+    assert error_payload(excinfo.value)["error"] == "parser_drift"
+
+
 # --------------------------------------------------------------- selfcheck ----
 
 
@@ -314,6 +354,45 @@ async def test_selfcheck_skips_card_when_search_yields_no_id(monkeypatch):
 
     assert result.checks["card"].state == "inconclusive"
     assert "skipped" in result.checks["card"].detail
+
+
+async def test_selfcheck_card_shell_is_inconclusive_not_drift(monkeypatch):
+    """Doctor must not page anyone (exit 1) over a hollow serving frame.
+
+    The 2026-09-13 canary reported drift_detected on exactly this page; the
+    product was alive in search the whole time and the parsers were fine.
+    """
+    stub_html(
+        monkeypatch,
+        {"/search": load("search_washer.html"), "/product/": load("card_empty_shell.html")},
+    )
+
+    result = await server.yandex_selfcheck()
+
+    assert result.checks["search"].state == "healthy"
+    assert result.checks["card"].state == "inconclusive"
+    assert "empty_product_shell" in result.checks["card"].detail
+    assert any("hollow" in note for note in result.checks["card"].notes)
+    assert result.status == "inconclusive"
+
+
+async def test_selfcheck_ldjson_only_search_is_weak_not_healthy(monkeypatch):
+    """A search read only through the schema.org fallback proves nothing about
+    the SSR parsers, and its card probe id inherits that weakness — report it
+    as inconclusive(ok_ldjson_only), never healthy (2026-09-13 canary gap)."""
+    html = """<html><body><script type="application/ld+json">
+    {"@type":"ItemList","itemListElement":[{"item":{"name":"X",
+     "url":"https://market.yandex.ru/product/763970960","offers":{"price":100}}}]}
+    </script></body></html>"""
+    stub_html(monkeypatch, {"/search": html, "/product/": load("card_washer.html")})
+
+    result = await server.yandex_selfcheck()
+
+    assert result.checks["search"].state == "inconclusive"
+    assert "ok_ldjson_only" in result.checks["search"].detail
+    assert result.checks["card"].state == "healthy"
+    assert any("degraded" in note for note in result.checks["card"].notes)
+    assert result.status == "inconclusive"
 
 
 def _drifted_values_search_html() -> str:

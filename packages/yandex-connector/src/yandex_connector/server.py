@@ -440,6 +440,27 @@ async def yandex_card(
     url = f"{SITE_BASE}/product/{pid}"
     html = await _fetch_html(url, "yandex_card", ctx)
     parsed = ssr.parse_card(html)
+    if parsed["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL:
+        # Tri-state doctrine (precedent: taobao's login-wall handling): the page
+        # arrived but carries no product at all — the known field families did
+        # not change shape, they are absent. Live-verified 2026-09-13: the
+        # product was the first hit of its own search while its card answered as
+        # a hollow frame (pageId market:product, zero product state) over
+        # anonymous HTTP and as SmartCaptcha in a real browser. That is degraded
+        # serving or a delisted product — inconclusive and retryable, never
+        # parser_drift, which would page a maintainer about parsers that are
+        # fine. not_found stays reserved for what Yandex itself reports as gone
+        # (HTTP 404 above); a 200 frame with no not-found marker proves nothing.
+        raise_tool_error(
+            TransportDownError(
+                f"yandex_card: empty_product_shell for id={pid} — Yandex served the product "
+                "page frame (pageId market:product) with zero product state, no schema.org "
+                "Product and no captcha/not-found markers: degraded serving or a delisted "
+                "product; the parsers are not implicated",
+                provider="yandex",
+                status_code=200,
+            )
+        )
     _guard_parse_status(parsed["status"], "yandex_card")
 
     if not parsed.get("title"):
@@ -521,7 +542,12 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
 
     Never raises ToolError: each probe catches its own failures — transport
     blocks, geo restrictions and captchas map to inconclusive entries,
-    reached-but-unparseable pages to drift entries.
+    reached-but-unparseable pages to drift entries. Two verdicts are deliberately
+    NOT drift: a hollow product frame (page served, pageId market:product, zero
+    product state) is degraded serving and maps to inconclusive, and a search
+    that only answered through the ld+json fallback is weak (inconclusive,
+    reason ok_ldjson_only), never healthy — its probe id for the card is less
+    reliable and the SSR parsers were never exercised.
     """
     log_event("yandex_selfcheck.start")
     if ctx is not None:
@@ -529,18 +555,39 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
 
     checks: dict[str, YandexSelfcheckEntry] = {}
     probe_product_id: str | None = None
+    probe_id_degraded = False
 
     # 1) Search — also supplies a live product id for the card probe, so the
     #    canary never depends on a hardcoded SKU that may be delisted.
     try:
         search = await yandex_search(query=_settings.selfcheck_query, page=1, limit=5, ctx=None)
         priced = [item for item in search.items if item.price_rub or item.price_with_plus]
-        healthy = bool(search.items) and bool(priced)
-        checks["search"] = YandexSelfcheckEntry(
-            state="healthy" if healthy else "drift",
-            detail=f"returned={search.returned} total={search.total_available} priced={len(priced)}",
-            notes=[] if healthy else ["search parsed but produced no priced items"],
-        )
+        if search.meta.extraction != "ssr":
+            # ok_ldjson_only: the widget state was unreadable and the rows came
+            # from the schema.org fallback. A page the parsers could not read is
+            # not a parser verdict in either direction — report weak, never
+            # healthy. Live example 2026-09-13: search answered ld+json-only
+            # (every product collection missing from the SSR state) while the
+            # card for its first item arrived as a hollow frame.
+            probe_id_degraded = True
+            checks["search"] = YandexSelfcheckEntry(
+                state="inconclusive",
+                detail=(
+                    "ok_ldjson_only: widget state unreadable, schema.org fallback carried "
+                    f"returned={search.returned} total={search.total_available} priced={len(priced)}"
+                ),
+                notes=[
+                    "degraded extraction: everyday prices, seller and brand are unavailable",
+                    "the card probe id from this fallback is less reliable",
+                ],
+            )
+        else:
+            healthy = bool(search.items) and bool(priced)
+            checks["search"] = YandexSelfcheckEntry(
+                state="healthy" if healthy else "drift",
+                detail=f"returned={search.returned} total={search.total_available} priced={len(priced)}",
+                notes=[] if healthy else ["search parsed but produced no priced items"],
+            )
         if search.items:
             probe_product_id = search.items[0].product_id or None
     except Exception as exc:
@@ -557,18 +604,31 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
         try:
             card = await yandex_card(product_id=probe_product_id, include_reviews=True, ctx=None)
             healthy = bool(card.title) and (card.price_rub is not None or card.price_with_plus is not None)
+            notes = [] if healthy else ["card parsed but carried no title or price"]
+            if probe_id_degraded:
+                notes.append("probe id came from the degraded ld+json search fallback")
             checks["card"] = YandexSelfcheckEntry(
                 state="healthy" if healthy else "drift",
                 detail=f"title={card.title[:30]!r} price={card.price_rub} reviews={len(card.reviews)}",
-                notes=[] if healthy else ["card parsed but carried no title or price"],
+                notes=notes,
             )
         except Exception as exc:
             text = _redact(str(exc))
             drift = "parser_drift" in text
+            if drift:
+                notes = ["SSR structure changed"]
+            elif "empty_product_shell" in text:
+                notes = [
+                    "product frame arrived hollow: degraded serving or a delisted product — parsers not implicated"
+                ]
+            else:
+                notes = ["transport or captcha — parsers untested"]
+            if probe_id_degraded:
+                notes.append("probe id came from the degraded ld+json search fallback")
             checks["card"] = YandexSelfcheckEntry(
                 state="drift" if drift else "inconclusive",
                 detail=text[:200],
-                notes=["SSR structure changed"] if drift else ["transport or captcha — parsers untested"],
+                notes=notes,
             )
     else:
         checks["card"] = YandexSelfcheckEntry(

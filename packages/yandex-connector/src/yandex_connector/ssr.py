@@ -27,6 +27,15 @@ here, since the payload is JSON once located.
 Verified against live pages Jul 2026 (search, cards across categories, empty
 results, pagination, A/B duplicates) and re-verified live Sep 2026 (search
 price semantics against the product card for the same offer).
+
+**Hollow frames.** Live-verified 2026-09-13 (residential RU IP): Yandex can
+serve a product page as an empty frame — ``pageId: market:product`` with every
+product collection empty, no schema.org Product and no captcha marker — while
+the product is alive in search, and the same URL shows SmartCaptcha to a real
+browser. ``parse_card`` reports that page as ``EMPTY_PRODUCT_SHELL``: degraded
+serving, never parser drift (the field families did not change shape; they are
+absent). The same day, search pages arrived without the widget-state bundle at
+all, readable only through the schema.org fallback.
 """
 
 from __future__ import annotations
@@ -60,6 +69,10 @@ class ParseStatus:
     EMPTY = "empty"
     NO_PRODUCTS_FOUND = "no_products_found"
     CAPTCHA = "captcha"
+    # The product page frame arrived with zero product state inside. That is a
+    # serving/session condition (degraded or challenge-gated serving, or a
+    # delisted product), not a parser verdict — see _empty_product_shell.
+    EMPTY_PRODUCT_SHELL = "empty_product_shell"
 
 
 def looks_like_captcha(html: str) -> bool:
@@ -302,6 +315,59 @@ def _first_dict(collection: Any) -> dict[str, Any]:
             if isinstance(value, dict):
                 return value
     return {}
+
+
+# The pageParams.pageId Yandex sets when it believes it is rendering a product
+# page. Present even on a hollow frame, which is what makes the shell verdict
+# more than "we found nothing": Yandex itself claims this is a product render.
+_PRODUCT_PAGE_ID = "market:product"
+
+# Collections a real product card populates at least one of. Every one of them
+# empty while the page claims to be a product render is the hollow-frame
+# signature (live capture 2026-09-13, /product/4315891968).
+_CARD_PRODUCT_COLLECTIONS = (
+    "allPrices",
+    "businessRatingStats",
+    "mediaItem",
+    "offer",
+    "price",
+    "productServiceSnippets",
+    "reviews",
+    "shopInfo",
+    "titleV2",
+)
+
+
+def _empty_product_shell(merged: dict[str, Any], fallback: dict[str, Any]) -> bool:
+    """True when the page is a product frame carrying no product at all.
+
+    Live-verified 2026-09-13 from a residential RU IP: ``/product/4315891968``
+    — a product alive enough to be the first hit of its own search — answered
+    HTTP 200 with ``pageParams {pageId: "market:product", productId:
+    "4315891968"}`` while every product-bearing collection was empty and no
+    schema.org Product was embedded. The same URL in a real browser hit
+    SmartCaptcha. The known field families did not change shape; they are
+    absent. Under the tri-state doctrine that is degraded serving
+    (inconclusive), never parser drift — and without a 404 or a not-found
+    marker it is never not_found either, because the product may well exist.
+
+    Captcha pages never reach this check — ``parse_card`` short-circuits them.
+    ``fallback`` is the ld+json Product dict; a page that still embeds one is
+    not hollow (the degraded card path fills title and price from it).
+    """
+    params = _first_dict(merged.get("pageParams"))
+    if params.get("pageId") != _PRODUCT_PAGE_ID:
+        return False
+    if fallback:
+        return False
+    return all(not _as_dict(merged.get(name)) for name in _CARD_PRODUCT_COLLECTIONS)
+
+
+def _shell_product_id(merged: dict[str, Any]) -> str:
+    """The productId echoed by pageParams on a product frame, if present."""
+    params = _as_dict(_first_dict(merged.get("pageParams")).get("params"))
+    product_id = params.get("productId")
+    return str(product_id) if product_id else ""
 
 
 def _picture_url(node: Any) -> str:
@@ -648,7 +714,7 @@ def parse_card(html: str) -> dict[str, Any]:
     if not stars:
         stars = _stars_from_distribution(reviews_collection.get("distribution"))
 
-    return {
+    result = {
         "status": ParseStatus.OK,
         "product_id": str(product_id) if product_id else "",
         "sku_id": str(baobab.get("skuId") or fallback.get("sku") or ""),
@@ -669,3 +735,15 @@ def parse_card(html: str) -> dict[str, Any]:
         "rating_stars": stars,
         "reviews": parse_reviews(merged),
     }
+    if (
+        not result["title"]
+        and result["price_rub"] is None
+        and result["price_with_plus"] is None
+        and _empty_product_shell(merged, fallback)
+    ):
+        # A hollow frame, not a card: report it as itself so the caller can
+        # classify it as degraded serving (inconclusive) instead of blaming
+        # the parsers (drift). pageParams still echoes the requested id.
+        result["status"] = ParseStatus.EMPTY_PRODUCT_SHELL
+        result["product_id"] = result["product_id"] or _shell_product_id(merged)
+    return result

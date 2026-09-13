@@ -155,6 +155,42 @@ async def test_yandex_live_fixture_variant_survives_comparison(monkeypatch):
     assert result.cheapest.price_rub == 2004
 
 
+async def test_yandex_empty_shell_never_becomes_a_verified_card(monkeypatch):
+    """The 2026-09-13 hollow frame, end to end through the real yandex server.
+
+    Verification must surface the connector's retryable transport_down
+    (empty_product_shell) as-is — never a card with invented prices, and never
+    a silent pass with matches=None.
+    """
+    from yandex_connector import server as yandex_server
+
+    fixture = Path(__file__).parents[2] / "yandex-connector/tests/fixtures/card_empty_shell.html"
+    html = fixture.read_text(encoding="utf-8")
+
+    async def fake_fetch(url, label, ctx=None):
+        return html
+
+    monkeypatch.setattr(yandex_server, "_fetch_html", fake_fetch)
+    monkeypatch.setattr(
+        server,
+        "SOURCES",
+        {"yandex_market": SimpleNamespace(yandex_card=yandex_server.yandex_card)},
+    )
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.compare_verify_offer(
+            "yandex_market",
+            "4315891968",
+            expected_price_rub=11329.0,
+            expected_variant_id="103796664836",
+        )
+
+    payload = json.loads(str(excinfo.value))
+    assert payload["error"] == "transport_down"
+    assert payload["retryable"] is True
+    assert "empty_product_shell" in payload["message"]
+
+
 def test_dedupe_keeps_distinct_known_variants_of_same_product():
     from compare_connector.models_output import MarketOffer
 

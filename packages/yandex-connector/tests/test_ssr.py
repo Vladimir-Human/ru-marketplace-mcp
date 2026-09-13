@@ -266,6 +266,79 @@ def test_card_survives_an_unparseable_page():
     assert card["price_rub"] is None
 
 
+# ------------------------------------------------------- hollow product frame ----
+
+
+def test_card_empty_shell_from_the_live_capture():
+    """Real 2026-09-13 capture: the product is alive, the frame is hollow.
+
+    Yandex served /product/4315891968 to anonymous HTTP as a product page
+    (pageParams pageId market:product, the id echoed back) with every product
+    collection declared and empty and no schema.org Product — while the same
+    product was the first hit of its own search and the same URL showed
+    SmartCaptcha in a real browser. Degraded serving must be reported as the
+    hollow frame it is, never as a verdict about the parsers.
+    """
+    card = ssr.parse_card(load("card_empty_shell.html"))
+
+    assert card["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL
+    assert card["product_id"] == "4315891968"  # recovered from pageParams
+    assert card["title"] == ""
+    assert card["price_rub"] is None
+    assert card["price_with_plus"] is None
+    assert card["reviews"] == []
+
+
+def test_synthetic_product_frame_with_empty_collections_is_a_shell():
+    html = (
+        '<noframes data-apiary="patch">{"collections":{"pageParams":{"current":'
+        '{"id":"current","pageId":"market:product","params":{"productId":"42"}}}}}</noframes>'
+        '<noframes data-apiary="patch">{"collections":{"titleV2":{},"price":{},"allPrices":{},'
+        '"offer":{},"productServiceSnippets":{},"shopInfo":{},"mediaItem":{},"reviews":{},'
+        '"businessRatingStats":{}}}</noframes>'
+    )
+
+    card = ssr.parse_card(html)
+
+    assert card["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL
+    assert card["product_id"] == "42"
+
+
+def test_shell_verdict_requires_the_product_page_id():
+    """An empty state that does not claim to be a product render is just an
+    unparseable page — it stays OK so the tool layer can report drift."""
+    html = (
+        '<noframes data-apiary="patch">{"collections":{"pageParams":{"current":'
+        '{"id":"current","pageId":"market:search","params":{}}},"titleV2":{},"price":{}}}</noframes>'
+    )
+
+    assert ssr.parse_card(html)["status"] == ssr.ParseStatus.OK
+
+
+def test_renamed_field_families_are_a_parser_question_not_a_shell():
+    """Shape drift with populated collections must never read as hollow.
+
+    The tri-state distinction: a field family that changed shape is drift (a
+    maintainer must look); a frame that carries no product at all is degraded
+    serving (inconclusive). Both pages lack a parseable title.
+    """
+    html = (
+        '<noframes data-apiary="patch">{"collections":{"pageParams":{"current":'
+        '{"id":"current","pageId":"market:product","params":{"productId":"42"}}}}}</noframes>'
+        '<noframes data-apiary="patch">{"collections":{"titleV2":{"t1":{"titleRenamed":"Товар"}},'
+        '"price":{"p1":{"mainPriceRenamed":{"price":{"value":100}}}}}}</noframes>'
+    )
+
+    card = ssr.parse_card(html)
+
+    assert card["status"] == ssr.ParseStatus.OK
+    assert card["title"] == ""  # the family is there but no longer understood
+
+
+def test_a_real_card_without_a_rating_is_never_a_shell(card_no_rating):
+    assert ssr.parse_card(card_no_rating)["status"] == ssr.ParseStatus.OK
+
+
 # ----------------------------------------------------------------- merging ----
 
 
