@@ -14,6 +14,13 @@ against the product card for the same offer):
 
 Behaviours that shape this code:
 
+**Three extraction paths, reported in ``meta.extraction``.** ``ssr`` reads the
+widget-state collections (richest: brand, seller, stock). Since 2026-09-12 the
+anonymous search page ships no collections; its first screen of snippets still
+carries ``data-zone-data`` payloads with both prices, title, sku and rating —
+``zone`` reads those and is a first-class path (no brand, one screen deep).
+``ld+json`` is the last resort: schema.org markup with the Plus price only.
+
 **Two prices, always.** Yandex leads with a subscriber price ("с Плюсом") that
 runs 25-30% below the everyday price. Both are reported separately, because
 quoting only the subscriber price misstates what most buyers pay. A third
@@ -275,7 +282,9 @@ async def yandex_search(
     title, brand, seller, price_rub (everyday — None when absent, never 0),
     price_with_plus, price_old_rub (struck-through reference), currency,
     rating, rating_count, in_stock, is_express, url, image. Zero results is
-    NOT an error — it is reported via meta.warnings.
+    NOT an error — it is reported via meta.warnings. meta.extraction names the
+    path: 'ssr' (full widget state), 'zone' (first-screen snippet payloads —
+    both prices, no brand) or 'ld+json' (degraded, Plus price only).
 
     ## Error Format
 
@@ -344,6 +353,13 @@ async def yandex_search(
     if items and all(not p.title for p in items):
         warnings.append("no_titles_on_page: every product lacks a title — likely SSR drift")
 
+    if parsed["status"] == ssr.ParseStatus.OK_ZONE:
+        # No collection bundle, but the first screen of snippets carried its
+        # data-zone-data payloads: both prices, title, sku, rating, seller
+        # (when shipped). Brand is unresolvable (vendorId only) and the page
+        # is one screen deep — a first-class path, not a degraded one, so it
+        # stays healthy; the extraction tag tells callers what they got.
+        extraction = "zone"
     if parsed["status"] == ssr.ParseStatus.OK_LDJSON_ONLY:
         # The widget state was unreadable but schema.org markup carried the first
         # screen — usable, with fewer fields and only the subscriber price.
@@ -562,7 +578,10 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
     try:
         search = await yandex_search(query=_settings.selfcheck_query, page=1, limit=5, ctx=None)
         priced = [item for item in search.items if item.price_rub or item.price_with_plus]
-        if search.meta.extraction != "ssr":
+        # "ssr" and "zone" are both parser verdicts: the collection parser or the
+        # first-screen zone parser read real product state and the rows carry
+        # everyday prices. Only the schema.org fallback is weak.
+        if search.meta.extraction not in ("ssr", "zone"):
             # ok_ldjson_only: the widget state was unreadable and the rows came
             # from the schema.org fallback. A page the parsers could not read is
             # not a parser verdict in either direction — report weak, never
@@ -583,10 +602,16 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
             )
         else:
             healthy = bool(search.items) and bool(priced)
+            notes = [] if healthy else ["search parsed but produced no priced items"]
+            if search.meta.extraction == "zone":
+                notes.append("first-screen zone payloads (collections absent): brand unavailable, one screen deep")
             checks["search"] = YandexSelfcheckEntry(
                 state="healthy" if healthy else "drift",
-                detail=f"returned={search.returned} total={search.total_available} priced={len(priced)}",
-                notes=[] if healthy else ["search parsed but produced no priced items"],
+                detail=(
+                    f"extraction={search.meta.extraction} returned={search.returned} "
+                    f"total={search.total_available} priced={len(priced)}"
+                ),
+                notes=notes,
             )
         if search.items:
             probe_product_id = search.items[0].product_id or None
