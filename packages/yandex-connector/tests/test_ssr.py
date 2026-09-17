@@ -431,3 +431,176 @@ def test_number_coercion_never_returns_or_raises_on_non_finite_values():
     assert ssr._to_number("1e400") is None
     assert ssr._to_number("9" * 400) is None
     assert ssr._to_int(float("inf")) is None
+
+
+# ------------------------------------------------- zone payloads (SERP) ----
+# Since 2026-09-12 the anonymous search page carries no collection bundle at
+# all: the products moved to client-side lazy loading. The first screen of
+# snippets is still server-rendered, and every productSnippet div carries its
+# own analytics payload in a data-zone-data attribute — the same baobabPayload
+# the collections used to deliver, minus the joins. These tests pin that path.
+
+
+@pytest.fixture(scope="module")
+def search_telefon_zone() -> str:
+    return load("search_telefon_zone.html")
+
+
+def test_zone_search_reads_the_first_screen_when_collections_are_absent(search_telefon_zone):
+    """The post-2026-09-12 anonymous page: no collections, rows still there.
+
+    Before this path existed the page fell through to the schema.org list,
+    which carries the Plus price only — thin data for a page that in fact
+    renders the full first screen.
+    """
+    result = ssr.parse_search(search_telefon_zone)
+
+    assert result["status"] == ssr.ParseStatus.OK_ZONE
+    assert len(result["items"]) == 3
+    assert all(item["source"] == "zone" for item in result["items"])
+
+
+def test_zone_search_never_quotes_the_plus_price_as_the_everyday_price(search_telefon_zone):
+    """The core price invariant on the zone path.
+
+    Re-read from this capture (2026-09-13, anonymous, search «телефон»): the
+    Realme row printed 12450 struck through, 11329 as the everyday price
+    (additionalPrices[withDiscount], the figure the card's prices.price row
+    mirrors) and 11102 as the green Plus price. The Plus figure is the one
+    rendered big in the snippet DOM, so it is the value a naive reader would
+    quote as the price.
+    """
+    realme = ssr.parse_search(search_telefon_zone)["items"][0]
+
+    assert realme["product_id"] == "4315891968"
+    assert realme["price_rub"] == 11329.0
+    assert realme["price_with_plus"] == 11102.0
+    assert realme["price_old_rub"] == 12450.0
+    assert realme["price_with_plus"] < realme["price_rub"] < realme["price_old_rub"]
+
+
+def test_zone_search_takes_the_ids_from_the_offer_not_the_family(search_telefon_zone):
+    """product_id is oskuId (what /card and /product accept), sku_id marketSku.
+
+    The Samsung row proves the two differ: the row links to product 4680656365
+    while the offer's marketSku is 4696420378. Collapsing them would silently
+    make a card lookup address a different offer.
+    """
+    samsung = ssr.parse_search(search_telefon_zone)["items"][2]
+
+    assert samsung["product_id"] == "4680656365"
+    assert samsung["sku_id"] == "4696420378"
+    assert samsung["product_id"] in samsung["url"]
+    assert samsung["price_rub"] == 19092.0
+    assert samsung["price_with_plus"] == 18710.0
+
+
+def test_zone_search_reports_the_seller_only_when_the_page_ships_one(search_telefon_zone):
+    """Rows without a shop signal report an empty seller, never a guessed one."""
+    items = ssr.parse_search(search_telefon_zone)["items"]
+
+    assert items[0]["seller"] == "ОНЛАЙНТРЕЙД.РУ"
+    assert items[1]["seller"] == ""
+
+
+def test_zone_snippets_ignore_tiles_that_are_not_offers():
+    """The same zone name is reused for non-product tiles on some pages."""
+    html = (
+        '<div data-zone-name="productSnippet" data-zone-data="{&quot;type&quot;:&quot;banner&quot;,&quot;title&quot;:&quot;Ad&quot;}">'
+        '<div data-zone-name="productSnippet" data-zone-data="{&quot;type&quot;:&quot;offer&quot;,&quot;oskuId&quot;:1,&quot;price&quot;:100}">'
+    )
+
+    payloads = ssr.zone_snippets(html)
+
+    assert [p["oskuId"] for p in payloads] == [1]
+
+
+def test_zone_snippets_skip_unparseable_payloads():
+    """One malformed payload must not abort the whole page."""
+    html = (
+        '<div data-zone-name="productSnippet" data-zone-data="{not json">'
+        '<div data-zone-name="productSnippet" data-zone-data="{&quot;type&quot;:&quot;offer&quot;,&quot;oskuId&quot;:2,&quot;price&quot;:200}">'
+    )
+
+    payloads = ssr.zone_snippets(html)
+
+    assert [p["oskuId"] for p in payloads] == [2]
+
+
+def test_zone_row_without_prices_reports_absent_not_zero():
+    """A row the page renders without a price is absent data, never 0 ."""
+    html = (
+        '<div data-zone-name="productSnippet" data-zone-data="'
+        '{&quot;type&quot;:&quot;offer&quot;,&quot;oskuId&quot;:777,&quot;title&quot;:&quot;T&quot;}">'
+    )
+
+    item = ssr.parse_zone_items(html)[0]
+
+    assert item["price_rub"] is None
+    assert item["price_with_plus"] is None
+    assert item["price_old_rub"] is None
+    assert item["product_id"] == "777"
+
+
+def test_zone_undiscounted_row_treats_the_base_price_as_the_everyday_price():
+    """With no withDiscount entry the base price is what anyone pays.
+
+    And with nothing struck through, price_old_rub stays empty rather than
+    echoing the everyday price back as a fake «old» figure.
+    """
+    html = (
+        '<div data-zone-name="productSnippet" data-zone-data="'
+        "{&quot;type&quot;:&quot;offer&quot;,&quot;oskuId&quot;:888,&quot;price&quot;:5000,"
+        '&quot;additionalPrices&quot;:[{&quot;priceType&quot;:&quot;yaBank&quot;,&quot;priceValue&quot;:4900}]}">'
+    )
+
+    item = ssr.parse_zone_items(html)[0]
+
+    assert item["price_rub"] == 5000.0
+    assert item["price_with_plus"] == 4900.0
+    assert item["price_old_rub"] is None
+
+
+def test_parse_search_prefers_zone_rows_over_the_plus_only_fallback():
+    """Cascade order: collections, then zone payloads, then schema.org.
+
+    The schema.org list is a degraded path (Plus price only, no seller), so
+    whenever the zone payloads are readable they must win.
+    """
+    html = (
+        '<script type="application/ld+json">{"@type":"ItemList","itemListElement":[{"@type":"ListItem",'
+        '"item":{"@type":"Product","@id":"https://market.yandex.ru/card/x/999","name":"LD","sku":"999",'
+        '"offers":{"@type":"Offer","price":123,"priceCurrency":"RUB"}}}]}</script>'
+        '<div data-zone-name="productSnippet" data-zone-data="'
+        "{&quot;type&quot;:&quot;offer&quot;,&quot;oskuId&quot;:999,&quot;title&quot;:&quot;Zone&quot;,"
+        '&quot;price&quot;:200,&quot;additionalPrices&quot;:[{&quot;priceType&quot;:&quot;withDiscount&quot;,&quot;priceValue&quot;:180}]}">'
+    )
+
+    result = ssr.parse_search(html)
+
+    assert result["status"] == ssr.ParseStatus.OK_ZONE
+    assert result["items"][0]["price_rub"] == 180.0
+    assert result["items"][0]["source"] == "zone"
+
+
+def test_parse_search_still_falls_back_to_schema_org_when_zone_is_missing():
+    """The fallback must survive: pages without zone payloads still read.
+
+    And it must stay honest about what it knows: schema.org carries the Plus
+    price only, so the fallback row ships ``price_with_plus`` and NO
+    ``price_rub`` key at all — it never promotes the subscriber price into the
+    everyday-price slot. Re-read from this capture with the zone attributes
+    renamed away (status ok_ldjson_only).
+    """
+    html = (
+        '<script type="application/ld+json">{"@type":"ItemList","itemListElement":[{"@type":"ListItem",'
+        '"item":{"@type":"Product","@id":"https://market.yandex.ru/card/x/999","name":"LD","sku":"999",'
+        '"offers":{"@type":"Offer","price":123,"priceCurrency":"RUB"}}}]}</script>'
+    )
+
+    result = ssr.parse_search(html)
+
+    assert result["status"] == ssr.ParseStatus.OK_LDJSON_ONLY
+    assert result["items"][0]["source"] == "ld+json"
+    assert result["items"][0]["price_with_plus"] == 123.0
+    assert "price_rub" not in result["items"][0]

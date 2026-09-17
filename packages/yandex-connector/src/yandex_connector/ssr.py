@@ -36,10 +36,23 @@ browser. ``parse_card`` reports that page as ``EMPTY_PRODUCT_SHELL``: degraded
 serving, never parser drift (the field families did not change shape; they are
 absent). The same day, search pages arrived without the widget-state bundle at
 all, readable only through the schema.org fallback.
+
+**Zone blobs (first screen).** Since 2026-09-12/13 the anonymous search page
+no longer embeds the product *collections* — Yandex moved them to client-side
+lazy loading — but the first screen of snippets is still server-rendered as
+DOM, and every ``<div data-zone-name="productSnippet">`` carries its own
+analytics payload in an HTML-escaped ``data-zone-data`` attribute: marketSku,
+oskuId, title, the base price, ``additionalPrices`` (``withDiscount`` =
+everyday, ``yaBank`` = Plus), vendor/shop ids, rating and availability. That
+is the same ``baobabPayload`` the collections used to carry, minus the joins.
+``parse_zone_items`` reads it (live capture 2026-09-13, 8 snippets on the
+anonymous page, 19 in a hydrated browser DOM), and ``parse_search`` uses it
+whenever the collections are missing — before the thinner schema.org fallback.
 """
 
 from __future__ import annotations
 
+import html as _html
 import json
 import math
 import re
@@ -49,6 +62,12 @@ from typing import Any
 _PATCH_RE = re.compile(r'<noframes data-apiary="patch">(.*?)</noframes>', re.S)
 
 _LDJSON_RE = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.S)
+
+# Opening tag of a server-rendered SERP snippet. Attribute order is not fixed
+# (class/id/data-daemon come and go), so the tag is matched on the zone name
+# and the payload is pulled out of it separately.
+_ZONE_SNIPPET_TAG_RE = re.compile(r'<[a-zA-Z][^>]*\bdata-zone-name="productSnippet"[^>]*>')
+_ZONE_DATA_ATTR_RE = re.compile(r'\bdata-zone-data="([^"]*)"')
 
 # Visible copy shown when a query genuinely matched nothing. Distinguishing "no
 # results" from "our parser broke" is the whole point of tracking it.
@@ -65,6 +84,9 @@ class ParseStatus:
     """Outcomes a parse can have, kept explicit so callers can branch on them."""
 
     OK = "ok"
+    # The collections were missing but the first screen of snippets carried its
+    # ``data-zone-data`` payloads: both prices, title, sku, rating per row.
+    OK_ZONE = "ok_zone"
     OK_LDJSON_ONLY = "ok_ldjson_only"
     EMPTY = "empty"
     NO_PRODUCTS_FOUND = "no_products_found"
@@ -255,6 +277,110 @@ def _to_int(value: Any) -> int | None:
     return int(number) if number is not None else None
 
 
+def zone_snippets(html: str) -> list[dict[str, Any]]:
+    """Raw ``data-zone-data`` payloads of the SERP's productSnippet zones.
+
+    Document order, which is the on-screen order (each payload also carries a
+    ``pos``). The attribute is HTML-escaped JSON (``&quot;``), unescaped here
+    and nowhere else; a snippet without a parseable payload is skipped, never
+    guessed at. Only ``type: offer`` payloads count — the same zone name is
+    reused for non-product tiles on some pages.
+    """
+    out: list[dict[str, Any]] = []
+    for tag_match in _ZONE_SNIPPET_TAG_RE.finditer(html):
+        attr = _ZONE_DATA_ATTR_RE.search(tag_match.group(0))
+        if attr is None:
+            continue
+        try:
+            payload = json.loads(_html.unescape(attr.group(1)))
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(payload, dict) and payload.get("type") == "offer":
+            out.append(payload)
+    return out
+
+
+def _zone_shop_name(payload: dict[str, Any]) -> str:
+    """Shop title out of the payload's ``signals`` — shipped on some rows only."""
+    for signal in _as_list(payload.get("signals")):
+        if isinstance(signal, dict) and signal.get("type") == "shop" and signal.get("title"):
+            return str(signal["title"])
+    return ""
+
+
+def parse_zone_items(html: str) -> list[dict[str, Any]]:
+    """Search rows from the first-screen snippet payloads (no collections needed).
+
+    Price semantics are the ones verified live 2026-09-11 for the identical
+    ``baobabPayload`` fields and re-read on the 2026-09-13 anonymous capture:
+
+    * ``additionalPrices[withDiscount]`` is the everyday price anyone pays
+      (it equalled the cart price and the card's ``prices.price`` row by row),
+      so it is ``price_rub``; on undiscounted rows the entry is absent and the
+      base ``price`` IS the everyday price.
+    * ``additionalPrices[yaBank]`` is the green Yandex Plus price — the figure
+      the SERP prints big and the only ₽ amount visible in the snippet DOM.
+      It is ``price_with_plus`` and is never allowed into ``price_rub``.
+    * ``price`` is the base/initial price; on discounted rows it is the
+      struck-through figure (Realme Note 60x: 12450 struck, 11329 everyday,
+      11102 Plus, badge «Скидка 11%») and rides in ``price_old_rub``.
+
+    ``product_id`` is ``oskuId`` — the id the row's own ``/card/…/{id}`` link
+    and schema.org ``url`` end in and that ``/product/{id}`` accepts;
+    ``sku_id`` is ``marketSku``. Brand cannot be resolved (only ``vendorId``
+    ships); seller comes from the ``shop`` signal when present. URL and image
+    are filled from the page's schema.org ``ItemList`` by product id, else the
+    canonical ``/product/{id}`` URL is built.
+    """
+    payloads = zone_snippets(html)
+    if not payloads:
+        return []
+
+    ldjson_by_id = {item["product_id"]: item for item in ldjson_item_list(html) if item.get("product_id")}
+
+    items: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for payload in payloads:
+        product_id = str(payload.get("oskuId") or payload.get("modelId") or "")
+        key = (product_id, str(payload.get("wareId") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        base_price = _to_number(payload.get("price"))
+        with_discount = _additional_price(payload, "withDiscount")
+        price_rub = with_discount if with_discount is not None else base_price
+        price_old = (
+            base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
+        )
+
+        rating_node = _as_dict(payload.get("rating"))
+        is_available = payload.get("isAvailable")
+        ld = ldjson_by_id.get(product_id, {})
+
+        items.append(
+            {
+                "product_id": product_id or None,
+                "sku_id": str(payload.get("marketSku") or ""),
+                "title": str(payload.get("title") or ld.get("title") or ""),
+                "brand": "",
+                "seller": _zone_shop_name(payload),
+                "price_rub": price_rub,
+                "price_with_plus": _additional_price(payload, "yaBank"),
+                "price_old_rub": price_old,
+                "currency": "RUR",
+                "rating": _to_number(rating_node.get("rating")) or ld.get("rating"),
+                "rating_count": _to_int(rating_node.get("gradesCount")) or ld.get("rating_count"),
+                "in_stock": is_available if isinstance(is_available, bool) else None,
+                "is_express": bool(payload.get("isExpress")),
+                "url": str(ld.get("url") or "") or _absolute_url(None, product_id or None),
+                "image": str(ld.get("image") or ""),
+                "source": "zone",
+            }
+        )
+    return items
+
+
 def _amount_int(node: Any) -> float | None:
     """Read a price out of the presentational ``amount.intPart`` shape.
 
@@ -414,6 +540,12 @@ def parse_search(html: str) -> dict[str, Any]:
     both carry the struck-through ``initialPrice`` 3698). The struck-through
     figure is surfaced separately as ``price_old_rub``.
 
+    When the page carries no collection bundle at all (anonymous serving since
+    2026-09-12), the rows come from the first-screen snippet payloads instead
+    (``parse_zone_items``, status ``ok_zone``) with the same price semantics;
+    only when those are missing too does the Plus-only schema.org list stand
+    in (``ok_ldjson_only``).
+
     A search row describes the SERP snippet's offer, which is not necessarily
     the offer a card for the same product id defaults to: one id covers a
     product family, and Yandex may show one member in search (REDMOND KM243,
@@ -439,6 +571,14 @@ def parse_search(html: str) -> dict[str, Any]:
     }
 
     if not collections:
+        # No collection bundle (the post-2026-09-12 anonymous page): the first
+        # screen of snippets still ships its data-zone-data payloads, which
+        # carry both prices — read those before the Plus-only schema.org list.
+        zone_items = parse_zone_items(html)
+        if zone_items:
+            result["items"] = zone_items
+            result["status"] = ParseStatus.OK_ZONE
+            return result
         fallback = ldjson_item_list(html)
         if fallback:
             result["items"] = fallback

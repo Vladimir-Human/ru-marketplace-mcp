@@ -17,13 +17,19 @@ from pydantic import BaseModel, Field
 class MetaOut(MetaOutBase):
     """Yandex reports which extraction path produced the payload.
 
-    The SSR widget state is the good path; ``ld+json`` is a degraded fallback
-    carrying far fewer fields, so a caller seeing thin data needs to know which
-    one it got rather than assuming the product simply has no price.
+    The SSR widget state is the richest path; ``zone`` reads the first-screen
+    snippet payloads (both prices, title, sku, seller, rating — no brand) when
+    the collections are missing; ``ld+json`` is a degraded fallback carrying
+    far fewer fields, so a caller seeing thin data needs to know which one it
+    got rather than assuming the product simply has no price.
     """
 
     extraction: str = Field(
-        default="", description="How data was extracted: 'ssr' (widget state) or 'ld+json' (degraded fallback)."
+        default="",
+        description=(
+            "How data was extracted: 'ssr' (widget state), 'zone' (first-screen snippet payloads, no brand) "
+            "or 'ld+json' (degraded fallback, Plus price only)."
+        ),
     )
 
 
