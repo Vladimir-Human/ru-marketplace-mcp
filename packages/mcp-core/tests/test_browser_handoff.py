@@ -81,9 +81,22 @@ async def test_missing_scope_and_headless_disable_retention(browser, monkeypatch
     assert all(page.closed for page in browser)
 
 
-def test_duration_has_hard_five_minute_cap(monkeypatch):
+def test_duration_has_hard_fifteen_minute_cap(monkeypatch):
+    """The lifetime cap moved 300 s -> 900 s with R2 (2026-09-18).
+
+    R2 aligns the retained-page lifetime with the external steel observation
+    (900 s lifetime / 600 s idle) so a compare fan-out can hold one page per
+    source long enough to be resumed. The cap is still a cap: an operator typo
+    cannot make a lease live forever, and the idle bound below only shortens a
+    lease, never extends it.
+    """
     monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_S", "999999")
-    assert handoff._duration_s() == 300
+    assert handoff._duration_s() == 900
+    assert handoff._idle_s() == 600
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_S", "120")
+    assert handoff._duration_s() == 120
+    # Idle never exceeds the lifetime it belongs to.
+    assert handoff._idle_s() == 120
 
 
 async def test_challenge_resumes_exact_page_with_new_read_and_immutable_expiry(browser):
@@ -230,14 +243,24 @@ async def test_new_policy_checked_on_resume_and_navigation_during_read_rejected(
 
 
 async def test_capacity_does_not_evict_an_existing_handoff(browser):
-    for index in range(4):
+    """The registry is bounded, and a full registry refuses rather than evicts.
+
+    The bound moved 4 -> 8 with R2 (2026-09-18): a compare fan-out over CDP
+    sources wants one retained page per source, and evicting somebody else's
+    challenge page to make room would turn a bounded resource into a race. The
+    limit is read from the module rather than hardcoded, so retuning the knob
+    cannot silently stop testing the bound.
+    """
+    limit = handoff._max_leases()
+    assert limit >= 8
+    for index in range(limit):
         await call(scope=f"session-{index}")
     with pytest.raises(handoff.HandoffBusyError):
         await call(scope="overflow")
-    assert len(browser) == 4
+    assert len(browser) == limit
     await call(scope="session-0", read=success)
     await call(scope="overflow")
-    assert len(browser) == 5
+    assert len(browser) == limit + 1
 
 
 async def test_shutdown_releases_all_pages(browser):

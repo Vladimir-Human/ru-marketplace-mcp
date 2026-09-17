@@ -10,6 +10,7 @@ import asyncio
 import math
 import os
 import secrets
+import time
 from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -24,7 +25,18 @@ Read = Callable[[PageLike], Awaitable[dict[str, Any]]]
 Challenge = Callable[[dict[str, Any]], str | None]
 Result = tuple[dict[str, Any], str | None]
 Key = tuple[str, str, str, str, str]
-_MAX_LEASES = 4
+
+# Registry size and timeouts, all operator-tunable (R2, 2026-09-18). The old
+# shape — one 300 s window and four slots — was sized for a single challenge
+# retry. A compare fan-out over CDP sources wants one retained page per source,
+# so the registry defaults to eight, and life is now bounded two ways: a lifetime
+# (how long a retained page may exist at all, never extended) and an idle bound
+# (how long it may sit untouched). The idle bound only ever shortens a lease, so
+# the documented "expiry is immutable and never extended by retries" guarantee
+# still holds.
+_DEFAULT_MAX_LEASES = 8
+_DEFAULT_IDLE_S = 600.0
+_MAX_LIFETIME_S = 900.0
 
 
 class HandoffBusyError(TransportDownError):
@@ -34,12 +46,43 @@ class HandoffBusyError(TransportDownError):
         super().__init__("Browser handoff is busy; retry the same operation later", status_code=409)
 
 
+def _env_seconds(name: str, default: float, cap: float) -> float:
+    try:
+        value = float(os.environ.get(name, "") or default)
+    except ValueError:
+        return default
+    if not math.isfinite(value) or value <= 0:
+        return default
+    return min(value, cap)
+
+
 def _duration_s() -> float:
+    """Lifetime of a retained page, in seconds (0 = retention off)."""
     try:
         value = float(os.environ.get("CHROME_CHALLENGE_HANDOFF_S", "0"))
     except ValueError:
         return 0
-    return min(value, 300) if math.isfinite(value) and value > 0 else 0
+    return min(value, _MAX_LIFETIME_S) if math.isfinite(value) and value > 0 else 0
+
+
+def _idle_s() -> float:
+    """Drop a retained page that nobody touched for this long.
+
+    Clamped to the lifetime: an idle bound longer than the page's own life would
+    be a second way of saying "never", which is how the two-timeout shape gets
+    misread.
+    """
+    lifetime = _duration_s()
+    idle = _env_seconds("CHROME_CHALLENGE_HANDOFF_IDLE_S", _DEFAULT_IDLE_S, _MAX_LIFETIME_S)
+    return min(idle, lifetime) if lifetime else idle
+
+
+def _max_leases() -> int:
+    try:
+        value = int(os.environ.get("CHROME_CHALLENGE_HANDOFF_MAX", "") or _DEFAULT_MAX_LEASES)
+    except ValueError:
+        return _DEFAULT_MAX_LEASES
+    return value if value >= 1 else _DEFAULT_MAX_LEASES
 
 
 @dataclass
@@ -61,6 +104,21 @@ class _Lease:
     busy: bool = True
     cleaning: bool = False
     task: asyncio.Task[None] | None = None
+    last_used: float = 0.0
+
+
+def _expired(lease: _Lease, now: float) -> bool:
+    """Lifetime or idle bound reached — either one ends the retention.
+
+    Two clocks, because they answer different questions: the lifetime says how
+    long a retained page may exist at all (never extended by a retry), the idle
+    bound says it has been forgotten about. The idle bound only ever shortens a
+    lease, so resume/expiry semantics stay a subset of the old behaviour.
+    """
+    if lease.deadline <= now:
+        return True
+    idle = _idle_s()
+    return bool(idle) and lease.last_used > 0 and lease.last_used + idle <= now
 
 
 _leases: dict[Key, _Lease] = {}
@@ -198,6 +256,49 @@ async def close_handoffs() -> None:
     await asyncio.gather(*(_stop(lease) for lease in tuple(_leases.values())))
 
 
+def handoff_diagnostics() -> dict[str, Any]:
+    """Read-only view of the lease registry — never opens, resumes or closes a tab.
+
+    Operators (and selfcheck-style tools) need to answer "what is retained right
+    now, and why would it disappear" without spending a navigation. Expiry is
+    reported as two remaining budgets, because lifetime and idle end a lease for
+    different reasons and an operator acts on them differently.
+    """
+    try:
+        now = asyncio.get_running_loop().time()
+    except RuntimeError:  # no running loop: fall back to the monotonic clock
+        now = time.monotonic()
+    idle = _idle_s()
+    leases = []
+    for key, lease in tuple(_leases.items()):
+        scope, operation, url, endpoint, profile = key
+        leases.append(
+            {
+                "scope": scope,
+                "operation": operation,
+                "url": url,
+                "endpoint": endpoint,
+                "profile": profile,
+                "expires_at": lease.expires_at,
+                "lifetime_remaining_s": round(max(0.0, lease.deadline - now), 3),
+                "idle_remaining_s": round(max(0.0, lease.last_used + idle - now), 3) if idle else None,
+                "busy": lease.busy,
+                "cleaning": lease.cleaning,
+                "expired": _expired(lease, now),
+                "queued_requests": lease.requests.qsize(),
+                "handoff_id": lease.handoff_id,
+            }
+        )
+    return {
+        "retention_enabled": bool(_duration_s()),
+        "lifetime_s": _duration_s(),
+        "idle_s": idle,
+        "max_leases": _max_leases(),
+        "count": len(leases),
+        "leases": leases,
+    }
+
+
 async def snapshot_handoff(*, scope: str | None, handoff_id: str) -> dict[str, Any]:
     """Capture a retained page in this session; never open or navigate a tab."""
     if not handoff_id.isascii():
@@ -214,11 +315,12 @@ async def snapshot_handoff(*, scope: str | None, handoff_id: str) -> dict[str, A
         ),
         None,
     )
-    if found is None or found.cleaning or found.deadline <= loop.time():
+    if found is None or found.cleaning or _expired(found, loop.time()):
         raise NotFoundError("Browser handoff is unavailable")
     if found.busy:
         raise HandoffBusyError()
     found.busy = True
+    found.last_used = loop.time()
     result: asyncio.Future[Result] = loop.create_future()
     found.requests.put_nowait(_Request(chrome_cdp.capture_owned_viewport, lambda _: None, found.hosts, result, True))
     try:
@@ -259,18 +361,20 @@ async def read_with_handoff(
     lease = _leases.get(key)
     if lease is not None and lease.busy:
         raise HandoffBusyError()
-    if lease is not None and lease.deadline <= loop.time():
+    if lease is not None and _expired(lease, loop.time()):
         # Mark busy until cleanup completes: a concurrent retry must not open a duplicate.
         lease.busy = True
         await _stop(lease)
         lease = None
     if lease is None:
-        if len(_leases) >= _MAX_LEASES:
+        if len(_leases) >= _max_leases():
             raise HandoffBusyError()
+        now = loop.time()
         lease = _Lease(
-            deadline=loop.time() + duration,
+            deadline=now + duration,
             expires_at=(datetime.now(UTC) + timedelta(seconds=duration)).isoformat(),
             hosts=hosts,
+            last_used=now,
         )
         _leases[key] = lease
     lease.busy = True
@@ -282,6 +386,8 @@ async def read_with_handoff(
         response = await asyncio.shield(result)
         if response[1] is None:
             await asyncio.shield(lease.task)
+        # The page was just used: the idle clock restarts, the lifetime does not.
+        lease.last_used = loop.time()
         return response
     except BaseException:
         await _stop(lease)

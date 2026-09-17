@@ -25,6 +25,7 @@ run in microseconds rather than really waiting.
 from __future__ import annotations
 
 import asyncio
+import random as _random
 import time
 from collections.abc import Awaitable, Callable
 
@@ -46,6 +47,8 @@ class Pacer:
         *,
         error_delay: float | None = None,
         rotation_threshold: int = 5,
+        jitter: float = 0.25,
+        random: Callable[[], float] | None = None,
         clock: Callable[[], float] | None = None,
         sleep: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
@@ -60,10 +63,19 @@ class Pacer:
         which ``should_rotate`` turns true. It changes no behaviour on its own;
         it exists so a connector can tell the operator "this is not a blip,
         change the IP or refresh the session" rather than silently retrying.
+
+        ``jitter`` spreads the post-refusal delay by up to that fraction of it.
+        Without jitter, every source in a fan-out refused at the same instant
+        retries at the same instant — the lockstep that got them refused. The
+        drawn factor is ``1 + jitter * random()``, so the delay is never shorter
+        than ``error_delay``; ``random=lambda: 0.0`` reproduces the un-jittered
+        value exactly, which is what the tests pin.
         """
         self.min_gap = max(0.0, float(min_gap))
         self.error_delay = max(self.min_gap, float(error_delay)) if error_delay is not None else self.min_gap * 2
         self.rotation_threshold = max(1, int(rotation_threshold))
+        self.jitter = max(0.0, float(jitter))
+        self._random = random or _random.random
         self._clock = clock or time.monotonic
         self._sleep = sleep or asyncio.sleep
         self._lock = asyncio.Lock()
@@ -80,7 +92,7 @@ class Pacer:
         """
         gap = self.min_gap if min_gap is None else max(0.0, float(min_gap))
         if self._penalised:
-            gap = max(gap, self.error_delay)
+            gap = max(gap, self.error_delay) * (1.0 + self.jitter * self._random())
         async with self._lock:
             elapsed = self._clock() - self._last_request_at
             if elapsed < gap:
