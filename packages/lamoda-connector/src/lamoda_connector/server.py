@@ -358,6 +358,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
             if scope is None:
                 async with open_page(url, wait_ms=8000) as page:
                     return await read(page)
+            note: dict = {}
             data, expires_at = await read_with_handoff(
                 url=url,
                 wait_ms=8000,
@@ -365,7 +366,12 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
                 operation="lamoda_search",
                 read=read,
                 challenge=lambda payload: "captcha" if _anti_bot_challenge(payload) else None,
+                note_out=note,
             )
+            if note.get("resumed"):
+                # R3: a resumed read states what changed (challenge cleared, data
+                # moved) rather than making the caller diff two payloads.
+                data["_resume"] = note
             if expires_at:
                 data["_handoff_expires_at"] = expires_at
                 data["_handoff_id"] = get_handoff_id(scope=scope, operation="lamoda_search", url=url)

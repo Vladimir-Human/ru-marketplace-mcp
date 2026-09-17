@@ -40,10 +40,25 @@ _MAX_LIFETIME_S = 900.0
 
 
 class HandoffBusyError(TransportDownError):
-    """An owned tab is already being read, or the bounded registry is full."""
+    """An owned tab is already being read, or the bounded registry is full.
 
-    def __init__(self) -> None:
-        super().__init__("Browser handoff is busy; retry the same operation later", status_code=409)
+    R3: the two cases are explained rather than merged into "busy". A caller can
+    act on the difference — one means "wait a moment", the other means "close or
+    let expire one of the retained pages first".
+    """
+
+    def __init__(self, *, reason: str = "busy", retry_after_s: float | None = None) -> None:
+        hints = {
+            "busy": "another operation is reading the retained page right now",
+            "registry_full": "the retained-page registry is full; a page must expire or be used up first",
+        }
+        detail = hints.get(reason, reason)
+        super().__init__(
+            f"Browser handoff is busy: {detail}. Retry the same operation later.",
+            status_code=409,
+            retry_after_s=retry_after_s,
+        )
+        self.reason = reason
 
 
 def _env_seconds(name: str, default: float, cap: float) -> float:
@@ -105,6 +120,44 @@ class _Lease:
     cleaning: bool = False
     task: asyncio.Task[None] | None = None
     last_used: float = 0.0
+    last_payload: dict[str, Any] | None = None
+    reads: int = 0
+
+
+def _resume_note(lease: _Lease, response: Result, *, resumed: bool, url: str) -> dict[str, Any]:
+    """Say what changed on this call — the question a resumed read should answer.
+
+    ``data_changed`` is deliberately tri-state: ``True``/``False`` compare against
+    the previous read of this same owned page, and ``None`` means there was
+    nothing to compare with yet (a first read, not "nothing changed").
+    """
+    payload = response[0] if isinstance(response[0], dict) else {}
+    previous = lease.last_payload
+    changed: bool | None = None if previous is None else payload != previous
+    lease.last_payload = payload
+    lease.reads += 1
+    still_challenged = response[1] is not None
+    return {
+        "resumed": resumed,
+        "operation_url": url,
+        "reads": lease.reads,
+        "challenge": "still_required" if still_challenged else "cleared",
+        "challenge_cleared": not still_challenged,
+        "data_changed": changed,
+        "summary": _resume_summary(resumed=resumed, cleared=not still_challenged, changed=changed),
+    }
+
+
+def _resume_summary(*, resumed: bool, cleared: bool, changed: bool | None) -> str:
+    if not resumed:
+        return "opened a new page; nothing was resumed"
+    if not cleared:
+        return "resumed the retained page; the challenge is still present"
+    if changed is True:
+        return "resumed the retained page; the challenge is cleared and the data changed"
+    if changed is False:
+        return "resumed the retained page; the challenge is cleared and nothing changed"
+    return "resumed the retained page; the challenge is cleared"
 
 
 def _expired(lease: _Lease, now: float) -> bool:
@@ -315,10 +368,19 @@ async def snapshot_handoff(*, scope: str | None, handoff_id: str) -> dict[str, A
         ),
         None,
     )
-    if found is None or found.cleaning or _expired(found, loop.time()):
+    if found is None:
+        # Unknown or another session's handle. Deliberately not distinguished:
+        # telling a caller that a handle exists elsewhere would be an oracle.
         raise NotFoundError("Browser handoff is unavailable")
+    if found.cleaning or _expired(found, loop.time()):
+        # This handle is the caller's own, so saying why it is gone costs no
+        # secrecy and saves a pointless retry with the same id.
+        reason = "expired" if _expired(found, loop.time()) else "being released"
+        raise NotFoundError(
+            f"Browser handoff is no longer retained ({reason}); run the operation again to obtain a fresh page"
+        )
     if found.busy:
-        raise HandoffBusyError()
+        raise HandoffBusyError(reason="busy", retry_after_s=5.0)
     found.busy = True
     found.last_used = loop.time()
     result: asyncio.Future[Result] = loop.create_future()
@@ -342,6 +404,7 @@ async def read_with_handoff(
     read: Read,
     challenge: Challenge,
     allowed_hosts: Collection[str] | None = None,
+    note_out: dict[str, Any] | None = None,
 ) -> Result:
     """Read once, or resume the exact same session's owned challenge tab.
 
@@ -349,6 +412,12 @@ async def read_with_handoff(
     scope and a headed browser. Expiry includes initial attach/navigation and is
     never extended by retries. The returned timestamp only describes retention;
     foreground activation is best-effort on the connected browser's machine.
+
+    R3: when ``note_out`` is given it is filled with what actually happened on
+    this call — whether a retained page was resumed, whether the challenge is
+    gone, and whether the data differs from the previous read of the same page
+    (``data_changed`` is ``None`` when there is nothing to compare against, which
+    is not the same as "nothing changed").
     """
     duration = _duration_s()
     if not duration or not scope or chrome_cdp.HEADLESS:
@@ -360,7 +429,7 @@ async def read_with_handoff(
     loop = asyncio.get_running_loop()
     lease = _leases.get(key)
     if lease is not None and lease.busy:
-        raise HandoffBusyError()
+        raise HandoffBusyError(reason="busy", retry_after_s=5.0)
     if lease is not None and _expired(lease, loop.time()):
         # Mark busy until cleanup completes: a concurrent retry must not open a duplicate.
         lease.busy = True
@@ -368,7 +437,7 @@ async def read_with_handoff(
         lease = None
     if lease is None:
         if len(_leases) >= _max_leases():
-            raise HandoffBusyError()
+            raise HandoffBusyError(reason="registry_full")
         now = loop.time()
         lease = _Lease(
             deadline=now + duration,
@@ -377,6 +446,9 @@ async def read_with_handoff(
             last_used=now,
         )
         _leases[key] = lease
+        resumed = False
+    else:
+        resumed = True
     lease.busy = True
     result: asyncio.Future[Result] = loop.create_future()
     lease.requests.put_nowait(_Request(read, challenge, hosts, result))
@@ -388,6 +460,8 @@ async def read_with_handoff(
             await asyncio.shield(lease.task)
         # The page was just used: the idle clock restarts, the lifetime does not.
         lease.last_used = loop.time()
+        if note_out is not None:
+            note_out.update(_resume_note(lease, response, resumed=resumed, url=url))
         return response
     except BaseException:
         await _stop(lease)

@@ -429,6 +429,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         if scope is None:
             async with open_page(url, wait_ms=wait_ms) as page:
                 return await read(page)
+        note: dict[str, Any] = {}
         data, expires_at = await read_with_handoff(
             url=url,
             wait_ms=wait_ms,
@@ -436,7 +437,13 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
             operation="taobao_card" if url.startswith(ITEM_BASE) else "taobao_search",
             read=read,
             challenge=_page_challenge_kind,
+            note_out=note,
         )
+        if note.get("resumed"):
+            # R3: say what changed on the resumed page instead of leaving the
+            # caller to diff two payloads. Attached only on a real resume, so an
+            # ordinary first read keeps exactly the shape it had before.
+            data["_resume"] = note
         if expires_at:
             data["_handoff_expires_at"] = expires_at
             data["_handoff_id"] = get_handoff_id(
