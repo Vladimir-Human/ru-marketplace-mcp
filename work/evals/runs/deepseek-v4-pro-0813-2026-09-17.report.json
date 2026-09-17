@@ -1,0 +1,487 @@
+{
+  "version": 1,
+  "mode": "case-run",
+  "bundle": "routing-cases-v1",
+  "model": "dashscope2/deepseek-v4-pro-0813",
+  "total": 38,
+  "answered": 38,
+  "complete": true,
+  "missing_ids": [],
+  "unknown_answer_ids": [],
+  "passed": 37,
+  "failed": 1,
+  "accuracy": 0.9737,
+  "accuracy_answered": 0.9737,
+  "per_slice": {
+    "routing": {
+      "total": 19,
+      "answered": 19,
+      "passed": 19,
+      "accuracy": 1.0,
+      "accuracy_answered": 1.0
+    },
+    "error-classification": {
+      "total": 19,
+      "answered": 19,
+      "passed": 18,
+      "accuracy": 0.9474,
+      "accuracy_answered": 0.9474
+    }
+  },
+  "ok": true,
+  "cases": [
+    {
+      "id": "routing-001",
+      "slice": "routing",
+      "expected": "compare-prices",
+      "alternatives": [],
+      "forbidden": [
+        "marketplace",
+        "wb-connector"
+      ],
+      "answer": "compare-prices",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-002",
+      "slice": "routing",
+      "expected": "compare-prices",
+      "alternatives": [],
+      "forbidden": [
+        "marketplace"
+      ],
+      "answer": "compare-prices",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-003",
+      "slice": "routing",
+      "expected": "compare-prices",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "compare-prices",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-004",
+      "slice": "routing",
+      "expected": "ozon-connector",
+      "alternatives": [],
+      "forbidden": [
+        "compare-prices"
+      ],
+      "answer": "ozon-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-005",
+      "slice": "routing",
+      "expected": "wb-connector",
+      "alternatives": [],
+      "forbidden": [
+        "yandex-connector"
+      ],
+      "answer": "wb-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-006",
+      "slice": "routing",
+      "expected": "cian-connector",
+      "alternatives": [],
+      "forbidden": [
+        "avito-connector"
+      ],
+      "answer": "cian-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-007",
+      "slice": "routing",
+      "expected": "cian-connector",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "cian-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-008",
+      "slice": "routing",
+      "expected": "detmir-connector",
+      "alternatives": [],
+      "forbidden": [
+        "compare-prices"
+      ],
+      "answer": "detmir-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-009",
+      "slice": "routing",
+      "expected": "detmir-connector",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "detmir-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-010",
+      "slice": "routing",
+      "expected": "avito-connector",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "avito-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-011",
+      "slice": "routing",
+      "expected": "mpstats-connector",
+      "alternatives": [],
+      "forbidden": [
+        "ozon-connector"
+      ],
+      "answer": "mpstats-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-012",
+      "slice": "routing",
+      "expected": "citilink-connector",
+      "alternatives": [],
+      "forbidden": [
+        "dns-connector"
+      ],
+      "answer": "citilink-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-013",
+      "slice": "routing",
+      "expected": "yandex-connector",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "yandex-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-014",
+      "slice": "routing",
+      "expected": "marketplace",
+      "alternatives": [],
+      "forbidden": [
+        "compare-prices"
+      ],
+      "answer": "marketplace",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-015",
+      "slice": "routing",
+      "expected": "taobao-connector",
+      "alternatives": [],
+      "forbidden": [
+        "compare-prices"
+      ],
+      "answer": "taobao-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-016",
+      "slice": "routing",
+      "expected": "compare-prices",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "compare-prices",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-017",
+      "slice": "routing",
+      "expected": "ozon-connector",
+      "alternatives": [],
+      "forbidden": [
+        "mpstats-connector"
+      ],
+      "answer": "ozon-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-018",
+      "slice": "routing",
+      "expected": "aliexpress-connector",
+      "alternatives": [],
+      "forbidden": [
+        "compare-prices"
+      ],
+      "answer": "aliexpress-connector",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "routing-019",
+      "slice": "routing",
+      "expected": "compare-prices",
+      "alternatives": [
+        "marketplace"
+      ],
+      "forbidden": [],
+      "answer": "compare-prices",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-001",
+      "slice": "error-classification",
+      "expected": "rate_limited",
+      "alternatives": [],
+      "forbidden": [
+        "transport_down"
+      ],
+      "answer": "rate_limited",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-002",
+      "slice": "error-classification",
+      "expected": "inconclusive",
+      "alternatives": [],
+      "forbidden": [
+        "parser_drift"
+      ],
+      "answer": "inconclusive",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-003",
+      "slice": "error-classification",
+      "expected": "parser_drift",
+      "alternatives": [],
+      "forbidden": [
+        "no_error",
+        "not_found"
+      ],
+      "answer": "parser_drift",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-004",
+      "slice": "error-classification",
+      "expected": "transport_down",
+      "alternatives": [],
+      "forbidden": [
+        "no_error",
+        "parser_drift"
+      ],
+      "answer": "transport_down",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-005",
+      "slice": "error-classification",
+      "expected": "challenge_required",
+      "alternatives": [],
+      "forbidden": [
+        "parser_drift",
+        "transport_down"
+      ],
+      "answer": "challenge_required",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-006",
+      "slice": "error-classification",
+      "expected": "auth_missing",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "auth_missing",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-007",
+      "slice": "error-classification",
+      "expected": "transport_down",
+      "alternatives": [],
+      "forbidden": [
+        "challenge_required"
+      ],
+      "answer": "transport_down",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-008",
+      "slice": "error-classification",
+      "expected": "no_error",
+      "alternatives": [],
+      "forbidden": [
+        "not_found",
+        "parser_drift"
+      ],
+      "answer": "no_error",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-009",
+      "slice": "error-classification",
+      "expected": "not_found",
+      "alternatives": [],
+      "forbidden": [
+        "no_error",
+        "parser_drift"
+      ],
+      "answer": "not_found",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-010",
+      "slice": "error-classification",
+      "expected": "rate_limited",
+      "alternatives": [
+        "transport_down"
+      ],
+      "forbidden": [
+        "parser_drift"
+      ],
+      "answer": "transport_down",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-011",
+      "slice": "error-classification",
+      "expected": "rate_limited",
+      "alternatives": [],
+      "forbidden": [],
+      "answer": "challenge_required",
+      "status": "wrong",
+      "passed": false
+    },
+    {
+      "id": "error-012",
+      "slice": "error-classification",
+      "expected": "parser_drift",
+      "alternatives": [],
+      "forbidden": [
+        "transport_down"
+      ],
+      "answer": "parser_drift",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-013",
+      "slice": "error-classification",
+      "expected": "rate_limited",
+      "alternatives": [
+        "transport_down"
+      ],
+      "forbidden": [
+        "parser_drift"
+      ],
+      "answer": "rate_limited",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-014",
+      "slice": "error-classification",
+      "expected": "timeout",
+      "alternatives": [],
+      "forbidden": [
+        "transport_down"
+      ],
+      "answer": "timeout",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-015",
+      "slice": "error-classification",
+      "expected": "parser_drift",
+      "alternatives": [],
+      "forbidden": [
+        "no_error",
+        "not_found"
+      ],
+      "answer": "parser_drift",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-016",
+      "slice": "error-classification",
+      "expected": "no_error",
+      "alternatives": [],
+      "forbidden": [
+        "parser_drift"
+      ],
+      "answer": "no_error",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-017",
+      "slice": "error-classification",
+      "expected": "transport_down",
+      "alternatives": [],
+      "forbidden": [
+        "parser_drift"
+      ],
+      "answer": "transport_down",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-018",
+      "slice": "error-classification",
+      "expected": "no_error",
+      "alternatives": [],
+      "forbidden": [
+        "rate_limited",
+        "transport_down"
+      ],
+      "answer": "no_error",
+      "status": "pass",
+      "passed": true
+    },
+    {
+      "id": "error-019",
+      "slice": "error-classification",
+      "expected": "no_error",
+      "alternatives": [],
+      "forbidden": [
+        "parser_drift",
+        "rate_limited"
+      ],
+      "answer": "no_error",
+      "status": "pass",
+      "passed": true
+    }
+  ]
+}
