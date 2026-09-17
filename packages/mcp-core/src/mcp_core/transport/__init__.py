@@ -17,6 +17,12 @@ connector that only needs tier 1 never pays for it.
 
 from __future__ import annotations
 
+from mcp_core.transport.cdp_budget import (
+    HostRefusingError,
+    NavigationBudget,
+    budget_snapshot,
+    navigation_budget,
+)
 from mcp_core.transport.http_tier import (
     DEFAULT_USER_AGENT,
     RETRYABLE_STATUSES,
@@ -34,11 +40,15 @@ __all__ = [
     "DEFAULT_USER_AGENT",
     "RETRYABLE_STATUSES",
     "BodyTooLargeError",
+    "HostRefusingError",
+    "NavigationBudget",
     "PoliteGate",
     "RateLimiter",
+    "budget_snapshot",
     "build_client",
     "get_text_budgeted",
     "get_text_with_retries",
+    "navigation_budget",
     "proxy_from_env",
     "read_capped_text",
 ]

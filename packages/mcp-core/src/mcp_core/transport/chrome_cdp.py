@@ -47,13 +47,15 @@ import subprocess
 import sys
 import time
 from collections.abc import AsyncIterator, Collection
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
+
+from mcp_core.transport.cdp_budget import navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
 # fallback raises a clear error instead).
@@ -1047,6 +1049,17 @@ async def open_page(
 
     Host allowlisting stays the caller's responsibility — each connector knows
     which paths are legitimate for its marketplace.
+
+    Concurrency is bounded here rather than by each connector: a fan-out over
+    several CDP sources used to drive every tab through one Chrome at once and
+    crash the lot (2026-09-11), so navigations take a permit from
+    ``mcp_core.transport.cdp_budget`` — bounded globally, serialized per host,
+    with a breaker that drops a host which keeps answering 4xx.
+
+    The permit covers the navigation, not the page: it is released as soon as
+    the document is up, because a caller may hold the yielded page for minutes
+    (a retained challenge page waits for a human). Holding a host's slot for
+    that long would queue every other navigation behind it.
     """
     low = (url or "").strip().lower()
     if not (low.startswith("http://") or low.startswith("https://")):
@@ -1057,11 +1070,35 @@ async def open_page(
     initial_host = urlsplit(url).hostname
     host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
+    budget = navigation_budget()
+    permit = await budget.acquire(initial_host or "")
+    stack = AsyncExitStack()
+    page: PageLike
     try:
-        async with _playwright_page(url, wait_ms) as page:
-            _check_final_host(page.url, host_policy)
-            yield page
-    except _CdpConnectTimeout:
-        async with _raw_cdp_page(url, wait_ms) as page:
-            _check_final_host(page.url, host_policy)
-            yield page
+        try:
+            page = await stack.enter_async_context(_playwright_page(url, wait_ms))
+        except _CdpConnectTimeout:
+            page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+        _check_final_host(page.url, host_policy)
+        permit.ok()
+    except NavBlocked as exc:
+        # The host actively refused the main document: that is the signal the
+        # breaker counts.
+        permit.refused(exc.status)
+        await stack.aclose()
+        raise
+    except NavigationPolicyError:
+        # We refused the navigation, not the host — never blame the host for our
+        # own policy.
+        permit.ok()
+        await stack.aclose()
+        raise
+    except BaseException:
+        await stack.aclose()
+        raise
+    finally:
+        permit.release()
+    try:
+        yield page
+    finally:
+        await stack.aclose()

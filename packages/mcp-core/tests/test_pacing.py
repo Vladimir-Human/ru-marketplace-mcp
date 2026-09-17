@@ -31,7 +31,13 @@ class FakeClock:
 
 
 def _pacer(**kwargs) -> tuple[Pacer, FakeClock]:
+    """Deterministic by default: the jitter factor is pinned to 0.
+
+    Jitter is real behaviour these tests must not depend on by accident, so a
+    test that wants to see it passes its own ``random``.
+    """
     clock = FakeClock()
+    kwargs.setdefault("random", lambda: 0.0)
     return Pacer(clock=clock, sleep=clock.sleep, **kwargs), clock
 
 
@@ -108,6 +114,45 @@ async def test_a_refusal_lengthens_the_next_gap():
     await pacer.wait()
 
     assert clock.slept == [4.0], "default error delay is twice the normal gap"
+
+
+async def test_jitter_spreads_the_penalty_without_ever_shortening_it():
+    """A fan-out refused at the same instant must not retry in lockstep.
+
+    The drawn factor is ``1 + jitter * random()``, so the worst case is the
+    un-jittered delay and the best case is that delay plus the full fraction.
+    """
+    spread, spread_clock = _pacer(min_gap=2.0, jitter=0.25, random=lambda: 1.0)
+    await spread.wait()
+    spread.record_refusal()
+    await spread.wait()
+    assert spread_clock.slept == [5.0], "4.0 * (1 + 0.25 * 1.0)"
+
+    unspread, unspread_clock = _pacer(min_gap=2.0, jitter=0.25, random=lambda: 0.0)
+    await unspread.wait()
+    unspread.record_refusal()
+    await unspread.wait()
+    assert unspread_clock.slept == [4.0], "a zero draw is exactly the un-jittered penalty"
+
+
+async def test_jitter_can_be_switched_off():
+    pacer, clock = _pacer(min_gap=2.0, jitter=0.0, random=lambda: 1.0)
+    await pacer.wait()
+    pacer.record_refusal()
+    await pacer.wait()
+
+    assert clock.slept == [4.0]
+
+
+async def test_jitter_leaves_the_normal_gap_alone():
+    """Only the penalty is spread; the polite floor stays exact."""
+    pacer, clock = _pacer(min_gap=3.0, jitter=0.9, random=lambda: 1.0)
+    await pacer.wait()
+    clock.advance(1.0)
+
+    await pacer.wait()
+
+    assert clock.slept == [2.0]
 
 
 async def test_the_error_delay_is_configurable():
