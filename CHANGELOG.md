@@ -105,6 +105,13 @@
   парсер. Search-канарейка больше не считает выдачу через ld+json-fallback
   (`ok_ldjson_only`) здоровой: probe-id для карточной проверки из такой
   выдачи ненадёжен.
+- Model-level routing eval стал запускаемым: бандл из 38 кейсов
+  (`work/evals/routing-cases-v1.json`, 19 routing + 19 классификаций сбоев,
+  каждый с evidence-цитатой из SKILL.md), детерминированный офлайн-раннер
+  `scripts/model_routing_eval.py run` (оценивает уже собранные ответы моделей,
+  accuracy per-slice, «не схлопывать в одну оценку»), протокол
+  мульти-модельного прогона `work/evals/MODEL_ROUTING_PROTOCOL.md` и
+  single-model пилот `work/evals/pilot-2026-09-13.md`.
 
 ### Fixed
 
@@ -128,6 +135,13 @@
   classes as serving/session, not the parser. The search canary no longer
   treats an ld+json-fallback extraction (`ok_ldjson_only`) as healthy: a
   card-probe id taken from such a page is unreliable.
+- The model-level routing eval is now runnable: a 38-case bundle
+  (`work/evals/routing-cases-v1.json`, 19 routing + 19 failure-classification
+  cases, each with an evidence citation from SKILL.md), a deterministic offline
+  runner `scripts/model_routing_eval.py run` (scores already-collected model
+  answers, per-slice accuracy, never collapsed into one score), the
+  multi-model run protocol `work/evals/MODEL_ROUTING_PROTOCOL.md`, and a
+  single-model pilot `work/evals/pilot-2026-09-13.md`.
 
 ## [2.2.0] — 2026-09-11
 

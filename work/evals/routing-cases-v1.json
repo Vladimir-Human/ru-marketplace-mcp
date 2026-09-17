@@ -1,0 +1,437 @@
+{
+  "version": 1,
+  "id": "routing-cases-v1",
+  "created_at": "2026-09-13",
+  "purpose": "Model-level routing eval for the ru-marketplace-mcp DSH bundle: given the bundle catalog exactly as a model sees it, does the model pick the right skill/tool source (routing slice) and the right failure classification (error-classification slice)? The two slices are reported separately and must never be collapsed into one score (work/v2-research/eval-matrix.md).",
+  "sources_of_truth": [
+    "skills/*/SKILL.md (trigger descriptions and gotchas, quoted per case in `evidence`)",
+    "packages/mcp-core/src/mcp_core/errors.py (ErrorCode vocabulary)",
+    "packages/mcp-core/src/mcp_core/resilience.py (tri-state canary verdict: healthy/drift/inconclusive)",
+    "work/v2-research/eval-matrix.md (Routing row: 200, 429, 5xx, timeout, challenge, JSON block, tier-2 failure)"
+  ],
+  "scoring": {
+    "match": "case-insensitive exact match of the answer id against `expected` or any of `acceptable_alternatives`",
+    "forbidden": "an answer listed in `forbidden` fails even if it would otherwise match",
+    "missing": "a case with no answer in the answers file is reported as `missing` and counts as failed for overall accuracy"
+  },
+  "system_context": {
+    "role": "You are the routing layer for the ru-marketplace-mcp DSH bundle: an MCP server family for Russian marketplaces, classifieds, real estate and sales analytics. For each case, decide which single catalog entry handles it.",
+    "answer_contract": "Answer with EXACTLY ONE id from the catalogs below: a skill id when the case asks which source/tool handles a request, or a failure-vocabulary id when the case asks how a failure (or non-failure) classifies. Output the bare id only — no prose, no punctuation.",
+    "skills": [
+      {"id": "aliexpress-connector", "trigger": "Search AliExpress or read one product card (aliexpress_search, aliexpress_card); prices in RUB; CDP-only, no anonymous tier. Triggers: «алиэкспресс», «найди на али», «цена на aliexpress», «сколько на алиэкспрессе». Skip other marketplaces — use their per-marketplace skills."},
+      {"id": "avito-connector", "trigger": "Avito classifieds: search listings, one listing's card, seller reputation (avito_search, avito_card, avito_seller). No per-item reviews — the seller's rating IS the review signal. Triggers: «найди на авито», «цена avito», «объявления авито», «продавец на авито»."},
+      {"id": "cian-connector", "trigger": "Russian real estate from Cian: flats, rooms, houses, commercial — sale, long-term rent or daily rent («посуточно», «на сутки»); offer card with price history and publisher. No text search: filters are deal/region/rooms/price. Triggers: «найди на циане», «снять квартиру», «снять посуточно», «квартира на сутки», «купить однушку в Москве». Skip goods and marketplaces; Cian never joins compare_prices."},
+      {"id": "citilink-connector", "trigger": "Citilink electronics: rendered search and product card (citilink_search, citilink_card); always needs the operator's Chrome over CDP (Qrator + gRPC-web). Triggers: «ситилинк», «citilink», «ситилинк цена»."},
+      {"id": "compare-prices", "trigger": "Where something is cheapest ACROSS marketplaces: compare_prices fans out to ten searchable sources (Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink, AliExpress; Detsky Mir excluded — no text search; Taobao priced in CNY, never ranked against rubles) and returns one ranked list with the spread; compare_sources() says which sources this installation can query and why one was missing. Triggers: «где дешевле», «сравни цены», «сколько стоит X на маркетплейсах», «найди самую низкую цену», English equivalents. Skip single-marketplace questions — use the per-marketplace skills."},
+      {"id": "detmir-connector", "trigger": "Detsky Mir: kids' and baby goods — prices, availability, offline store stock (detmir_categories, detmir_category, detmir_card). NO text search at all: any query string is silently ignored, discovery goes through categories. Triggers: «цена в детском мире», «детский мир наличие», «сколько стоит коляска»."},
+      {"id": "dns-connector", "trigger": "DNS-Shop electronics: rendered search and product card (dns_search, dns_card); always needs the operator's Chrome over CDP (Qrator proof-of-work). Triggers: «днс», «dns-shop», «dns», «ноутбук днс»."},
+      {"id": "lamoda-connector", "trigger": "Lamoda fashion: search (CDP) and one product's price/old price/per-size availability (lamoda_search, lamoda_card). Lamoda exposes NO ratings or reviews anywhere. Triggers: «ламода», «lamoda», «кроссовки lamoda»."},
+      {"id": "marketplace", "trigger": "The full unified mount, routing metadata, or client setup: one server mounting every connector as namespaced tools plus marketplace_sources(), which reports {mounted, skipped, capabilities} and tells an installed-but-quiet source from one that never loaded. Operator CLI: marketplace-mcp install/doctor. Triggers: «один MCP», «все источники», «marketplace_sources», «настроить marketplace», «full marketplace». Route price questions («где дешевле», «compare prices») to compare-prices; skip single-source tasks."},
+      {"id": "megamarket-connector", "trigger": "Megamarket: catalog search and product card (megamarket_search, megamarket_card); always needs the operator's LOGGED-IN Chrome over CDP (ServicePipe gates the whole site by IP reputation). Triggers: «мегамаркет», «megamarket», «цена мегамаркет»."},
+      {"id": "mpstats-connector", "trigger": "MPStats paid sales/stock analytics for a specific Ozon or Wildberries SKU: per-day 30-day orders/price/stock graphs, current price and stock, FBS/FBO warehouse split, seller/brand identity, orders-per-day (mpstats_item, mpstats_warehouses). Requires MPSTATS_MP_AUTH (paid account). Triggers: «продажи товара на озон», «аналитика ozon sku», «mpstats по артикулу», «продажи за 30 дней». Skip bare price/availability checks with no account — use wb_card / ozon_card; no text search or reviews."},
+      {"id": "ozon-connector", "trigger": "Ozon marketplace: product details, search, prices, ratings, reviews (ozon_card, ozon_search, ozon_reviews). Tier 1 is TLS impersonation with no browser; Chrome CDP is only the tier-2 fallback when Cloudflare challenges. Triggers: «найди на озоне», «цена ozon», «отзывы на озоне», English mentions of Ozon."},
+      {"id": "taobao-connector", "trigger": "Taobao: search Chinese listings and read one item card (taobao_search, taobao_card); prices are in YUAN (CNY), never converted; always needs the operator's Chrome over CDP (signed mtop API). Triggers: «taobao», «淘宝», «найди на таобао», «цена taobao»."},
+      {"id": "wb-connector", "trigger": "Wildberries: price/availability checks, review-pool analysis by imt_id, seller identity and tax details (INN/OGRN), catalog category browsing, variant discovery via root_id, buyer questions (wb_search, wb_card, wb_root_info, wb_reviews, wb_seller, wb_categories, wb_category_products, wb_questions). Triggers: «цена на WB», «отзывы на вб», «найди на вайлдберриз», «кто продавец», «какие категории»."},
+      {"id": "yandex-connector", "trigger": "Yandex Market: price checks across many sellers, rating analysis with the star distribution, buyer reviews with pros/cons (yandex_search, yandex_card). Quote price_rub; price_with_plus is the subscriber price, never the price to quote. Triggers: «цена на Яндекс Маркете», «отзывы на маркете», «найди на яндекс маркете», «сравни предложения продавцов»."}
+    ],
+    "failure_vocabulary": [
+      {"id": "rate_limited", "meaning": "HTTP 429 / too-many-requests throttling. Retryable, but needs a genuine wait — not a tight retry loop."},
+      {"id": "timeout", "meaning": "The request exceeded its time budget (e.g. an httpx timeout). Retryable; retry once."},
+      {"id": "transport_down", "meaning": "Transport-level failure: the source did not answer with data — connection failure, persistent 5xx, IP/WAF block (403 suspicious-traffic page, VPN-refusal body), browser-level throttling. Retryable in principle."},
+      {"id": "challenge_required", "meaning": "A login/CAPTCHA/DOM challenge wall was detected (requires_user_action=true). A human must complete it in the connected scraping profile, then the SAME call is repeated. Retryable, but never self-retryable."},
+      {"id": "parser_drift", "meaning": "The transport answered, but the payload shape/selector contract moved, or extraction came back empty with NO challenge evidence. Code change needed; never readable as «no results»."},
+      {"id": "not_found", "meaning": "The specific item/offer does not exist (including loose upstream contracts such as HTTP 200 carrying a body-level 404)."},
+      {"id": "auth_missing", "meaning": "A required credential/token is missing or expired (e.g. MPSTATS_MP_AUTH). Not retryable until configured."},
+      {"id": "bad_request", "meaning": "The call itself was invalid: wrong argument type or combination."},
+      {"id": "permission_denied", "meaning": "The operation is refused for the current access tier or profile."},
+      {"id": "no_error", "meaning": "HTTP 200 with a valid result — including honest nulls (price_rub null = no data, never 0), delisted items, empty pools from a successful call, and partial multi-source results reported with per-source outcomes. Nothing failed at tool level."},
+      {"id": "inconclusive", "meaning": "Tri-state canary verdict: drift could NOT be judged because the transport or a prerequisite (e.g. the tier-2 Chrome/CDP) was unreachable. Says nothing about parser health; never reported as healthy or as drift."}
+    ]
+  },
+  "cases": [
+    {
+      "id": "routing-001",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Где дешевле купить iPhone 15 — покажи самое низкое предложение.",
+      "expected": "compare-prices",
+      "acceptable_alternatives": [],
+      "forbidden": ["marketplace", "wb-connector"],
+      "evidence": "skills/compare-prices/SKILL.md — trigger «где дешевле», «найди самую низкую цену»; canonical case «Где дешевле купить X?»."
+    },
+    {
+      "id": "routing-002",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Сколько стоит узкая стиральная машина на маркетплейсах? Интересует вилка цен по рынку.",
+      "expected": "compare-prices",
+      "acceptable_alternatives": [],
+      "forbidden": ["marketplace"],
+      "evidence": "skills/compare-prices/SKILL.md — trigger «сколько стоит X на маркетплейсах»; use case «establishing a market price range»."
+    },
+    {
+      "id": "routing-003",
+      "slice": "routing",
+      "lang": "en",
+      "query": "Compare prices for a Xiaomi robot vacuum across Russian marketplaces and show me the spread.",
+      "expected": "compare-prices",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/compare-prices/SKILL.md — «or English equivalents»; returns ranking plus price_spread_rub."
+    },
+    {
+      "id": "routing-004",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Покажи отзывы на этот чайник на Озоне — рейтинг и последние несколько отзывов.",
+      "expected": "ozon-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["compare-prices"],
+      "evidence": "skills/ozon-connector/SKILL.md — trigger «отзывы на озоне», tool ozon_reviews; compare-prices says «Detail on one known product (reviews...) → *_card tools»."
+    },
+    {
+      "id": "routing-005",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Почитай отзывы на ВБ про эти кроссовки: как распределены оценки по звёздам и что пишут в последних?",
+      "expected": "wb-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["yandex-connector"],
+      "evidence": "skills/wb-connector/SKILL.md — trigger «отзывы на вб», review-pool analysis via wb_root_info → wb_reviews."
+    },
+    {
+      "id": "routing-006",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Хочу снять квартиру посуточно в Сочи на выходные, двое гостей. Что есть на эти даты?",
+      "expected": "cian-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["avito-connector"],
+      "evidence": "skills/cian-connector/SKILL.md — triggers «снять посуточно», «квартира на сутки»; deal=\"daily\" is a separate market the connector keeps separate."
+    },
+    {
+      "id": "routing-007",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Купить однушку в Москве на вторичке, бюджет до 15 миллионов. Подбери варианты.",
+      "expected": "cian-connector",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/cian-connector/SKILL.md — trigger «купить однушку в Москве»; deal=sale, region id 1 (Москва)."
+    },
+    {
+      "id": "routing-008",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Сколько стоит коляска Peg-Perego в Детском мире и есть ли она в магазинах рядом?",
+      "expected": "detmir-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["compare-prices"],
+      "evidence": "skills/detmir-connector/SKILL.md — trigger «сколько стоит коляска»; offline store availability (store_count) is Detmir's strength; Detsky Mir is excluded from compare_prices by design."
+    },
+    {
+      "id": "routing-009",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Посмотри, какие вообще коляски есть в каталоге Детского мира и сколько их в каждой ветке — поиск по названию там не работает.",
+      "expected": "detmir-connector",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/detmir-connector/SKILL.md — NO text search; discovery goes detmir_categories → detmir_category with upstream totals."
+    },
+    {
+      "id": "routing-010",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Найди на Авито б/у велосипед в Москве, посмотрите рейтинг продавца у пары объявлений.",
+      "expected": "avito-connector",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/avito-connector/SKILL.md — triggers «найди на авито», «продавец на авито»; avito_search + avito_seller."
+    },
+    {
+      "id": "routing-011",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Покажи аналитику продаж по артикулу 5107857210 на Озоне за 30 дней: заказы по дням, остатки, FBS/FBO. Аккаунт MPStats подключён.",
+      "expected": "mpstats-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["ozon-connector"],
+      "evidence": "skills/mpstats-connector/SKILL.md — trigger «продажи за 30 дней»/«аналитика ozon sku»; mpstats_item + mpstats_warehouses; catalog connectors do not expose sales graphs."
+    },
+    {
+      "id": "routing-012",
+      "slice": "routing",
+      "lang": "en",
+      "query": "Find me a Lenovo IdeaPad laptop on Citilink and tell me its current price and availability.",
+      "expected": "citilink-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["dns-connector"],
+      "evidence": "skills/citilink-connector/SKILL.md — triggers «citilink»; citilink_search → citilink_card."
+    },
+    {
+      "id": "routing-013",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Посмотри на Яндекс Маркете эту модель: нужна разбивка оценок по звёздам и отзывы с плюсами и минусами.",
+      "expected": "yandex-connector",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/yandex-connector/SKILL.md — triggers «отзывы на маркете»; rating_stars breakdown is the connector's strongest use."
+    },
+    {
+      "id": "routing-014",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Хочу один MCP-сервер со всеми источниками сразу: настрой клиент так, чтобы в mcpServers была одна запись вместо четырнадцати.",
+      "expected": "marketplace",
+      "acceptable_alternatives": [],
+      "forbidden": ["compare-prices"],
+      "evidence": "skills/marketplace/SKILL.md — triggers «один MCP», «настроить marketplace», «full marketplace»; client setup: one config entry, not fourteen."
+    },
+    {
+      "id": "routing-015",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Найди на таобао беспроводные наушники и скажи цену — сколько это в юанях?",
+      "expected": "taobao-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["compare-prices"],
+      "evidence": "skills/taobao-connector/SKILL.md — trigger «найди на таобао»; prices stay in CNY, never converted; single-source question, so compare-prices is skipped."
+    },
+    {
+      "id": "routing-016",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Где выгоднее взять фен Dyson: на Вайлдберриз или на Озоне? Сравни только эти две площадки.",
+      "expected": "compare-prices",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "notes": "Boundary: two named marketplaces, not one. compare_prices(sources=[...]) is the ranked cross-marketplace route; ozon-connector lists «cross-check Ozon vs WB prices» as a use, but the cross-source comparison tool is compare-prices (skills/compare-prices/SKILL.md — «Skip single-marketplace questions» does not apply to a two-market question).",
+      "evidence": "skills/compare-prices/SKILL.md — compare_prices(query, sources=None) supports restricting the fan-out."
+    },
+    {
+      "id": "routing-017",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Проверь текущую цену и наличие по артикулу 123456789 на Озоне. Платной аналитики нет, просто карточка товара.",
+      "expected": "ozon-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["mpstats-connector"],
+      "evidence": "skills/mpstats-connector/SKILL.md — «Skip raw catalog price checks — use wb_/ozon_ connectors (no account needed)»; skills/ozon-connector/SKILL.md — ozon_card."
+    },
+    {
+      "id": "routing-018",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Сколько на алиэкспрессе стоят умные часы? Сравнивать с другими площадками не надо, только Али.",
+      "expected": "aliexpress-connector",
+      "acceptable_alternatives": [],
+      "forbidden": ["compare-prices"],
+      "evidence": "skills/aliexpress-connector/SKILL.md — trigger «сколько на алиэкспрессе»; single-marketplace question → per-marketplace skill."
+    },
+    {
+      "id": "routing-019",
+      "slice": "routing",
+      "lang": "ru",
+      "query": "Сравнение цен вернулось с пометкой complete=false и не всеми площадками. Посмотри, какие источники эта установка вообще может опрашивать и почему часть отвалилась.",
+      "expected": "compare-prices",
+      "acceptable_alternatives": ["marketplace"],
+      "forbidden": [],
+      "notes": "Boundary: compare_sources() (compare-prices skill) is the documented call «when a comparison comes back partial»; marketplace_sources (marketplace skill) is the deeper installed-vs-never-loaded inspection, accepted as an alternative.",
+      "evidence": "skills/compare-prices/SKILL.md — «compare_sources() — which marketplaces this installation can query. Call it when a comparison comes back partial»; skills/marketplace/SKILL.md — marketplace_sources tells installed-but-quiet from never-loaded."
+    },
+    {
+      "id": "error-001",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: wb_search вызывали несколько раз подряд, последний вызов упал с HTTP 429.",
+      "expected": "rate_limited",
+      "acceptable_alternatives": [],
+      "forbidden": ["transport_down"],
+      "evidence": "skills/wb-connector/SKILL.md — «wb_search is 429-prone... the error is retryable but needs a genuine wait»; ErrorCode.RATE_LIMITED."
+    },
+    {
+      "id": "error-002",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй результат канарейки: Ozon tier-1 получил Cloudflare JS-челлендж, а fallback-браузер не поднялся — CDP-порт не отвечает. Состояние парсеров проверить не удалось.",
+      "expected": "inconclusive",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift"],
+      "evidence": "skills/ozon-connector/SKILL.md — «inconclusive means Chrome was unreachable»; mcp_core/resilience.py — transport failure ⇒ inconclusive, never drift."
+    },
+    {
+      "id": "error-003",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: ozon_card ответил HTTP 200, но в ответе composer-api нет ни одного виджета webPrice-*, форма полезной нагрузки не совпадает с фикстурами.",
+      "expected": "parser_drift",
+      "acceptable_alternatives": [],
+      "forbidden": ["not_found", "no_error"],
+      "evidence": "skills/ozon-connector/SKILL.md — «Composer-api widget keys vary (webPrice-XXXX)»; transport answered but the shape moved ⇒ ErrorCode.PARSER_DRIFT."
+    },
+    {
+      "id": "error-004",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: megamarket_search вернул валидный JSON, но это отказ с кодом 7 «отключите VPN» и моим собственным IP в теле.",
+      "expected": "transport_down",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift", "no_error"],
+      "evidence": "skills/megamarket-connector/SKILL.md — «A code-7 / VPN-error body is an IP block, not data — the connector maps it to transport_down»."
+    },
+    {
+      "id": "error-005",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: taobao_search вместо листингов отрендерил стену входа с CAPTCHA; в ответе requires_user_action=true.",
+      "expected": "challenge_required",
+      "acceptable_alternatives": [],
+      "forbidden": ["transport_down", "parser_drift"],
+      "evidence": "skills/taobao-connector/SKILL.md — «A detected login/CAPTCHA wall returns challenge_required and requires_user_action=true»."
+    },
+    {
+      "id": "error-006",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: сервер поднялся чисто, но каждый вызов mpstats_item сразу возвращает ошибку — переменную MPSTATS_MP_AUTH не задавали.",
+      "expected": "auth_missing",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/mpstats-connector/SKILL.md — «Without it, every tool returns an auth_missing error (retryable: false) and the server still boots cleanly»."
+    },
+    {
+      "id": "error-007",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: обычный HTTP-запрос к cian.ru (вне браузера) получил 403 и страницу «Обнаружен подозрительный трафик», без капчи.",
+      "expected": "transport_down",
+      "acceptable_alternatives": [],
+      "forbidden": ["challenge_required"],
+      "evidence": "skills/cian-connector/SKILL.md — WAF blocks plain HTTP by IP reputation: «403 inside the browser session (transport_down with \"WAF block\")»; no captcha ⇒ not challenge_required."
+    },
+    {
+      "id": "error-008",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй результат: wb_card по снятому с продажи товару вернул HTTP 200, price_rub: null, in_stock: false.",
+      "expected": "no_error",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift", "not_found"],
+      "evidence": "skills/wb-connector/SKILL.md — «A delisted WB item returns price_rub: null and in_stock: false — real data, not a parse failure. A missing price is null, never 0»."
+    },
+    {
+      "id": "error-009",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: detmir_card вернул HTTP 200, но в теле ответа {\"status\": 404} — товара нет.",
+      "expected": "not_found",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift", "no_error"],
+      "evidence": "skills/detmir-connector/SKILL.md — «HTTP 200 can carry a 404... The connector checks the body and raises a proper not_found»."
+    },
+    {
+      "id": "error-010",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: avito_search на page=3 сначала получил 429, затем 403 с проставлением кук; первые две страницы до этого читались нормально.",
+      "expected": "rate_limited",
+      "acceptable_alternatives": ["transport_down"],
+      "forbidden": ["parser_drift"],
+      "evidence": "skills/avito-connector/SKILL.md — «Avito escalates 429 then 403 once a session walks past the first page or two... treat a rate_limited or transport_down on page > 1 as expected rather than as drift»."
+    },
+    {
+      "id": "error-011",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: после серии быстрых запросов yandex_search начал получать SmartCaptcha; ошибка помечена как retryable.",
+      "expected": "rate_limited",
+      "acceptable_alternatives": [],
+      "forbidden": [],
+      "evidence": "skills/yandex-connector/SKILL.md — «Bursts invite SmartCaptcha, which surfaces as a retryable rate-limit error»."
+    },
+    {
+      "id": "error-012",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: yandex_card перестал находить состояние страницы в SSR — Яндекс перерисовал фронтенд, коннектор сообщает, что схема ответа изменилась.",
+      "expected": "parser_drift",
+      "acceptable_alternatives": [],
+      "forbidden": ["transport_down"],
+      "evidence": "skills/yandex-connector/SKILL.md — «If you see parser_drift, Yandex changed its front-end and the connector needs updating»."
+    },
+    {
+      "id": "error-013",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: из датацентрового адреса citilink_search получает HTTP 429 на каждый запрос ко всему домену.",
+      "expected": "rate_limited",
+      "acceptable_alternatives": ["transport_down"],
+      "forbidden": ["parser_drift"],
+      "notes": "429 is rate_limited by the ErrorCode contract; the skill also describes the datacenter block as «nothing can be verified there», so transport_down is accepted, but drift is never a valid reading of a 429.",
+      "evidence": "skills/citilink-connector/SKILL.md — «From a datacenter address the domain answers 429»; ErrorCode.RATE_LIMITED for 429."
+    },
+    {
+      "id": "error-014",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: ozon_search не ответил за отведённое время и упал по httpx-таймауту.",
+      "expected": "timeout",
+      "acceptable_alternatives": [],
+      "forbidden": ["transport_down"],
+      "evidence": "mcp_core/errors.py — ErrorCode.TIMEOUT; skills/compare-prices/SKILL.md — «Retry once for a timeout»."
+    },
+    {
+      "id": "error-015",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: lamoda_search отрендерил страницу в Chrome, но экстрактор вернул ноль плиток; никаких признаков челленджа на странице нет.",
+      "expected": "parser_drift",
+      "acceptable_alternatives": [],
+      "forbidden": ["not_found", "no_error"],
+      "evidence": "skills/lamoda-connector/SKILL.md — «Empty extraction without challenge evidence remains parser drift, not proof of \"no results\"»."
+    },
+    {
+      "id": "error-016",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй результат: aliexpress_card под нагрузкой вернул карточку с названием, но price_rub: null и предупреждение price_missing.",
+      "expected": "no_error",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift"],
+      "evidence": "skills/aliexpress-connector/SKILL.md — «a normal card response with price_rub None and a price_missing warning — NOT an error, NOT a zero»."
+    },
+    {
+      "id": "error-017",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй сбой: detmir_category несколько раз подряд получил 502 Bad Gateway, автоматические ретраи коннектора не помогли.",
+      "expected": "transport_down",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift"],
+      "evidence": "skills/detmir-connector/SKILL.md — «Sporadic 502s are normal. The API intermittently returns gateway errors; the connector retries them automatically»; persistent 5xx after retries ⇒ transport."
+    },
+    {
+      "id": "error-018",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй результат: compare_prices вернул ранжированный список, в котором 9 источников ответили, а Ozon в source_outcomes помечен blocked; complete=false.",
+      "expected": "no_error",
+      "acceptable_alternatives": [],
+      "forbidden": ["transport_down", "rate_limited"],
+      "notes": "The tool call itself succeeded with a partial, honestly-labelled result; the per-source failure lives inside source_outcomes, it is not a tool-level error for this call.",
+      "evidence": "skills/compare-prices/SKILL.md — «source_outcomes — per-marketplace status... A blocked Ozon does not mean the product is absent»; partial results stay successes with warnings (mcp_core contract)."
+    },
+    {
+      "id": "error-019",
+      "slice": "error-classification",
+      "lang": "ru",
+      "query": "Классифицируй результат: wb_search вернул HTTP 200 и 100 товаров с ценами, остатками и рейтингами — обычный успешный ответ.",
+      "expected": "no_error",
+      "acceptable_alternatives": [],
+      "forbidden": ["parser_drift", "rate_limited"],
+      "evidence": "work/v2-research/eval-matrix.md — the Routing row starts at 200: a healthy response must be classified as healthy, not forced into an error bucket."
+    }
+  ]
+}
