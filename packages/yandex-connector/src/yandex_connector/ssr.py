@@ -350,7 +350,9 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
         base_price = _to_number(payload.get("price"))
         with_discount = _additional_price(payload, "withDiscount")
         price_rub = with_discount if with_discount is not None else base_price
-        price_old = base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
+        price_old = (
+            base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
+        )
 
         rating_node = _as_dict(payload.get("rating"))
         is_available = payload.get("isAvailable")
