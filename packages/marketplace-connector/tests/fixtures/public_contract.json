@@ -425,6 +425,17 @@
           "minLength": 16,
           "pattern": "^[A-Za-z0-9_-]+$",
           "type": "string"
+        },
+        "include_image": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

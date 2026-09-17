@@ -78,9 +78,16 @@ class UpstreamTimeoutError(ConnectorError):
 
 class TransportDownError(ConnectorError):
     def __init__(
-        self, message: str = "upstream transport error", *, provider: str | None = None, status_code: int | None = None
+        self,
+        message: str = "upstream transport error",
+        *,
+        provider: str | None = None,
+        status_code: int | None = None,
+        retry_after_s: float | None = None,
     ) -> None:
-        super().__init__(ErrorCode.TRANSPORT_DOWN, message, provider=provider, status_code=status_code)
+        super().__init__(
+            ErrorCode.TRANSPORT_DOWN, message, provider=provider, status_code=status_code, retry_after_s=retry_after_s
+        )
 
 
 class ParserDriftError(ConnectorError):

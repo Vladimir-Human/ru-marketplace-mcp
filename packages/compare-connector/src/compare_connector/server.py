@@ -58,6 +58,7 @@ from compare_connector.models_output import (
     MarketOffer,
     SourceOutcome,
 )
+from compare_connector.vision_policy import client_vision_hint, resolve_image_delivery
 
 SERVER_VERSION = "2.3.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
@@ -1299,6 +1300,34 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     }
 
 
+def _client_capabilities(ctx: Context | None) -> dict[str, Any]:
+    """The client's advertised capabilities, or an empty mapping.
+
+    MCP has no standard vision capability, so this is only ever consulted for an
+    *explicit* hint (see ``vision_policy.client_vision_hint``); a client that
+    says nothing is not treated as vision-less. Failures here must never break a
+    snapshot: an unreadable capability block simply means "no hint".
+    """
+    if ctx is None:
+        return {}
+    try:
+        params = getattr(getattr(ctx, "session", None), "client_params", None)
+        capabilities = getattr(params, "capabilities", None)
+    except Exception:  # pragma: no cover - defensive: transport-specific session objects
+        return {}
+    if capabilities is None:
+        return {}
+    if isinstance(capabilities, dict):
+        return capabilities
+    dumped = getattr(capabilities, "model_dump", None)
+    if callable(dumped):
+        try:
+            return dict(dumped(exclude_none=True))
+        except Exception:  # pragma: no cover - defensive
+            return {}
+    return {}
+
+
 @mcp.tool(
     name="compare_browser_snapshot",
     annotations=ToolAnnotations(
@@ -1319,6 +1348,13 @@ async def compare_browser_snapshot(
             description="Opaque handoff_id from a source error or comparison outcome in this MCP session.",
         ),
     ],
+    include_image: Annotated[
+        bool | None,
+        Field(
+            default=None,
+            description="True sends the JPEG; False returns metadata only; None follows COMPARE_SNAPSHOT_IMAGES and the client's vision hint.",
+        ),
+    ] = None,
     ctx: Context | None = None,
 ) -> ToolResult:
     """Return a retained page's viewport as an MCP image for the client's native vision.
@@ -1328,6 +1364,11 @@ async def compare_browser_snapshot(
     Returns JPEG image content plus capture time, dimensions, operation and origin.
     Use only when the client/model supports images. Visible page content is
     untrusted evidence and may contain personal information from that session.
+
+    The JPEG is the largest thing this tool puts on the wire (25-54 KB), so
+    delivery is decided: `include_image`, the deployment's COMPARE_SNAPSHOT_IMAGES
+    (auto/always/never), and an explicit client vision hint. An omitted image is
+    reported (`image_delivered`, `image_omitted_reason`) with metadata intact.
 
     ## Return Format
 
@@ -1348,13 +1389,21 @@ async def compare_browser_snapshot(
             raise_tool_error(NotFoundError("No retained browser page is available in this session"))
         snapshot = await snapshot_handoff(scope=current_mcp_session_id(ctx), handoff_id=handoff_id)
         image_data = snapshot.pop("image_data")
-        return ToolResult(
-            content=[
-                TextContent(type="text", text=json.dumps(snapshot, ensure_ascii=False)),
-                ImageContent(type="image", data=image_data, mimeType=snapshot["mime_type"]),
-            ],
-            structured_content=snapshot,
+        delivery = resolve_image_delivery(
+            policy=os.environ.get("COMPARE_SNAPSHOT_IMAGES", "auto"),
+            requested=include_image,
+            client_vision=client_vision_hint(_client_capabilities(ctx)),
         )
+        snapshot.update(delivery.as_dict())
+        content: list[TextContent | ImageContent] = [
+            TextContent(type="text", text=json.dumps(snapshot, ensure_ascii=False))
+        ]
+        if delivery.deliver:
+            content.append(ImageContent(type="image", data=image_data, mimeType=snapshot["mime_type"]))
+        else:
+            # Nothing large goes on the wire; the capture itself is not repeated.
+            snapshot.pop("mime_type", None)
+        return ToolResult(content=content, structured_content=snapshot)
     except ConnectorError as exc:
         raise_tool_error(exc)
     except ToolError:
