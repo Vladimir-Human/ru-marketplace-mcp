@@ -1,0 +1,5 @@
+ README.md                                              | 12 ++++++------
+ docs/ARCHITECTURE.md                                   |  2 +-
+ .../compare-connector/src/compare_connector/server.py  | 12 ++++++++++--
+ packages/compare-connector/tests/test_server.py        | 18 ++++++++++++++++++
+ 4 files changed, 35 insertions(+), 9 deletions(-)

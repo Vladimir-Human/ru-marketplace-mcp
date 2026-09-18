@@ -126,7 +126,7 @@ Image tags are pinned: the builder is `ghcr.io/astral-sh/uv:0.11.32-python3.12-t
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:2.3.0 .
+docker build -t ru-marketplace-mcp:2.4.0 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -149,7 +149,7 @@ container, and publish the port to the host's loopback:
 
 ```bash
 docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.3.0
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.4.0
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
@@ -157,7 +157,7 @@ Run a different marketplace by overriding the command:
 
 ```bash
 docker run --rm -p 127.0.0.1:8001:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.3.0 yandex-mcp
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.4.0 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` keeps access local in addition to the MCP auth checks.

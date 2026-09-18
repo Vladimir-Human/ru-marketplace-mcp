@@ -7,6 +7,50 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [2.4.0] - 2026-09-18
+
+### Reliability
+
+- CDP navigations are bounded: at most three in flight process-wide and one per
+  host, with a per-host breaker that pauses a host after repeated refusals instead
+  of letting the rest of a fan-out queue behind it. The budget covers the
+  navigation, not the page - a retained challenge page waits for a human and must
+  not hold its host's slot.
+- Refusal backoff is jittered, so sources refused at the same moment no longer
+  retry in lockstep.
+- The browser-handoff registry holds eight leases, bounds a lease by lifetime
+  (900 s, never extended by a retry) and by idleness (600 s), and the handle issuer
+  and consumer now agree on what "live" means.
+
+### Reporting
+
+- A resumed read says what happened: whether the retained page was resumed,
+  whether the challenge cleared, and whether the data moved (tri-state - "nothing
+  to compare with" is not "nothing changed"), compared by digest rather than by
+  keeping the payload.
+- Refusals explain themselves: busy names the reason and a retry hint, a full
+  registry says so, and a caller's own expired handle says it expired while a
+  foreign handle stays opaque.
+
+### Correctness
+
+- Yandex zone snippets are found with a quote-aware tag scanner; a raw `>` inside
+  an attribute value no longer makes a snippet disappear from the parse.
+- The routing-eval runner's verdict is machine-checkable: a partial run is not
+  `ok`, missing answers count as failed, and the exit code follows the verdict.
+
+### Privacy
+
+- Fixtures no longer carry third-party contact phone numbers, a logged-in account
+  nick, per-request identifiers, reviewer display names, account ids or order
+  numbers; the operator's egress IP was replaced with documentation space.
+- Every fixture pin is verified against its file by a CI gate.
+
+### Tooling
+
+- `scripts/check_provenance.py` checks all fixture pins and refuses to let a
+  quarantined pin stay quarantined once it matches again.
+
 ## [2.3.0] - 2026-09-13
 
 - `compare_browser_snapshot(handoff_id)` exposes the retained browser viewport as
@@ -33,8 +77,9 @@
   vision. Handles are same-session and expire with the retained lease.
 - DSH mounts exactly one profile with precedence full, decision, compare. This
   fixes duplicate compare/decision mounts and the full+decision flag conflict.
-- The snapshot tool deliberately adds about 265 wire tokens: compare 1816,
-  decision 2071, unified 16342. Baselines and the public tool contract were
+- The snapshot tool costs 370 wire tokens in the stored baseline; the profiles it
+  belongs to total compare 2023, decision 2278, unified 16549
+  (`work/performance/wire-baseline.json`, enforced by the CI wire gate). Baselines and the public tool contract were
   updated for this addition; CI now gates the middle profile too.
 - Owned tabs close on success, failure, expiry, caller cancellation and graceful
   shutdown. Active handoffs suppress profile hiding; owned-window foreground
@@ -79,7 +124,7 @@
   rejected and leading-zero GTIN representations compare equally. Price
   ranking is unchanged; live manufacturer-field extraction remains unverified.
 - The deliberate optional-input expansion adds about 196 estimated tokens:
-  compare profile 1355 → 1551; unified profile 15834 → 16030. The stored
+  compare profile 1816 → 2023; unified profile 16030 → 16549 (values as stored in `work/performance/wire-baseline.json`). The stored
   wire baseline is updated for this contract change; the 10% gate is unchanged.
 
 ### Исправлено

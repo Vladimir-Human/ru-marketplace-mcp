@@ -1,0 +1,45 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "openai",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKey": "$DASHSCOPE_API_KEY"
+    }
+  },
+  "model": {
+    "name": "qwen3.8-max",
+    "reasoningEffort": "xhigh",
+    "generationConfig": {
+      "timeout": 1200000,
+      "maxRetries": 5
+    },
+    "maxSessionTurns": -1,
+    "maxWallTimeSeconds": 12600,
+    "maxToolCalls": -1,
+    "maxToolCallsPerTurn": 100
+  },
+  "tools": {
+    "approvalMode": "yolo"
+  },
+  "permissions": {
+    "deny": [
+      "run_shell_command(git push)",
+      "run_shell_command(git tag)",
+      "run_shell_command(git remote)",
+      "run_shell_command(gh)",
+      "run_shell_command(uv publish)",
+      "run_shell_command(twine)",
+      "run_shell_command(curl)",
+      "run_shell_command(wget)",
+      "run_shell_command(nc)",
+      "run_shell_command(ssh)"
+    ]
+  },
+  "context": {
+    "autoCompactThreshold": 0.7
+  },
+  "general": {
+    "cleanupPeriodDays": 30
+  },
+  "$version": 4
+}
