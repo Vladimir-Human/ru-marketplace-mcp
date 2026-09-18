@@ -12,7 +12,7 @@ decided, not assumed:
   capability, so only an *explicit* hint is honoured, and its absence is not read
   as "no vision" (that would silently break every existing client). The hint is
   looked up in ``capabilities.experimental`` / ``capabilities.extensions``, the
-  two extra-field bags fastmcp itself inspects.
+  the ``extensions`` bag is the one fastmcp itself inspects; ``experimental`` is read as our own convention, because a client that means 'no images' has nowhere standard to say it.
 
 The resolver is pure: policy text, the caller's wish and the client's hint in,
 one decision out. Nothing here opens a browser or touches MCP.

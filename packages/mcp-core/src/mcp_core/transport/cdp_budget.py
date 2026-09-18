@@ -104,7 +104,12 @@ class Slot:
         self._budget._note_success(self.host)
 
     def refused(self, status: int | None = None) -> None:
-        """The navigation was refused (4xx/5xx/block/auth or a challenge wall)."""
+        """The navigation was refused (4xx/5xx/block/auth) as reported by the caller.
+
+        A challenge wall is *not* counted here: the page loaded, so the navigation
+        succeeded, and recognising a wall is the connector's job — a page that shows a
+        captcha is not a host refusing to talk to us.
+        """
         if self._settled:
             return
         self._settled = True
