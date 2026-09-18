@@ -1,7 +1,7 @@
 {
   "url": "https://market.yandex.ru/product/4315891968",
   "captured_at": "2026-09-13",
-  "sha256": "010155c3b79d0140359cd0c35282518083a2d429a37fa61a7c25d71ca6e02bc6",
+  "sha256": "e45a30771ac279f3de7809cd3b709ddf9f2b8dc4c769f00ea291c838cfcb9ca0",
   "source_capture": {
     "sha256": "1913627a1e499f12108f0e3764950c3f0f34fdea46b1ee75313fc67d07cfadf2",
     "saved_copy": "release-v230-evidence/agentA-ydrift/agentA-card-4315891968.html",
@@ -16,5 +16,6 @@
     "product_alive": "at capture time the product (Смартфон Realme Note 60х 4/128GB, sku 103796664836, InStock) was the first hit of the live search «телефон» on the same client — the hollow frame is degraded serving, not a delisting",
     "browser_tier": "the same URL opened in the operator's Chrome via CDP at 2026-09-13T10:22Z hit SmartCaptcha («Вы не робот?», showcaptcha redirect)",
     "note": "pinned by test_ssr.py::test_card_empty_shell_from_the_live_capture and test_server.py::test_card_empty_shell_is_not_reported_as_parser_drift: parse_card returns status empty_product_shell with product_id 4315891968 recovered from pageParams, yandex_card raises a retryable transport_down error naming empty_product_shell (never parser_drift), and yandex_selfcheck classifies the card as inconclusive, not drift."
-  }
+  },
+  "redaction_note": "2026-09-18 privacy audit: third-party contacts / logged-in account nick / per-request ids masked to same-shape placeholders; recomputed sha256"
 }
