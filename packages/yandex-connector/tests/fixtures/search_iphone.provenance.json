@@ -1,9 +1,10 @@
 {
   "url": "https://market.yandex.ru/search?text=iphone",
   "captured_at": "2026-07-28",
-  "sha256": "89ac8858817e47f1af81c733f47f2f3ddc324569684f496695f9773679a920fb",
+  "sha256": "7e83a6280f65a3b3fda6a2106d7dad48224cf53f3d6332c09380fc4d6aabcdbc",
   "method": "real SSR page captured live Jul 2026, trimmed to a few products and two reviews each (2 MB -> ~60 KB); trimming preserves exact nesting",
   "ground_truth": {
     "note": "search «iphone»: pins absolute product URLs and deduplication by snippet (duplicate model offers collapse to one item)."
-  }
+  },
+  "redaction_note": "2026-09-18 privacy audit: third-party contacts / logged-in account nick / per-request ids masked to same-shape placeholders; recomputed sha256"
 }

@@ -1,9 +1,10 @@
 {
   "url": "https://market.yandex.ru/search?text=%D1%82%D0%B5%D0%BB%D0%B5%D1%84%D0%BE%D0%BD",
   "captured_at": "2026-09-13",
-  "sha256": "5f3199863325c07e9c17188acb7f48734c1df15d716bcf72fbd3a4e63c09258f",
+  "sha256": "423e8e4a1decd7f050a09bff7eccc66030f2525be1c51741e3ea77ec9de5aa22",
   "method": "anonymous SSR search page captured live 2026-09-13 (the post-2026-09-12 serving: no widget-state collections bundle at all), trimmed to the first three productSnippet zones (114931 bytes); trimming preserves the exact nesting and the HTML-escaped data-zone-data attribute payloads so an upstream structural change still shows up. PII redacted: data-zone-data ip -> 203.0.113.0 (RFC 5737 TEST-NET-3), yandexuid -> 1234567890123456789 placeholder.",
   "ground_truth": {
     "note": "search «телефон» (total 2107, page 1, 8 items per page): the fixture for the zone path that replaced the missing collections. Each productSnippet zone carries its own analytics payload in data-zone-data; the three kept rows, decoded straight out of this snapshot, are: Realme Note 60х 4/128GB Зеленый — osku 4315891968, marketSku 103796664836, base price 12450 (struck through), additionalPrices withDiscount 11329 (everyday, what anyone pays), yaBank 11102 (green Yandex Plus); Android 15 12/512ГБ — osku 6113276550, marketSku 6113276550, base 16569, withDiscount 6195, yaBank 6071; Samsung Galaxy A17 6/128GB Голубой — osku 4680656365, marketSku 4696420378, base 20980, withDiscount 19092, yaBank 18710. Independent cross-check inside the same snapshot: the schema.org ItemList carries exactly the yaBank figures (11102 / 6071 / 18710) as offers.price — it is the Plus-only view of the very same offers, and it is why quoting offers.price as price_rub would misstate the everyday cost by 25-30 percent. The everyday figures are NOT present as visible text anywhere in the snippet DOM (the SERP prints only the green Plus amount); they exist only as additionalPrices[withDiscount], verified live 2026-09-11 against the product card's prices.price row for the same offers (see search_kettle.provenance.json for that cross-check). Seller comes from the payload's shop signal: ОНЛАЙНТРЕЙД.РУ on rows 0 and 2, absent on row 1 (the Android row ships no shop signal) — an absent seller must read as empty, never as a guess. brand is unresolvable on this path: the payload ships only vendorId."
-  }
+  },
+  "redaction_note": "2026-09-18 privacy audit: third-party contacts / logged-in account nick / per-request ids masked to same-shape placeholders; recomputed sha256"
 }
