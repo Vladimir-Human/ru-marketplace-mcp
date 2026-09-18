@@ -18,15 +18,10 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-# path -> why it is tolerated, dated. Remove the entry when the owner decides.
-KNOWN_STALE = {
-    "packages/avito-connector/tests/fixtures/js_items_live.provenance.json": (
-        "2026-09-18: the pin matches its fixture under no line-ending convention (raw, LF or CRLF), and the "
-        "fixture directory holds exactly one candidate file. Unlike the citilink case, which turned out to be "
-        "CRLF-based and healthy, this one looks genuinely wrong. Waiting for the owner: the pin may be stale or "
-        "the fixture may have been replaced."
-    ),
-}
+# path -> why it is tolerated, dated. Empty is the healthy state: a pin that
+# matches under raw, LF or CRLF needs no entry, and a resolved entry must be
+# deleted - the gate fails while a quarantined pin is matching, on purpose.
+KNOWN_STALE: dict[str, str] = {}
 
 
 def pins() -> list[tuple[pathlib.Path, pathlib.Path, str]]:

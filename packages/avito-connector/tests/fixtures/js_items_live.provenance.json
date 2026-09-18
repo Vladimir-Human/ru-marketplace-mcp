@@ -1,7 +1,8 @@
 {
   "url": "https://www.avito.ru/web/1/js/items?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA&locationId=637640",
   "captured_at": "2026-08-29",
-  "sha256": "321fe4b2f046d3b9378c6cbbed8172eb40135a82cba9339d197b6be03e8855a6",
+  "sha256": "575dd5c7da89b0a29225fa5b42519e79b187d5e9ce69e8b16a1e7760f9791fd4",
+  "sha256_corrected": "2026-09-18: the previous value (321fe4b2f046d3b9...) matched this fixture under no line-ending convention (raw, LF, CRLF), no trailing-newline variant and not the committed blob, while the fixture has not changed since the very commit that wrote that value (cc4f201, 're-fingerprint shape reference'). So the pin was computed from a state that was never committed. Refreshed to the committed bytes: this field is metadata about the fixture every test reads. Found by scripts/check_provenance.py.",
   "method": "a genuine Avito search response captured from a residential session (query «ноутбук», locationId 637640); trimmed to 3 items and shortened image/gallery lists for size — every field the parser reads is byte-for-byte as Avito sent it. Envelope note: as of this capture there is NO top-level 'items' key — listings live under catalog.items[] (moved from the top level, replacing the pre-2026-08 shape captured in the older provenance note).",
   "ground_truth": {
     "note": "the live js/items payload; the contract test pins: catalog.items[] with 3 items, prices [69900, 17990, 14000] from priceDetailed.value, url fields present: urlPath, first title «Ноутбук Lenovo ThinkBook 16 G6 Новый»"
