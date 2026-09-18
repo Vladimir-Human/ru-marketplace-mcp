@@ -20,14 +20,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 # path -> why it is tolerated, dated. Remove the entry when the owner decides.
 KNOWN_STALE = {
-    "packages/citilink-connector/tests/fixtures/card.provenance.json": (
-        "2026-09-18: pin does not match the file under any normalisation (no CRLF involved); fixture and pin "
-        "were written in the same commit 4fadf28, so likely the pre-trim capture was hashed. Waiting for the "
-        "owner to decide whether the pin or the fixture is wrong."
-    ),
     "packages/avito-connector/tests/fixtures/js_items_live.provenance.json": (
-        "2026-09-18: found by this gate on its first run - declared 321fe4b2..., the only candidate file "
-        "js_items_live.json hashes to 575dd5c7.... Same class as the citilink pin; waiting for the owner."
+        "2026-09-18: the pin matches its fixture under no line-ending convention (raw, LF or CRLF), and the "
+        "fixture directory holds exactly one candidate file. Unlike the citilink case, which turned out to be "
+        "CRLF-based and healthy, this one looks genuinely wrong. Waiting for the owner: the pin may be stale or "
+        "the fixture may have been replaced."
     ),
 }
 
@@ -54,8 +51,18 @@ def check() -> list[str]:
     problems = []
     for prov, fixture, declared in pins():
         rel = prov.relative_to(ROOT).as_posix()
-        actual = hashlib.sha256(fixture.read_bytes()).hexdigest()
-        if actual == declared:
+        raw = fixture.read_bytes()
+        lf = raw.replace(b"\r\n", b"\n")
+        crlf = lf.replace(b"\n", b"\r\n")
+        actual = hashlib.sha256(raw).hexdigest()
+        # A pin is legitimate under any of the three line-ending conventions: the
+        # repository has both, because different contributors hashed different
+        # checkouts. Only "none of them" is a defect. (Learned the hard way: the
+        # first version compared raw bytes and LF only, so on a Windows CI checkout
+        # it reported six healthy pins as stale - and called the CRLF-based citilink
+        # pin broken, which it is not.)
+        matches = declared in {actual, hashlib.sha256(lf).hexdigest(), hashlib.sha256(crlf).hexdigest()}
+        if matches:
             if rel in KNOWN_STALE:
                 problems.append(f"{rel}: pin now MATCHES - remove the KNOWN_STALE entry")
             continue
