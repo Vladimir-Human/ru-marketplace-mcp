@@ -50,7 +50,7 @@
         "minArea": null,
         "phones": [
           {
-            "number": "9230727409",
+            "number": "0000000000",
             "countryCode": "7"
           }
         ],
@@ -637,11 +637,11 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9253532887"
+              "number": "0000000000"
             },
             {
               "countryCode": "+7",
-              "number": "9263483889"
+              "number": "0000000000"
             }
           ],
           "userType": "developer",
@@ -774,7 +774,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9863239225"
+            "number": "0000000000"
           }
         ],
         "kitchenArea": "5.2",
@@ -1246,7 +1246,7 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9160332434"
+              "number": "0000000000"
             }
           ],
           "profileUri": "company/132219853/",
@@ -1802,7 +1802,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9230727409"
+            "number": "0000000000"
           }
         ],
         "bargainTerms": {
@@ -1916,11 +1916,11 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9253532887"
+              "number": "0000000000"
             },
             {
               "countryCode": "+7",
-              "number": "9263483889"
+              "number": "0000000000"
             }
           ],
           "userType": "developer",

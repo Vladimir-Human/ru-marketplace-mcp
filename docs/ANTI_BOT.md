@@ -297,7 +297,7 @@ POST https://megamarket.ru/api/mobile/v1/catalogService/productCard/get
 It accepts requests and returns valid JSON — but always this:
 
 ```json
-{"error": "Произошла ошибка. Попробуйте отключить VPN…", "code": 7, "ip": "3.220.149.31"}
+{"error": "Произошла ошибка. Попробуйте отключить VPN…", "code": 7, "ip": "203.0.113.0"}
 ```
 
 Echoing our own IP back is an unambiguous reputation block. ServicePipe

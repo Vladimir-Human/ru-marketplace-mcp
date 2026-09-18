@@ -434,7 +434,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9230758879"
+            "number": "0000000000"
           }
         ],
         "isImported": false,
@@ -570,7 +570,7 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9128541333"
+              "number": "0000000000"
             }
           ],
           "profileUri": "agents/17548313/",
@@ -1154,7 +1154,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9810868105"
+            "number": "0000000000"
           }
         ],
         "cadastralNumber": null,
@@ -1259,11 +1259,11 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9645593399"
+              "number": "0000000000"
             },
             {
               "countryCode": "+7",
-              "number": "4950329232"
+              "number": "0000000000"
             }
           ],
           "profileUri": "company/82978482/",
@@ -1903,7 +1903,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9339384779"
+            "number": "0000000000"
           }
         ],
         "cadastralNumber": null,
@@ -2007,7 +2007,7 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9254809517"
+              "number": "0000000000"
             }
           ],
           "profileUri": "company/112566994/",
