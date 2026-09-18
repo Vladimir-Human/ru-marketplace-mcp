@@ -204,9 +204,15 @@ def has_pending_handoff(*, scope: str | None, operation: str, url: str) -> bool:
 
 
 def get_handoff_id(*, scope: str | None, operation: str, url: str) -> str | None:
-    """Return an opaque handle only for this exact live operation's lease."""
+    """Return an opaque handle only for this exact live operation's lease.
+
+    Liveness is ``_expired`` — the lifetime bound *and* the idle bound — the same
+    predicate the rest of the module uses. Checking only the deadline here used to
+    hand out a handle that ``snapshot_handoff`` immediately rejected as expired:
+    two functions answering one question with different answers (review 2026-09-18).
+    """
     lease = _leases.get(_key(scope, operation, url)) if scope else None
-    if lease is None or lease.cleaning or lease.deadline <= asyncio.get_running_loop().time():
+    if lease is None or lease.cleaning or _expired(lease, asyncio.get_running_loop().time()):
         return None
     return lease.handoff_id
 
