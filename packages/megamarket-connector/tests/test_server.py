@@ -42,7 +42,7 @@ CARD_PAYLOAD = {
     }
 }
 
-IP_BLOCK_PAYLOAD = {"error": "Произошла ошибка. Попробуйте отключить VPN…", "code": 7, "ip": "3.220.149.31"}
+IP_BLOCK_PAYLOAD = {"error": "Произошла ошибка. Попробуйте отключить VPN…", "code": 7, "ip": "203.0.113.0"}
 
 
 # The autouse fixture stubs _final_catalog_url so unrelated tests never reach for

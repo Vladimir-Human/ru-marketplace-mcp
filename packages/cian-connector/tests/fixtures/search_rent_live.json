@@ -192,7 +192,7 @@
         "coworking": null,
         "phones": [
           {
-            "number": "9119664962",
+            "number": "0000000000",
             "countryCode": "7"
           }
         ],
@@ -557,7 +557,7 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9523724431"
+              "number": "0000000000"
             }
           ],
           "profileUri": "company/131124249/",
@@ -788,7 +788,7 @@
         "coworking": null,
         "phones": [
           {
-            "number": "9820937453",
+            "number": "0000000000",
             "countryCode": "7"
           }
         ],
@@ -1179,11 +1179,11 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9609919856"
+              "number": "0000000000"
             },
             {
               "countryCode": "+7",
-              "number": "4951563586"
+              "number": "0000000000"
             }
           ],
           "subAgentCompanyName": "Циан х ПИК-Аренда",
@@ -1749,7 +1749,7 @@
         "phones": [
           {
             "countryCode": "7",
-            "number": "9119520225"
+            "number": "0000000000"
           }
         ],
         "isImported": false,
@@ -1908,7 +1908,7 @@
           "phoneNumbers": [
             {
               "countryCode": "+7",
-              "number": "9523873161"
+              "number": "0000000000"
             }
           ],
           "subAgentCompanyName": "8 ЭТАЖ",
