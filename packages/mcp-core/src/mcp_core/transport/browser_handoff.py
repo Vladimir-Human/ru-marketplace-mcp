@@ -7,6 +7,8 @@ context manager alive; resuming never searches for tabs or navigates again.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import math
 import os
 import secrets
@@ -120,8 +122,21 @@ class _Lease:
     cleaning: bool = False
     task: asyncio.Task[None] | None = None
     last_used: float = 0.0
-    last_payload: dict[str, Any] | None = None
+    last_digest: str | None = None
     reads: int = 0
+
+
+def _payload_digest(payload: dict[str, Any]) -> str:
+    """A stable fingerprint of one read, so nothing has to be retained to compare.
+
+    Found by an independent review: keeping the payload object itself compared a
+    dict the *caller* then mutates (connectors attach ``_resume`` and
+    ``_handoff_*`` keys to it), so every resumed read looked "changed" — and it
+    also kept marketplace data alive in the registry for the whole retention
+    window, which the worker explicitly forbids.
+    """
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _resume_note(lease: _Lease, response: Result, *, resumed: bool, url: str) -> dict[str, Any]:
@@ -132,9 +147,9 @@ def _resume_note(lease: _Lease, response: Result, *, resumed: bool, url: str) ->
     nothing to compare with yet (a first read, not "nothing changed").
     """
     payload = response[0] if isinstance(response[0], dict) else {}
-    previous = lease.last_payload
-    changed: bool | None = None if previous is None else payload != previous
-    lease.last_payload = payload
+    digest = _payload_digest(payload)
+    changed: bool | None = None if lease.last_digest is None else digest != lease.last_digest
+    lease.last_digest = digest
     lease.reads += 1
     still_challenged = response[1] is not None
     return {

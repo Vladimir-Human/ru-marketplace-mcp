@@ -1088,9 +1088,10 @@ async def open_page(
         await stack.aclose()
         raise
     except NavigationPolicyError:
-        # We refused the navigation, not the host — never blame the host for our
-        # own policy.
-        permit.ok()
+        # We refused the navigation, not the host: neither blame it (refused) nor
+        # credit it (ok — which would wipe its refusal record and close an open
+        # breaker on an event we caused).
+        permit.neutral()
         await stack.aclose()
         raise
     except BaseException:
