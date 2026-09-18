@@ -110,6 +110,18 @@ class Slot:
         self._settled = True
         self._budget._note_refusal(self.host, status)
 
+    def neutral(self) -> None:
+        """The navigation ended for a reason that is neither success nor refusal.
+
+        Our own host-policy rejection is not the host refusing us — but it is not
+        proof the host is healthy either. Settling it as ``ok()`` used to wipe the
+        host's accumulated refusals and close a legitimately open breaker, i.e. an
+        event we caused could reset the host's record. (Independent review, 2026-09-18.)
+        """
+        if self._settled:
+            return
+        self._settled = True
+
     def release(self) -> None:
         """Give the slot back. Idempotent, and separate from the outcome.
 

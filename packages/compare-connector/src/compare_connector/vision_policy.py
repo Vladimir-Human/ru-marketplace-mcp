@@ -94,11 +94,16 @@ def resolve_image_delivery(
 ) -> ImageDelivery:
     """Decide whether the JPEG goes on the wire, and name the reason when it does not.
 
-    Precedence: an explicit refusal from the client beats everything (we do not
-    send pixels to something that just said it cannot read them); then the
-    deployment policy; then the caller's explicit wish; then the default, which
-    is to deliver — the tool exists to be used, and today's callers already opt in
-    by calling it.
+    Precedence, highest first — the deployment outranks the caller, and only the
+    client's own explicit refusal outranks the deployment:
+
+    1. the client said it cannot read images → never send pixels;
+    2. ``never`` → the deployment forbids images for everyone;
+    3. ``always`` → the deployment requires them, so a caller asking for metadata
+       only does not veto it (that is what makes ``always`` differ from ``auto``:
+       an independent review found the two identical);
+    4. the caller asked for metadata only;
+    5. otherwise deliver — the tool exists to be used.
     """
     chosen = normalize_policy(policy)
 
@@ -106,8 +111,8 @@ def resolve_image_delivery(
         return ImageDelivery(False, chosen, "client_reports_no_vision")
     if chosen == "never":
         return ImageDelivery(False, chosen, "policy_never")
-    if requested is False:
-        return ImageDelivery(False, chosen, "caller_requested_metadata_only")
     if chosen == "always":
         return ImageDelivery(True, chosen, None)
+    if requested is False:
+        return ImageDelivery(False, chosen, "caller_requested_metadata_only")
     return ImageDelivery(True, chosen, None)
