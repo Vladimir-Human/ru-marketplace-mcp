@@ -63,10 +63,10 @@ node_modules/
 # manifest every dsh install resolves, so it must be tracked.
 !dsh/package.json
 
-# Local run scaffolding - never part of the project.
-PUBLISH_PROMPT.md
+# Local tooling and run artifacts that must never be committed.
 .agent/
 .qwen/
 MISSION.md
 QWEN.md
+PUBLISH_PROMPT.md
 start-run.sh

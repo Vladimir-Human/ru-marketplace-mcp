@@ -47,5 +47,5 @@
     ]
   },
   "note": "Daily rent: bargainTerms carries price (no priceRur), paymentPeriod and leaseTermType are null, category dailyFlatRent. The price is per NIGHT.",
-  "trimmed": "first 3 offers; description cut to 300 chars; photos cut to 2 | 2026-09-18 privacy audit: publisher contact phones masked to placeholders"
+  "trimmed": "first 3 offers; description cut to 300 chars; photos cut to 2 | 2026-09-18 privacy audit: publisher contact phones masked to placeholders | 2026-09-18 audit follow-up: identities of natural-person realtors masked (name fields, account ids, agent profile link). Agency and business records are unchanged."
 }

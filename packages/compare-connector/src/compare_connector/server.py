@@ -378,7 +378,7 @@ def _as_price(value: object) -> float | None:
 
     Live evidence for the delegation (Ozon rendered search + card pages captured
     2026-08-07 through the operator's Chrome, raw HTML in
-    ``.agent/captures/``): all 144 distinct price-like strings on the pages
+    the captured pages kept outside the repository): all 144 distinct price-like strings on the pages
     parse identically through ``coerce_price``, except range strings like
     "1 000–2 000 ₽", which the old duplicate concatenated into a fabricated
     price and the shared parser correctly rejects as ambiguous.

@@ -81,6 +81,6 @@
 
 ## Бюджет живых запросов
 
-Потрачено 25/40 рабочих запросов (см. `.agent/LIVE-BUDGET.md`): citilink 3/8,
+Потрачено 25/40 рабочих запросов (см. журнал живого прогона): citilink 3/8,
 dns-shop 3/8, wildberries 3/8, ozon 6/8, lamoda 2/8, taobao 3, detmir 2/8,
 megamarket 3/8.

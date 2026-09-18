@@ -544,7 +544,7 @@ def test_price_coercion_never_returns_a_non_finite_value():
 
 def test_price_coercion_never_concatenates_a_price_range():
     """Live-captured Ozon filter strings (rendered search page, 2026-08-07,
-    .agent/captures/ozon_search_page_raw.html) carry TWO numbers:
+    the captured pages kept outside the repository, ozon_search_page_raw.html) carry TWO numbers:
     '1 000–2 000 ₽'. The old tolerant parser concatenated them into
     10002000.0 — a plausible-looking fabricated price. The shared doctrine
     is: more than one number means ambiguous, which means None."""
@@ -556,7 +556,7 @@ def test_price_coercion_never_concatenates_a_price_range():
     "raw",
     [
         # Thin-space grouped integers exactly as captured from Ozon's rendered
-        # pages on 2026-08-07 (.agent/captures/ozon_*_page_raw.html); the two
+        # pages on 2026-08-07 (the captured pages kept outside the repository, ozon_*_page_raw.html); the two
         # comma-decimal forms were not on those pages but are the kopeck
         # display shape coerce_price is documented to handle — pinned here so
         # the delegation's decimal parity is explicit, not implied.

@@ -944,7 +944,7 @@ English summary:
 - Живой `doctor` на момент выпуска: wildberries, ozon, yandex, detmir, taobao,
   citilink — healthy; avito (анти-бот), dns (401 сессии), megamarket
   (ServicePipe), mpstats (нет платного токена) — честные inconclusive.
-- Бюджет живых запросов прогона: 25 из 40 (см. `.agent/LIVE-BUDGET.md`).
+- Бюджет живых запросов прогона: 25 из 40 (см. журнал живого прогона).
 
 English summary:
 

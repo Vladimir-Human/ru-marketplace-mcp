@@ -10,5 +10,5 @@
     "category": "dailyFlatRent"
   },
   "note": "A daily card has no bargainTerms.priceRur — only .price, and it is the nightly rate.",
-  "trimmed": "offerData reduced to offer/agent/company/priceChanges/stats; description 300 chars; photos 2 | 2026-09-18 privacy audit: publisher contact phones masked to placeholders"
+  "trimmed": "offerData reduced to offer/agent/company/priceChanges/stats; description 300 chars; photos 2 | 2026-09-18 privacy audit: publisher contact phones masked to placeholders | 2026-09-18 audit follow-up: identities of natural-person realtors masked (name fields, account ids, agent profile link). Agency and business records are unchanged."
 }

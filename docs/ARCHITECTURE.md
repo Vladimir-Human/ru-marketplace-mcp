@@ -48,11 +48,13 @@ everyone.
 `mcp-core` exists so that adding a marketplace means writing fetch and parse logic
 and nothing else.
 
-### `errors` — one taxonomy, eight codes
+### `errors` — one taxonomy, nine codes
 
 Every failure maps to `auth_missing`, `rate_limited`, `timeout`, `transport_down`,
-`parser_drift`, `bad_request`, `permission_denied`, or `not_found`, each carrying a
-`retryable` flag. Tools raise `ToolError` with a JSON body, so an agent can decide
+`parser_drift`, `bad_request`, `permission_denied`, `challenge_required`, or
+`not_found`, each carrying a `retryable` flag. `challenge_required` is the one a
+CDP caller meets most often: the page loaded but a wall stands in front of the data,
+and it is retryable once the wall is cleared. Tools raise `ToolError` with a JSON body, so an agent can decide
 whether to retry without parsing prose.
 
 The distinction that matters most: **`transport_down` means "we were refused",

@@ -1116,7 +1116,7 @@
           "realtor": null
         },
         "user": {
-          "cianUserId": "117832788",
+          "cianUserId": "000000000",
           "isAgent": true,
           "isBuilder": false,
           "isCallbackUser": false,
@@ -1124,7 +1124,7 @@
           "isHidden": true,
           "isPassportVerified": false,
           "isSubAgent": true,
-          "userId": 117832788,
+          "userId": 0,
           "userTrustLevel": "involved",
           "accountType": "specialist",
           "agencyName": "Дмитрий Шубин",
@@ -1162,7 +1162,7 @@
           },
           "canShowOnline": false,
           "cianProfileStatus": "hide",
-          "companyName": "Циан х ПИК-Аренда",
+          "companyName": "00000000000000000",
           "isChatsEnabled": true,
           "isSelfEmployed": false,
           "masterAgent": {
@@ -1843,7 +1843,7 @@
           "realtor": null
         },
         "user": {
-          "cianUserId": "47557313",
+          "cianUserId": "00000000",
           "isAgent": true,
           "isBuilder": false,
           "isCallbackUser": false,
@@ -1851,7 +1851,7 @@
           "isHidden": true,
           "isPassportVerified": true,
           "isSubAgent": true,
-          "userId": 47557313,
+          "userId": 0,
           "userTrustLevel": "involved",
           "accountType": "specialist",
           "agencyName": "Игорь Соснин",
@@ -1891,7 +1891,7 @@
           },
           "canShowOnline": true,
           "cianProfileStatus": "hide",
-          "companyName": "8 ЭТАЖ",
+          "companyName": "000000",
           "isChatsEnabled": true,
           "isSelfEmployed": false,
           "masterAgent": {

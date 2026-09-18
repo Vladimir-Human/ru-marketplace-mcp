@@ -459,12 +459,12 @@
     },
     "agent": {
       "id": 17548313,
-      "cianUserId": 17548313,
+      "cianUserId": 0,
       "realtyUserId": 17548313,
       "accountType": "specialist",
-      "companyName": "Наталья  Ярышкина",
+      "companyName": "00000000000000000",
       "creationDate": "2018-07-25T12:29:32.337000Z",
-      "name": "Наталья  Ярышкина",
+      "name": "00000000000000000",
       "isPro": false,
       "phones": [
         {
@@ -476,12 +476,12 @@
       ],
       "skills": [],
       "isDeveloper": false,
-      "firstName": "Наталья ",
-      "lastName": "Ярышкина ",
+      "firstName": "00000000",
+      "lastName": "000000000",
       "isRecidivist": false,
       "isUserOffersHasErrors": false,
       "offersCount": 1,
-      "offersLink": "https://www.cian.ru/agents/17548313/",
+      "offersLink": "https://www.cian.ru/agents/0/",
       "availableServices": {
         "isUploadsAvailable": false,
         "isCallTrackingAvailable": false,

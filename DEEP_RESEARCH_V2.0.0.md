@@ -1,5 +1,21 @@
 # Deep Research: ru-marketplace-mcp 2.0.0
 
+> **SUPERSEDED PLAN — do not read as current state (notice added 2026-09-18).**
+> This is a dated research plan from 2026-09-09 (`4e0476d`). Its "high-impact v2 work"
+> list was written before that work shipped, and every item in it has since been
+> implemented:
+>
+> - routable HTTP requires a bearer token and a tenant id, and refuses to start
+>   without them (`packages/mcp-core/src/mcp_core/runtime.py:233-244`, `a7b3f86`);
+> - CDP navigation enforces the final-host allowlist after redirects
+>   (`packages/mcp-core/src/mcp_core/transport/chrome_cdp.py:1071-1082`);
+> - the Megamarket profile address is opt-in and off by default
+>   (`MEGAMARKET_USE_PROFILE_ADDRESS`, `megamarket_connector/server.py:288-309`);
+> - the raw CDP websocket frame size is bounded and environment-clamped
+>   (`chrome_cdp.py:545-546`, `ca846fe`).
+>
+> The findings below are kept as the record of what was planned, not as open work.
+
 > Generated 2026-09-09 | Depth: deep | Research streams: 6 | Status: implementation plan plus first-wave fixes
 
 ## Decision summary

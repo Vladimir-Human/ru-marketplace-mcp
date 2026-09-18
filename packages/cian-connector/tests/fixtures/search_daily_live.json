@@ -518,7 +518,7 @@
           "realtor": null
         },
         "user": {
-          "cianUserId": "17548313",
+          "cianUserId": "00000000",
           "isAgent": true,
           "isBuilder": false,
           "isCallbackUser": false,
@@ -526,7 +526,7 @@
           "isHidden": false,
           "isPassportVerified": true,
           "isSubAgent": false,
-          "userId": 17548313,
+          "userId": 0,
           "userTrustLevel": "notInvolved",
           "accountType": "specialist",
           "agencyName": "Наталья  Ярышкина",

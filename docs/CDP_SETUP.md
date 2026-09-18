@@ -5,9 +5,9 @@ Some marketplaces refuse datacenter traffic outright. Ozon answers
 clears it. The reliable answer is not a better fingerprint — it is to run the fetch
 **inside a browser you already trust**, over the Chrome DevTools Protocol.
 
-Eight sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink
-and AliExpress.
-The split matters. Taobao, Megamarket, DNS, Citilink and AliExpress are
+Nine sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink,
+AliExpress and Cian.
+The split matters. Taobao, Megamarket, DNS, Citilink, AliExpress and Cian are
 **CDP-only** — no
 anonymous tier exists, so nothing reads from them without a logged-in Chrome. Ozon
 and Avito use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) usually works
@@ -178,12 +178,12 @@ over plain anonymous HTTP, and `compare_prices` will report every CDP source it
 can't reach as blocked and rank the rest.
 
 You need it the moment Taobao, Megamarket, DNS, Citilink or AliExpress matter —
-those five have no anonymous tier, so without a logged-in Chrome they return nothing at all. For
+those six have no anonymous tier, so without a logged-in Chrome they return nothing at all. For
 Ozon and Avito it is optional insurance: tier 1 usually answers, and CDP only earns
 its keep when the anonymous tier is challenged. For Lamoda, card lookups work
 without it but search does not.
 
 A residential IP is the alternative for the fallback sources — from a Russian
 residential address Ozon's and Avito's tier 1 often work without any browser. It
-does nothing for the CDP-only five, whose block is at the API, not the IP. Set
+does nothing for the CDP-only six, whose block is at the API, not the IP. Set
 `OZON_PROXY`/`AVITO_PROXY` or the standard `HTTPS_PROXY` to route through one.

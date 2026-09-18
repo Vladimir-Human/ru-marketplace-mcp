@@ -1,10 +1,10 @@
 {
   "url": "https://market.yandex.ru/",
   "captured_at": "2026-07-28",
-  "sha256": "ed0cf56b316b67abb8a59ecf3bd9aae549883d1ab32df292837223a30d9b7888",
+  "sha256": "336988160bda304b4293f17fa6c4d38e0db6e9a5c6b6ff31a9e6afd11a35a244",
   "method": "real SSR product page captured live Jul 2026, trimmed to a few products and two reviews each (2 MB -> ~60 KB); trimming preserves exact nesting; the exact product URL was not recorded in the test docstring, so the base domain is given and the product is identified by the pinned assertions",
   "ground_truth": {
     "note": "washer product card pinned by test_ssr.py::test_card_extracts_prices_rating_and_seller: title starts «Стиральная машина», brand Tuvio, price_rub 19377.0, price_with_plus 18796.0, price_before_discount_rub 26185.0, discount 28%, rating 4.8 over rating_count 544 with review_count 209; two reviews with pros/cons and vote counts."
   },
-  "redaction_note": "2026-09-18 pre-release audit: reviewer display names, UID_* account identifiers, publicId/avatarMediaId values and order numbers inside base64 context blobs masked to same-shape placeholders. An earlier pass (PR #70/#72) covered phones/nick/showUid/calculatedFor but not this class, and its 'zero nicks remain' claim did not hold for this file."
+  "redaction_note": "2026-09-18 audit follow-up: reviewer display names, uidPublicId, avatarMediaId, analyticsData.uid and the authorComplaintContext protobuf (which encoded the same account UID and was invisible to a text grep) are masked. The previous note claimed this class was already covered; it was not, which is why the note now names each carrier explicitly."
 }
