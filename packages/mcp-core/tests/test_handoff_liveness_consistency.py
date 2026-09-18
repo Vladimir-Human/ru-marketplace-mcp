@@ -54,13 +54,18 @@ def _call():
 
 async def test_an_idle_expired_lease_is_not_handed_out(browser):
     await _call()
-    lease = next(iter(handoff._leases.values()))
+    # Look the lease up by its own key: the registry is module-global, and a
+    # `next(iter(...))` here picked up somebody else's lease on py3.13, where the
+    # collection order differs — CI caught it, the local run did not.
+    lease = handoff._leases[handoff._key("session-1", "search", URL)]
     handle = lease.handoff_id
 
     # Alive by lifetime, forgotten by idle: exactly the window the two functions
-    # used to disagree about.
-    lease.last_used = asyncio.get_running_loop().time() - 120
-    assert lease.deadline > asyncio.get_running_loop().time(), "the lifetime has not run out"
+    # used to disagree about. The offset is derived from the bound actually in
+    # force, so the case stays valid whatever the environment says.
+    now = asyncio.get_running_loop().time()
+    lease.last_used = now - handoff._idle_s() - 1
+    assert lease.deadline > now, "the lifetime has not run out"
 
     assert handoff.get_handoff_id(scope="session-1", operation="search", url=URL) is None
 
