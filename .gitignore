@@ -62,3 +62,11 @@ node_modules/
 # dsh/package.json is not the Node artefact above: it is the plugin-bundle
 # manifest every dsh install resolves, so it must be tracked.
 !dsh/package.json
+
+# Local run scaffolding - never part of the project.
+PUBLISH_PROMPT.md
+.agent/
+.qwen/
+MISSION.md
+QWEN.md
+start-run.sh
