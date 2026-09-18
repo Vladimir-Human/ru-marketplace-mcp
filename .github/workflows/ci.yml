@@ -84,6 +84,12 @@ jobs:
         # audit that fixed it was adding tests of its own.
         run: uv run python scripts/check_test_count.py
 
+      - name: Fixture pins describe their fixtures
+        # A provenance file pins the bytes it describes, and nothing checked
+        # that the pin still matched. This is why the stale citilink and avito
+        # pins are visible - and quarantined with dated reasons - instead of silent.
+        run: uv run python scripts/check_provenance.py
+
       - name: MCP wire-cost baseline
         # Keep the model-facing surface measurable. A schema expansion over the
         # stored baseline is a review signal, not an invisible context-cost
