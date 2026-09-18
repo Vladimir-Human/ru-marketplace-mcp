@@ -122,7 +122,7 @@ uv sync --all-packages
 
 Полная инструкция и таблица инструментов — в [README.md](README.md), история
 изменений — в [CHANGELOG.md](CHANGELOG.md), отчёт аудита — в
-[AUDIT_REPORT.md](AUDIT_REPORT.md).
+[AUDIT_REPORT.md](../archive/AUDIT_REPORT_2026-08_v1.2.0-snapshot.md).
 
 ---
 

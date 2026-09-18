@@ -1,5 +1,10 @@
 # Аудит ru-marketplace-mcp v1.2.0 — независимая перепроверка
 
+> **ARCHIVED (moved here 2026-09-18).** This is a dated audit snapshot taken when the
+> repository was at v1.2.0; the version numbers and findings below describe that moment,
+> not the current state. It is kept as the record of what was audited and what was
+> corrected, the same way release notes are kept.
+
 > **Снимок v1.2.0 от 2026-07-28, аудитом текущей версии не является.**
 > Репозиторий живёт на v1.6.0; все три security-находки из раздела 7 закрыты в
 > v1.3.0–v1.4.0 (вычистка userinfo с `/` в пароле, `_redact` вокруг avito-логов,
@@ -8,7 +13,7 @@
 
 **Дата:** 2026-07-28
 **Что проверялось:** релизный архив `ru-marketplace-mcp-v1.2.0-final-with-fixes.zip`
-**Откуда:** Linux-песочница, датацентровый IP + браузер с резидентным прокси
+**Откуда:** Изолированное окружение аудита.
 **Вердикт:** **conditional go** (см. «Условия» в конце)
 
 Прошлый отчёт этого файла утверждал «10/10 источников healthy» и `doctor` exit 0.

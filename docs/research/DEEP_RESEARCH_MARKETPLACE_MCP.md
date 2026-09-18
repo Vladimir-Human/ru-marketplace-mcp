@@ -1,5 +1,9 @@
 # Deep Research: Product and DSH Evolution of ru-marketplace-mcp
 
+> **DATED RESEARCH ARTIFACT (moved here 2026-09-18).** A survey produced while planning
+> an earlier release. It records what was researched then; for the current state read the
+> README and `docs/ARCHITECTURE.md`.
+
 > Generated 2026-09-09 | Depth: standard | Sources: 4
 
 ## TL;DR
