@@ -240,6 +240,22 @@ def evaluate_answers(bundle: dict[str, Any], answers: Any, model: str | None = N
     passed = sum(1 for row in rows if row["passed"])
     answered = sum(1 for row in rows if row["status"] != "missing")
     missing_ids = [row["id"] for row in rows if row["status"] == "missing"]
+    unknown = sorted(_norm(key) for key in answers if key not in case_ids)
+
+    # The verdict has to be machine-checkable, or the exit code means nothing. It
+    # says "this run is clean under the protocol" — every case answered and every
+    # supplied id matched a case — not "the model scored well", which is a
+    # measurement, not a protocol question. A partial run is the case that matters:
+    # section 8 of the protocol says a partial route is not usable for assignment,
+    # so it must not report success. (Found by an independent review, 2026-09-18.)
+    problems: list[str] = []
+    if missing_ids:
+        shown = ", ".join(missing_ids[:3]) + (" …" if len(missing_ids) > 3 else "")
+        problems.append(f"{len(missing_ids)} case(s) have no answer: {shown}")
+    if unknown:
+        shown = ", ".join(unknown[:3]) + (" …" if len(unknown) > 3 else "")
+        problems.append(f"{len(unknown)} answer id(s) match no case in the bundle: {shown}")
+
     return {
         "version": 1,
         "mode": "case-run",
@@ -249,13 +265,16 @@ def evaluate_answers(bundle: dict[str, Any], answers: Any, model: str | None = N
         "answered": answered,
         "complete": not missing_ids,
         "missing_ids": missing_ids,
-        "unknown_answer_ids": sorted(_norm(key) for key in answers if key not in case_ids),
+        "unknown_answer_ids": unknown,
         "passed": passed,
-        "failed": answered - passed,
+        # Missing answers count against the run, exactly as this module's docstring
+        # promises and as the accuracy denominator already assumed.
+        "failed": len(rows) - passed,
         "accuracy": round(passed / len(rows), 4) if rows else None,
         "accuracy_answered": round(passed / answered, 4) if answered else None,
         "per_slice": {name: _slice_stats(rows, name) for name in SLICES},
-        "ok": True,
+        "problems": problems,
+        "ok": not problems,
         "cases": rows,
     }
 
@@ -325,7 +344,9 @@ def main() -> int:
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return 0
+    # The verdict has to reach the shell: an incomplete run (a throttled provider,
+    # a dropped answer file) used to exit 0 and read as success in any wrapper.
+    return 0 if report["ok"] else 1
 
 
 if __name__ == "__main__":
