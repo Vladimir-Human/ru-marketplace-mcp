@@ -124,11 +124,16 @@ async def test_a_refusing_host_fails_fast_instead_of_queueing(clock):
     async with budget.slot("wall.example") as slot:
         slot.refused(403)
 
-    started = clock()
-    with pytest.raises(HostRefusingError):
-        async with budget.slot("wall.example"):
-            pass  # pragma: no cover
-    assert clock() == started, "no time may be spent waiting on an open breaker"
+    # The single global slot is held while we try the refusing host. A check that
+    # runs *after* the acquire would wait for that slot and the clock would move;
+    # only a check before the wait can raise with no time spent. Without the holder
+    # this test passed either way.
+    async with budget.slot("busy.example"):
+        started = clock()
+        with pytest.raises(HostRefusingError):
+            async with budget.slot("wall.example"):
+                pass  # pragma: no cover
+        assert clock() == started, "no time may be spent waiting on an open breaker"
 
 
 async def test_cooldown_gives_the_host_another_chance(clock):
@@ -138,7 +143,14 @@ async def test_cooldown_gives_the_host_another_chance(clock):
         async with budget.slot("flaky.example") as slot:
             slot.refused(503)
 
-    clock.advance(15.0)
+    # Before the cooldown ends the host must still be refused: without this the
+    # test could not tell "the cooldown reopened it" from "a success cleared it".
+    clock.advance(14.0)
+    with pytest.raises(HostRefusingError):
+        async with budget.slot("flaky.example"):
+            pass  # pragma: no cover
+
+    clock.advance(1.0)
     async with budget.slot("flaky.example") as slot:
         slot.ok()
 
@@ -242,6 +254,13 @@ async def test_release_is_idempotent_and_never_double_counts(clock):
 
     assert budget.snapshot()["in_flight"] == 0
     assert budget.snapshot()["peak_in_flight"] == 1
+
+    # A double release must not hand out a second slot: take one more permit and
+    # count the in-flight navigations. A counter decremented twice reads 0 here.
+    again = await budget.acquire("twice.example")
+    assert budget.snapshot()["in_flight"] == 1, "the bound was inflated by the second release"
+    again.ok()
+    again.release()
 
 
 def test_environment_knobs_build_the_process_budget(monkeypatch):
