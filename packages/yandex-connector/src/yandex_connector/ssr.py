@@ -56,6 +56,7 @@ import html as _html
 import json
 import math
 import re
+from collections.abc import Iterator
 from typing import Any
 
 # One state fragment. Yandex emits ~150 of these per search page, ~200 per card.
@@ -66,8 +67,47 @@ _LDJSON_RE = re.compile(r'<script type="application/ld\+json">(.*?)</script>', r
 # Opening tag of a server-rendered SERP snippet. Attribute order is not fixed
 # (class/id/data-daemon come and go), so the tag is matched on the zone name
 # and the payload is pulled out of it separately.
-_ZONE_SNIPPET_TAG_RE = re.compile(r'<[a-zA-Z][^>]*\bdata-zone-name="productSnippet"[^>]*>')
+_ZONE_NAME_ATTR_RE = re.compile(r'\bdata-zone-name="productSnippet"')
 _ZONE_DATA_ATTR_RE = re.compile(r'\bdata-zone-data="([^"]*)"')
+
+
+def _iter_tags(html: str) -> Iterator[str]:
+    """Yield each start tag, honouring quoted attribute values.
+
+    A regex like ``<[^>]*>`` ends the tag at the first ``>`` — including one that
+    sits *inside* an attribute value (``title="a > b"``), which is legal HTML. A
+    snippet whose earlier attribute contains a raw ``>`` therefore disappeared
+    from the parse entirely (found by an independent review, 2026-09-18). Walking
+    the tag while tracking quote state is exact and linear, with no backtracking.
+    """
+    index = 0
+    length = len(html)
+    while True:
+        start = html.find("<", index)
+        if start < 0:
+            return
+        # A tag starts with a letter (``<div``) or a closing slash (``</div``).
+        after = html[start + 1 : start + 2]
+        if not after or not (after.isalpha() or after == "/"):
+            index = start + 1
+            continue
+        quote = ""
+        cursor = start + 1
+        while cursor < length:
+            char = html[cursor]
+            if quote:
+                if char == quote:
+                    quote = ""
+            elif char in "\"'":
+                quote = char
+            elif char == ">":
+                yield html[start : cursor + 1]
+                index = cursor + 1
+                break
+            cursor += 1
+        else:
+            return
+
 
 # Visible copy shown when a query genuinely matched nothing. Distinguishing "no
 # results" from "our parser broke" is the whole point of tracking it.
@@ -287,8 +327,10 @@ def zone_snippets(html: str) -> list[dict[str, Any]]:
     reused for non-product tiles on some pages.
     """
     out: list[dict[str, Any]] = []
-    for tag_match in _ZONE_SNIPPET_TAG_RE.finditer(html):
-        attr = _ZONE_DATA_ATTR_RE.search(tag_match.group(0))
+    for tag in _iter_tags(html):
+        if _ZONE_NAME_ATTR_RE.search(tag) is None:
+            continue
+        attr = _ZONE_DATA_ATTR_RE.search(tag)
         if attr is None:
             continue
         try:
