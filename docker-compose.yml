@@ -36,7 +36,7 @@ services:
   # uncomment CHROME_CDP_HOST plus the chrome sidecar to unlock those sources.
   marketplace-mcp:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["marketplace-mcp"]
     environment:
       <<: *http-environment
@@ -49,7 +49,7 @@ services:
 
   wb:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["wb-mcp"]
     environment:
       <<: *http-environment
@@ -59,7 +59,7 @@ services:
 
   yandex:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["yandex-mcp"]
     environment:
       <<: *http-environment
@@ -69,7 +69,7 @@ services:
 
   detmir:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["detmir-mcp"]
     environment:
       <<: *http-environment
@@ -94,7 +94,7 @@ services:
   #    browser profile, so use a dedicated scraping profile only.
   ozon:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["ozon-mcp"]
     environment:
       <<: *http-environment
@@ -129,7 +129,7 @@ services:
   # in the Chrome profile the sidecar drives, not on these services.
   avito:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["avito-mcp"]
     environment:
       <<: *http-environment
@@ -141,7 +141,7 @@ services:
 
   taobao:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["taobao-mcp"]
     environment:
       <<: *http-environment
@@ -153,7 +153,7 @@ services:
 
   megamarket:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["megamarket-mcp"]
     environment:
       <<: *http-environment
@@ -165,7 +165,7 @@ services:
 
   lamoda:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["lamoda-mcp"]
     environment:
       <<: *http-environment
@@ -177,7 +177,7 @@ services:
 
   dns:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["dns-mcp"]
     environment:
       <<: *http-environment
@@ -189,7 +189,7 @@ services:
 
   citilink:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["citilink-mcp"]
     environment:
       <<: *http-environment
@@ -201,7 +201,7 @@ services:
 
   aliexpress:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["aliexpress-mcp"]
     environment:
       <<: *http-environment
@@ -216,7 +216,7 @@ services:
   # sidecar like the sources above.
   cian:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["cian-mcp"]
     environment:
       <<: *http-environment
@@ -230,7 +230,7 @@ services:
   # starts but its tools return auth_missing. No Chrome needed — plain httpx.
   mpstats:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["mpstats-mcp"]
     environment:
       <<: *http-environment
@@ -258,7 +258,7 @@ services:
   # container is enough; Ozon inside it inherits the same two caveats.
   compare:
     build: .
-    image: ru-marketplace-mcp:2.4.0
+    image: ru-marketplace-mcp:2.4.1
     command: ["compare-mcp"]
     environment:
       <<: *http-environment

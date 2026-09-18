@@ -7,7 +7,30 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
-## [2.4.0] - 2026-09-18
+## [2.4.1] - 2026-09-18
+
+**Withdrawn: 2.4.0.** Its source distributions carried third-party personal data in
+the test fixtures — two Yandex reviewer accounts (including one encoded inside a
+base64 protobuf) and three named private individuals from Cian listings, with
+account ids and a resolvable agent profile URL. The fixtures are scrubbed here, and
+the 2.4.0 release and tag were withdrawn rather than left downloadable.
+
+### Fixed
+
+- Fixture privacy: the reviewer identity in `card_washer.html` is masked in all four
+  carriers (`uidPublicId`, `avatarMediaId`, `analyticsData.uid`, and the
+  `authorComplaintContext` protobuf that encoded the same UID); the Cian fixtures no
+  longer name private realtors, while agency records stay as business data.
+- Provenance prose no longer points at the operator's private capture workspace, and
+  the fixture pins are recomputed.
+- `ARCHITECTURE.md` now documents nine error codes, not eight - `challenge_required`
+  was missing from a contract integrators branch on.
+- `CDP_SETUP.md` lists Cian among the sources that need a browser, and the CDP-only
+  set is six, not five.
+- `DEEP_RESEARCH_V2.0.0.md` carries a superseded notice: the four security items it
+  listed as open work all shipped since (`a7b3f86`, `ca846fe`).
+
+## [2.4.0] - 2026-09-18 — WITHDRAWN (see 2.4.1)
 
 ### Reliability
 
