@@ -86,6 +86,9 @@ class SourceOutcome(BaseModel):
         description="ok, blocked (anti-bot or rate limit), timeout, error, or not_installed.",
     )
     detail: str = Field(default="", description="Human-readable outcome detail; the error text when it failed.")
+    warnings: list[str] = Field(
+        default_factory=list, description="Native diagnostics; successful access can still return degraded data."
+    )
     offers_returned: int = Field(default=0, description="How many offers this marketplace contributed.")
     elapsed_ms: int = Field(default=0, description="Round-trip time for this marketplace, in milliseconds.")
     error_code: str | None = Field(default=None, description="Structured connector error code, if known.")

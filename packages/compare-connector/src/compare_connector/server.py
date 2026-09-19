@@ -442,6 +442,30 @@ def _stock_from_label(value: object) -> bool | None:
     return None
 
 
+class OfferBatch(list[MarketOffer]):
+    """Offers with native diagnostics; no shared state across concurrent sources."""
+
+    def __init__(self, offers: Iterable[MarketOffer], response: object) -> None:
+        super().__init__(offers)
+        meta = getattr(response, "meta", None)
+        raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
+        healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
+        self.warnings: list[str] = []
+        if isinstance(raw, list):
+            for warning in raw:
+                if not isinstance(warning, str) or not warning.strip():
+                    continue
+                text = " ".join(_redact(warning).split())
+                if len(text) > 500:
+                    text = text[:497] + "..."
+                if text not in self.warnings:
+                    self.warnings.append(text)
+                if len(self.warnings) == 10:
+                    break
+        if healthy is False and not self.warnings:
+            self.warnings.append("source_unhealthy: native validation did not pass; no diagnostic supplied")
+
+
 async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``wb_search`` results.
 
@@ -471,7 +495,7 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 url=_wb_product_url(item.nm_id),
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
@@ -502,7 +526,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url,
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
@@ -541,7 +565,7 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_avito(query: str, limit: int) -> list[MarketOffer]:
@@ -570,7 +594,7 @@ async def _search_avito(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
@@ -603,7 +627,7 @@ async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_megamarket(query: str, limit: int) -> list[MarketOffer]:
@@ -629,7 +653,7 @@ async def _search_megamarket(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_lamoda(query: str, limit: int) -> list[MarketOffer]:
@@ -653,7 +677,7 @@ async def _search_lamoda(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_dns(query: str, limit: int) -> list[MarketOffer]:
@@ -677,7 +701,7 @@ async def _search_dns(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_citilink(query: str, limit: int) -> list[MarketOffer]:
@@ -701,7 +725,7 @@ async def _search_citilink(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
@@ -731,7 +755,7 @@ async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return offers
+    return OfferBatch(offers, response)
 
 
 _SEARCH_IMPLS = {
@@ -850,6 +874,7 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
             source=name,
             status="ok",
             detail=f"{len(offers)} results, {len(priced)} priced",
+            warnings=offers.warnings if isinstance(offers, OfferBatch) else [],
             offers_returned=len(offers),
             elapsed_ms=round((time.monotonic() - started) * 1000),
         ),
@@ -1025,6 +1050,8 @@ async def compare_prices(
             warnings.append(f"stock_filter: excluded {excluded} priced offer(s) without confirmed stock")
         if not priced_all:
             warnings.append("stock_filter: no priced offers were returned")
+    for outcome in outcomes:
+        warnings.extend(f"source_warning:{outcome.source}: {warning}" for warning in outcome.warnings)
     warnings.extend(_relevance_warnings(text, priced))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(

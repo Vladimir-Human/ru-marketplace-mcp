@@ -53,6 +53,12 @@ rank its rows against rouble sources.
 
 ## Reading the result correctly
 
+Read `source_outcomes[].warnings` even when `status` is `ok`. These preserve
+native diagnostics about incomplete fields, fallback extraction, coupon prices,
+and truncated grids. `complete` describes which sources answered; it does not
+certify data quality, identical products, or a full catalog search. The same
+diagnostics appear in top-level `warnings` prefixed with the source.
+
 Three fields decide whether the answer is trustworthy:
 
 **`complete`** — `true` only when every queried marketplace answered. When

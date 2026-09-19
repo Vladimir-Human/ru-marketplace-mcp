@@ -94,6 +94,9 @@ Read `source_outcomes` and `complete` before claiming the comparison covered all
 requested sources. `cheapest` is a numeric minimum; product identity, condition,
 subscription prices, and stock can change which offer is suitable. A verified
 card is an observation at request time, not a price guarantee.
+Read `source_outcomes[].warnings` too: a source can answer successfully while
+reporting incomplete fields, fallback extraction, or a truncated grid. Those
+limitations also appear in top-level warnings with the source name.
 
 For items available to buy now, pass `in_stock_only=true`. A missing stock count
 or an ambiguous label means unknown (`null`), not confirmed availability or a

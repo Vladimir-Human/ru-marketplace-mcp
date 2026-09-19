@@ -7,6 +7,14 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Fixed
+
+- Comparison preserves native source warnings alongside valid offers, including
+  fallback extraction, missing fields, coupon pricing, and result truncation.
+  Successful source access no longer hides those data-quality limitations.
+
 ## [2.4.2] - 2026-09-19
 
 ### Fixed
