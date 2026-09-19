@@ -311,6 +311,33 @@ def test_doctor_shows_why_a_check_was_inconclusive():
 
 def test_a_healthy_check_stays_terse():
     assert cli._check_detail({"state": "healthy", "reason": None}) == "healthy"
+    assert cli._check_detail({"state": "healthy", "detail": "42 valid products", "notes": ["ok"]}) == "healthy"
+
+
+def test_doctor_preserves_yandex_empty_shell_diagnosis():
+    from yandex_connector.models_output import YandexSelfcheckEntry
+
+    check = YandexSelfcheckEntry(
+        state="inconclusive",
+        detail='{"error": "transport_down", "message": "yandex_card: empty_product_shell',
+        notes=["product frame arrived hollow: degraded serving or a delisted product"],
+    )
+    assert "empty_product_shell" in cli._check_detail(check)
+    assert cli._check_detail(check).startswith("inconclusive (")
+
+
+def test_doctor_uses_notes_if_no_reason_or_detail():
+    assert cli._check_detail({"state": "drift", "notes": ["price field vanished", "inspect the parser"]}) == (
+        "drift (price field vanished; inspect the parser)"
+    )
+
+
+def test_doctor_keeps_diagnostics_on_one_bounded_line():
+    detail = "empty_product_shell\n" + "unavailable " * 100
+    rendered = cli._check_detail({"state": "inconclusive", "detail": detail})
+    assert "\n" not in rendered
+    assert len(rendered) <= len("inconclusive ()") + 240
+    assert rendered.endswith("...)")
 
 
 def test_detail_survives_a_reason_without_a_code():

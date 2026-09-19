@@ -11,6 +11,15 @@
 
 ### Fixed
 
+- Yandex search keeps distinct reported SKUs within a product family before
+  applying its result limit, including zone payloads with no `wareId`.
+- Comparison preserves unknown Wildberries quantities as unknown stock and
+  interprets Ozon availability conservatively: negative labels cannot win an
+  in-stock-only comparison, and pack sizes or ambiguous counts remain unknown.
+- Doctor retains failure explanations supplied through a canary's `detail`
+  or `notes` when no standard `reason` is present, including Yandex empty-card
+  responses; healthy checks stay terse.
+
 - Operator CLI: installation includes AliExpress and optional MPStats; doctor
   includes AliExpress, accepts documented source aliases, and rejects invalid
   arguments before querying sources. Unknown subcommands no longer start a

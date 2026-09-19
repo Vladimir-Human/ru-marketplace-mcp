@@ -1107,6 +1107,24 @@ def _atom_text(atom: dict, type_key: str) -> str | None:
     return None
 
 
+def _is_search_stock_label(text: str) -> bool:
+    """Retain stock messages without requiring them to contain a unit count."""
+    label = " ".join(text.casefold().split()).rstrip(".! ")
+    return (
+        "осталось" in label
+        or "шт" in label
+        or label
+        in {
+            "нет в наличии",
+            "нет на складе",
+            "товар закончился",
+            "распродано",
+            "в наличии",
+            "есть в наличии",
+        }
+    )
+
+
 def _parse_search_tile(item: Any) -> dict[str, Any]:
     """Parse a single tileGridDesktop item (Ozon search result, Nov 2026 schema).
 
@@ -1160,7 +1178,7 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
             test_id = test_info.get("automatizationId") if isinstance(test_info, dict) else None
             if isinstance(text, str) and not title and (atom.get("id") == "name" or test_id == "tile-name"):
                 title = text
-            elif isinstance(text, str) and not stock_label and ("осталось" in text or "шт" in text):
+            elif isinstance(text, str) and not stock_label and _is_search_stock_label(text):
                 stock_label = text
         elif t == "priceV2":
             pv = atom.get("priceV2") or {}
@@ -1191,7 +1209,7 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
                 if not isinstance(it, dict):
                     continue  # a non-object label item must not crash the tile
                 tit = it.get("title") or ""
-                if isinstance(tit, str) and ("осталось" in tit or "шт" in tit):
+                if isinstance(tit, str) and _is_search_stock_label(tit):
                     stock_label = tit
         elif t == "labelListV2":
             llv2 = atom.get("labelListV2") or {}

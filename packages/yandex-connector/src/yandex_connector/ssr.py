@@ -381,10 +381,12 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
     ldjson_by_id = {item["product_id"]: item for item in ldjson_item_list(html) if item.get("product_id")}
 
     items: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
     for payload in payloads:
         product_id = str(payload.get("oskuId") or payload.get("modelId") or "")
-        key = (product_id, str(payload.get("wareId") or ""))
+        # wareId can be absent; keep explicitly distinct sellable variants even
+        # when the page has no offer identifier for those snippets.
+        key = (product_id, str(payload.get("marketSku") or ""), str(payload.get("wareId") or ""))
         if key in seen:
             continue
         seen.add(key)

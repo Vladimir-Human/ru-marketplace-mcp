@@ -77,10 +77,12 @@ lookalike name, and to spot several storefronts sharing one legal entity.
 **Reviews are keyed by imt_id, not nmId.** Calling `wb_reviews` with a raw nmId
 returns the wrong pool. Always resolve through `wb_root_info` first.
 
-**No price means no stock.** A delisted WB item returns `price_rub: null` and
-`in_stock: false` — real data, not a parse failure. A missing price is `null`,
-never `0` — zero is never substituted. If an entire search page has
-no prices, the connector warns with `no_prices`.
+**Check quantity before claiming a sell-out.** The native `in_stock: false`
+also covers missing quantity or an unusable price. If `total_quantity` is
+`null`, availability is unknown; `0` is a reported empty stock. A missing price
+is `null`, never `0` or a free item. If an entire search page has no prices, the
+connector warns with `no_prices`. Comparison preserves unknown quantity as
+`in_stock: null` and excludes it when `in_stock_only=true`.
 
 **`wb_search` is 429-prone.** WB rate-limits repeated searches aggressively; the
 error is retryable but needs a genuine wait, not a tight retry loop. For known

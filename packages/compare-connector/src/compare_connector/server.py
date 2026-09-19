@@ -427,10 +427,19 @@ def _stock_from_label(value: object) -> bool | None:
         return value > 0 if math.isfinite(value) else None
     if not isinstance(value, str) or not value.strip():
         return None
-    digits = re.sub(r"[^\d]", "", value)
-    if digits:
-        return int(digits) > 0
-    return True
+    label = " ".join(value.casefold().split()).rstrip(".! ")
+    if label in {"не осталось", "нет в наличии", "нет на складе", "товар закончился", "распродано"}:
+        return False
+    if label in {"в наличии", "есть в наличии", "много шт", "осталось много", "осталось много шт"}:
+        return True
+    # A count alone can describe a pack or sales, rather than available stock.
+    # Anchor the entire label so signs, ranges and unrelated digits cannot be
+    # concatenated into an invented positive quantity.
+    count = r"([0-9]+|[0-9]{1,3}(?: [0-9]{3})+)"
+    quantity = re.fullmatch(rf"осталось {count}(?: шт)?", label) or re.fullmatch(rf"{count} шт осталось", label)
+    if quantity:
+        return int(quantity.group(1).replace(" ", "")) > 0
+    return None
 
 
 async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
@@ -456,7 +465,9 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 price_rub=item.price_rub,
                 rating=item.review_rating,
                 rating_count=item.feedbacks,
-                in_stock=item.in_stock,
+                # WB's legacy bool also uses False for an unreported quantity.
+                # Preserve that distinction in our nullable stock contract.
+                in_stock=item.in_stock if item.total_quantity is not None else None,
                 url=_wb_product_url(item.nm_id),
             )
         )

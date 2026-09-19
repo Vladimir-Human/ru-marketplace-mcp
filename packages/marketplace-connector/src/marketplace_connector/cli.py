@@ -279,8 +279,22 @@ def _check_detail(check: object) -> str:
     state = _attr(check, "state", "?")
     reason = _attr(check, "reason", None)
     code = _attr(check, "code", None)
+    # Some canaries (notably Yandex) carry the diagnosis in `detail` or
+    # `notes` instead of `reason`. Keep that explanation for non-healthy
+    # states: a bare "inconclusive" loses the operator's next action.
+    if not reason and state != "healthy":
+        detail = _attr(check, "detail", None)
+        if isinstance(detail, str) and detail.strip():
+            reason = detail
+        else:
+            notes = _attr(check, "notes", None)
+            if isinstance(notes, list):
+                reason = "; ".join(note.strip() for note in notes if isinstance(note, str) and note.strip())
     if not reason:
         return str(state)
+    reason = " ".join(str(reason).split())
+    if len(reason) > 240:
+        reason = reason[:237] + "..."
     suffix = f" http {code}" if code else ""
     return f"{state} ({reason}{suffix})"
 

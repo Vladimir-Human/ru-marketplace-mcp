@@ -95,6 +95,13 @@ requested sources. `cheapest` is a numeric minimum; product identity, condition,
 subscription prices, and stock can change which offer is suitable. A verified
 card is an observation at request time, not a price guarantee.
 
+For items available to buy now, pass `in_stock_only=true`. A missing stock count
+or an ambiguous label means unknown (`null`), not confirmed availability or a
+sell-out. Excluded offers remain in the response so you can explain the limit.
+For a Yandex search row, keep its `variant_id` and pass it as
+`expected_variant_id` when verifying the card; one product family can contain
+several differently priced SKUs.
+
 Cian searches real estate through its own filters. It does not participate in
 product price comparison. Taobao prices remain in yuan and do not compete with
 ruble prices.

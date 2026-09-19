@@ -77,7 +77,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1764 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1804 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -447,8 +447,11 @@ compare_prices("кроссовки мужские")
 Маркетплейсы опрашиваются параллельно, и каждый отчитывается сам за себя. Если один
 заблокирован, сравнение не рушится: `complete: false` вместе с `source_outcomes`
 покажет, что именно вы видите. Подписочные цены в ранжировании не участвуют.
-Совпадающие предложения по паре (источник, id товара) схлопываются, так что один
-и тот же товар не занимает два места в ранжировании.
+Повторы по (источник, id товара, id варианта) схлопываются. Разные SKU Яндекса
+сохраняются даже внутри одной товарной семьи. Наличие в сравнении трёхзначное:
+`true` — подтверждено, `false` — подтверждено отсутствие, `null` — неизвестно.
+При `in_stock_only=true` победитель выбирается только среди `true`; неизвестные
+остатки WB и неоднозначные подписи Ozon остаются видимыми в конце списка.
 
 У каждого предложения есть `currency` (строчный ISO-код, по умолчанию `rub`) и
 `price_native` — цена в этой валюте, как её показывает маркетплейс. Для российских
@@ -570,7 +573,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1764 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1804 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -636,7 +639,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1764 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1804 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -721,7 +724,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1764 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1804 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -946,8 +949,11 @@ compare_prices("кроссовки мужские")
 Sources are queried concurrently and each reports its own outcome. One marketplace
 being blocked never sinks the comparison: `complete: false` plus `source_outcomes`
 tells you exactly what you are looking at. Subscription prices never win the ranking.
-Offers matching on (source, product id) are collapsed, so one listing can no longer
-take two ranking slots.
+Repeats matching on (source, product id, variant id) are collapsed. Distinct Yandex
+SKUs remain visible within one product family. Comparison stock is tri-state:
+`true` means confirmed, `false` means unavailable, and `null` means unknown.
+With `in_stock_only=true`, only confirmed stock can win; unreported WB quantities
+and ambiguous Ozon labels remain visible at the end of the list.
 
 Every offer carries `currency` (lowercase ISO code, default `rub`) and `price_native`,
 the price in that currency as the marketplace quotes it. For Russian sources it mirrors
@@ -1079,7 +1085,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1764 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1804 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1141,7 +1147,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1764 offline
+are confidently wrong, so the project is arranged around verification: 1804 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
