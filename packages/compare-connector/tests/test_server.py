@@ -10,6 +10,7 @@ import asyncio
 import json
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from compare_connector import server
@@ -67,6 +68,56 @@ async def test_compare_verify_offer_dispatches_to_source_card(monkeypatch):
     assert result["source"] == "wildberries"
     assert result["card"]["items"][0]["nm_id"] == 123
     assert result["price_verification"]["matches"] is True
+
+
+async def test_megamarket_card_dispatch_uses_native_argument_in_both_profiles(monkeypatch):
+    from compare_connector import decision_server
+
+    calls: list[str] = []
+
+    async def card(*, item_id_or_url):
+        calls.append(item_id_or_url)
+        return {"item_id": item_id_or_url, "price_rub": 1234}
+
+    monkeypatch.setattr(server, "SOURCES", {"megamarket": SimpleNamespace(megamarket_card=card)})
+    assert (await server.compare_verify_offer("megamarket", "100023282378"))["card"]["item_id"] == "100023282378"
+    assert (await decision_server.decision_inspect("megamarket", "100023282378"))["card"]["item_id"] == "100023282378"
+    assert calls == ["100023282378", "100023282378"]
+
+
+async def test_default_comparison_omits_deselected_sources_but_explicit_request_is_rejected(monkeypatch):
+    async def search(query, limit):
+        return [offer("wildberries", 100)]
+
+    monkeypatch.setenv("MARKETPLACE_SOURCES", "wildberries,compare")
+    monkeypatch.setattr(server, "_SEARCH_IMPLS", {"wildberries": search, "ozon": search})
+    monkeypatch.setattr(server, "SOURCES", {"wildberries": object(), "ozon": object()})
+
+    result = await server.compare_prices("тест")
+    assert result.sources_queried == ["wildberries"]
+    assert result.complete is True
+    with pytest.raises(ToolError, match="deselected"):
+        await server.compare_prices("тест", sources=["ozon"])
+
+
+async def test_selected_missing_connector_still_makes_default_comparison_partial(monkeypatch):
+    async def search(query, limit):
+        return [offer("wildberries", 100)]
+
+    monkeypatch.setenv("MARKETPLACE_SOURCES", "wildberries,ozon,compare")
+    monkeypatch.setattr(server, "_SEARCH_IMPLS", {"wildberries": search, "ozon": search, "dns": search})
+    monkeypatch.setattr(server, "SOURCES", {"wildberries": object()})
+
+    result = await server.compare_prices("тест")
+    assert result.complete is False
+    assert {outcome.source: outcome.status for outcome in result.source_outcomes} == {
+        "wildberries": "ok",
+        "ozon": "not_installed",
+    }
+    report = await server.compare_sources()
+    assert report["not_installed"] == ["ozon"]
+    assert "dns" in report["deselected"]
+    assert "ozon" not in report["deselected"]
 
 
 async def test_detsky_mir_is_not_a_comparison_source():

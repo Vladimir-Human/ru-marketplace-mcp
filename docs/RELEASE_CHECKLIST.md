@@ -16,7 +16,7 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 70;
-- `e2e_stdio_check.py` даёт 15/15, у всех серверов версия релиза;
+- `e2e_stdio_check.py` даёт 16/16, у всех серверов версия релиза;
 - `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
   непроверенному источнику;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
@@ -42,12 +42,14 @@
 
 ## 1. Офлайн-гейт
 
-Сеть не нужна, всё должно проходить за секунды.
+После установки зависимостей тесты не требуют доступа к маркетплейсам.
 
 ```powershell
 uv lock --check
 uv sync --frozen --all-packages
+npm ci --no-audit --no-fund
 uv run pytest -q -m "not live and not cdp"
+uv run pytest -q scripts
 uv run ruff check . ; uv run ruff format --check .
 uv run mypy
 uv run mypy --platform win32
@@ -59,14 +61,15 @@ uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=
 uv run python scripts/e2e_stdio_check.py
 ```
 
-Если прогон занимает минуты вместо секунд — это дефект гигиены: значит тест
-спит на живом пейсере или лезет в Chrome. Разбирать до релиза.
+При замедлении используйте `--durations=10`: время зависит от машины и запуска
+DOM-процессов. Случайные обращения к живому пейсеру или Chrome нужно исключить
+по результатам измерения, а не по общей длительности прогона.
 
 Часть тестов исполняет настоящий JS-экстрактор по снятой разметке и требует Node
 с jsdom. Без него эта половина скипается, и покрытие экстракторов теряется:
 
 ```powershell
-npm install jsdom
+npm ci --no-audit --no-fund
 ```
 
 ## 2. Консистентность версий
@@ -202,7 +205,7 @@ uv run python scripts/e2e_stdio_check.py
 ```
 
 Проверить страницу релиза глазами: текст на месте, таблица проверенных
-источников отрисовалась, приложено 30 файлов.
+источников отрисовалась, приложено 32 файла (16 wheel и 16 sdist).
 
 ---
 
@@ -216,7 +219,7 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 70% coverage
-floor; `e2e_stdio_check.py` reports 15/15 at the release version; `doctor`
+floor; `e2e_stdio_check.py` reports 16/16 at the release version; `doctor`
 returns `0`, or `2` with a clear account of every unverified source; every
 source that answered was compared by eye on price and availability; Taobao's
 yuan did not win a rouble ranking; CI is green.
@@ -235,12 +238,13 @@ install, image build or CI is red.
 
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
    plus win32 and darwin, the no-print and version-consistency checks, the
-   coverage floor, and a real stdio MCP session for all fourteen servers. Seconds, not minutes; a slow run means a test is sleeping
-   on the live pacer or reaching for Chrome. `npm install jsdom` to also run the
-   extractor checks against captured markup.
+   coverage floor, `uv run pytest -q scripts` for operational gate regressions,
+   and a real stdio MCP session for all sixteen servers. Install the locked DOM
+   test dependencies with `npm ci --no-audit --no-fund`. Use `--durations=10` to
+   investigate slow tests; total runtime alone does not prove network access.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   seventy-nine declarations (sixteen `pyproject.toml`, fifteen `__version__`,
-   fourteen `SERVER_VERSION`, fourteen `mcp-core==` pins, seventeen image tags,
+   eighty-four declarations (seventeen `pyproject.toml`, sixteen `__version__`,
+   fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, eighteen image tags,
    `server.json`, its OCI image identifier, and `dsh/package.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
    actually say.
@@ -261,6 +265,6 @@ install, image build or CI is red.
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
 7. **Branch, PR, green CI, squash merge, tag.** The tag push builds and attaches
-   30 artifacts.
+   32 artifacts (16 wheels and 16 sdists).
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page.

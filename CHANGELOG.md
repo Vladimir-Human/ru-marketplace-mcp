@@ -7,6 +7,32 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Fixed
+
+- Operator CLI: installation includes AliExpress and optional MPStats; doctor
+  includes AliExpress, accepts documented source aliases, and rejects invalid
+  arguments before querying sources. Unknown subcommands no longer start a
+  waiting stdio server.
+- Comparison and shortlist inspection share the native card dispatcher:
+  Megamarket receives the correct argument, and Wildberries/Detsky Mir IDs and
+  canonical URLs use the same validation in both profiles.
+- Sources deliberately excluded by `MARKETPLACE_SOURCES` are distinguished from
+  missing installations and do not make default comparisons falsely partial.
+- Startup, wire-budget, and Docker probes enforce response deadlines, drain
+  stderr, reject JSON-RPC errors, and clean up their processes. The local stdio
+  gate now checks the running release version and complete source inventory.
+- A failed pytest collection cannot satisfy the documented-test-count gate.
+  Operational regression tests run in CI, Node tests use the lockfile, and the
+  pre-commit Ruff version matches the workspace lock.
+
+### Documentation
+
+- Added a task-oriented [first-query guide](docs/QUICKSTART.md) covering client
+  setup, targeted diagnostics, offer verification, and access limitations.
+- Updated the release checklist to cover sixteen servers and 32 artifacts.
+
 ## [2.4.1] - 2026-09-18
 
 **Withdrawn: 2.4.0.** Its source distributions carried third-party personal data in

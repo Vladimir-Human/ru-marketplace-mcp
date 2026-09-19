@@ -918,6 +918,7 @@ async def compare_prices(
     if len(text) < 2:
         raise_tool_error(BadRequestError("query must be at least 2 characters"))
 
+    chosen = selected()
     if sources:
         # An explicit list is validated strictly: naming a marketplace that does
         # not exist is a caller mistake worth surfacing, not silently dropping.
@@ -925,11 +926,16 @@ async def compare_prices(
         unknown = [name for name in requested if name not in _SEARCH_IMPLS]
         if unknown:
             raise_tool_error(BadRequestError(f"unknown source(s) {unknown}: valid options are {sorted(_SEARCH_IMPLS)}"))
+        deselected = [name for name in requested if chosen is not None and name not in chosen]
+        if deselected:
+            raise_tool_error(BadRequestError(f"source(s) {deselected} are deselected by MARKETPLACE_SOURCES"))
     else:
         # Default: every searchable marketplace that is actually wired up. Reading
         # from _SEARCH_IMPLS rather than the static tuple keeps this honest when
         # implementations are added or, in tests, replaced.
         requested = [name for name in _SEARCH_IMPLS if name in SEARCHABLE] or list(_SEARCH_IMPLS)
+        if chosen is not None:
+            requested = [name for name in requested if name in chosen]
 
     active = [name for name in requested if name in SOURCES]
     missing = [name for name in requested if name not in SOURCES]
@@ -1076,6 +1082,42 @@ def _numeric_card_id(source: str, value: str) -> int:
     raise_tool_error(BadRequestError(f"{source} verification needs a positive numeric id or a canonical product URL"))
 
 
+async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews: bool = False) -> tuple[Any, str]:
+    """Dispatch both comparison profiles through the same native card contract."""
+    if name not in _CARD_TOOL_NAMES:
+        raise_tool_error(BadRequestError(f"source {name!r} has no supported card inspector"))
+    module = SOURCES.get(name)
+    if module is None:
+        raise_tool_error(BadRequestError(f"source {name!r} is not installed in this profile"))
+    tool = getattr(module, _CARD_TOOL_NAMES[name], None)
+    if tool is None:
+        raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
+
+    requested_numeric_id = ""
+    if name == "wildberries":
+        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
+        result = await tool(nm_ids=[int(requested_numeric_id)])
+    elif name == "yandex_market":
+        result = await tool(product_id=product_id_or_url, include_reviews=include_reviews)
+    elif name == "detsky_mir":
+        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
+        result = await tool(product_id=int(requested_numeric_id))
+    else:
+        argument = {
+            "ozon": "sku_or_path",
+            "avito": "item_id_or_url",
+            "taobao": "item_id_or_url",
+            "megamarket": "item_id_or_url",
+            "lamoda": "sku_or_url",
+            "dns": "product_url",
+            "citilink": "product_url",
+            "aliexpress": "item_id_or_url",
+        }[name]
+        result = await tool(**{argument: product_id_or_url})
+    payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    return payload, requested_numeric_id
+
+
 @mcp.tool(
     name="compare_verify_offer",
     annotations=ToolAnnotations(
@@ -1145,38 +1187,7 @@ async def compare_verify_offer(
     name = source.strip().lower()
     if expected_variant_id is not None and name != "yandex_market":
         raise_tool_error(BadRequestError("expected_variant_id is supported only for yandex_market"))
-    if name not in _CARD_TOOL_NAMES:
-        raise_tool_error(BadRequestError(f"source {source!r} has no supported card verifier"))
-    module = SOURCES.get(name)
-    if module is None:
-        raise_tool_error(BadRequestError(f"source {name!r} is not installed in this compare server"))
-    tool_name = _CARD_TOOL_NAMES[name]
-    tool = getattr(module, tool_name, None)
-    if tool is None:
-        raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
-
-    requested_numeric_id = ""
-    if name == "wildberries":
-        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
-        result = await tool(nm_ids=[int(requested_numeric_id)])
-    elif name == "yandex_market":
-        result = await tool(product_id=product_id_or_url, include_reviews=False)
-    elif name == "detsky_mir":
-        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
-        result = await tool(product_id=int(requested_numeric_id))
-    else:
-        argument = {
-            "ozon": "sku_or_path",
-            "avito": "item_id_or_url",
-            "taobao": "item_id_or_url",
-            "megamarket": "product_id_or_url",
-            "lamoda": "sku_or_url",
-            "dns": "product_url",
-            "citilink": "product_url",
-            "aliexpress": "item_id_or_url",
-        }[name]
-        result = await tool(**{argument: product_id_or_url})
-    payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    payload, requested_numeric_id = await _call_card_tool(name, product_id_or_url)
     if name == "yandex_market" and expected_variant_id:
         observed_variant = str(payload.get("sku_id") or "") if isinstance(payload, dict) else ""
         if observed_variant != expected_variant_id:
@@ -1252,7 +1263,7 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
 
     ## Return Format
 
-    Plain object: {installed, searchable, not_installed, notes,
+    Plain object: {installed, searchable, not_installed, deselected, notes,
     source_timeout_s, server_version, server_started_at, process_id}. notes
     explains per-source access quirks (CDP-only sources, currencies, missing
     text search).
@@ -1268,18 +1279,21 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
 
     installed = sorted(SOURCES)
     searchable = [name for name in SEARCHABLE if name in SOURCES]
+    chosen = selected()
+    deselected = set(_CARD_TOOL_NAMES) - chosen if chosen is not None else set()
 
     return {
         "installed": installed,
         "searchable": searchable,
-        "not_installed": sorted(set(_SEARCH_IMPLS) - set(SOURCES)),
+        "not_installed": sorted(set(_SEARCH_IMPLS) - set(SOURCES) - deselected),
+        "deselected": sorted(deselected),
         "notes": {
             "detsky_mir": (
                 "installed for direct card/category lookups but excluded from text comparison — "
                 "its API has no working text search"
             )
             if "detsky_mir" in SOURCES
-            else "not installed",
+            else ("deselected by MARKETPLACE_SOURCES" if "detsky_mir" in deselected else "not installed"),
             "ozon": ("requires curl_cffi and, when Cloudflare challenges, a logged-in Chrome on the CDP port"),
             "yandex_market": "reports both an everyday price and a Plus-subscriber price",
             "taobao": "reports yuan prices and is never ranked against rubles",

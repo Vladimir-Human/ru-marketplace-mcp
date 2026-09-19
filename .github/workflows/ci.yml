@@ -130,7 +130,7 @@ jobs:
           node-version: 22
 
       - name: Install jsdom
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -148,6 +148,9 @@ jobs:
         # Live and CDP tests are excluded: CI has no Russian-friendly IP and no
         # logged-in browser, so including them would produce noise, not signal.
         run: uv run pytest -q -m "not live and not cdp"
+
+      - name: Operational gate regression tests
+        run: uv run pytest -q scripts
 
   coverage:
     name: Coverage (ubuntu, py3.12)

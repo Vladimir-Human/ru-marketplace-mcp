@@ -16,7 +16,7 @@
 опциональный MPStats берёт платный токен (`MPSTATS_MP_AUTH`) — без него всё
 остальное работает как прежде.
 
-[English version below](#english-version) · [Архитектура](docs/ARCHITECTURE.md) ·
+[English version below](#english-version) · [Первый успешный запрос](docs/QUICKSTART.md) · [Архитектура](docs/ARCHITECTURE.md) ·
 [Как добавить источник](docs/ADDING_A_SOURCE.md) · [Про анти-бот](docs/ANTI_BOT.md)
 
 Для проверок в браузере добавлен опциональный режим сохранения вкладки:
@@ -70,11 +70,14 @@ MPStats стоит особняком: это единственный **пла�
 
 Нужны **Python 3.12+** и [uv](https://docs.astral.sh/uv/).
 
+Для установки клиента, выбора источников и проверки первого предложения —
+[пошаговый старт](docs/QUICKSTART.md). Node нужен только для тестов разработчика.
+
 ```bash
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1735 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1764 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -567,7 +570,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1735 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1764 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -633,7 +636,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1735 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1764 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -659,9 +662,11 @@ MIT, файл [LICENSE](LICENSE).
 
 **MCP servers for Russian and Chinese marketplaces.** Read prices, stock, ratings,
 reviews and seller identity from Wildberries, Ozon, Yandex Market, Detsky Mir, Avito,
-AliExpress, Taobao, Megamarket, Lamoda, DNS and Citilink, then compare prices across
-all of them in one call. Taobao and AliExpress are the Chinese ones; the other nine
-are Russian.
+AliExpress, Taobao, Megamarket, Lamoda, DNS and Citilink, then compare product prices
+in one call. Cian adds real-estate search and listing cards separately.
+
+[First successful query](docs/QUICKSTART.md) walks through installation, choosing
+a server, targeted health checks, and verifying an offer before recommending it.
 
 Read-only. No credentials, no API keys, no account required — the marketplaces with
 hard anti-bot are read through your own Chrome. One optional exception: MPStats
@@ -716,7 +721,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1735 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1764 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1074,7 +1079,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1735 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1764 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1136,7 +1141,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1735 offline
+are confidently wrong, so the project is arranged around verification: 1764 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

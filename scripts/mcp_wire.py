@@ -11,10 +11,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from stdio_probe import ProbeError, StdioProbe
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,58 +28,18 @@ def estimate_tokens(text: str) -> int:
 
 def fetch_tools(root: Path, script: str, timeout: float = 180.0) -> tuple[list[dict] | None, float]:
     """Start ``uv run --directory <root> <script>`` and collect tools/list."""
-    cmd = ["uv", "run", "--frozen", "--directory", str(root), script]
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    assert proc.stdin is not None
-    assert proc.stdout is not None
-    started = time.time()
-
-    def send(obj: object) -> None:
-        assert proc.stdin is not None
-        proc.stdin.write((json.dumps(obj) + "\n").encode())
-        proc.stdin.flush()
-
-    send(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": "wire-probe", "version": "0"},
-            },
-        }
-    )
-    deadline = started + timeout
-    tools: list[dict] | None = None
-    while time.time() < deadline:
-        assert proc.stdout is not None
-        line = proc.stdout.readline()
-        if not line:
-            break
-        try:
-            message = json.loads(line.decode())
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            continue
-        if message.get("id") == 1:
-            send({"jsonrpc": "2.0", "method": "notifications/initialized"})
-            send({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
-        elif message.get("id") == 2:
-            tools = message.get("result", {}).get("tools", [])
-            break
-
-    elapsed = time.time() - started
+    command = ["uv", "run", "--frozen", "--directory", str(root), script]
+    started = time.monotonic()
     try:
-        proc.terminate()
-    except OSError:
-        pass
-    return tools, elapsed
+        with StdioProbe(command) as probe:
+            deadline = started + timeout
+            probe.initialize("wire-probe", deadline)
+            tools = probe.list_tools(deadline)
+            elapsed = time.monotonic() - started
+        return tools, elapsed
+    except (ProbeError, OSError) as exc:
+        print(f"{script}: {exc}", file=sys.stderr)
+        return None, time.monotonic() - started
 
 
 def _snapshot(script: str, tools: list[dict], elapsed: float) -> dict[str, object]:
@@ -141,6 +102,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scripts", nargs="*", help="MCP console scripts")
     parser.add_argument("--directory", "--dir", dest="directory", default=None)
+    parser.add_argument("--timeout", type=float, default=180.0, help="total protocol deadline in seconds")
     parser.add_argument("--baseline", type=Path, default=None, help="stored JSON baseline")
     parser.add_argument("--update-baseline", action="store_true", help="write measured values as baseline")
     parser.add_argument("--json-out", type=Path, default=None, help="write machine-readable report")
@@ -153,7 +115,7 @@ def main(argv: list[str]) -> int:
     snapshots: list[dict[str, object]] = []
     gates: dict[str, object] = {}
     for script in scripts:
-        tools, elapsed = fetch_tools(root, script)
+        tools, elapsed = fetch_tools(root, script, args.timeout)
         if tools is None:
             print(f"{script}: did not answer within {elapsed:.1f}s")
             gates[script] = {"ok": False, "failures": ["no_tools_response"], "latency_ms": round(elapsed * 1000, 1)}
@@ -188,13 +150,13 @@ def main(argv: list[str]) -> int:
             print(f"  ... {len(rows) - 12} more")
         output_total = sum(row[4] for row in rows)
         print(f"\nTOTAL: ~{total} tokens paid on every request")
-        print(f"  output schema share: ~{output_total} ({100.0 * output_total / total:.0f}%)")
+        print(f"  output schema share: ~{output_total} ({100.0 * output_total / total if total else 0.0:.0f}%)")
         print(f"  description share  : ~{sum(row[2] for row in rows)}")
         print(f"  input schema share : ~{sum(row[3] for row in rows)}")
         selfchecks = [row for row in rows if row[1].endswith("_selfcheck")]
         if selfchecks:
             cost = sum(row[0] for row in selfchecks)
-            print(f"  {len(selfchecks)} *_selfcheck tools: ~{cost} ({100.0 * cost / total:.0f}%)")
+            print(f"  {len(selfchecks)} *_selfcheck tools: ~{cost} ({100.0 * cost / total if total else 0.0:.0f}%)")
         groups: dict[str, list[int]] = {}
         for row in rows:
             groups.setdefault(row[1].split("_")[0], []).append(row[0])

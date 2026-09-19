@@ -23,6 +23,7 @@ import sys
 from typing import Any
 
 from mcp_core.logging import log_event
+from mcp_core.source_selection import canonical
 
 # Clients whose config format this block is known to fit. A typo like
 # "cursour" should say so rather than silently printing a Claude block.
@@ -37,7 +38,7 @@ DSH_ENV_DECISION = "RU_MARKETPLACE_MCP_DECISION"
 
 # (config key, console script, human note)
 SERVERS: list[tuple[str, str, str]] = [
-    ("wildberries", "wb-mcp", "anonymous HTTP — works anywhere"),
+    ("wildberries", "wb-mcp", "anonymous HTTP — availability depends on your network"),
     ("ozon", "ozon-mcp", "needs your Chrome for tier 2 — see docs/CDP_SETUP.md"),
     ("yandex-market", "yandex-mcp", "anonymous HTTP"),
     ("detsky-mir", "detmir-mcp", "anonymous HTTP"),
@@ -47,8 +48,10 @@ SERVERS: list[tuple[str, str, str]] = [
     ("lamoda", "lamoda-mcp", "cards anonymous; search needs your Chrome"),
     ("dns", "dns-mcp", "needs your Chrome — Qrator proof-of-work"),
     ("citilink", "citilink-mcp", "needs your Chrome — Qrator"),
+    ("aliexpress", "aliexpress-mcp", "needs your Chrome — AliExpress Russia"),
     ("cian", "cian-mcp", "real estate; needs your Chrome — WAF by IP"),
     ("compare-prices", "compare-mcp", "fans out across all of the above"),
+    ("mpstats", "mpstats-mcp", "optional paid analytics — requires MPSTATS_MP_AUTH in the server environment"),
 ]
 
 _SELFCHECKS: list[tuple[str, str, str]] = [
@@ -62,6 +65,7 @@ _SELFCHECKS: list[tuple[str, str, str]] = [
     ("lamoda", "lamoda_connector.server", "lamoda_selfcheck"),
     ("dns", "dns_connector.server", "dns_selfcheck"),
     ("citilink", "citilink_connector.server", "citilink_selfcheck"),
+    ("aliexpress", "aliexpress_connector.server", "aliexpress_selfcheck"),
     ("cian", "cian_connector.server", "cian_selfcheck"),
     ("mpstats", "mpstats_connector.server", "mpstats_selfcheck"),
 ]
@@ -155,7 +159,7 @@ def _dsh_command(script: str, root: pathlib.Path | None) -> tuple[str, list[str]
             "          - run",
             "          - --frozen",
             "          - --directory",
-            f'          - !!js "process.env.{DSH_ENV_DIR}"',
+            f"          - !!js \"process.env.{DSH_ENV_DIR} || '.'\"",
             f"          - {script}",
         ]
         return '"uv"', args, None
@@ -234,6 +238,9 @@ def _dsh_patch_block() -> tuple[str, str]:
 
 def cmd_install(argv: list[str]) -> int:
     """Print the client config block to paste."""
+    if len(argv) > 1:
+        print("install accepts at most one client name", file=sys.stderr)
+        return 2
     client = argv[0] if argv else "claude"
     if client not in KNOWN_CLIENTS:
         print(
@@ -256,7 +263,7 @@ def cmd_install(argv: list[str]) -> int:
     for _, _, note_line in SERVERS:
         print(f"#   - {note_line}")
     print()
-    print("# Or wire one entry instead of twelve: the unified 'marketplace-mcp' server mounts every source.")
+    print("# Or wire one entry: the unified 'marketplace-mcp' server mounts every source.")
     return 0
 
 
@@ -291,8 +298,10 @@ async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tup
         module = __import__(module_path, fromlist=[tool_name])
         tool = getattr(module, tool_name)
         result = await tool()
-        status = getattr(result, "status", "unknown")
-        checks = getattr(result, "checks", {}) or {}
+        status = str(_attr(result, "status", "unknown"))
+        checks = _attr(result, "checks", {}) or {}
+        if not isinstance(checks, dict):
+            raise TypeError("selfcheck checks must be a mapping")
         detail = ", ".join(f"{k}:{_check_detail(v)}" for k, v in checks.items()) or status
         return name, status, detail
     except Exception as exc:
@@ -313,10 +322,27 @@ def cmd_doctor(argv: list[str]) -> int:
     it = iter(argv)
     for arg in it:
         if arg == "--status-file":
+            if status_file is not None:
+                print("--status-file may only be supplied once", file=sys.stderr)
+                return 2
             status_file = next(it, None)
+            if not status_file or status_file.startswith("-"):
+                print("--status-file requires a path", file=sys.stderr)
+                return 2
+        elif arg.startswith("-"):
+            print(f"unknown doctor option {arg!r}", file=sys.stderr)
+            return 2
         else:
-            sources.append(arg)
-    only = {a.strip() for a in sources} if sources else None
+            sources.append(canonical(arg))
+    only = set(sources) if sources else None
+    known_sources = {name for name, _, _ in _SELFCHECKS}
+    unknown = (only or set()) - known_sources
+    if unknown:
+        print(
+            f"unknown source(s): {', '.join(sorted(unknown))}; expected one of {', '.join(sorted(known_sources))}",
+            file=sys.stderr,
+        )
+        return 2
     results = []
     for name, module_path, tool_name in _SELFCHECKS:
         if only and name not in only:
@@ -351,7 +377,7 @@ def cmd_doctor(argv: list[str]) -> int:
                 f"Chrome CDP: reachable on {probe['host']}:{probe['port']} ({probe.get('contexts', '?')} context(s))."
             )
         else:
-            cdp_note = f"Chrome CDP: NOT reachable — {probe.get('reason')}. Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink/Cian need it."
+            cdp_note = f"Chrome CDP: NOT reachable — {probe.get('reason')}. Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink/AliExpress/Cian need it."
     except Exception as exc:
         cdp_note = f"Chrome CDP: probe failed ({type(exc).__name__})."
     print(f"\n  {cdp_note}")

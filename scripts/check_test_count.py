@@ -45,7 +45,13 @@ def _collected() -> int:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
+    if proc.returncode != 0:
+        sys.stderr.write(f"pytest collection failed (exit {proc.returncode}):\n")
+        sys.stderr.write(proc.stdout[-2000:] + proc.stderr[-2000:])
+        raise SystemExit(2)
     # Two shapes, depending on whether the marker deselected anything:
     #   "946/950 tests collected (4 deselected)"  -> the selected count is first
     #   "950 tests collected"

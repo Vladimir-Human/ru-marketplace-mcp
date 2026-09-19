@@ -11,7 +11,6 @@ from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from mcp_core.errors import BadRequestError, raise_tool_error
 from mcp_core.output_schema import apply_compact_output_schemas
 from pydantic import Field
 
@@ -48,40 +47,7 @@ async def decision_inspect(
     and seller before spending the context cost of the full marketplace mount.
     """
     name = source.strip().lower()
-    if name not in compare._CARD_TOOL_NAMES:
-        raise_tool_error(BadRequestError(f"source {source!r} has no supported card inspector"))
-    module = compare.SOURCES.get(name)
-    if module is None:
-        raise_tool_error(BadRequestError(f"source {name!r} is not installed in this decision profile"))
-    tool_name = compare._CARD_TOOL_NAMES[name]
-    tool = getattr(module, tool_name, None)
-    if tool is None:
-        raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
-
-    if name == "wildberries":
-        import re
-
-        digits = re.search(r"\d+", product_id_or_url)
-        if digits is None:
-            raise_tool_error(BadRequestError("wildberries inspection needs a numeric nm_id"))
-        result = await tool(nm_ids=[int(digits.group(0))])
-    elif name == "yandex_market":
-        result = await tool(product_id=product_id_or_url, include_reviews=include_reviews)
-    elif name == "detsky_mir":
-        result = await tool(product_id=int(product_id_or_url))
-    else:
-        argument = {
-            "ozon": "sku_or_path",
-            "avito": "item_id_or_url",
-            "taobao": "item_id_or_url",
-            "megamarket": "product_id_or_url",
-            "lamoda": "sku_or_url",
-            "dns": "product_url",
-            "citilink": "product_url",
-            "aliexpress": "item_id_or_url",
-        }[name]
-        result = await tool(**{argument: product_id_or_url})
-    payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    payload, _ = await compare._call_card_tool(name, product_id_or_url, include_reviews=include_reviews)
     return {"source": name, "product_id_or_url": product_id_or_url, "card": payload}
 
 

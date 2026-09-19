@@ -17,7 +17,7 @@ def main() -> int:
     ``install`` or ``doctor`` it runs the operator CLI and exits. Subcommands
     go to stdout freely — only the server path owns the JSON-RPC stream.
     """
-    if len(sys.argv) > 1 and sys.argv[1] in ("install", "doctor", "-h", "--help"):
+    if len(sys.argv) > 1:
         from marketplace_connector.cli import main as cli_main
 
         return cli_main(sys.argv[1:])
