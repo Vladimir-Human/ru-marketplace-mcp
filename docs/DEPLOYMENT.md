@@ -77,13 +77,15 @@ into one `wheelhouse` directory. The unified wheel and every connector wheel
 are separate artifacts, so download all workspace wheels when using
 `marketplace-mcp`; `compare-connector[all]` needs `mcp-core`, WB, Detsky Mir,
 Yandex, and its optional source wheels. Install from that directory so the
-project's pinned `mcp-core==2.4.1` resolves to the matching project wheel
-instead of an unrelated public package:
+project's pinned mcp-core dependency resolves to the matching project wheel
+instead of an unrelated public package. The already-published v2.4.1
+`compare-connector[all]` wheel predates the corrected AliExpress extra, so add
+the matching AliExpress wheel explicitly for that release:
 
 ```console
 python -m venv .venv
 .venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.4.1-py3-none-any.whl
-.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.4.1"
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.4.1" "aliexpress-connector==2.4.1"
 .venv/bin/compare-mcp
 ```
 
@@ -91,13 +93,14 @@ Installing the matching `mcp-core` wheel first with `--no-deps` prevents pip
 from selecting the unrelated public package with the same distribution name;
 the second command then resolves its ordinary third-party dependencies from
 the package index and all workspace dependencies from `wheelhouse`.
-On Windows, use `.venv\\Scripts\\python.exe` and
-`.venv\\Scripts\\compare-mcp.exe` (and replace the `.venv/bin/python`
+On Windows, use `.venv\Scripts\python.exe` and
+`.venv\Scripts\compare-mcp.exe` (and replace the `.venv/bin/python`
 prefixes above accordingly).
 The wheelhouse must contain the same release version for every downloaded
-workspace package; do not mix versions. `aliexpress-connector` is included in
-the `compare-connector[all]` extra. Cian and MPStats are unified-server sources,
-not comparison sources, and are intentionally not part of that extra.
+workspace package; do not mix versions. In a source checkout, the corrected
+metadata includes `aliexpress-connector` in `compare-connector[all]`; Cian and
+MPStats are unified-server sources, not comparison sources, and are intentionally
+not part of that extra.
 
 ### HTTP (opt-in)
 

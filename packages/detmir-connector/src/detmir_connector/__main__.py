@@ -3,10 +3,10 @@
 Exposed as the ``detmir-mcp`` console script, so MCP client configs can spawn the
 server without knowing where the package lives on disk:
 
-    {"command": "uvx", "args": ["--from", "detmir-connector", "detmir-mcp"]}
+    uv run --frozen --directory /path/to/ru-marketplace-mcp detmir-mcp
 
-stdio is the default transport because that is what MCP clients speak, so the
-config above keeps working untouched. Set ``MCP_TRANSPORT=http`` (with optional
+stdio is the default transport because that is what MCP clients speak. Set
+``MCP_TRANSPORT=http`` (with optional
 ``MCP_HTTP_HOST``/``MCP_HTTP_PORT``/``MCP_HTTP_PATH``) to run it over HTTP for
 remote deployment instead — see docs/DEPLOYMENT.md. Transport selection lives in
 ``mcp_core.runtime`` and writes any diagnostics to stderr; nothing here may write
