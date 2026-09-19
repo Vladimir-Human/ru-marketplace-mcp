@@ -62,11 +62,42 @@ is intended and review the resulting diff.
 
 ### stdio (default, unchanged)
 
-Nothing to configure. The README's client configs already do this:
+Nothing to configure. The release workflow attaches wheels and sdists to each
+GitHub Release; it does not publish these package names to PyPI. Use a checkout
+when you want the complete workspace with one frozen lockfile:
 
-```json
-{"command": "uvx", "args": ["--from", "wb-connector", "wb-mcp"]}
+```console
+uv sync --frozen --all-packages
+uv run --frozen --directory /path/to/ru-marketplace-mcp compare-mcp
 ```
+
+For a standalone release install, download the matching-version wheels from
+the [GitHub Release](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases)
+into one `wheelhouse` directory. The unified wheel and every connector wheel
+are separate artifacts, so download all workspace wheels when using
+`marketplace-mcp`; `compare-connector[all]` needs `mcp-core`, WB, Detsky Mir,
+Yandex, and its optional source wheels. Install from that directory so the
+project's pinned `mcp-core==2.4.1` resolves to the matching project wheel
+instead of an unrelated public package:
+
+```console
+python -m venv .venv
+.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.4.1-py3-none-any.whl
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.4.1"
+.venv/bin/compare-mcp
+```
+
+Installing the matching `mcp-core` wheel first with `--no-deps` prevents pip
+from selecting the unrelated public package with the same distribution name;
+the second command then resolves its ordinary third-party dependencies from
+the package index and all workspace dependencies from `wheelhouse`.
+On Windows, use `.venv\\Scripts\\python.exe` and
+`.venv\\Scripts\\compare-mcp.exe` (and replace the `.venv/bin/python`
+prefixes above accordingly).
+The wheelhouse must contain the same release version for every downloaded
+workspace package; do not mix versions. `aliexpress-connector` is included in
+the `compare-connector[all]` extra. Cian and MPStats are unified-server sources,
+not comparison sources, and are intentionally not part of that extra.
 
 ### HTTP (opt-in)
 

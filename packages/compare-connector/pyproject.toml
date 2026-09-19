@@ -28,6 +28,7 @@ megamarket = ["megamarket-connector"]
 lamoda = ["lamoda-connector"]
 dns = ["dns-connector"]
 citilink = ["citilink-connector"]
+aliexpress = ["aliexpress-connector"]
 all = [
     "ozon-connector",
     "avito-connector",
@@ -36,6 +37,7 @@ all = [
     "lamoda-connector",
     "dns-connector",
     "citilink-connector",
+    "aliexpress-connector",
 ]
 
 [project.scripts]

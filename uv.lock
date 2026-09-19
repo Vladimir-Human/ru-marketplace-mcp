@@ -393,7 +393,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+aliexpress = [
+    { name = "aliexpress-connector" },
+]
 all = [
+    { name = "aliexpress-connector" },
     { name = "avito-connector" },
     { name = "citilink-connector" },
     { name = "dns-connector" },
@@ -426,6 +430,8 @@ taobao = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aliexpress-connector", marker = "extra == 'aliexpress'", editable = "packages/aliexpress-connector" },
+    { name = "aliexpress-connector", marker = "extra == 'all'", editable = "packages/aliexpress-connector" },
     { name = "avito-connector", marker = "extra == 'all'", editable = "packages/avito-connector" },
     { name = "avito-connector", marker = "extra == 'avito'", editable = "packages/avito-connector" },
     { name = "citilink-connector", marker = "extra == 'all'", editable = "packages/citilink-connector" },
@@ -448,7 +454,7 @@ requires-dist = [
     { name = "wb-connector", editable = "packages/wb-connector" },
     { name = "yandex-connector", editable = "packages/yandex-connector" },
 ]
-provides-extras = ["ozon", "avito", "taobao", "megamarket", "lamoda", "dns", "citilink", "all"]
+provides-extras = ["ozon", "avito", "taobao", "megamarket", "lamoda", "dns", "citilink", "aliexpress", "all"]
 
 [[package]]
 name = "coverage"
