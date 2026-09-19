@@ -32,6 +32,10 @@
 - Added a task-oriented [first-query guide](docs/QUICKSTART.md) covering client
   setup, targeted diagnostics, offer verification, and access limitations.
 - Updated the release checklist to cover sixteen servers and 32 artifacts.
+- Standalone installation uses GitHub Release wheels or a source checkout,
+  rather than unavailable PyPI package names. The comparison `all` extra now
+  includes AliExpress; instructions retain the explicit AliExpress install
+  needed by the previously published v2.4.1 wheels.
 
 ## [2.4.1] - 2026-09-18
 
