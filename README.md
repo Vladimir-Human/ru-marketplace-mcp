@@ -66,6 +66,8 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
+**Проверка 2.4.2:** доступность всех площадок не подтверждена. WB прошёл selfcheck и сверку поиска с карточкой; карточки Яндекса остаются inconclusive. Визуальная и браузерная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.4.2.md).
+
 ## Быстрый старт
 
 Нужны **Python 3.12+** и [uv](https://docs.astral.sh/uv/).
@@ -675,6 +677,8 @@ Read-only. No credentials, no API keys, no account required — the marketplaces
 hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
+
+**2.4.2 verification:** source access is only partially checked; no visual/browser acceptance was performed. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.4.2.md).
 
 ## What you get
 

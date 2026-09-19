@@ -136,7 +136,7 @@ class StdioProbe:
         stderr = self.stderr.strip()
         return ProbeError(f"{message}; stderr: {stderr}" if stderr else message)
 
-    def initialize(self, name: str, deadline: float) -> None:
+    def initialize(self, name: str, deadline: float) -> dict:
         self.send(
             {
                 "jsonrpc": "2.0",
@@ -149,8 +149,9 @@ class StdioProbe:
                 },
             }
         )
-        self.response(1, deadline)
+        result = self.response(1, deadline)
         self.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return result
 
     def list_tools(self, deadline: float) -> list[dict]:
         self.send({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})

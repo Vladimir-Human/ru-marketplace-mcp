@@ -36,13 +36,19 @@ for line in sys.stdin:
     if mode == "error" + str(request_id):
         print(json.dumps({"jsonrpc": "2.0", "id": request_id, "error": {"code": -32603, "message": "fixture error"}}), flush=True)
         continue
-    result = {"protocolVersion": "2025-06-18", "capabilities": {}, "serverInfo": {"name": "fixture", "version": "0"}}
+    version = "fixture-old" if mode == "stale_initialize" else "fixture-current"
+    result = {"protocolVersion": "2025-06-18", "capabilities": {}, "serverInfo": {"name": "fixture", "version": version}}
+    if mode == "missing_initialize":
+        result["serverInfo"].pop("version")
     if request_id == 2:
         result = {"tools": [{"name": "tool_" + str(i), "inputSchema": {"type": "object"}} for i in range(40)]}
         if mode == "badtools":
             result = {"tools": None}
     elif request_id == 3:
-        result = {"structuredContent": {"mounted_count": 14}}
+        version = "fixture-old" if mode == "stale_sources" else "fixture-current"
+        result = {"structuredContent": {"mounted_count": 14, "server_version": version}}
+        if mode == "missing_sources":
+            result["structuredContent"].pop("server_version")
         if mode == "toolerror":
             result["isError"] = True
     print(json.dumps({"jsonrpc": "2.0", "id": request_id, "result": result}), flush=True)
@@ -147,6 +153,7 @@ def replace_command(monkeypatch: pytest.MonkeyPatch, module: object, mode: str) 
 
     monkeypatch.setattr(module, "StdioProbe", start)
     if module is e2e_stdio_check_docker:
+        monkeypatch.setenv("MCP_EXPECTED_VERSION", "fixture-current")
         # Exercise the exchange with real local child processes, without Docker.
         original_run = module.subprocess.run
 
@@ -219,3 +226,29 @@ def test_docker_timeout_attempts_container_removal(monkeypatch: pytest.MonkeyPat
     assert e2e_stdio_check_docker.main() == 1
     assert len(removed) == 1
     assert removed[0].startswith("mcp-stdio-probe-")
+
+
+@pytest.mark.parametrize(
+    ("mode", "error"),
+    [
+        ("stale_initialize", "initialize server version: expected fixture-current, got fixture-old"),
+        ("stale_sources", "marketplace_sources server version: expected fixture-current, got fixture-old"),
+        ("missing_initialize", "initialize server version: expected fixture-current, got None"),
+        ("missing_sources", "marketplace_sources server version: expected fixture-current, got None"),
+    ],
+)
+def test_docker_probe_rejects_wrong_or_missing_versions(monkeypatch, capsys, mode, error) -> None:
+    probes = replace_command(monkeypatch, e2e_stdio_check_docker, mode)
+    monkeypatch.setenv("MCP_DOCKER_IMAGE", "fixture")
+    assert e2e_stdio_check_docker.main() == 1
+    assert error in capsys.readouterr().err
+    assert probes[0].proc.poll() is not None
+
+
+def test_docker_probe_requires_expected_version_before_starting(monkeypatch, capsys) -> None:
+    probes = replace_command(monkeypatch, e2e_stdio_check_docker, "interleaved")
+    monkeypatch.setenv("MCP_DOCKER_IMAGE", "fixture")
+    monkeypatch.delenv("MCP_EXPECTED_VERSION")
+    assert e2e_stdio_check_docker.main() == 2
+    assert "MCP_EXPECTED_VERSION is not set" in capsys.readouterr().err
+    assert not probes

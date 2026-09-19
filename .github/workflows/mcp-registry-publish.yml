@@ -58,6 +58,7 @@ jobs:
       - name: Real MCP session over docker stdio
         env:
           MCP_DOCKER_IMAGE: ghcr.io/vladimir-human/ru-marketplace-mcp:${{ steps.version.outputs.value }}
+          MCP_EXPECTED_VERSION: ${{ steps.version.outputs.value }}
         run: python3 scripts/e2e_stdio_check_docker.py
 
       - name: Install mcp-publisher
