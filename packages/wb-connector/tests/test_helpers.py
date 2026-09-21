@@ -2027,6 +2027,13 @@ def test_impersonated_refusal_stays_a_transport_error(monkeypatch):
             "curl_requests",
             SimpleNamespace(get=lambda url, **kw: _FakeCurlResponse(403, body, "text/html")),
         )
+
+        # Both transports are stubbed, because the gated hosts now fall back:
+        # without this the fallback would make a real request.
+        async def fake_budgeted(client, target, **kwargs):
+            return 403, body.decode(), None
+
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_card([5535522])
@@ -2274,6 +2281,70 @@ def test_an_edge_wall_is_not_a_success_and_is_not_cached(monkeypatch):
         assert status == 200, "the status is passed through untouched"
         assert pacer.events == ["refusal"], "a wall is a refusal, not a success"
         assert server._cache.get(url) is None, "a wall must not be cached"
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+@pytest.mark.parametrize(
+    ("impersonated_result", "budgeted_result", "expected"),
+    [
+        # impersonation produced no status at all -> the fallback answers
+        ((0, None, "timeout: no response within 15.0s"), (200, "body", None), (200, "body", None)),
+        # impersonation got a wall page with HTTP 200 -> not a read, fall back
+        ((200, "<html>wall</html>", None), (200, "body", None), (200, "body", None)),
+        # impersonation got a real status, the fallback got nothing -> keep the status
+        ((403, "<html>wall</html>", None), (0, None, "timeout: x"), (403, "<html>wall</html>", None)),
+        # both refused -> the refusal is reported, not swallowed
+        ((403, "<html>wall</html>", None), (403, "<html>wall</html>", None), (403, "<html>wall</html>", None)),
+    ],
+)
+def test_a_gated_host_falls_back_when_impersonation_fails(monkeypatch, impersonated_result, budgeted_result, expected):
+    """Preferring impersonation must not mean depending on it.
+
+    Measured on 2026-09-21: from one address the impersonated path timed out on
+    the primary search endpoint while the shared client answered it with 130 KB,
+    and from the next address card.wb.ru refused both. A host list cannot encode
+    that, so the gated hosts try impersonation and then fall back once.
+    """
+
+    async def fake_impersonated(url):
+        return impersonated_result
+
+    async def fake_budgeted(client, target, **kwargs):
+        return budgeted_result
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_impersonated_get_text", fake_impersonated)
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
+        result = await server._safe_get_text(object(), _GATED_URLS["card"])
+        assert result == expected
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_a_canary_probe_cannot_be_answered_from_its_own_cache(monkeypatch):
+    """`search_v9: healthy` must describe a read that just happened.
+
+    Every probe uses a fixed URL, and a cached 200 was observed satisfying a probe
+    while a live request to the same endpoint was timing out.
+    """
+    calls: list[str] = []
+
+    async def fake_safe_get_text(client, url):
+        calls.append(url)
+        return 200, "live body", None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        url = _GATED_URLS["card"]
+        server._cache.set(url, (200, "stale body", None))
+        _status, text, _err = await server._fresh_get_text(object(), url)
+        assert text == "live body", "the probe was answered from the cache"
+        assert calls == [url]
 
     asyncio.run(scenario())
     _clear_wb_cache()
