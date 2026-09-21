@@ -12,8 +12,14 @@ on:
     - cron: "0 3 * * *"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # The nightly canary runs on this same ref as every push to main, so the group
+  # has to carry the event name: otherwise a routine commit cancels the canary —
+  # which reports nothing when cancelled, it just stops existing — and the canary
+  # cancels a merge verification. Scheduled runs are never cancelled; superseded
+  # push and pull-request runs still cancel each other. See
+  # scripts/test_ci_concurrency.py, which fails if this contract is dropped.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 env:
   # Prove the committed uv.lock rather than re-resolving in CI. With "1" every
