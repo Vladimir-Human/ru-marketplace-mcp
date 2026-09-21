@@ -41,6 +41,12 @@
   rather than an unexplained status. A dated [live record](docs/LIVE_STATUS.md)
   states what was verified against the marketplaces, and the Detsky Mir note in
   `docs/ANTI_BOT.md` carries the dated correction.
+- The gated Wildberries hosts prefer impersonation and fall back once to the
+  shared client, because a second measurement showed the split is not a property
+  of the host: from one address the impersonated path timed out on the primary
+  search endpoint while the shared client answered it, and from the next
+  `card.wb.ru` refused both. Canary probes read past the cache, so a `healthy`
+  verdict cannot describe a read that already happened.
 
 ## [2.4.2] - 2026-09-19
 

@@ -243,13 +243,14 @@ def _wb_client() -> httpx.AsyncClient:
 #   feedbacks2.wb.ru              httpx 200   curl_cffi 200
 #   basket-NN.wbbasket.ru         httpx 200   curl_cffi 200
 #
-# Re-measured on 2026-09-21 from a different (VPN) address, the 403s did not
-# reproduce: plain httpx drew 200 from card.wb.ru and search.wb.ru there, and
-# wb_selfcheck and wb_search both ran green with impersonation disabled. So the
-# refusal depends on the address as well as the client — the handshake decides
-# when the address is not trusted. Impersonation stays: in that same session it
-# was the difference on catalog.wb.ru, where httpx drew a 429 while curl_cffi
-# drew a 200.
+# Re-measured on 2026-09-21 from two further addresses, the 403s did not
+# reproduce, and the split moved the other way: on one of them plain httpx drew
+# 200 from card.wb.ru and search.wb.ru while the impersonated path timed out on
+# v9, and on the next card.wb.ru refused BOTH transports with the same wall
+# within the same hour. So this is not a fixed property of a host that a host
+# list can capture: it moves with the address, the hour and the endpoint's
+# current mood. That is why the gated hosts below now prefer impersonation and
+# fall back to the shared client once, instead of depending on it.
 #
 # feedbacks2 sits on the same apex as the three gated hosts and is not gated, so
 # this is an explicit host list rather than a suffix rule. Everything outside it
@@ -290,6 +291,13 @@ def _decode_body(body: bytes, content_type: str) -> str:
         return body.decode(charset, errors="replace")
     except LookupError:
         return body.decode("utf-8", errors="replace")
+
+
+def _is_usable(result: tuple[int, str | None, str | None]) -> bool:
+    """True for a real read: HTTP 200, a body, and not the edge's wall page."""
+
+    status, text, err = result
+    return err is None and status == 200 and text is not None and not _is_edge_wall(text)
 
 
 def _is_edge_wall(text: str | None) -> bool:
@@ -377,6 +385,33 @@ class _PoliteGate:
         await _polite_wait()
 
 
+async def _budgeted_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
+    """The shared path: body cap, wall-clock budget, polite gate, bounded retries."""
+
+    return await get_text_budgeted(
+        client,
+        url,
+        max_bytes=MAX_BODY_BYTES,
+        wall_timeout_s=WB_WALL_TIMEOUT,
+        retries=_NET_RETRIES,
+        backoff_s=_NET_BACKOFF_S,
+        limiter=_PoliteGate(),
+    )
+
+
+async def _fresh_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
+    """A canary read that cannot be answered from the cache.
+
+    Every probe uses a fixed URL, so a cached 200 would let a canary report
+    ``healthy`` about a read that happened earlier — and ``search_v9: healthy``
+    was observed while a live request to the same endpoint was timing out. A
+    health signal has to describe the present.
+    """
+
+    _cache.invalidate(url)
+    return await _safe_get_text(client, url)
+
+
 async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
     """GET with body cap, wall-clock budget, and bounded transient-network retry.
 
@@ -403,17 +438,23 @@ async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str 
         return cached
 
     if _needs_impersonation(url):
+        # Preferring impersonation must not mean depending on it. Measured on
+        # 2026-09-21 from a second address: search.wb.ru v9 answered the default
+        # client with 130 KB while the impersonated path timed out at 15 s, and
+        # card.wb.ru refused both transports with the same wall. The split is not
+        # a property of the host; it moves with the address and the hour. So the
+        # gated hosts try impersonation first and fall back once, through the same
+        # polite gate and wall-clock budget as any other read.
         result = await _impersonated_get_text(url)
+        if not _is_usable(result):
+            fallback = await _budgeted_get_text(client, url)
+            # Prefer the fallback when it worked, or when the impersonated attempt
+            # produced no status at all: a 403 wall tells the reader more than a
+            # bare timeout does.
+            if _is_usable(fallback) or result[0] == 0:
+                result = fallback
     else:
-        result = await get_text_budgeted(
-            client,
-            url,
-            max_bytes=MAX_BODY_BYTES,
-            wall_timeout_s=WB_WALL_TIMEOUT,
-            retries=_NET_RETRIES,
-            backoff_s=_NET_BACKOFF_S,
-            limiter=_PoliteGate(),
-        )
+        result = await _budgeted_get_text(client, url)
 
     status, text, err = result
     if err is None and status == 200 and text is not None and not _is_edge_wall(text):
@@ -2278,7 +2319,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     try:
         async with asyncio.timeout(45):  # whole-subcheck wall-clock (audit CRASH_HANG)
             async with _wb_client() as client:
-                status_code, text, err = await _safe_get_text(client, card_url)
+                status_code, text, err = await _fresh_get_text(client, card_url)
             if err or status_code != 200:
                 checks["card"] = R.selfcheck_entry(
                     "inconclusive", baseline=str(nm), reason="transport_down", notes=[f"http {status_code} err={err}"]
@@ -2399,7 +2440,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
             used_host = ""
             async with _wb_client() as client:
                 for host in WB_REVIEW_HOSTS:
-                    status_code, text, err = await _safe_get_text(
+                    status_code, text, err = await _fresh_get_text(
                         client, f"https://{host}/feedbacks/v2/{_SELFCHECK_IMT}"
                     )
                     if err or status_code != 200:
@@ -2519,7 +2560,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     try:
         async with asyncio.timeout(45):
             async with _wb_client() as client:
-                status_code, text, err = await _safe_get_text(client, sg_url)
+                status_code, text, err = await _fresh_get_text(client, sg_url)
             if err or status_code == 429:
                 checks["search_goods"] = R.selfcheck_entry(
                     "inconclusive",
@@ -2616,7 +2657,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     try:
         async with asyncio.timeout(45):
             async with _wb_client() as client:
-                status_code, text, err = await _safe_get_text(client, v9_url)
+                status_code, text, err = await _fresh_get_text(client, v9_url)
             if err or status_code == 429:
                 checks["search_v9"] = R.selfcheck_entry(
                     "inconclusive",
@@ -2710,7 +2751,7 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
             part = nm // 1000
             basket_url = f"https://{host}/vol{vol}/part{part}/{nm}/info/ru/card.json"
             async with _wb_client() as client:
-                status_code, text, err = await _safe_get_text(client, basket_url)
+                status_code, text, err = await _fresh_get_text(client, basket_url)
             if err or status_code == 404 or status_code != 200:
                 checks["root_basket"] = R.selfcheck_entry(
                     "inconclusive",
