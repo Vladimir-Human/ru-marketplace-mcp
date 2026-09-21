@@ -148,7 +148,8 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
                     limiter=_limiter,
                 )
             except httpx.TransportError as exc:
-                raise_tool_error(TransportDownError(f"{label}: {_redact(str(exc))}", provider="detmir"))
+                detail = _redact(str(exc)).strip() or "(no message)"
+                raise_tool_error(TransportDownError(f"{label}: {type(exc).__name__}: {detail}", provider="detmir"))
                 raise AssertionError("unreachable") from exc  # pragma: no cover
 
         if status == 429:
@@ -156,6 +157,21 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
         if status >= 500:
             raise_tool_error(
                 TransportDownError(f"{label}: upstream HTTP {status}", provider="detmir", status_code=status)
+            )
+        if status == 418:
+            # DDoS-Guard answers 418 for the whole domain from an address it does
+            # not like, before any parser runs. Verified live on 2026-09-21: the
+            # same 418 came back for httpx with the connector's own headers, for
+            # httpx with no headers at all, and for curl_cffi's Chrome
+            # impersonation — so this is an address refusal, not request shaping
+            # and not drift. Say so instead of "unexpected HTTP 418".
+            raise_tool_error(
+                TransportDownError(
+                    f"{label}: refused by the DDoS-Guard edge (HTTP 418) — this address is blocked, "
+                    "the parser never ran",
+                    provider="detmir",
+                    status_code=status,
+                )
             )
         if status != 200:
             raise_tool_error(
@@ -676,12 +692,17 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
         except Exception as exc:
             text = _redact(str(exc))
             drift = "parser_drift" in text or "not valid JSON" in text
+            blocked = "DDoS-Guard" in text or "HTTP 418" in text
+            if drift:
+                notes = ["upstream reachable but unparseable"]
+            elif blocked:
+                notes = ["blocked at the edge (HTTP 418) — this address is refused; parsers untested"]
+            else:
+                notes = ["transport or geo block — parsers untested"]
             checks[name] = DetmirSelfcheckEntry(
                 state="drift" if drift else "inconclusive",
                 detail=text[:200],
-                notes=["upstream reachable but unparseable"]
-                if drift
-                else ["transport or geo block — parsers untested"],
+                notes=notes,
             )
             return
         ok, detail = verify(result)
