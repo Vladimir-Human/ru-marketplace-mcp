@@ -26,6 +26,16 @@
   cancelled, so a routine commit can no longer delete the only automatic live
   evidence, and the canary can no longer cancel a merge verification. The
   contract is pinned by `scripts/test_ci_concurrency.py`.
+- Wildberries refusals now reach the request pacer, so the longer post-refusal
+  gap applies and the "standing block, not a blip" hint can reach an operator;
+  an HTML wall page served with HTTP 200 counts as a refusal instead of being
+  cached as a success. `wb_selfcheck` probes `search.wb.ru` v9 directly, so a
+  refusal of the primary search path is visible rather than hiding behind the
+  legacy fallback's answers.
+- The impersonated transport streams its body through the same cap as the shared
+  path, and the gated-host note records the dated re-measurement: the 403s did
+  not reproduce from a different address, while impersonation remained the
+  difference on `catalog.wb.ru`.
 
 ## [2.4.2] - 2026-09-19
 
