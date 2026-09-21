@@ -613,3 +613,26 @@ async def test_limit_still_caps_a_page_without_duplicates(monkeypatch):
 
     assert result.returned == 4
     assert [item.product_id for item in result.items] == ["0", "1", "2", "3"]
+
+
+async def test_fetch_html_names_the_exception_when_httpx_carries_no_message(monkeypatch):
+    """An exception with an empty message must not produce an empty detail.
+
+    Observed live on 2026-09-21: the card probe surfaced ``"yandex_card: "`` with
+    nothing after the colon, which tells an operator nothing about which failure
+    it was and hides the difference between a timeout and a reset.
+    """
+    import httpx
+
+    async def fake_get(client, url, **kwargs):
+        raise httpx.ReadTimeout("")
+
+    monkeypatch.setattr(server, "get_text_with_retries", fake_get)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._fetch_html("https://market.yandex.ru/product/1", "yandex_card", None)
+
+    payload = error_payload(excinfo.value)
+    assert payload["error"] == "transport_down"
+    assert "ReadTimeout" in payload["message"], payload["message"]
+    assert payload["message"].strip() != "yandex_card:"

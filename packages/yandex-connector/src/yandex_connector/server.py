@@ -147,7 +147,11 @@ async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
                     retry_statuses=_RETRY_STATUSES,
                 )
             except httpx.TransportError as exc:
-                raise_tool_error(TransportDownError(f"{label}: {_redact(str(exc))}", provider="yandex"))
+                # An httpx transport exception can carry no message at all, and
+                # "yandex_card: " tells an operator nothing about which failure it
+                # was. Name the class before the (possibly empty) detail.
+                detail = _redact(str(exc)).strip() or "(no message)"
+                raise_tool_error(TransportDownError(f"{label}: {type(exc).__name__}: {detail}", provider="yandex"))
                 raise AssertionError("unreachable") from exc  # pragma: no cover
 
         if status == 429:

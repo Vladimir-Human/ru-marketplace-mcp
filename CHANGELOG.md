@@ -36,6 +36,11 @@
   path, and the gated-host note records the dated re-measurement: the 403s did
   not reproduce from a different address, while impersonation remained the
   difference on `catalog.wb.ru`.
+- Transport failures name the exception class instead of surfacing an empty
+  detail, and Detsky Mir reports an HTTP 418 from its edge as an address block
+  rather than an unexplained status. A dated [live record](docs/LIVE_STATUS.md)
+  states what was verified against the marketplaces, and the Detsky Mir note in
+  `docs/ANTI_BOT.md` carries the dated correction.
 
 ## [2.4.2] - 2026-09-19
 

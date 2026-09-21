@@ -576,3 +576,48 @@ async def test_different_regions_do_not_share_a_cache_entry(monkeypatch):
 async def test_all_three_tools_are_still_registered():
     names = {tool.name for tool in await server.mcp.list_tools()}
     assert names == {"detmir_card", "detmir_category", "detmir_categories"}
+
+
+async def test_a_418_is_reported_as_an_edge_block(monkeypatch, no_delay):
+    """HTTP 418 comes from DDoS-Guard, so the message must name the edge.
+
+    Verified live on 2026-09-21: the same 418 came back for httpx with this
+    connector's own headers, for httpx with no headers at all, and for curl_cffi's
+    Chrome impersonation. The address is refused before any parser runs, so a bare
+    "unexpected HTTP 418" invites an operator to debug the wrong thing.
+    """
+
+    async def edge_418(client, url, **kwargs):
+        return 418, ""
+
+    monkeypatch.setattr(server, "get_text_with_retries", edge_418)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._fetch_json("https://api.detmir.ru/v2/products/1", "detmir_card", None)
+
+    payload = json.loads(str(excinfo.value))
+    assert payload["error"] == "transport_down"
+    assert "DDoS-Guard" in payload["message"], payload["message"]
+    assert payload["status_code"] == 418
+
+
+async def test_selfcheck_says_blocked_when_the_edge_refuses(monkeypatch, no_delay):
+    """The canary's note must distinguish a refusal from an unexplained block."""
+    from mcp_core.errors import TransportDownError, raise_tool_error
+
+    async def edge_418(url: str, label: str, ctx=None):
+        raise_tool_error(
+            TransportDownError(
+                f"{label}: refused by the DDoS-Guard edge (HTTP 418) — this address is blocked, the parser never ran",
+                provider="detmir",
+                status_code=418,
+            )
+        )
+
+    monkeypatch.setattr(server, "_fetch_json", edge_418)
+
+    result = await server.detmir_selfcheck()
+
+    assert result.status == "inconclusive"
+    notes = [note for entry in result.checks.values() for note in entry.notes]
+    assert any("blocked at the edge" in note for note in notes), notes

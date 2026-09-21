@@ -179,7 +179,18 @@ product page ~2.5 MB, because the whole widget state ships inside the HTML.
 Because extraction is coupled to a front-end, `yandex_selfcheck` matters more here
 than for a JSON API. Drift is a question of when.
 
-### Detsky Mir — genuinely open
+### Detsky Mir — open JSON API, refused by address
+
+**Dated correction (2026-09-21).** The "genuinely open" premise below was
+measured from a Russian residential address and no longer holds from every
+vantage point. From a European hosting address (Frankfurt, a hosting ASN),
+`api.detmir.ru` answered **HTTP 418 from DDoS-Guard for the whole domain** — for
+httpx carrying this connector's exact headers, for httpx with no headers at all,
+and for curl_cffi's Chrome impersonation alike. The refusal arrives before any
+parser runs, so `inconclusive` from this address means the address, not the code;
+nothing in the request shaping is at fault and nothing was changed in response.
+The connector now says so in the error and in the canary note. Live record:
+[LIVE_STATUS.md](LIVE_STATUS.md).
 
 `api.detmir.ru` answers with no User-Agent at all. No rate limit observed across
 rapid sequential requests. Three quirks:
