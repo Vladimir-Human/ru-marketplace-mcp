@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -2382,6 +2382,7 @@ name = "wb-connector"
 version = "2.4.2"
 source = { editable = "packages/wb-connector" }
 dependencies = [
+    { name = "curl-cffi" },
     { name = "fastmcp" },
     { name = "httpx" },
     { name = "mcp-core" },
@@ -2391,6 +2392,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "curl-cffi", specifier = ">=0.8" },
     { name = "fastmcp", specifier = ">=3.4.6,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp-core", editable = "packages/mcp-core" },

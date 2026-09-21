@@ -17,6 +17,9 @@ Run locally before pushing (this is what CI enforces):
 - [ ] `uv run mypy` — types clean
 - [ ] `uv run python scripts/check_no_print.py` — no stdout writes
 - [ ] `uv run python scripts/check_versions.py` — one version everywhere
+- [ ] `uv run python scripts/check_test_count.py` — the documented test count matches collection; adding a test moves it in several documented places at once
+- [ ] `uv run python scripts/check_provenance.py` — every fixture pin still describes its fixture
+- [ ] `uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp --baseline work/performance/wire-baseline.json --max-token-regression-percent 10` — tool descriptions stay within the wire-cost baseline
 
 If you touched platform-specific code (process handling, signals):
 

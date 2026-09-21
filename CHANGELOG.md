@@ -11,6 +11,13 @@
 
 ### Fixed
 
+- Wildberries reads `card.wb.ru`, `search.wb.ru` and `catalog.wb.ru` through
+  browser impersonation. Those three answer the default client's TLS handshake
+  with a 403 HTML page on a network where curl and curl_cffi get a 200 from the
+  identical URL, so `wb_card` and `wb_category_products` failed outright while
+  `wb_search` fell through to the legacy stale-id path and returned unrelated
+  products instead of an error. Hosts without the gate, including `feedbacks2.wb.ru`
+  on the same apex, keep the shared budget and retry path.
 - Comparison preserves native source warnings alongside valid offers, including
   fallback extraction, missing fields, coupon pricing, and result truncation.
   Successful source access no longer hides those data-quality limitations.

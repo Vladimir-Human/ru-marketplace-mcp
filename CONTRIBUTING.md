@@ -23,11 +23,17 @@ uv run pre-commit install
 ## Перед открытием pull request
 
 ```bash
+uv lock --check
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 uv run mypy --platform win32
 uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
+uv run python scripts/check_test_count.py
+uv run python scripts/check_provenance.py
+uv run python scripts/check_versions.py
+uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
+  --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
 
 CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13.
@@ -132,11 +138,17 @@ uv run pre-commit install
 ## Before you open a PR
 
 ```bash
+uv lock --check
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 uv run mypy --platform win32
 uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
+uv run python scripts/check_test_count.py
+uv run python scripts/check_provenance.py
+uv run python scripts/check_versions.py
+uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
+  --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
 
 CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,

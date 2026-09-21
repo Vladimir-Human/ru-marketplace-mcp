@@ -1,8 +1,10 @@
 import asyncio
 import json
+import time
 import tomllib
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -1928,3 +1930,132 @@ def test_known_quantities_produce_no_stock_warning():
     warnings = server._aggregate_offer_warnings(items)
 
     assert not any(w.startswith("stock_unknown") for w in warnings), warnings
+
+
+# --- WB's TLS-fingerprint gate ------------------------------------------------
+#
+# card.wb.ru, search.wb.ru and catalog.wb.ru answer httpx's handshake with a 403
+# HTML page while serving curl_cffi a 200 for the identical URL. These pin which
+# hosts take which transport, because getting the split wrong is silent: a gated
+# host on httpx makes wb_card fail outright and wb_search degrade to the stale
+# legacy ids, which look like an answer.
+
+_GATED_URLS = {
+    "card": "https://card.wb.ru/cards/v4/detail?appType=1&curr=rub&dest=-1257786&locale=ru&nm=5535522",
+    "search": "https://search.wb.ru/exactmatch/ru/common/v9/search?appType=1&query=x&resultset=catalog",
+    "catalog": "https://catalog.wb.ru/catalog/electronic17/v4/catalog?appType=1&subject=515",
+}
+
+_UNGATED_URLS = {
+    # Same apex as the gated hosts and deliberately NOT impersonated: the split is
+    # a host list, not a suffix rule, and this is the case that proves it.
+    "feedbacks": "https://feedbacks2.wb.ru/feedbacks/v2/1002173489",
+    "search_goods": "https://search-goods.wildberries.ru/search?query=x&dest=-1257786",
+    "basket": "https://basket-01.wbbasket.ru/vol55/part5535/5535522/info/ru/card.json",
+}
+
+
+@pytest.mark.parametrize("url", sorted(_GATED_URLS.values()))
+def test_gated_hosts_read_through_the_impersonated_transport(monkeypatch, url):
+    seen = []
+
+    async def fake_impersonated(target):
+        seen.append(target)
+        return 200, '{"products": []}', None
+
+    async def forbidden_budgeted(*args, **kwargs):
+        raise AssertionError("a gated host must not use the default client")
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_impersonated_get_text", fake_impersonated)
+        monkeypatch.setattr(server, "get_text_budgeted", forbidden_budgeted)
+        status, text, err = await server._safe_get_text(object(), url)
+        assert (status, text, err) == (200, '{"products": []}', None)
+        assert seen == [url]
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+@pytest.mark.parametrize("url", sorted(_UNGATED_URLS.values()))
+def test_ungated_hosts_keep_the_budgeted_transport(monkeypatch, url):
+    seen = []
+
+    async def fake_budgeted(client, target, **kwargs):
+        seen.append(target)
+        return 200, "[]", None
+
+    async def forbidden_impersonation(target):
+        raise AssertionError("an ungated host must keep the retry/budget path")
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
+        monkeypatch.setattr(server, "_impersonated_get_text", forbidden_impersonation)
+        status, text, err = await server._safe_get_text(object(), url)
+        assert (status, text, err) == (200, "[]", None)
+        assert seen == [url]
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_impersonated_refusal_stays_a_transport_error(monkeypatch):
+    """A refusal through the impersonated path is still a block, never drift."""
+
+    class FakeResponse:
+        status_code = 403
+        content = b"<html><title>403 Forbidden</title><hr><center>Angie</center></html>"
+        text = "<html><title>403 Forbidden</title><hr><center>Angie</center></html>"
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=lambda url, **kw: FakeResponse()))
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_card([5535522])
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "transport_down"
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_impersonated_timeout_uses_the_shared_error_vocabulary(monkeypatch):
+    def slow_get(url, **kwargs):
+        time.sleep(5)
+        raise AssertionError("unreachable: the wall clock should fire first")
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=slow_get))
+        monkeypatch.setattr(server, "WB_WALL_TIMEOUT", 0.01)
+        status, text, err = await server._impersonated_get_text(_GATED_URLS["card"])
+        assert (status, text) == (0, None)
+        assert err.startswith("timeout:")
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_impersonated_body_cap_refuses_an_oversized_payload(monkeypatch):
+    class HugeResponse:
+        status_code = 200
+        content = b"x" * 4096
+        text = "x" * 4096
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=lambda url, **kw: HugeResponse()))
+        monkeypatch.setattr(server, "MAX_BODY_BYTES", 1024)
+        status, text, err = await server._impersonated_get_text(_GATED_URLS["card"])
+        assert status == 200
+        assert text is None
+        assert "exceeded" in err
+
+    asyncio.run(scenario())
+    _clear_wb_cache()

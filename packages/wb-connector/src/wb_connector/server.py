@@ -34,8 +34,10 @@ import os
 import re
 import string
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 import httpx
+from curl_cffi import requests as curl_requests
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware.error_handling import RetryMiddleware
@@ -229,6 +231,69 @@ def _wb_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=WB_TIMEOUT, headers=WB_HEADERS, proxy=_proxy())
 
 
+# WB's API edge answers httpx's TLS handshake with a 403 HTML page served by
+# Angie, while plain curl and curl_cffi get a 200 from the very same address,
+# query and headers. The gate is the client fingerprint, not the IP and not a
+# missing dest.
+#
+# Measured host by host from a Russian residential IP, same URL per row:
+#
+#   card.wb.ru                    httpx 403   curl_cffi 200
+#   search.wb.ru                  httpx 403   curl_cffi 200
+#   catalog.wb.ru                 httpx 403   curl_cffi 200
+#   search-goods.wildberries.ru   httpx 200   curl_cffi 200
+#   feedbacks2.wb.ru              httpx 200   curl_cffi 200
+#   basket-NN.wbbasket.ru         httpx 200   curl_cffi 200
+#
+# feedbacks2 sits on the same apex as the three gated hosts and is not gated, so
+# this is an explicit host list rather than a suffix rule. Everything outside it
+# keeps the shared budget/retry machinery.
+_IMPERSONATED_HOSTS = ("card.wb.ru", "search.wb.ru", "catalog.wb.ru")
+_IMPERSONATE_PROFILE = "chrome"
+# Impersonation supplies its own User-Agent and client hints. Sending WB_HEADERS'
+# pinned Chrome 120 UA on top would contradict the handshake curl_cffi just
+# performed, so only the request-shaping headers travel with it.
+_IMPERSONATED_HEADERS = {k: v for k, v in WB_HEADERS.items() if k != "User-Agent"}
+
+
+def _needs_impersonation(url: str) -> bool:
+    """True for hosts that refuse the default client's TLS fingerprint."""
+    return urlsplit(url).hostname in _IMPERSONATED_HOSTS
+
+
+async def _impersonated_get_text(url: str) -> tuple[int, str | None, str | None]:
+    """Fetch via curl_cffi, honouring ``_safe_get_text``'s (status, text, err) contract.
+
+    Same error vocabulary as the httpx path (``timeout:`` / ``network:``), the
+    same body cap and the same wall-clock bound. Deliberately without a retry
+    loop: the fingerprint gate this clears is deterministic, so a refusal would
+    not become a pass on a second attempt, and a genuine transient fault still
+    surfaces to the caller as a transport error.
+    """
+
+    def _fetch() -> tuple[int, bytes, str]:
+        resp = curl_requests.get(
+            url,
+            headers=_IMPERSONATED_HEADERS,
+            impersonate=_IMPERSONATE_PROFILE,
+            timeout=_settings.timeout,
+            allow_redirects=False,
+            proxy=_proxy(),
+        )
+        return resp.status_code, resp.content or b"", resp.text
+
+    try:
+        status, content, text = await asyncio.wait_for(asyncio.to_thread(_fetch), timeout=WB_WALL_TIMEOUT)
+    except TimeoutError:  # asyncio.TimeoutError is an alias of this since 3.11
+        return 0, None, f"timeout: no response within {WB_WALL_TIMEOUT}s"
+    except Exception as exc:  # curl_cffi raises its own RequestsError hierarchy
+        return 0, None, f"network: {exc}"
+
+    if len(content) > MAX_BODY_BYTES:
+        return status, None, f"network: body exceeded {MAX_BODY_BYTES} bytes"
+    return status, text, None
+
+
 class _PoliteGate:
     """Adapter exposing WB's module-level polite gate as a ``RateLimiter``.
 
@@ -268,15 +333,18 @@ async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str 
     if cached is not None:
         return cached
 
-    result = await get_text_budgeted(
-        client,
-        url,
-        max_bytes=MAX_BODY_BYTES,
-        wall_timeout_s=WB_WALL_TIMEOUT,
-        retries=_NET_RETRIES,
-        backoff_s=_NET_BACKOFF_S,
-        limiter=_PoliteGate(),
-    )
+    if _needs_impersonation(url):
+        result = await _impersonated_get_text(url)
+    else:
+        result = await get_text_budgeted(
+            client,
+            url,
+            max_bytes=MAX_BODY_BYTES,
+            wall_timeout_s=WB_WALL_TIMEOUT,
+            retries=_NET_RETRIES,
+            backoff_s=_NET_BACKOFF_S,
+            limiter=_PoliteGate(),
+        )
 
     status, text, err = result
     if err is None and status == 200 and text is not None:
