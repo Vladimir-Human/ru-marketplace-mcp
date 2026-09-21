@@ -14,6 +14,11 @@
 - Comparison preserves native source warnings alongside valid offers, including
   fallback extraction, missing fields, coupon pricing, and result truncation.
   Successful source access no longer hides those data-quality limitations.
+- The nightly live canary no longer shares a concurrency slot with pushes to
+  `main`: the group carries the event name and a scheduled run is never
+  cancelled, so a routine commit can no longer delete the only automatic live
+  evidence, and the canary can no longer cancel a merge verification. The
+  contract is pinned by `scripts/test_ci_concurrency.py`.
 
 ## [2.4.2] - 2026-09-19
 
