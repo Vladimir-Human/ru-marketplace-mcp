@@ -2001,20 +2001,32 @@ def test_ungated_hosts_keep_the_budgeted_transport(monkeypatch, url):
     _clear_wb_cache()
 
 
+class _FakeCurlResponse:
+    """A curl_cffi response as the streaming reader sees it."""
+
+    def __init__(self, status_code: int, body: bytes, content_type: str = "application/json") -> None:
+        self.status_code = status_code
+        self.headers = {"content-type": content_type}
+        self._body = body
+
+    def iter_content(self, chunk_size: int = 0):
+        return [self._body]
+
+
 def test_impersonated_refusal_stays_a_transport_error(monkeypatch):
     """A refusal through the impersonated path is still a block, never drift."""
-
-    class FakeResponse:
-        status_code = 403
-        content = b"<html><title>403 Forbidden</title><hr><center>Angie</center></html>"
-        text = "<html><title>403 Forbidden</title><hr><center>Angie</center></html>"
 
     async def no_wait():
         return None
 
     async def scenario():
         _clear_wb_cache()
-        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=lambda url, **kw: FakeResponse()))
+        body = b"<html><title>403 Forbidden</title><hr><center>Angie</center></html>"
+        monkeypatch.setattr(
+            server,
+            "curl_requests",
+            SimpleNamespace(get=lambda url, **kw: _FakeCurlResponse(403, body, "text/html")),
+        )
         monkeypatch.setattr(server, "_polite_wait", no_wait)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_card([5535522])
@@ -2043,19 +2055,225 @@ def test_impersonated_timeout_uses_the_shared_error_vocabulary(monkeypatch):
 
 
 def test_impersonated_body_cap_refuses_an_oversized_payload(monkeypatch):
-    class HugeResponse:
-        status_code = 200
-        content = b"x" * 4096
-        text = "x" * 4096
+    """A body past the cap must be refused, and the reader must stop there.
+
+    ``pulled`` is the point of this test: if the reader materialised the whole
+    body first and compared lengths afterwards, every chunk would be pulled and
+    the cap would bound nothing.
+    """
+    pulled: list[int] = []
+
+    class Grower(_FakeCurlResponse):
+        def iter_content(self, chunk_size: int = 0):
+            for index in range(64):
+                pulled.append(index)
+                yield b"x" * 1024
 
     async def scenario():
         _clear_wb_cache()
-        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=lambda url, **kw: HugeResponse()))
-        monkeypatch.setattr(server, "MAX_BODY_BYTES", 1024)
+        monkeypatch.setattr(server, "curl_requests", SimpleNamespace(get=lambda url, **kw: Grower(200, b"")))
+        monkeypatch.setattr(server, "MAX_BODY_BYTES", 4096)
         status, text, err = await server._impersonated_get_text(_GATED_URLS["card"])
         assert status == 200
         assert text is None
         assert "exceeded" in err
+        assert len(pulled) <= 6, f"the reader drained the body instead of stopping at the cap ({len(pulled)} chunks)"
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+# ------------------------------------------- refusal accounting and the canary ----
+
+_MARKER_REFUSAL_STREAK = "5 refusals in a row"
+
+
+class _RecordingPacer:
+    """Stands in for the real Pacer so a test can see what it was told."""
+
+    def __init__(self, hint: str = "") -> None:
+        self.events: list[str] = []
+        self._hint = hint
+
+    def record_refusal(self) -> None:
+        self.events.append("refusal")
+
+    def record_success(self) -> None:
+        self.events.append("success")
+
+    def rotation_hint(self) -> str:
+        return self._hint
+
+    async def wait(self, min_gap: float | None = None) -> None:
+        return None
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(401, "refusal"), (403, "refusal"), (429, "refusal"), (200, "success"), (500, None)],
+)
+def test_refusals_reach_the_pacer_and_other_statuses_do_not(monkeypatch, status, expected):
+    """The pacer is told about refusals — and only about refusals.
+
+    Nothing in this connector used to call ``record_refusal``, so the longer
+    post-refusal gap and the rotation hint could never fire for the one source
+    that answers 403.
+    """
+    pacer = _RecordingPacer()
+
+    async def fake_budgeted(client, target, **kwargs):
+        return status, "body", None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
+        monkeypatch.setattr(server, "_pacer", pacer)
+        await server._safe_get_text(object(), _UNGATED_URLS["feedbacks"])
+        assert (pacer.events or [None])[-1] == expected
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_a_transient_fault_is_not_counted_as_a_refusal(monkeypatch):
+    """A timeout is our problem or the network's, not a signal to slow down."""
+    pacer = _RecordingPacer()
+
+    async def fake_budgeted(client, target, **kwargs):
+        return 0, None, "timeout: no response within 15s"
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
+        monkeypatch.setattr(server, "_pacer", pacer)
+        await server._safe_get_text(object(), _UNGATED_URLS["feedbacks"])
+        assert pacer.events == []
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def test_a_refusal_streak_reaches_the_operator(monkeypatch):
+    """Once refusals stop looking like bad luck, the error must say so.
+
+    ``_safe_get_text`` is stubbed rather than the transport beneath it: ``card.wb.ru``
+    is an impersonated host, so stubbing only ``get_text_budgeted`` would let this
+    test make a real request.
+    """
+    pacer = _RecordingPacer(hint=f"{_MARKER_REFUSAL_STREAK} — this is a standing block, not a blip.")
+
+    async def no_wait():
+        return None
+
+    async def fake_safe_get_text(client, url):
+        return 403, "<html>blocked</html>", None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_pacer", pacer)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_card([5535522])
+        payload = _tool_error_payload(excinfo)
+        assert _MARKER_REFUSAL_STREAK in payload["message"]
+
+    asyncio.run(scenario())
+    _clear_wb_cache()
+
+
+def _healthy_selfcheck_responder(v9_response):
+    """Every canary probe healthy except v9, which answers with ``v9_response``."""
+
+    async def responder(client, url):
+        if "card.wb.ru" in url:
+            return (
+                200,
+                json.dumps(
+                    {
+                        "products": [
+                            {
+                                "id": server._SELFCHECK_NM,
+                                "name": "x",
+                                "sizes": [{"price": {"product": 10000, "basic": 12000}}],
+                                "reviewRating": 4.5,
+                                "feedbacks": 1,
+                                "totalQuantity": 1,
+                            }
+                        ]
+                    }
+                ),
+                None,
+            )
+        if "feedbacks2.wb.ru" in url:
+            return 200, json.dumps({"feedbacks": [{"text": "ok", "productValuation": 5}]}), None
+        if "search-goods.wildberries.ru" in url:
+            return 200, json.dumps([server._SELFCHECK_NM]), None
+        if "search.wb.ru" in url:
+            return v9_response
+        if "wbbasket.ru" in url:
+            return 200, json.dumps({"imt_id": server._SELFCHECK_IMT}), None
+        return 500, "", "unexpected url"
+
+    return responder
+
+
+@pytest.mark.parametrize(
+    ("v9_response", "expected_state"),
+    [
+        ((403, "", None), "inconclusive"),
+        ((429, "", None), "inconclusive"),
+        ((0, None, "timeout: no response within 15s"), "inconclusive"),
+        ((200, "not json", None), "drift"),
+        ((200, json.dumps({"products": []}), None), "drift"),
+        ((200, json.dumps({"products": [{"name": "x"}]}), None), "drift"),
+        ((200, json.dumps({"products": [{"id": 1, "salePriceU": 1000}]}), None), "healthy"),
+    ],
+)
+def test_the_canary_sees_the_primary_search_path(monkeypatch, v9_response, expected_state):
+    """A refused v9 must show up: the fallback used to answer in its place.
+
+    When v9 was refused, wb_search fell through to the legacy id list and
+    returned unrelated products with prices attached, while this canary stayed
+    green because its other probe reads search-goods and never touched v9.
+    """
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", _healthy_selfcheck_responder(v9_response))
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        data = (await server.wb_selfcheck()).model_dump()
+        assert data["checks"]["search_v9"]["state"] == expected_state
+        return data
+
+    data = asyncio.run(scenario())
+    if expected_state == "inconclusive" and v9_response[0] in (401, 403, 429):
+        notes = " ".join(data["checks"]["search_v9"]["notes"])
+        assert "primary search path" in notes, "an operator must be able to see WHICH path was refused"
+
+
+def test_an_edge_wall_is_not_a_success_and_is_not_cached(monkeypatch):
+    """A wall served with HTTP 200 is a refusal, and must never reach the cache.
+
+    A cached wall would keep failing for the whole TTL — the failure mode the
+    cache's own docstring names — and the pacer would never hear about the block.
+    """
+    pacer = _RecordingPacer()
+
+    async def fake_budgeted(client, target, **kwargs):
+        return 200, "<html><title>blocked</title><center>Angie</center></html>", None
+
+    async def scenario():
+        _clear_wb_cache()
+        monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
+        monkeypatch.setattr(server, "_pacer", pacer)
+        url = _UNGATED_URLS["feedbacks"]
+        status, _text, _err = await server._safe_get_text(object(), url)
+        assert status == 200, "the status is passed through untouched"
+        assert pacer.events == ["refusal"], "a wall is a refusal, not a success"
+        assert server._cache.get(url) is None, "a wall must not be cached"
 
     asyncio.run(scenario())
     _clear_wb_cache()
