@@ -365,6 +365,11 @@ async def test_card_parses_a_new_building_sale(monkeypatch):
     assert result.agent.agent_id == 134642318
     assert result.metro and result.metro[0].name == "Рассказовка"
     assert result.url == "https://www.cian.ru/sale/flat/331002424/"
+    assert result.photos == 2
+    assert [(photo.url, photo.is_layout) for photo in result.photo_urls] == [
+        ("https://images.cdn-cian.ru/images/2953413873-1.jpg", True),
+        ("https://images.cdn-cian.ru/images/2958331459-1.jpg", False),
+    ]
     assert result.meta.healthy is True
 
 

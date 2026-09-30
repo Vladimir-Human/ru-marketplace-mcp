@@ -1016,7 +1016,11 @@ def _check_final_host(url: str, allowed_hosts: Collection[str]) -> None:
     parsed = urlsplit(url)
     host = (parsed.hostname or "").lower().rstrip(".")
     allowed = {str(item).lower().rstrip(".") for item in allowed_hosts}
-    if parsed.scheme not in {"http", "https"} or not host or host not in allowed:
+    # A leading dot (".cian.ru") admits any subdomain of that host — for sites
+    # that geo-redirect www to regional subdomains (rostov.cian.ru, spb.cian.ru).
+    suffixes = tuple(item for item in allowed if item.startswith("."))
+    in_policy = host in allowed or (bool(suffixes) and host.endswith(suffixes))
+    if parsed.scheme not in {"http", "https"} or not host or not in_policy:
         raise NavigationPolicyError(url, allowed)
 
 

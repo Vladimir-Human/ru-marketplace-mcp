@@ -72,6 +72,8 @@ SERVER_VERSION = "2.4.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.cian.ru"
+# www geo-redirects to a regional subdomain remembered in the profile (rostov.cian.ru).
+ALLOWED_HOSTS = frozenset({"www.cian.ru", ".cian.ru"})
 SEARCH_API = "https://api.cian.ru/search-offers/v2/search-offers-desktop/"
 CARD_CONFIG_KEY = "frontend-offer-card"
 TIMEOUT = _settings.timeout
@@ -218,7 +220,7 @@ async def _cdp_post_json(json_query: dict[str, Any], ctx: Context | None) -> tup
     """
 
     async def _attempt() -> tuple[int, str]:
-        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=2500) as page:
+        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=2500, allowed_hosts=ALLOWED_HOSTS) as page:
             raw = await asyncio.wait_for(
                 page.evaluate(
                     _JS_POST,
@@ -239,7 +241,7 @@ async def _cdp_page_config(url: str, ctx: Context | None) -> tuple[int, str]:
     """Open an offer page and serialise its ``_cianConfig`` card state."""
 
     async def _attempt() -> tuple[int, str]:
-        async with _cdp_lock, open_page(url, wait_ms=2500) as page:
+        async with _cdp_lock, open_page(url, wait_ms=2500, allowed_hosts=ALLOWED_HOSTS) as page:
             raw = await asyncio.wait_for(
                 page.evaluate(_JS_CARD_CONFIG, {"key": CARD_CONFIG_KEY, "cap": MAX_BODY_BYTES}),
                 timeout=30.0,
@@ -586,6 +588,16 @@ def _agent(offer_data: dict[str, Any], offer: dict[str, Any]) -> dict[str, Any] 
     }
 
 
+def _photo_urls(photos: Any) -> list[dict[str, Any]]:
+    """Full-size URLs of a card's photos; entries without an https URL are skipped."""
+    rows: list[dict[str, Any]] = []
+    for photo in photos if isinstance(photos, list) else []:
+        url = _s(_d(photo).get("fullUrl"))
+        if url and url.startswith("https://"):
+            rows.append({"url": url, "is_layout": _d(photo).get("isLayout") is True})
+    return rows
+
+
 def _parse_card(offer_data: Any) -> dict[str, Any]:
     """A card from the ``offerData`` subtree. ValueError on the wrong shape."""
     if not isinstance(offer_data, dict):
@@ -607,6 +619,7 @@ def _parse_card(offer_data: Any) -> dict[str, Any]:
             "views": _views(offer_data.get("stats")),
             "price_history": _price_history(offer_data.get("priceChanges")),
             "agent": agent,
+            "photo_urls": _photo_urls(offer.get("photos")),
         }
     )
     # A card's offer object carries no ``user`` (the one at offerData level is
@@ -867,7 +880,8 @@ async def cian_card(
     CianCardResponse: {status, offer_id, title, deal_type, category, price_rub,
     price_unit, price_period, lease_term, deposit_rub, rooms, areas, floor, floors_total,
     build_year, building_material, ceiling_height_m, address, metro[],
-    description, photos, created_at, updated_at, views, price_history[], agent,
+    description, photos, photo_urls[] (full-size URLs, floor plans flagged
+    is_layout), created_at, updated_at, views, price_history[], agent,
     url, tier_used, _meta}. price_rub is None when not stated — never 0.
 
     ## Error Format

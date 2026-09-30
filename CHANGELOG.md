@@ -9,6 +9,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- `cian_card` returns `photo_urls`: the full-size image URLs in Cian's order,
+  with floor plans flagged `is_layout`. The count in `photos` stays; the URLs
+  let a client download and inspect the photos, which the CDN serves without
+  the browser session.
+
 ### Fixed
 
 - Wildberries reads `card.wb.ru`, `search.wb.ru` and `catalog.wb.ru` through
@@ -47,6 +54,12 @@
   search endpoint while the shared client answered it, and from the next
   `card.wb.ru` refused both. Canary probes read past the cache, so a `healthy`
   verdict cannot describe a read that already happened.
+- Cian works from a Chrome profile that remembers a region. `www.cian.ru`
+  redirects such a profile to a regional subdomain (`rostov.cian.ru`), which the
+  exact-host navigation policy rejected, so every `cian_search` and `cian_card`
+  failed with `transport_down`. A policy entry with a leading dot (`.cian.ru`)
+  now admits subdomains of that host, and only the Cian connector uses one;
+  `cian.ru` itself and look-alike hosts stay outside it.
 
 ## [2.4.2] - 2026-09-19
 

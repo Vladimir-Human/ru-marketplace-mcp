@@ -131,6 +131,11 @@ class CianPriceChangeOut(BaseModel):
     price_rub: float | None = Field(default=None, description="Price in rubles after that change.")
 
 
+class CianPhotoOut(BaseModel):
+    url: str = Field(description="Full-size image URL on Cian's CDN.")
+    is_layout: bool = Field(default=False, description="True when the image is a floor plan, not a photo.")
+
+
 class CianCardResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -186,6 +191,9 @@ class CianCardResponse(BaseModel):
     )
     is_by_homeowner: bool | None = Field(default=None, description="True when the owner publishes without an agent.")
     photos: int = Field(default=0, description="Number of photos attached.")
+    photo_urls: list[CianPhotoOut] = Field(
+        default_factory=list, description="Full-size photo URLs in Cian's order; floor plans flagged is_layout."
+    )
     created_at: str | None = Field(default=None, description="Offer creation time (local ISO-8601).")
     updated_at: str | None = Field(default=None, description="Last edit time (ISO-8601 UTC).")
     views: int | None = Field(default=None, description="Total views Cian reports for the offer.")

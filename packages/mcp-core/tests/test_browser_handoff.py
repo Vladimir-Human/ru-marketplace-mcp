@@ -242,6 +242,25 @@ async def test_new_policy_checked_on_resume_and_navigation_during_read_rejected(
     assert all(page.closed for page in browser)
 
 
+@pytest.mark.parametrize(
+    ("url", "allowed"),
+    [
+        ("https://rostov.cian.ru/", True),
+        ("https://www.cian.ru/rent/flat/1/", True),
+        ("https://cian.ru/", False),
+        ("https://evilcian.ru/", False),
+        ("https://rostov.cian.ru.evil.test/", False),
+    ],
+)
+def test_leading_dot_policy_admits_subdomains_only(url, allowed):
+    policy = ["www.cian.ru", ".cian.ru"]
+    if allowed:
+        chrome_cdp._check_final_host(url, policy)
+    else:
+        with pytest.raises(chrome_cdp.NavigationPolicyError):
+            chrome_cdp._check_final_host(url, policy)
+
+
 async def test_capacity_does_not_evict_an_existing_handoff(browser):
     """The registry is bounded, and a full registry refuses rather than evicts.
 
