@@ -594,6 +594,151 @@ def test_wb_search_rate_limit_is_surfaced_not_masked_by_fallback(monkeypatch):
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_wb_search_v9_refusal_never_calls_legacy_path(monkeypatch, status_code):
+    """#101: a refused primary search is an error, not stale legacy data."""
+    calls = []
+
+    async def fake_safe_get_text(client, url):
+        calls.append(url)
+        assert "v9/search" in url
+        return status_code, "", None
+
+    async def forbidden_fallback(*args, **kwargs):
+        pytest.fail("a v9 refusal must not call the legacy path")
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_search_via_search_goods", forbidden_fallback)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_search("x")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "transport_down"
+        assert payload["provider"] == "wb"
+        assert payload["status_code"] == status_code
+        assert f"search.wb.ru v9 refused (HTTP {status_code})" in payload["message"]
+        assert "not falling back to the stale legacy id path" in payload["message"]
+        assert len(calls) == 1
+
+    asyncio.run(scenario())
+
+
+def test_wb_search_v9_html_wall_never_calls_legacy_path(monkeypatch):
+    """#101: HTTP 200 does not make an anti-bot HTML wall a search answer."""
+    wall = "<!doctype html><html><body>Angie: access denied</body></html>"
+    assert server._is_edge_wall(wall)
+    calls = []
+
+    async def fake_safe_get_text(client, url):
+        calls.append(url)
+        assert "v9/search" in url
+        return 200, wall, None
+
+    async def forbidden_fallback(*args, **kwargs):
+        pytest.fail("a v9 HTML wall must not call the legacy path")
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_search_via_search_goods", forbidden_fallback)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_search("x")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "transport_down"
+        assert payload["provider"] == "wb"
+        assert payload["status_code"] == 200
+        assert "search.wb.ru v9 refused (HTML wall, HTTP 200)" in payload["message"]
+        assert "not falling back to the stale legacy id path" in payload["message"]
+        assert len(calls) == 1
+
+    asyncio.run(scenario())
+
+
+def test_wb_search_v9_http_500_still_calls_legacy_path(monkeypatch):
+    """#101: non-refusal failures must keep the existing fallback."""
+    fallback_calls = []
+
+    async def fake_safe_get_text(client, url):
+        assert "v9/search" in url
+        return 500, "", None
+
+    async def fake_fallback(query, dest, page, ctx):
+        fallback_calls.append((query, dest, page, ctx))
+        return [{"id": 123, "name": "x", "brand": "b", "sizes": [], "totalQuantity": 0}], 42
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_search_via_search_goods", fake_fallback)
+        result = await server.wb_search("x")
+        data = result.model_dump()
+        assert fallback_calls == [("x", server.WB_DEFAULT_DEST, 1, None)]
+        assert data["count"] == 1
+        assert data["items"][0]["nm_id"] == 123
+        assert data["total_ids"] == 42
+        assert data["page_size"] == 30
+        assert any("fallback" in warning for warning in data["meta"]["warnings"])
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("endpoint", ["search_goods", "fallback_enrich"])
+@pytest.mark.parametrize(
+    "status_code, body",
+    [
+        (401, ""),
+        (403, ""),
+        (200, "<!doctype html><html><body>Angie: access denied</body></html>"),
+    ],
+)
+def test_wb_search_legacy_refusal_is_not_no_results(monkeypatch, endpoint, status_code, body):
+    """#101: refused ids or enrichment must not look like a successful empty search."""
+    calls = []
+
+    async def fake_safe_get_text(client, url):
+        calls.append(url)
+        if "v9/search" in url:
+            return 500, "", None
+        if "search-goods" in url:
+            if endpoint == "search_goods":
+                return status_code, body, None
+            return 200, json.dumps([123]), None
+        assert "card.wb.ru/cards/v4/detail" in url
+        assert endpoint == "fallback_enrich"
+        return status_code, body, None
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_search("x")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "transport_down"
+        assert payload["provider"] == "wb"
+        assert payload["status_code"] == status_code
+        expected_request = "search-goods ids" if endpoint == "search_goods" else "card.wb.ru enrichment"
+        assert f"legacy {expected_request} request refused" in payload["message"]
+        assert f"HTTP {status_code}" in payload["message"]
+        if status_code == 200:
+            assert "HTML wall" in payload["message"]
+        assert len(calls) == (2 if endpoint == "search_goods" else 3)
+
+    asyncio.run(scenario())
+
+
 def test_wb_search_returns_no_results_when_both_paths_are_empty(monkeypatch):
     """Unrecoverable ids used to be parser_drift; with v9 primary they mean 'nothing'.
 

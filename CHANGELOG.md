@@ -18,6 +18,9 @@
 
 ### Fixed
 
+- Wildberries search reports a refusal of `search.wb.ru` v9 or of the legacy path
+  as `transport_down` instead of falling back to stale unpriced results or an
+  empty answer (#101).
 - Review health no longer reports content key drift for a small sample of
   rating-only reviews: the all-empty-text alarm needs at least 10 returned
   reviews (#111).
