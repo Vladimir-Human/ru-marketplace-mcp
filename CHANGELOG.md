@@ -11,6 +11,9 @@
 
 ### Fixed
 
+- Review health no longer reports content key drift for a small sample of
+  rating-only reviews: the all-empty-text alarm needs at least 10 returned
+  reviews (#111).
 - Wildberries reads `card.wb.ru`, `search.wb.ru` and `catalog.wb.ru` through
   browser impersonation. Those three answer the default client's TLS handshake
   with a 403 HTML page on a network where curl and curl_cffi get a 200 from the

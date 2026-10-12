@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import pytest
 from mcp_core.resilience import (
+    REVIEW_TEXT_DRIFT_MIN_SAMPLE,
     coerce_int,
     coerce_price,
     coerce_rating,
@@ -27,6 +28,7 @@ from mcp_core.resilience import (
     price_from_texts,
     selfcheck_entry,
     selfcheck_result,
+    validate_review_block,
 )
 
 # --------------------------------------------------------------------------- #
@@ -283,3 +285,26 @@ def test_selfcheck_result_missing_required_check_is_injected_inconclusive():
     assert "card" in result["checks"]
     assert result["checks"]["card"]["state"] == "inconclusive"
     assert result["status"] == "inconclusive"
+
+
+# --- validate_review_block: small all-empty samples are not drift (issue #111) ---
+
+
+def _rating_only(n: int) -> dict:
+    return {"returned": n, "reviews": [{"text": "", "pros": "", "cons": "", "rating": 5}] * n}
+
+
+def test_small_rating_only_sample_is_not_drift() -> None:
+    assert validate_review_block(_rating_only(3)) == []
+
+
+def test_large_rating_only_sample_is_drift() -> None:
+    warnings = validate_review_block(_rating_only(REVIEW_TEXT_DRIFT_MIN_SAMPLE))
+    assert len(warnings) == 1
+    assert warnings[0].startswith("all_review_texts_empty:")
+
+
+def test_large_sample_with_some_text_is_healthy() -> None:
+    block = _rating_only(REVIEW_TEXT_DRIFT_MIN_SAMPLE)
+    block["reviews"] = [*block["reviews"][:-1], {"text": "ok"}]
+    assert validate_review_block(block) == []
