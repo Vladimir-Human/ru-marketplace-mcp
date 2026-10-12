@@ -9,6 +9,14 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Yandex Market cards are read from `/card/{slug}/{id}`. Yandex retired
+  `/product/{id}`, which now answers with an empty page frame, so every
+  `yandex_card` and `compare_verify_offer` for Yandex came back as
+  `empty_product_shell` while the product was live; built fallback links use the
+  new path too (#105).
+
 ## [2.5.0] - 2026-10-12
 
 ### Added

@@ -10,7 +10,7 @@ Pages it depends on (all verified live Jul 2026 from a datacenter IP; the
 search price semantics re-verified live Sep 2026 from a residential IP
 against the product card for the same offer):
   - ``https://market.yandex.ru/search?text=…&page=N`` — search (~2 MB)
-  - ``https://market.yandex.ru/product/{id}`` — card + first ~13 reviews (~2.5 MB)
+  - ``https://market.yandex.ru/card/{slug}/{id}`` — card + first ~13 reviews (~2.5 MB)
 
 Behaviours that shape this code:
 
@@ -469,7 +469,7 @@ async def yandex_card(
     if ctx is not None:
         await ctx.info(f"yandex_card: product_id={pid}")
 
-    url = f"{SITE_BASE}/product/{pid}"
+    url = ssr.card_url(pid)
     html = await _fetch_html(url, "yandex_card", ctx)
     parsed = ssr.parse_card(html)
     if parsed["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL:
