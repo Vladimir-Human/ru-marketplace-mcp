@@ -17,14 +17,16 @@ from chat history.
 | [@Xpos587](https://github.com/Xpos587) | [#5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5) | MPStats connector: plugin API analysis, parser structure, and the first working version. |
 | [@avxone](https://github.com/avxone) | [#37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37) | Avito selfcheck fix for the `catalog.items[]` response envelope. |
 | [@Khalmatov](https://github.com/Khalmatov) | [#38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38) | Ozon review provenance: mark the SKU the review is about. |
-| [@fosteev](https://github.com/fosteev) | [#42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [#47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47) | macOS CDP stealth portability and the Cian real-estate connector. |
+| [@fosteev](https://github.com/fosteev) | [#42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [#47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47), [#106](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/106) | macOS CDP stealth portability, the Cian real-estate connector, and Cian regional redirects with card photo URLs. |
 | [@ilodezis](https://github.com/ilodezis) | [#48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48) | Selective unified-server mounting through `MARKETPLACE_SOURCES`, reducing tool-schema wire cost. |
+| [@NektoDron](https://github.com/NektoDron) | [#94](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/94) | Wildberries: reading the gated wb.ru API hosts through curl_cffi browser impersonation. |
+| [@Pegas-us](https://github.com/Pegas-us) | [#107](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/107), [#108](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/108) | Citilink search parameter fix, and the opt-in `WB_TRANSPORT=dom` Wildberries transport that reads rendered pages through the operator's Chrome. |
 
 ## Automation / Автоматизация
 
 | Contributor | Merged PRs | Contribution |
 |---|---|---|
-| [dependabot[bot]](https://github.com/apps/dependabot) | [#2](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/2), [#3](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/3), [#4](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/4), [#17](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/17), [#23](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/23), [#24](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/24), [#41](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/41) | Dependency updates and supply-chain maintenance. |
+| [dependabot[bot]](https://github.com/apps/dependabot) | [#2](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/2), [#3](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/3), [#4](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/4), [#17](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/17), [#23](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/23), [#24](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/24), [#41](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/41), [#114](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/114) | Dependency updates and supply-chain maintenance. |
 
 If a merged contribution is missing or the description needs correction, please
 open an issue or pull request so the record stays accurate.
