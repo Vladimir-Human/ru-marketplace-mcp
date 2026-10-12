@@ -33,8 +33,9 @@ CLI-only — `marketplace-mcp doctor` runs every connector's canary at once.
 
 ## Region is an id, not a name
 
-Cian addresses regions by its own numeric ids and the connector has no
-lookup table. Known and verified live:
+Cian addresses regions by its own numeric ids. The connector knows only the four
+below (`KNOWN_REGIONS`, used in error messages); any other id must come from cian.ru.
+Known and verified live:
 
 | id   | region                |
 |------|-----------------------|

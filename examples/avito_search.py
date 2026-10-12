@@ -28,7 +28,7 @@ async def main(query: str) -> int:
         if seller.seller:
             print(
                 f"\nSeller '{seller.seller.name}': rating {seller.seller.rating_score} "
-                f"({seller.seller.rating_count} reviews), {seller.active_items} active listings"
+                f"({seller.seller.rating_count} reviews)"
             )
     return 0
 

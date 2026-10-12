@@ -8,12 +8,12 @@ clears it. The reliable answer is not a better fingerprint — it is to run the 
 Nine sources use this: Ozon, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink,
 AliExpress and Cian.
 The split matters. Taobao, Megamarket, DNS, Citilink, AliExpress and Cian are
-**CDP-only** — no
-anonymous tier exists, so nothing reads from them without a logged-in Chrome. Ozon
-and Avito use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) usually works
+**CDP-only** — no anonymous tier exists, so nothing reads from them without a logged-in Chrome. Ozon
+and Avito search use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) usually works
 from a Russian residential IP, and CDP only kicks in when the anonymous tier is
-challenged. Lamoda is split — its card path is anonymous GraphQL, but search needs
-CDP. Wildberries, Yandex Market and Detsky Mir never touch it.
+challenged; Avito cards and seller profiles always read the rendered page in Chrome
+(since 2026-10-12). Lamoda is split — cards try anonymous GraphQL first and fall back
+to Chrome when it is refused (the 307 loop, 2026-10-12), search needs CDP. Wildberries, Yandex Market and Detsky Mir never touch it.
 
 ## Read this before you enable it
 
@@ -177,11 +177,11 @@ If you only need Wildberries, Yandex Market and Detsky Mir: **no**. All three wo
 over plain anonymous HTTP, and `compare_prices` will report every CDP source it
 can't reach as blocked and rank the rest.
 
-You need it the moment Taobao, Megamarket, DNS, Citilink or AliExpress matter —
+You need it the moment Taobao, Megamarket, DNS, Citilink, AliExpress or Cian matter —
 those six have no anonymous tier, so without a logged-in Chrome they return nothing at all. For
-Ozon and Avito it is optional insurance: tier 1 usually answers, and CDP only earns
-its keep when the anonymous tier is challenged. For Lamoda, card lookups work
-without it but search does not.
+Ozon and Avito search it is optional insurance: tier 1 usually answers, and CDP only earns
+its keep when the anonymous tier is challenged; Avito cards and sellers need it. For
+Lamoda, cards work without it while anonymous GraphQL answers, search never does.
 
 A residential IP is the alternative for the fallback sources — from a Russian
 residential address Ozon's and Avito's tier 1 often work without any browser. It
