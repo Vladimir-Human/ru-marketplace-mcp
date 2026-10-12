@@ -252,6 +252,23 @@ async def test_card_refuses_off_host_urls(monkeypatch, hostile):
         await server.citilink_card(hostile)
 
 
+async def test_search_sends_the_query_as_text(monkeypatch):
+    """citilink.ru reads the search query from `text`. With `?q=` it renders the
+    generic search landing: zero tiles, reported as drift while the site was fine
+    (#104, measured 2026-09-18..29)."""
+    seen: list[str] = []
+
+    async def capture(url, extract_js, wait_ms, ctx):
+        seen.append(url)
+        return SEARCH_EXTRACTED
+
+    monkeypatch.setattr(server, "_cdp_render", capture)
+
+    await server.citilink_search("Samsung 870 EVO 500GB")
+
+    assert seen == ["https://www.citilink.ru/search/?text=Samsung%20870%20EVO%20500GB"]
+
+
 async def test_card_navigates_a_rebuilt_site_base_url(monkeypatch):
     """Even for a legitimate URL, we navigate our own construction, not theirs."""
     seen: list[str] = []

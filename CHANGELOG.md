@@ -18,6 +18,13 @@
 
 ### Fixed
 
+- Review health no longer reports content key drift for a small sample of
+  rating-only reviews: the all-empty-text alarm needs at least 10 returned
+  reviews (#111).
+- Citilink search sends the query as `text`, the parameter citilink.ru reads.
+  With `?q=` the site renders its generic search landing, so every search parsed
+  zero tiles and was reported as drift while the site itself answered normally;
+  the self-check probe built the same URL (#104).
 - Wildberries reads `card.wb.ru`, `search.wb.ru` and `catalog.wb.ru` through
   browser impersonation. Those three answer the default client's TLS handshake
   with a 403 HTML page on a network where curl and curl_cffi get a 200 from the

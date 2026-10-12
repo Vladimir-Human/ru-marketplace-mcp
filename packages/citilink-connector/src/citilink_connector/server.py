@@ -334,7 +334,9 @@ async def citilink_search(
     """
     log_event("citilink_search.start", query=query[:60])
     try:
-        url = f"{SEARCH_URL}?q={urllib.parse.quote(query.strip())}"
+        # citilink.ru reads the query from `text`; `?q=` renders the empty search
+        # landing, which parses as zero tiles and looked like drift (#104).
+        url = f"{SEARCH_URL}?text={urllib.parse.quote(query.strip())}"
         cached = _cache.get(url)
         if cached is not None:
             payload, tier = cached, "cache"
@@ -498,7 +500,7 @@ async def citilink_selfcheck(ctx: Context | None = None) -> CitilinkSelfcheckRes
 async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResponse:
     checks: dict[str, dict] = {}
     baseline = "cdp-search-shape-v1"
-    url = f"{SEARCH_URL}?q={urllib.parse.quote('ноутбук')}"
+    url = f"{SEARCH_URL}?text={urllib.parse.quote('ноутбук')}"
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)

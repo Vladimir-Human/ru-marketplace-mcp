@@ -302,6 +302,9 @@ def validate_offer(item: dict, *, require_title: bool = True) -> list[str]:
     return warnings
 
 
+REVIEW_TEXT_DRIFT_MIN_SAMPLE = 10
+
+
 def validate_review_block(block: dict) -> list[str]:
     """Invariant checks on a reviews response (ozon_reviews / wb_reviews shape)."""
     warnings: list[str] = []
@@ -320,12 +323,17 @@ def validate_review_block(block: dict) -> list[str]:
     if returned is not None and reviews is not None and returned != len(reviews):
         warnings.append(f"returned_mismatch: returned={returned} != len(reviews)={len(reviews)}")
 
-    if reviews:
+    # Rating-only reviews are normal on mass-market cards, so a small all-empty
+    # sample says nothing about the parser (issue #111). Only a sample of at
+    # least REVIEW_TEXT_DRIFT_MIN_SAMPLE reviews with zero text is drift.
+    if reviews and len(reviews) >= REVIEW_TEXT_DRIFT_MIN_SAMPLE:
         texts_present = sum(
             1 for r in reviews if (r.get("text") or r.get("positive") or r.get("cons") or r.get("pros"))
         )
         if texts_present == 0:
-            warnings.append("all_review_texts_empty: every returned review has empty text (content key drift)")
+            warnings.append(
+                f"all_review_texts_empty: none of {len(reviews)} returned reviews has text (content key drift?)"
+            )
 
     if score is not None and not (0 <= score <= 5):
         warnings.append(f"score_out_of_range: rating_score={score} outside 0..5")
