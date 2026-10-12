@@ -368,11 +368,11 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
       11102 Plus, badge «Скидка 11%») and rides in ``price_old_rub``.
 
     ``product_id`` is ``oskuId`` — the id the row's own ``/card/…/{id}`` link
-    and schema.org ``url`` end in and that ``/product/{id}`` accepts;
+    and schema.org ``url`` end in and that ``/card/{slug}/{id}`` accepts;
     ``sku_id`` is ``marketSku``. Brand cannot be resolved (only ``vendorId``
     ships); seller comes from the ``shop`` signal when present. URL and image
     are filled from the page's schema.org ``ItemList`` by product id, else the
-    canonical ``/product/{id}`` URL is built.
+    ``/card/{slug}/{id}`` URL is built.
     """
     payloads = zone_snippets(html)
     if not payloads:
@@ -559,11 +559,20 @@ def _absolute_url(raw: Any, product_id: Any = None, slug: Any = None) -> str:
         if raw.startswith("//"):
             return f"https:{raw}"
         return f"https://market.yandex.ru{raw}"
-    if slug and product_id:
-        return f"https://market.yandex.ru/product--{slug}/{product_id}"
     if product_id:
-        return f"https://market.yandex.ru/product/{product_id}"
+        return card_url(product_id, slug)
     return ""
+
+
+# Yandex moved product pages to /card/{slug}/{id}; the old /product/{id} now answers
+# with an empty page frame (#105). Any slug resolves — the id alone selects the
+# product — so a placeholder stands in when the slug is unknown (live 2026-10-12).
+CARD_SLUG_PLACEHOLDER = "x"
+
+
+def card_url(product_id: Any, slug: Any = None) -> str:
+    """The product page URL for ``product_id``; ``slug`` is cosmetic."""
+    return f"https://market.yandex.ru/card/{slug or CARD_SLUG_PLACEHOLDER}/{product_id}"
 
 
 def parse_search(html: str) -> dict[str, Any]:

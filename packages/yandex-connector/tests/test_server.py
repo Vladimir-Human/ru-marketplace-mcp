@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from fastmcp.exceptions import ToolError
-from yandex_connector import server
+from yandex_connector import server, ssr
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -204,7 +204,7 @@ async def test_search_rejects_too_short_queries(monkeypatch, bad_query):
 
 
 async def test_card_returns_prices_rating_breakdown_and_reviews(monkeypatch):
-    stub_html(monkeypatch, {"/product/763970960": load("card_washer.html")})
+    stub_html(monkeypatch, {"/card/x/763970960": load("card_washer.html")})
 
     card = await server.yandex_card(product_id="763970960")
 
@@ -218,7 +218,7 @@ async def test_card_returns_prices_rating_breakdown_and_reviews(monkeypatch):
 
 
 async def test_card_can_skip_reviews(monkeypatch):
-    stub_html(monkeypatch, {"/product/": load("card_washer.html")})
+    stub_html(monkeypatch, {"/card/": load("card_washer.html")})
 
     card = await server.yandex_card(product_id="763970960", include_reviews=False)
 
@@ -228,7 +228,7 @@ async def test_card_can_skip_reviews(monkeypatch):
 
 async def test_card_warns_when_a_resale_offer_has_no_rating(monkeypatch):
     """Real and common — the warning explains it rather than implying 0 stars."""
-    stub_html(monkeypatch, {"/product/": load("card_no_rating.html")})
+    stub_html(monkeypatch, {"/card/": load("card_no_rating.html")})
 
     card = await server.yandex_card(product_id="1912483624")
 
@@ -256,7 +256,7 @@ async def test_card_rejects_non_numeric_ids(monkeypatch, bad_id):
 
 
 async def test_card_raises_drift_when_no_title_is_found(monkeypatch):
-    stub_html(monkeypatch, {"/product/": '<html><body>"mainPrice" but no product</body></html>'})
+    stub_html(monkeypatch, {"/card/": '<html><body>"mainPrice" but no product</body></html>'})
 
     with pytest.raises(ToolError) as excinfo:
         await server.yandex_card(product_id="1")
@@ -272,7 +272,7 @@ async def test_card_empty_shell_is_not_reported_as_parser_drift(monkeypatch):
     state of the world is Yandex serving the product frame with no product
     inside — degraded serving or a delisting, neither of which is a code bug.
     """
-    stub_html(monkeypatch, {"/product/": load("card_empty_shell.html")})
+    stub_html(monkeypatch, {"/card/": load("card_empty_shell.html")})
 
     with pytest.raises(ToolError) as excinfo:
         await server.yandex_card(product_id="4315891968")
@@ -296,7 +296,7 @@ async def test_card_renamed_field_families_still_report_drift(monkeypatch):
         '<noframes data-apiary="patch">{"collections":{"titleV2":{"t1":{"titleRenamed":"Товар"}},'
         '"price":{"p1":{"mainPriceRenamed":{}}}}}</noframes>'
     )
-    stub_html(monkeypatch, {"/product/": html})
+    stub_html(monkeypatch, {"/card/": html})
 
     with pytest.raises(ToolError) as excinfo:
         await server.yandex_card(product_id="42")
@@ -311,7 +311,7 @@ async def test_selfcheck_chains_search_into_card(monkeypatch):
     """The card probe uses an id from search, so no fixture SKU can go stale."""
     stub_html(
         monkeypatch,
-        {"/search": load("search_washer.html"), "/product/": load("card_washer.html")},
+        {"/search": load("search_washer.html"), "/card/": load("card_washer.html")},
     )
 
     result = await server.yandex_selfcheck()
@@ -364,7 +364,7 @@ async def test_selfcheck_card_shell_is_inconclusive_not_drift(monkeypatch):
     """
     stub_html(
         monkeypatch,
-        {"/search": load("search_washer.html"), "/product/": load("card_empty_shell.html")},
+        {"/search": load("search_washer.html"), "/card/": load("card_empty_shell.html")},
     )
 
     result = await server.yandex_selfcheck()
@@ -384,7 +384,7 @@ async def test_selfcheck_ldjson_only_search_is_weak_not_healthy(monkeypatch):
     {"@type":"ItemList","itemListElement":[{"item":{"name":"X",
      "url":"https://market.yandex.ru/product/763970960","offers":{"price":100}}}]}
     </script></body></html>"""
-    stub_html(monkeypatch, {"/search": html, "/product/": load("card_washer.html")})
+    stub_html(monkeypatch, {"/search": html, "/card/": load("card_washer.html")})
 
     result = await server.yandex_selfcheck()
 
@@ -636,3 +636,23 @@ async def test_fetch_html_names_the_exception_when_httpx_carries_no_message(monk
     assert payload["error"] == "transport_down"
     assert "ReadTimeout" in payload["message"], payload["message"]
     assert payload["message"].strip() != "yandex_card:"
+
+
+async def test_card_requests_the_card_path_not_the_retired_product_path(monkeypatch):
+    """#105: /product/{id} now answers with an empty frame; the card lives at /card/{slug}/{id}."""
+    seen: list[str] = []
+
+    async def capture(url: str, label: str, ctx=None) -> str:
+        seen.append(url)
+        return load("card_washer.html")
+
+    monkeypatch.setattr(server, "_fetch_html", capture)
+
+    await server.yandex_card(product_id="763970960", include_reviews=False)
+
+    assert seen == ["https://market.yandex.ru/card/x/763970960"]
+
+
+def test_fallback_card_url_uses_the_card_path():
+    assert ssr.card_url(42) == "https://market.yandex.ru/card/x/42"
+    assert ssr.card_url(42, "stiralnaya-mashina") == "https://market.yandex.ru/card/stiralnaya-mashina/42"

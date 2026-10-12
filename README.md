@@ -79,7 +79,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1931 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1933 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -584,7 +584,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1931 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1933 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -650,7 +650,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1931 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1933 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -737,7 +737,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1931 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1933 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1107,7 +1107,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1931 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1933 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1169,7 +1169,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1931 offline
+are confidently wrong, so the project is arranged around verification: 1933 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
