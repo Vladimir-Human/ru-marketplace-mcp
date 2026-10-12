@@ -66,7 +66,7 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
-**Проверка 2.4.2:** доступность всех площадок не подтверждена. WB прошёл selfcheck и сверку поиска с карточкой; карточки Яндекса остаются inconclusive. Визуальная и браузерная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.4.2.md).
+**Проверка 2.5.0:** доступность площадок подтверждена частично. С одного адреса 12 октября selfcheck прошли Ozon, Детский мир, Авито, AliExpress и Циан; Wildberries, Яндекс (карточки), Taobao, Мегамаркет, Lamoda, DNS и Ситилинк остались inconclusive, дрейфа не найдено. Визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.0.md).
 
 ## Быстрый старт
 
@@ -687,7 +687,7 @@ hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
 
-**2.4.2 verification:** source access is only partially checked; no visual/browser acceptance was performed. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.4.2.md).
+**2.5.0 verification:** source access is partially checked: from one address on 12 October, Ozon, Detsky Mir, Avito, AliExpress and Cian passed selfcheck; the rest stayed inconclusive with no drift. No visual acceptance was performed. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.0.md).
 
 ## What you get
 
