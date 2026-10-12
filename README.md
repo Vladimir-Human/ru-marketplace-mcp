@@ -67,7 +67,7 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
-**Проверка 2.5.0:** доступность площадок подтверждена частично. С одного адреса 12 октября selfcheck прошли Ozon, Детский мир, Авито, AliExpress и Циан; Wildberries, Яндекс (карточки), Taobao, Мегамаркет, Lamoda, DNS и Ситилинк остались inconclusive, дрейфа не найдено. Визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.0.md).
+**Проверка 2.5.1:** 12 октября с одного адреса selfcheck прошли Ozon, Яндекс Маркет (поиск и карточка), Детский мир, Авито (поиск, карточка, продавец), Taobao, Ситилинк, AliExpress и Циан; Lamoda, DNS и Мегамаркет прошли после прохождения проверки в Chrome, но их куки живут минуты; Wildberries отвечает через `WB_TRANSPORT=dom`. Дрейфа не найдено, визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.1.md).
 
 ## Быстрый старт
 
@@ -703,7 +703,7 @@ hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
 
-**2.5.0 verification:** source access is partially checked: from one address on 12 October, Ozon, Detsky Mir, Avito, AliExpress and Cian passed selfcheck; the rest stayed inconclusive with no drift. No visual acceptance was performed. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.0.md).
+**2.5.1 verification:** on 12 October, from one address, Ozon, Yandex Market (search and card), Detsky Mir, Avito (search, card, seller), Taobao, Citilink, AliExpress and Cian passed selfcheck; Lamoda, DNS and Megamarket passed right after the browser check was cleared, but their cookies last minutes; Wildberries answers through `WB_TRANSPORT=dom`. No drift; no visual acceptance. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.1.md).
 
 ## What you get
 
