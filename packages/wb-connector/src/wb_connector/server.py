@@ -1735,8 +1735,9 @@ async def _search_via_search_goods(
     skew stale — verified Jul 2026, a query whose v9 results were all in stock came
     back from this path entirely delisted — so callers are warned when it is used.
 
-    Returns ``(products, total)`` and never raises for an empty result: an empty
-    list simply means "nothing usable", which the caller reports as no results.
+    Returns ``(products, total)``; an empty list simply means "nothing usable",
+    which the caller reports as no results. A refusal (401/403 or an HTML wall)
+    raises transport_down instead, so a block never reads as an empty search (#101).
     """
     sg_params = httpx.QueryParams({"query": query, "dest": dest})
     sg_url = f"https://search-goods.wildberries.ru/search?{sg_params}"
@@ -1747,7 +1748,7 @@ async def _search_via_search_goods(
     try:
         async with _wb_client() as client:
             status_code, text, err = await _safe_get_text(client, sg_url)
-        if status_code in (401, 403) or _is_edge_wall(text):
+        if status_code in (401, 403) or (status_code != 429 and _is_edge_wall(text)):
             # A refused id list is not an empty search result (#101).
             log_event("wb_search.refused", endpoint="search_goods", status=status_code)
             reason = f"HTTP {status_code}" if status_code in (401, 403) else f"HTML wall, HTTP {status_code}"
@@ -1791,7 +1792,7 @@ async def _search_via_search_goods(
     try:
         async with _wb_client() as client:
             status_code, text, err = await _safe_get_text(client, card_url)
-        if status_code in (401, 403) or _is_edge_wall(text):
+        if status_code in (401, 403) or (status_code != 429 and _is_edge_wall(text)):
             # Refused enrichment must not hide behind no_results (#101).
             log_event("wb_search.refused", endpoint="fallback_enrich", status=status_code)
             reason = f"HTTP {status_code}" if status_code in (401, 403) else f"HTML wall, HTTP {status_code}"

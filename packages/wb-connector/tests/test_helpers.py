@@ -739,6 +739,30 @@ def test_wb_search_legacy_refusal_is_not_no_results(monkeypatch, endpoint, statu
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("endpoint", ["search_goods", "fallback_enrich"])
+def test_wb_search_legacy_429_html_is_not_a_refusal(monkeypatch, endpoint):
+    """A 429 carrying an HTML body is rate limiting, as on v9 — not a transport_down wall."""
+    wall = "<!doctype html><html><body>Angie: too many requests</body></html>"
+
+    async def fake_safe_get_text(client, url):
+        if "v9/search" in url:
+            return 500, "", None
+        if "search-goods" in url:
+            return (429, wall, None) if endpoint == "search_goods" else (200, json.dumps([123]), None)
+        return 429, wall, None
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        result = await server.wb_search("x")
+        assert result.status == "no_results"
+
+    asyncio.run(scenario())
+
+
 def test_wb_search_returns_no_results_when_both_paths_are_empty(monkeypatch):
     """Unrecoverable ids used to be parser_drift; with v9 primary they mean 'nothing'.
 
