@@ -47,7 +47,7 @@ class LamodaCardResponse(BaseModel):
     is_available: bool | None = Field(default=None, description="Whether the product is sellable now.")
     sizes: list[LamodaSizeOut] = Field(default_factory=list, description="Per-size availability.")
     url: str = Field(default="", description="Canonical product URL.")
-    tier_used: str = Field(default="", description="Fetch tier used: graphql, cdp.")
+    tier_used: str = Field(default="", description="Fetch tier used: graphql, graphql_cdp.")
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 

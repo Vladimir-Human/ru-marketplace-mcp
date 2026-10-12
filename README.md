@@ -37,7 +37,7 @@
 | **Авито**         | 3            | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца                                            |
 | **Taobao**        | 2            | ваш Chrome с активным входом в Taobao                                      | Поиск и карточки, цены в юанях                                                            |
 | **Мегамаркет**    | 2            | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто           | Поиск и карточки через мобильный API                                                      |
-| **Lamoda**        | 2            | карточки анонимно (GraphQL), поиск — ваш Chrome                            | Поиск, карточки с размерами                                                               |
+| **Lamoda**        | 2            | карточки: HTTP GraphQL → Chrome при отказе; поиск — Chrome                            | Поиск, карточки с размерами                                                               |
 | **DNS**           | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
 | **Ситилинк**      | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
 | **AliExpress**    | 2            | ваш Chrome (x5sec)                                                       | Поиск и карточки, цены в рублях                            |
@@ -45,8 +45,9 @@
 | **Сравнение**     | 4            | опрашивает всё перечисленное                                               | «Где дешевле?» одним вызовом                                                              |
 | **MPStats**       | 2            | платный аккаунт MPStats, cookie `mp_auth` (опционально)                    | Продажи/остатки/графики за 30 дней по SKU Ozon/WB, остатки по складам (FBS/FBO)           |
 
-Читается анонимно, без браузера: Wildberries, Яндекс Маркет, Детский мир и
-карточки Lamoda. Остальным нужен ваш залогиненный Chrome (CDP). Taobao и
+Читается анонимно, без браузера: Wildberries, Яндекс Маркет и Детский мир.
+Карточки Lamoda сначала читаются по HTTP GraphQL; при отказе нужен ваш Chrome
+(CDP) для запасного уровня. Остальным нужен ваш залогиненный Chrome (CDP). Taobao и
 Мегамаркет вдобавок требуют активного входа в саму площадку — без него Taobao
 упирается в стену логина, а Мегамаркет отдаёт пустой ответ. Авито ещё и блокирует
 по IP: с датацентрового адреса это глухой отказ, с российского домашнего — работает,
@@ -79,7 +80,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1933 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1938 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -386,9 +387,13 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 JSON API из-за ServicePipe, и одного пройденного челленджа мало: анонимной сессии
 API отдаёт пустой список, нужен активный вход в Мегамаркет. DNS (`dns_*`) и Ситилинк
 (`citilink_*`) — отрисованный DOM из-за Qrator; у всех трёх анонимного пути нет вообще.
-Lamoda (`lamoda_*`) наполовину: карточки берутся анонимно через GraphQL, а поиск —
-через Chrome. Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен всем, кроме карточек
-Lamoda.
+Lamoda (`lamoda_*`) наполовину: поиск идёт через Chrome, а карточки сначала
+читаются через HTTP GraphQL (tier 1). При ответе не 200 или
+`httpx.TransportError` выполняется ровно один GraphQL POST внутри страницы вашего
+Chrome через CDP (tier 2); успешный fallback отмечен `tier_used: graphql_cdp`.
+HTTP 200 не вызывает CDP. Причина: 2026-10-12 GraphQL по HTTPS отвечал циклом 307.
+Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен остальным всегда, а карточкам
+Lamoda — только для запасного уровня.
 
 Всего через CDP ходят восемь источников — эти плюс Taobao, AliExpress, Ozon и
 Авито, где Chrome лишь
@@ -584,7 +589,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1933 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1938 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -650,7 +655,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1933 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1938 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -700,7 +705,7 @@ it every other server is unaffected.
 | **Avito**         | 3     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
 | **Taobao**        | 2     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
 | **Megamarket**    | 2     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
-| **Lamoda**        | 2     | cards anonymous (GraphQL), search via your Chrome                             | Search, cards with sizes                                                                           |
+| **Lamoda**        | 2     | cards: HTTP GraphQL → Chrome on refusal; search via Chrome                             | Search, cards with sizes                                                                           |
 | **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
 | **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
 | **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
@@ -708,7 +713,8 @@ it every other server is unaffected.
 | **Compare**       | 4     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
 | **MPStats**       | 2     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
-Anonymous, no browser: Wildberries, Yandex Market, Detsky Mir and Lamoda cards.
+Anonymous, no browser: Wildberries, Yandex Market and Detsky Mir. Lamoda cards
+try HTTP GraphQL first and need your Chrome (CDP) only for the fallback tier.
 The rest need your logged-in Chrome (CDP). Taobao and Megamarket additionally need
 you signed into the marketplace itself — without it Taobao hits a login wall and
 Megamarket returns an empty result. Avito also blocks by IP: from a datacenter
@@ -737,7 +743,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1933 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1938 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -945,10 +951,14 @@ These four read through your Chrome (CDP). Megamarket (`megamarket_*`) goes
 through the mobile JSON API behind ServicePipe and needs an active login — an
 anonymous session reads empty. DNS (`dns_*`) and Citilink (`citilink_*`) render
 DOM behind Qrator with no anonymous path at all. Lamoda (`lamoda_*`) is split:
-cards over anonymous GraphQL, search through Chrome. All of them need Chrome
-with CDP (`scripts/start_chrome_cdp.sh`), except Lamoda cards. Eight sources
-run through CDP in total: these plus Taobao, AliExpress, Ozon and Avito, where
-Chrome is only the fallback tier when the anonymous one is challenged.
+search through Chrome, cards over HTTP GraphQL first (tier 1). A non-200 response
+or `httpx.TransportError` triggers exactly one in-page GraphQL POST through your
+Chrome over CDP (tier 2); successful fallback reads report `tier_used: graphql_cdp`.
+HTTP 200 skips CDP. The reason is the 2026-10-12 307 loop from GraphQL over HTTPS.
+All of them need Chrome with CDP (`scripts/start_chrome_cdp.sh`), but Lamoda cards
+only need it for the fallback. Eight sources run through CDP in total: these plus
+Taobao, AliExpress, Ozon and Avito; for Ozon and Avito, Chrome is also only the
+fallback tier when the anonymous one is challenged.
 
 ### Cross-marketplace — `compare_*`
 
@@ -1107,7 +1117,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1933 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1938 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1169,7 +1179,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1933 offline
+are confidently wrong, so the project is arranged around verification: 1938 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
