@@ -11,6 +11,9 @@
 
 ### Fixed
 
+- `avito_card` reads the item page's schema.org Product over CDP because
+  `/web/1/js/items` now ignores `itemId` and answered a catalog envelope that
+  was returned as an empty successful card.
 - Yandex Market cards are read from `/card/{slug}/{id}`. Yandex retired
   `/product/{id}`, which now answers with an empty page frame, so every
   `yandex_card` and `compare_verify_offer` for Yandex came back as

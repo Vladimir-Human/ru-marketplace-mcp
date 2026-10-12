@@ -109,7 +109,8 @@
     <test file="packages/detmir-connector/tests/test_live.py" coverage="live-marked; not run" checks="Selfcheck accepts all tri-state verdicts including inconclusive; not a healthy-data assertion" />
   </entry>
   <entry id="V-M-AVITO" module="M-AVITO" file="packages/avito-connector/src/avito_connector/server.py">
-    <test file="packages/avito-connector/tests/test_server.py" checks="Mocked search/card/seller fields, nullable prices, location/category rejection, firewall/nonJSON classification and canary verdicts" />
+    <test file="packages/avito-connector/tests/test_server.py" checks="Mocked search/seller envelopes and CDP Product-page cards, nullable prices and unavailable fields, location/category rejection, firewall/nonJSON classification and canary verdicts" />
+    <test file="packages/avito-connector/tests/test_item_page.py" coverage="19 new offline cases; not run" checks="Captured Product ground truth, paced allowlisted page.content CDP path and stripped query/fragment, bare Product and matching SKU, nullable/non-RUB prices, missing/malformed/empty Product drift, catalog-envelope regression, removed ads, NavBlocked refusal backoff/404/503 and timeout taxonomy" />
     <test file="packages/avito-connector/tests/test_live_payload_contract.py" checks="Offline captured envelope, price_detailed, place/URL fields, safe finite ISO timestamps, totals and absent seller" />
     <test file="packages/avito-connector/tests/test_shape_reference.py" checks="Captured required shape families, absent families and older envelope compatibility" />
     <test file="packages/avito-connector/tests/test_settings_secrets.py" checks="Proxy secret absent from settings dumps but available to fetch" />

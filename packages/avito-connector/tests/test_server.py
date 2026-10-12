@@ -41,27 +41,31 @@ SEARCH_PAYLOAD = {
     ],
 }
 
-CARD_PAYLOAD = {
-    "item": {
-        "id": 4612345678,
-        "title": "Ноутбук ThinkPad X1 Carbon",
-        "price": 45500,
-        "description": "В хорошем состоянии, батарея держит 6 часов.",
-        "location": "Москва, р-н Хамовники",
-        "date": "сегодня, 12:40",
-        "views": 231,
-        "images": [{"url": "https://img.avito.st/1.jpg"}],
-        "seller": {
-            "name": "ИП Сидоров",
-            "id": 987654,
-            "isCompany": True,
-            "ratingScore": 4.8,
-            "ratingCount": 152,
-            "profileUrl": "/user/987654/profile",
+CARD_HTML = (
+    '<html><head><script type="application/ld+json">'
+    + json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "Product",
+                    "sku": "4612345678",
+                    "name": "Ноутбук ThinkPad X1 Carbon",
+                    "description": "В хорошем состоянии, батарея держит 6 часов.",
+                    "image": ["https://img.avito.st/1.jpg"],
+                    "offers": {
+                        "@type": "Offer",
+                        "price": "45500",
+                        "priceCurrency": "RUB",
+                        "url": "https://www.avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+                    },
+                }
+            ],
         },
-        "uri": "/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
-    }
-}
+        ensure_ascii=False,
+    )
+    + "</script></head><body></body></html>"
+)
 
 SELLER_PAYLOAD = {
     "totalCount": 12,
@@ -94,6 +98,13 @@ def _patch_fetch(monkeypatch, result):
         return result
 
     monkeypatch.setattr(server, "_fetch", fake_fetch)
+
+
+def _patch_item_page(monkeypatch, result):
+    async def fake_fetch_item_page(url, ctx):
+        return result
+
+    monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
 
 
 # --------------------------------------------------------------- avito_search ----
@@ -176,21 +187,24 @@ async def test_search_warns_on_empty_items_with_nonzero_total(monkeypatch):
 # ----------------------------------------------------------------- avito_card ----
 
 
-async def test_card_parses_the_item_envelope(monkeypatch):
-    _patch_fetch(monkeypatch, _ok(CARD_PAYLOAD))
+async def test_card_parses_the_item_page(monkeypatch):
+    _patch_item_page(monkeypatch, (200, CARD_HTML, "cdp"))
 
     result = await server.avito_card("4612345678")
 
     assert result.item_id == 4612345678
+    assert result.title == "Ноутбук ThinkPad X1 Carbon"
     assert result.price_rub == 45500
-    assert result.views == 231
-    assert result.seller is not None
-    assert result.seller.rating_score == 4.8
-    assert result.seller.is_company is True
+    assert result.images == 1
+    assert result.description == "В хорошем состоянии, батарея держит 6 часов."
+    assert result.location is None
+    assert result.posted_at is None
+    assert result.views is None
+    assert result.seller is None
 
 
 async def test_card_accepts_a_slug_url(monkeypatch):
-    _patch_fetch(monkeypatch, _ok(CARD_PAYLOAD))
+    _patch_item_page(monkeypatch, (200, CARD_HTML, "cdp"))
 
     result = await server.avito_card("https://www.avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678")
 
@@ -207,7 +221,7 @@ async def test_card_rejects_input_without_an_item_id(bad):
 
 
 async def test_card_maps_404_to_not_found(monkeypatch):
-    _patch_fetch(monkeypatch, (404, "{}", "curl_cffi"))
+    _patch_item_page(monkeypatch, (404, "<html><body>Объявление не найдено</body></html>", "cdp"))
 
     with pytest.raises(ToolError):
         await server.avito_card("4612345678")
