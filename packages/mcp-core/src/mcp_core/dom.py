@@ -49,6 +49,20 @@ freshly navigated one, and is unavailable in DOM test harnesses.
     Price-shaped strings from the subtree, skipping instalment, bonus and
     discount-badge nodes, nearest-to-the-currency-glyph first.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Share DOM extraction heuristics and conservative tile normalization.
+# SCOPE: Generated JavaScript source and Python price/title mapping; no execution.
+# DEPENDS: mcp_core.resilience; stdlib re,typing.
+# LINKS: M-DOM; M-RESILIENCE; M-DOMTEST; M-CHROME-CDP.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _decoy_regex_literal: Generate escaped JavaScript markers for non-price numbers.
+# _price_glyph_literal: Generate the shared currency-glyph regex.
+# _glyph_remainder_literal: Recognize currency-only sibling remainders.
+# JS_HELPERS: Expose text cleaning, single-product tile and price-string helpers.
+# prices_from_tile: Select current/old prices without promoting weak candidates.
+# title_from_tile: Flatten the extracted title or return None.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

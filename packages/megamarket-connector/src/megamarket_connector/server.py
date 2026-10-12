@@ -19,6 +19,21 @@ from your Chrome first — its verdict tells you which case you are in.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Megamarket search and cards from its mobile catalog API.
+# SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
+# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings.
+# LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _post: Issue catalog API reads inside the operator's browser.
+# _resolve_address_id: Resolve delivery context; profile access requires opt-in.
+# _final_catalog_url: Resolve the catalog redirect before reading search parameters.
+# _is_ip_block: Detect code-7 ServicePipe refusals rather than treating them as data.
+# megamarket_search: Normalize paginated mobile catalog offers and drift states.
+# megamarket_card: Read one goods envelope with nullable price/stock fields.
+# megamarket_selfcheck: Diagnose operator transport/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

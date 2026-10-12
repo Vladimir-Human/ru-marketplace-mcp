@@ -32,6 +32,17 @@ endpoint family (``missing_widgets``, ``max_pages``, ``smoke``, ...). Pinning an
 exhaustive field list would mean silently dropping the very detail a drift
 report is read for.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Share extensible provenance and selfcheck response envelopes.
+# SCOPE: Pydantic base schemas; connector subclasses retain source-specific fields.
+# DEPENDS: pydantic BaseModel,ConfigDict,Field; stdlib typing.
+# LINKS: M-MODELS; M-RESILIENCE; M-OUTPUT-SCHEMA.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# MetaOutBase: Describe source, health and connector-level warnings.
+# SelfCheckEntryBase: Preserve variable per-check diagnostics via extra allow.
+# SelfCheckResponseBase: Describe aggregate checks and process/config identity.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

@@ -1,3 +1,13 @@
+# START_MODULE_CONTRACT
+# PURPOSE: Emit structured diagnostics without corrupting stdio JSON-RPC stdout.
+# SCOPE: Logger configuration and JSON event serialization; callers redact fields.
+# DEPENDS: stdlib json,logging,sys,functools,typing.
+# LINKS: M-LOGGING; M-CORE; M-RUNTIME; M-REDACT.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# make_stderr_logger: Reuse a logger or configure its stderr JSON formatter.
+# log_event: Serialize an event and caller fields at the requested log level.
+# END_MODULE_MAP
 from __future__ import annotations
 
 import json

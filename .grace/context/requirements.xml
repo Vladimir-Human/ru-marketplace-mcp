@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<requirements project="ru-marketplace-mcp" evidence="Repository source and documentation; static inspection only; tests and live services not run">
+  <requirement id="R-MARKETPLACES" source="README.md; pyproject.toml; packages/*/pyproject.toml">
+    Provide independently installable read-only MCP connectors in a Python 3.12+ uv workspace, shared mcp-core runtime, cross-market comparison, shortlist inspection and a unified marketplace server. Support stdio and configured HTTP serving. Source availability depends on upstream shape, network and operator browser session; documentation is not a live availability guarantee.
+  </requirement>
+  <rule id="R-READ-ONLY" source="CONTRIBUTING.md:Scope; README.md; packages/*/src/*/server.py">
+    Read catalog, listing, review, seller and optional analytics data only. Do not place orders, publish reviews or mutate marketplace accounts. Local caching, diagnostics and operator browser lifecycle are separate from marketplace writes. POST used for read-only upstream queries does not imply an account-writing capability.
+  </rule>
+  <rule id="R-CREDENTIALS" source="CONTRIBUTING.md:Scope; README.md; packages/mpstats-connector/src/mpstats_connector/settings.py; packages/mcp-core/src/mcp_core/runtime.py">
+    Public marketplace connectors must not require stored marketplace API credentials: use anonymous access or the operator's existing Chrome session. Preserve the documented optional MPStats exception: MPSTATS_MP_AUTH supplies a paid account token, and absence returns auth_missing without disabling other sources. MCP HTTP authentication tokens protect the server deployment, not marketplace access. Do not expose token values in logs, errors or responses. Taobao and Megamarket may require an already logged-in operator browser; do not promise anonymous access for them.
+  </rule>
+  <rule id="R-NO-FABRICATION" source="CONTRIBUTING.md:What this codebase cares about; packages/mcp-core/src/mcp_core/resilience.py">
+    A missing or ambiguous value is None, never a fabricated zero. Use coerce_price and coerce_int rather than guessing. Do not turn an unavailable price into the cheapest offer; preserve price-kind and conditional-price distinctions. This rule does not prohibit genuine zero counts where the upstream contract establishes them.
+  </rule>
+  <rule id="R-DRIFT" source="CONTRIBUTING.md; packages/mcp-core/src/mcp_core/errors.py; packages/mcp-core/src/mcp_core/resilience.py">
+    When a reachable payload no longer matches the expected structure, report parser_drift. Distinguish format change from transport_down, rate limits, missing products, login walls and challenge_required. Selfchecks report success, drift_detected or inconclusive; a blocked probe does not verify parser health. Shape signatures retain paths and types, not payload values; adoption differs by connector.
+  </rule>
+  <rule id="R-ERRORS" source="packages/mcp-core/src/mcp_core/errors.py:ErrorCode,ConnectorError,raise_tool_error">
+    Use ErrorCode: auth_missing, rate_limited, timeout, transport_down, parser_drift, bad_request, permission_denied, challenge_required, not_found. Only rate_limited, timeout, transport_down and challenge_required have retryable=true. ConnectorError serializes error, message and retryable plus applicable provider, retry_after_s and status_code; raise_tool_error wraps JSON in FastMCP ToolError. ChallengeRequiredError additionally describes required user action and optional handoff metadata.
+  </rule>
+  <rule id="R-STDOUT" source="CONTRIBUTING.md; scripts/check_no_print.py; packages/mcp-core/src/mcp_core/logging.py">
+    Never write application diagnostics to stdout in MCP server code: stdio stdout belongs to JSON-RPC. Use log_event on stderr or FastMCP Context logging. Operator cli.py and __main__ entrypoints are excluded by the no-print guard; their human-facing output is not an MCP server diagnostic channel.
+  </rule>
+  <rule id="R-INPUT-TRUST" source="CONTRIBUTING.md; docs/ARCHITECTURE.md:Untrusted output,Input validation over escaping; packages/mcp-core/src/mcp_core/transport/chrome_cdp.py">
+    Validate IDs, slugs, URL paths and filter inputs against the supported shapes before upstream access. Treat seller/buyer text as untrusted data, not instructions. Preserve CDP origin/redirect guards and use the operator-owned browser rather than storing session credentials or solving captchas automatically.
+  </rule>
+  <rule id="R-TRANSPORT" source="docs/ARCHITECTURE.md; docs/ANTI_BOT.md; packages/mcp-core/src/mcp_core/transport/http_tier.py; packages/mcp-core/src/mcp_core/pacing.py; packages/mcp-core/src/mcp_core/transport/cdp_budget.py">
+    Keep request pacing, bounded response bodies, bounded retries and browser concurrency budgets. The shared HTTP tier retries transport failures and 502/503/504, not 429 or other 4xx; redirects are disabled by default. Connector-specific tiers may differ. Do not remove politeness gaps, substitute captcha-solving services or implement nonexistent upstream capabilities; Detsky Mir deliberately has no text-search tool.
+  </rule>
+  <rule id="R-OFFLINE" source="CONTRIBUTING.md:Tests; pyproject.toml:tool.pytest.ini_options; .github/workflows/ci.yml">
+    Ordinary tests must run offline by replacing upstream fetches and asserting error codes, warnings and response fields. Network tests use live and browser tests use cdp; the offline CI suite excludes both. The nightly/manual live job is separate and covers only sources with live-marked tests. A file named parser_live may instead exercise captured fixtures offline; inspect markers and assertions rather than infer coverage from its name.
+  </rule>
+  <rule id="R-FIXTURES" source="CONTRIBUTING.md:Tests; scripts/check_provenance.py; packages/*/tests/fixtures/*.provenance.json">
+    Use captured, trimmed real HTML/SSR fixtures rather than invented upstream markup; retain .provenance.json evidence and SHA-256 pins for captured fixtures. check_provenance verifies existing top-level HTML/JSON fixture pairs with declared pins, accepting raw/LF/CRLF hashes and dated known-stale exceptions; its current exception map is empty. It does not enforce that every fixture has provenance or reject all malformed/missing sidecars, so fixture completeness remains a review responsibility.
+  </rule>
+  <rule id="R-VERSION" source="scripts/check_versions.py; pyproject.toml; packages/*/pyproject.toml; packages/*/src/*/__init__.py; packages/*/src/*/server.py; docker-compose.yml; docs/DEPLOYMENT.md; server.json; dsh/package.json">
+    One release carries one version, rooted in pyproject.toml. The current gate families contain 84 declarations: 17 project manifests, 16 package __version__ strings, 15 SERVER_VERSION constants, 18 compose/deployment image tags, 15 mcp-core pins, one registry version, one registry OCI image tag and one dsh bundle version. Update all affected declarations together; missing required declarations are failures. This is a static declaration count, not an executed release gate; the count may change with repository structure.
+  </rule>
+  <rule id="R-TOOL-SCHEMA" source="packages/marketplace-connector/tests/test_public_contract_snapshot.py; packages/marketplace-connector/tests/fixtures/public_contract.json; scripts/mcp_wire.py; .github/workflows/ci.yml">
+    Do not silently rename, remove or retype tools, arguments or response fields. The committed public-contract snapshot pins mounted tool structure while excluding prose descriptions/titles, but keeps domain fields with those names. Regenerate only for an intentional owner-approved contract change. Preserve per-tool field descriptions and schema budgets; CI gates compare-mcp, decision-mcp and marketplace-mcp wire-token growth at 10 percent over the stored baseline. Operator selfchecks are not advertised as MCP tools.
+  </rule>
+  <rule id="R-CROSS-PLATFORM" source="CONTRIBUTING.md; packages/mcp-core/src/mcp_core/process.py; .github/workflows/ci.yml">
+    Support Windows, Linux and macOS. Keep platform-specific process termination behind patchable seams, obtain POSIX-only functions through guarded getattr access and allowlist child environments. CI declares Python 3.12/3.13 on all three OSes and host/win32/darwin type checks; current execution outcomes are not verified by this documentation change.
+  </rule>
+  <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
+    Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
+  </rule>
+</requirements>

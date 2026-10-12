@@ -18,6 +18,25 @@ Two rules this module exists to enforce, both protocol- or security-critical:
    exposure warning: authentication does not supply TLS or isolate browser
    profiles between tenants. Each tenant needs its own process and profile.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Resolve and launch stdio or authenticated HTTP-family MCP servers.
+# SCOPE: Environment parsing, launch diagnostics and graceful handoff cleanup.
+# DEPENDS: FastMCP; mcp_core.logging; loaded browser_handoff at shutdown; stdlib.
+# LINKS: M-RUNTIME; M-LOGGING; M-BROWSER-HANDOFF.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# current_mcp_session_id: Resolve tool-call session identity or None for CLI probes.
+# browser_handoff_lifespan: Close already-loaded handoffs on server shutdown.
+# TransportConfig: Hold transport and loopback/default endpoint configuration.
+# BearerAuthMiddleware: Compare bearer token and optional static tenant identity.
+# _parse_transport: Reject unsupported transport names; blank defaults to stdio.
+# _parse_port: Validate configured TCP port bounds.
+# _parse_host: Trim the bind host or select loopback.
+# _parse_path: Normalize the HTTP endpoint's leading slash.
+# resolve_transport: Build configuration without launching or logging.
+# run_server: Require exposure credentials, add middleware and dispatch FastMCP.
+# _warn_if_exposed: Emit stderr warning for a non-loopback HTTP bind.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

@@ -21,6 +21,29 @@ turns two fingerprints into missing/added paths. Connector selfchecks currently
 do a live parse-smoke instead; wiring them onto stored baselines is the next
 step, not something already in place.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Normalize drifting upstream values and report structural health honestly.
+# SCOPE: Offline coercion, validation, shape fingerprints and tri-state canaries.
+# DEPENDS: stdlib math,re,collections.abc,typing; no network or persistence.
+# LINKS: M-RESILIENCE; M-DOM; M-MODELS.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# first_present: Bind the first non-null alias while preserving false/empty values.
+# deep_first: Search nested dict/list payloads within a depth bound.
+# coerce_int: Parse unambiguous counts or return None.
+# coerce_price: Accept positive finite prices and reject ambiguous display blobs.
+# coerce_rating: Normalize ratings on the 0..5 scale.
+# validate_offer: Report missing or contradictory normalized offer fields.
+# validate_review_block: Check returned counts and sufficiently large text samples.
+# attach_meta: Mutate a result with source, health and warnings.
+# widget_prefixes: Strip volatile numeric widget suffixes.
+# shape_signature: Fingerprint bounded paths/types independently of values.
+# diff_keys: Return sorted missing and added structural keys.
+# selfcheck_entry: Build healthy/drift/inconclusive sub-check metadata.
+# selfcheck_result: Aggregate verdicts and inject omitted required checks.
+# flatten_text: Reduce display fields to usable scalar text, never container repr.
+# price_from_texts: Pick the first candidate that parses as a real price.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

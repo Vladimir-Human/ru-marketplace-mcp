@@ -12,6 +12,18 @@ The two mount points name sources differently (``yandex`` in the unified
 server's mount table, ``yandex_market`` in compare's source map), so names are
 canonicalised here rather than in either caller.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Resolve the operator-selected subset of marketplace sources.
+# SCOPE: Environment selection and aliases; callers perform mounts/filtering.
+# DEPENDS: stdlib os; fixed known-source vocabulary.
+# LINKS: M-SOURCE-SELECTION; M-CORE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# SourceSelectionError: Reject requested source names absent from this release.
+# canonical: Normalize case, separators and supported source aliases.
+# selected: Read MARKETPLACE_SOURCES; blank means all, unknown names fail loudly.
+# wanted: Decide whether a canonical source survives the resolved selection.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

@@ -1,3 +1,14 @@
+# START_MODULE_CONTRACT
+# PURPOSE: Scrub recognized credentials from error text and diagnostic URLs.
+# SCOPE: Pattern-based redaction and bounded error output; not general PII removal.
+# DEPENDS: stdlib re.
+# LINKS: M-REDACT; M-CORE; M-LOGGING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _strip_userinfo: Remove user:password material up to the last URL-token at sign.
+# redact_error_text: Scrub known token/cookie/JWT shapes before truncating text.
+# redact_url: Scrub sensitive query parameters and proxy userinfo.
+# END_MODULE_MAP
 from __future__ import annotations
 
 import re

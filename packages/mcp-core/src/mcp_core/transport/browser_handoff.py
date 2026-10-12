@@ -3,6 +3,28 @@
 No browser storage or extracted content is persisted. A lease keeps its original
 context manager alive; resuming never searches for tabs or navigates again.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Retain and resume exact session-owned browser challenge pages.
+# SCOPE: Bounded process-local leases, immutable lifetime, idle expiry and snapshots.
+# DEPENDS: mcp_core.errors,transport.chrome_cdp; stdlib asyncio,hashlib,json,time.
+# LINKS: M-BROWSER-HANDOFF; M-CHROME-CDP; M-ERRORS; M-RUNTIME.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# HandoffBusyError: Distinguish concurrent reads from a full retention registry.
+# _Request: Queue one extraction/snapshot with host policy and result future.
+# _Lease: Hold owned worker, deadlines and payload digest rather than payload data.
+# _payload_digest: Fingerprint a read without retaining mutable caller data.
+# _resume_note: Describe first/resumed reads and tri-state data changes.
+# _expired: Apply lifetime and idle liveness consistently.
+# has_pending_handoff: Detect exact-operation ownership even during cleanup.
+# get_handoff_id: Expose an opaque handle only for a live exact-operation lease.
+# _run: Own one page, service queued reads and settle callers on every exit.
+# _stop: Shield owned cleanup from repeated cancellation.
+# close_handoffs: Release all owned tabs during graceful shutdown.
+# handoff_diagnostics: Inspect registry budgets without browser operations.
+# snapshot_handoff: Capture only the caller session's live retained page.
+# read_with_handoff: Read once or resume the exact retained operation.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

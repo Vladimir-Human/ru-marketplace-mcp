@@ -10,6 +10,23 @@ unit-testable on any OS via ``PLATFORM_OVERRIDE``.
 Child environments are allowlisted rather than inherited: a scraping worker has
 no business seeing tokens that happen to sit in the parent environment.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Isolate worker environments and reap short-lived process trees.
+# SCOPE: Windows taskkill and POSIX groups; best-effort cleanup and pipe closure.
+# DEPENDS: stdlib os,signal,subprocess,pathlib; kernel32 on Windows.
+# LINKS: M-PROCESS; M-CORE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# current_platform: Resolve the actual platform or explicit test override.
+# is_windows: Select Windows process/environment rules.
+# safe_child_env: Allowlist environment names with Windows case folding.
+# worker_process_kwargs: Isolate a worker in a new group/session.
+# windows_system_dir: Resolve a trusted system directory without environment input.
+# taskkill_cmd: Return the absolute trusted taskkill executable path.
+# taskkill_env: Supply only trusted system-directory environment variables.
+# kill_process_group: Signal a POSIX group or reject unavailable primitives.
+# terminate_process_tree: Kill live workers, close pipes and bound the reap wait.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

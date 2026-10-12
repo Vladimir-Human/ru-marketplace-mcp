@@ -41,6 +41,19 @@ visibility, so it differs between a warm tab and a freshly navigated one and
 cannot be asserted on reproducibly. An extractor that needs ``innerText`` to work
 is an extractor this harness cannot vouch for, by design.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Provide an optional jsdom harness for captured-markup extractors.
+# SCOPE: Developer subprocess helper; not a connector runtime browser transport.
+# DEPENDS: Node and optional jsdom; stdlib subprocess,tempfile,pathlib,json.
+# LINKS: M-DOMTEST; M-DOM.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# JsdomUnavailable: Signal missing Node/jsdom so callers can skip DOM checks.
+# _node: Resolve the Node executable or raise unavailable.
+# _resolve_jsdom: Probe module resolution and locate its node_modules directory.
+# jsdom_available: Report whether the optional DOM harness can execute.
+# run_extractor: Write temporary sources, run Node and decode UTF-8 JSON output.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

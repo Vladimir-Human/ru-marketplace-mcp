@@ -13,6 +13,18 @@ as its own namespace (``compare_prices``, ``compare_sources``).
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Mount selected marketplace connectors behind one MCP server.
+# SCOPE: Preserve native tool names; skip failed/deselected imports; static capabilities.
+# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/source_selection; fourteen source servers.
+# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# MarketplaceSourcesResponse: Model mounted/skipped sources and cheap routing metadata.
+# _mount_all: Import selected connectors and mount their unchanged tool names.
+# marketplace_sources: Report mounts, skip reasons, capabilities and server version.
+# apply_compact_output_schemas: Compact advertised schemas after mounting.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

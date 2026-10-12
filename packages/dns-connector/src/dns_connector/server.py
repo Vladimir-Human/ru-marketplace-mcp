@@ -19,6 +19,21 @@ first — its verdict tells you which case you are in.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose DNS-Shop product search and cards from rendered pages.
+# SCOPE: Read-only operator-browser DOM; paced CDP reads; Qrator refusal detection.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
+# LINKS: M-DNS; M-COMPARE; M-MARKETPLACE; packages/dns-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _extract_product_id: Validate bare handles or product URLs before navigation.
+# _search_item_from_tile: Adapt DOM price/availability fields into public models.
+# _cdp_render: Serialize paced browser navigation and extractor execution.
+# _is_qrator_wall: Distinguish proof-of-work pages from catalog data.
+# dns_search: Read rendered search tiles and flag unrecognized empty grids.
+# dns_card: Read product price and stock without inventing absent values.
+# dns_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

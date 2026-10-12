@@ -84,6 +84,14 @@ POSIX-функции через `getattr` и держи ветку платфо�
 Тесты, которым нужна сеть, помечай `@pytest.mark.live`, а браузерные —
 `@pytest.mark.cdp`. CI исключает и те, и другие.
 
+## GRACE
+
+GRACE (Graph-RAG Anchored Code Engineering) связывает требования
+(`.grace/context/requirements.xml`), граф модулей и потоков
+(`.grace/graph/index.xml`) и карту проверок (`.grace/verification/index.xml`).
+Контракты и карты функций находятся в комментариях рядом с кодом.
+Меняешь поведение → обнови контракт, граф и карту проверок в том же изменении.
+
 ## Сообщения о сломанном эндпоинте
 
 Эндпоинты ломаются, это ожидаемо и не значит, что отчёт плохой. Пожалуйста, приложи:
@@ -198,6 +206,14 @@ agent sees, meaning error codes, warnings and field values.
 For HTML/SSR sources, capture a real page and trim it rather than inventing markup,
 so upstream structural changes still surface. Mark network tests
 `@pytest.mark.live` and browser tests `@pytest.mark.cdp`; CI excludes both.
+
+## GRACE
+
+GRACE (Graph-RAG Anchored Code Engineering) connects requirements
+(`.grace/context/requirements.xml`), the module and data-flow graph
+(`.grace/graph/index.xml`), and the verification map (`.grace/verification/index.xml`).
+Contracts and function maps live in comments next to the code.
+Changing behaviour → update the contract, graph and verification in the same change.
 
 ## Reporting a broken endpoint
 

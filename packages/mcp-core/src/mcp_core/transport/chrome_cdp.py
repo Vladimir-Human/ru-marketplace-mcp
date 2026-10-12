@@ -31,6 +31,31 @@ Cross-platform: Chrome binaries and profile locations are resolved per platform
 off-screen) and macOS (tabs opened in the background, app kept hidden); on Linux
 the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
+# SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
+# DEPENDS: Playwright; optional websockets; mcp_core.transport.cdp_budget; stdlib.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# PageLike: Specify the evaluate/url surface shared by both page implementations.
+# _start_chrome_with_cdp: Spawn a dedicated-profile Chrome on loopback.
+# _ensure_cdp_running: Serialize loopback-only autostart and bounded readiness wait.
+# _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
+# get_browser: Attach Playwright and bound detach without owning browser shutdown.
+# get_context: Yield the attached browser's existing default context.
+# NavBlocked: Carry rejected main-document status and final URL.
+# probe_session: Return CDP reachability and raw-fallback diagnostics.
+# _RawCdpPage: Correlate raw commands/events and expose evaluate/navigation.
+# capture_owned_viewport: Capture bounded JPEG pixels without DOM reads or disk writes.
+# current_page_url: Refresh raw main-frame URL without extracting document content.
+# reveal_owned_page: Best-effort foreground activation of only the owned target.
+# _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
+# _new_tab: Claim a Playwright page by its created CDP target ID.
+# _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
+# NavigationPolicyError: Report a final URL outside the caller's policy.
+# open_page: Budget navigation, select transport and yield an owned page until cleanup.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
@@ -737,6 +762,12 @@ def _handoff_jpeg(encoded: Any) -> tuple[int, int]:
     raise RuntimeError("CDP screenshot returned invalid JPEG dimensions")
 
 
+# START_CONTRACT: capture_owned_viewport
+# PURPOSE: Capture a bounded current viewport from an already-owned browser page.
+# INPUTS: Playwright or raw-CDP page; current finite viewport geometry.
+# OUTPUTS: JPEG base64, MIME and real pixel dimensions; rejects invalid/oversized data.
+# SIDE_EFFECTS: CDP metrics/screenshot commands and bounded session detach; no disk/DOM reads.
+# END_CONTRACT: capture_owned_viewport
 async def capture_owned_viewport(page: PageLike) -> dict[str, Any]:
     """Capture only the current owned viewport through CDP.
 
@@ -1034,6 +1065,12 @@ class NavigationPolicyError(RuntimeError):
 
 
 @asynccontextmanager
+# START_CONTRACT: open_page
+# PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
+# INPUTS: HTTP(S) URL, settle delay and optional allowed-host set; default origin host.
+# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures.
+# SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
+# END_CONTRACT: open_page
 async def open_page(
     url: str,
     wait_ms: int = 5000,
