@@ -19,8 +19,8 @@ Answer these five questions with real HTTP responses, not assumptions:
    proof-of-work means you need a real browser.
 3. **Are all three data families reachable?** Search, product detail, reviews. A
    source with detail but no search cannot be discovered through. Lamoda is the
-   case to study: its GraphQL endpoint answers card queries over plain HTTPS but
-   offers no text search, so search had to go through the CDP tier. That split is
+   case to study: its GraphQL endpoint answered card queries over plain HTTPS (until
+   2026-10-12, when the 307 loop reached it too) but offers no text search, so search had to go through the CDP tier. That split is
    why the connector carries two transports instead of one.
 4. **Does the "search" actually search?** Send a distinctive query and read the
    results. Detsky Mir's API accepts text filters and ignores them, returning its

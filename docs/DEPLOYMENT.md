@@ -78,14 +78,15 @@ are separate artifacts, so download all workspace wheels when using
 `marketplace-mcp`; `compare-connector[all]` needs `mcp-core`, WB, Detsky Mir,
 Yandex, and its optional source wheels. Install from that directory so the
 project's pinned mcp-core dependency resolves to the matching project wheel
-instead of an unrelated public package. The already-published v2.4.1
-`compare-connector[all]` wheel predates the corrected AliExpress extra, so add
-the matching AliExpress wheel explicitly for that release:
+instead of an unrelated public package. Since v2.4.2 the `all` extra already
+includes AliExpress; the explicit AliExpress pin below is redundant there but keeps
+the same command working with the v2.4.1 wheels, whose extra predates it — swap
+the version to match the release you downloaded.
 
 ```console
 python -m venv .venv
-.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.4.1-py3-none-any.whl
-.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.4.1" "aliexpress-connector==2.4.1"
+.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.5.1-py3-none-any.whl
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.5.1" "aliexpress-connector==2.5.1"
 .venv/bin/compare-mcp
 ```
 

@@ -359,7 +359,7 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | Инструмент                                            | Что делает                                           |
 | ----------------------------------------------------- | ---------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API     |
-| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото |
+| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль) |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов; число активных объявлений недоступно (`null`) |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
@@ -407,7 +407,7 @@ HTTP 200 не вызывает CDP. Причина: 2026-10-12 GraphQL по HTTP
 Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен остальным всегда, а карточкам
 Lamoda — только для запасного уровня.
 
-Всего через CDP ходят восемь источников — эти плюс Taobao, AliExpress, Ozon и
+Всего через CDP ходят девять источников — эти плюс Taobao, AliExpress, Циан, Ozon и
 Авито. У Ozon, а также у поиска и продавцов Авито Chrome — запасной уровень,
 когда анонимный tier 1 упёрся в челлендж; карточки Авито всегда требуют CDP. `marketplace-mcp doctor` из вашего браузера скажет, какие
 эндпоинты подтверждены.
@@ -577,7 +577,7 @@ compare_prices("кроссовки мужские")
 `CHROME_CDP_HOST` указывает, куда дозвониться CDP-клиенту (по умолчанию
 `127.0.0.1`). Из контейнера ставьте `chrome` (сайдкар) или `host.docker.internal`
 — это открывает tier-2 источники (Ozon, Авито, Taobao, Мегамаркет, Lamoda,
-DNS, Ситилинк) в Docker без host networking. Подробности в
+DNS, Ситилинк, AliExpress, Циан) в Docker без host networking. Подробности в
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 `*_CACHE_TTL=0` выключает кэш. `*_PROXY` перекрывает стандартные `HTTPS_PROXY` и
@@ -934,7 +934,7 @@ takes no part in `compare_prices`.
 | Tool                                              | What it does                                      |
 | ------------------------------------------------- | ------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id)` | Classified search through the internal `js/items` API |
-| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count |
+| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link) |
 | `avito_seller(seller_id_or_url)`                  | Seller rating, review count; active listing count unavailable (`null`)       |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the
@@ -978,8 +978,8 @@ or `httpx.TransportError` triggers exactly one in-page GraphQL POST through your
 Chrome over CDP (tier 2); successful fallback reads report `tier_used: graphql_cdp`.
 HTTP 200 skips CDP. The reason is the 2026-10-12 307 loop from GraphQL over HTTPS.
 All of them need Chrome with CDP (`scripts/start_chrome_cdp.sh`), but Lamoda cards
-only need it for the fallback. Eight sources run through CDP in total: these plus
-Taobao, AliExpress, Ozon and Avito; for Ozon and Avito, Chrome is also only the
+only need it for the fallback. Nine sources run through CDP in total: these plus
+Taobao, AliExpress, Cian, Ozon and Avito; for Ozon and Avito, Chrome is also only the
 fallback tier when the anonymous one is challenged.
 
 ### Cross-marketplace — `compare_*`
@@ -1114,7 +1114,7 @@ that browser's configuration, not ours.
 **Containers.** `CHROME_CDP_HOST` points the CDP client at Chrome (default
 `127.0.0.1`; use `chrome` or `host.docker.internal` inside Docker). That single
 variable is what opens the tier-2 sources — Ozon, Avito, Taobao, Megamarket,
-Lamoda, DNS, Citilink and AliExpress — from a container without host networking.
+Lamoda, DNS, Citilink, AliExpress and Cian — from a container without host networking.
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 **One secret, and it is optional.** Every server except MPStats needs nothing:

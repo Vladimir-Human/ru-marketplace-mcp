@@ -575,7 +575,8 @@ async def lamoda_card(
     ## Error Format
 
     ToolError: BadRequestError when no SKU can be extracted; NotFoundError when
-    the SKU has no product; TransportDownError on HTTP failures; ParserDriftError
+    the SKU has no product; ChallengeRequiredError when the Chrome fallback lands on
+    Lamoda's anti-bot page (complete it, then retry); TransportDownError on HTTP failures; ParserDriftError
     when the GraphQL envelope changed.
     """
     log_event("lamoda_card.start", input=sku_or_url[:80])

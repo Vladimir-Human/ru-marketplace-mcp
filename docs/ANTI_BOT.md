@@ -381,6 +381,11 @@ That returns real prices, brands, availability and sizes. But:
 endpoint (works tier 1, no ratings — `rating` is not in the schema); search runs
 through the CDP tier, which is what supplies the discovery the GraphQL lacks.
 
+**2026-10-12:** GraphQL over plain HTTPS now gets the same 307 loop. Cards keep
+trying it first and fall back to one in-page POST from a loaded lamoda.ru tab in the
+operator's Chrome (`tier_used: graphql_cdp`); a landing on the anti-bot page answers
+`challenge_required`.
+
 The split is right, and the July 2026 run is why it matters. The public GraphQL
 endpoint `POST /goapi/v2/catalog/graphql/products/` takes a list of SKUs, not a
 search query — it enriches known products, and there is no public search API at

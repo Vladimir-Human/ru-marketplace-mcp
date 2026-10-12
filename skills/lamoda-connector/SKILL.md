@@ -1,19 +1,20 @@
 ---
 name: lamoda-connector
-description: Use this skill when the operator needs Lamoda fashion data — search or a product card with sizes. Trigger on "ламода", "lamoda", "кроссовки lamoda". Cards work anonymously (GraphQL); search needs the operator's Chrome over CDP. Skip for non-Lamoda tasks.
+description: Use this skill when the operator needs Lamoda fashion data — search or a product card with sizes. Trigger on "ламода", "lamoda", "кроссовки lamoda". Cards try anonymous GraphQL first, then the operator's Chrome when it is refused; search needs Chrome over CDP. Skip for non-Lamoda tasks.
 ---
 
 # Lamoda Connector
 
-Two tiers by endpoint. The GraphQL product endpoint answers plain anonymous
-HTTPS — it enriches a SKU you already have with real prices, brand, sizes and
+Two tiers by endpoint. The GraphQL product endpoint is tried over plain anonymous
+HTTPS first and, since 2026-10-12 when that started to meet the 307 loop too, through
+one in-page POST in the operator's Chrome (`tier_used: graphql_cdp`) — it enriches a SKU you already have with real prices, brand, sizes and
 availability. Everything that would find a SKU (search, catalog, HTML) sits
 behind the same 307 redirect loop as Ozon, so discovery runs in the operator's
 Chrome over CDP.
 
 ## When to use
 - Search Lamoda by text (CDP tier)
-- One product's price, old price, per-size availability (GraphQL, anonymous)
+- One product's price, old price, per-size availability (GraphQL: anonymous first, Chrome on refusal)
 
 ## Tools available
 - `lamoda_search(query)` — tiles from the rendered search page (CDP)

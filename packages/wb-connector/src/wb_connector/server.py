@@ -3,13 +3,13 @@
 Public WB internal APIs (catalog parsing, not Seller API). Anti-bot light;
 residential IP works without proxies. No credentials needed.
 
-Endpoints (verified Nov 2026 against live data):
+Endpoints (verified before v1.0.0, July 2026 against live data):
   - https://card.wb.ru/cards/v4/detail        (batch product cards)
   - https://basket-NN.wbbasket.ru/...          (root_id / variants / specs)
   - https://feedbacks2.wb.ru/feedbacks/v2/{imt_id}   (review pool)
   - https://search.wb.ru/exactmatch/...        (search; 429-prone)
 
-CRITICAL Nov 2026 discovery:
+CRITICAL pre-v1.0.0 (July 2026) discovery:
   Top-level priceU/salePriceU are NOW null. Real prices live in
   sizes[0].price.{product, basic} as integer kopecks. Code extracts both.
 
@@ -174,7 +174,7 @@ WB_MENU_MAX_NODES = 400
 # always returns ids on search-goods, so 0 recoverable ids = shape drift, not rot.
 _SELFCHECK_SEARCH_QUERY = "телефон"
 
-# Verified live Nov 2026: feedbacks/v2/{imt} IGNORES order=/sort=/take=/skip= and
+# Verified live pre-v1.0.0 (July 2026): feedbacks/v2/{imt} IGNORES order=/sort=/take=/skip= and
 # always returns the same pool (~1000 most-recent, newest-first). So sorting is
 # done CLIENT-SIDE over that returned pool. Aliases mirror ozon_reviews.
 _WB_REVIEW_SORTS = {"recent", "best", "worst"}
@@ -190,7 +190,7 @@ _min_gap = _settings.min_gap
 _pacer = Pacer(_min_gap)
 
 # Bounded retry for TRANSIENT network faults only (connect/read timeout, conn
-# reset). Verified live Nov 2026: wb_search intermittently throws ConnectTimeout
+# reset). Verified live pre-v1.0.0 (July 2026): wb_search intermittently throws ConnectTimeout
 # on the first hit and a single retry succeeds. We retry ONLY on httpx transport
 # exceptions — never on an HTTP status (a 429/5xx retry would worsen rate-limit).
 _NET_RETRIES = _settings.net_retries  # retries after the first try (so up to 3 attempts)
@@ -612,11 +612,11 @@ def _normalise_ws(value: object) -> str:
 def _extract_price_rub(p: dict) -> tuple[float | None, float | None]:
     """Return (current_rub, original_rub), or (None, None) if no live offer.
 
-    WB v4 (Nov 2026): top-level priceU/salePriceU are null. Prices live in
+    WB v4 (pre-v1.0.0 (July 2026)): top-level priceU/salePriceU are null. Prices live in
     sizes[0].price.{product, basic} as integer kopecks.
 
     None (not 0.0) is returned when the SKU has no sellable price — verified
-    Nov 2026 that this coincides with totalQuantity==0 (out of stock). A 0.0
+    pre-v1.0.0 (July 2026) that this coincides with totalQuantity==0 (out of stock). A 0.0
     sentinel would falsely rank a dead listing as the cheapest item, corrupting
     any "find the best/cheapest" comparison.
     """
@@ -1144,7 +1144,7 @@ async def wb_reviews(
     All product variants share one review pool, indexed by imt_id NOT nmId.
 
     The WB feedbacks endpoint returns a fixed pool (~1000 most-recent reviews,
-    newest-first) and IGNORES server-side order params (verified Nov 2026), so
+    newest-first) and IGNORES server-side order params (verified before v1.0.0, July 2026), so
     `sort` is applied CLIENT-SIDE over that pool. To surface complaints, "worst"
     reorders the returned pool by lowest rating first.
 

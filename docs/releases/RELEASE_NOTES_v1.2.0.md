@@ -60,7 +60,7 @@ MCP-серверы для чтения российских маркетплей
 **Семь источников требуют вашего Chrome.** Ozon, Авито, Taobao, Мегамаркет,
 Lamoda, DNS и Ситилинк отказывают датацентровым адресам: капча, редирект-петля
 или JavaScript proof-of-work. Они читаются внутри браузера, в который вы вошли
-сами. Инструкция — в [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
+сами. Инструкция — в [docs/CDP_SETUP.md](../CDP_SETUP.md).
 
 **Три источника работают без всего** — Wildberries, Яндекс Маркет, Детский мир.
 
@@ -120,8 +120,8 @@ uv sync --all-packages
 }
 ```
 
-Полная инструкция и таблица инструментов — в [README.md](README.md), история
-изменений — в [CHANGELOG.md](CHANGELOG.md), отчёт аудита — в
+Полная инструкция и таблица инструментов — в [README.md](../../README.md), история
+изменений — в [CHANGELOG.md](../../CHANGELOG.md), отчёт аудита — в
 [AUDIT_REPORT.md](../archive/AUDIT_REPORT_2026-08_v1.2.0-snapshot.md).
 
 ---

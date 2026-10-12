@@ -50,8 +50,10 @@
 
 Восемь источников читают через Chrome, который **вы** запустили и в котором залогинились
 сами, по DevTools Protocol. Taobao, Мегамаркет, DNS, Ситилинк и AliExpress — только так,
-анонимного уровня у них нет. Ozon и Авито уходят в браузер лишь когда анонимный
-уровень получил отказ. Lamoda берёт через браузер поиск, карточка идёт анонимно.
+анонимного уровня у них нет. Ozon и поиск Авито уходят в браузер лишь когда анонимный
+уровень получил отказ; карточки и продавцы Авито читаются только через браузер. Циан —
+тоже только через браузер. Lamoda берёт через браузер поиск, а карточку сначала
+просит анонимно по GraphQL и идёт в браузер, если получила отказ.
 
 **CDP даёт любому локальному процессу полный контроль над тем профилем, к которому он
 подключён**, включая все залогиненные в нём сессии. Это и есть угроза, которую нужно
@@ -70,7 +72,7 @@
 маркетплейсы. Подробности в [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 Wildberries, Яндекс Маркет и Детский мир к CDP не обращаются вообще. Если вам хватает
-их, уровень можно не включать — но тогда восемь остальных источников читать нечем.
+их, уровень можно не включать — но тогда девять остальных источников читать нечем.
 
 ## Прочие меры
 
@@ -183,11 +185,12 @@ ordinary suggest path adds no address warning and answers `_meta.healthy=true`.
 
 ## The one part that carries real risk: the CDP tier
 
-Eight sources run their fetches inside a Chrome instance **you** started and logged
-into, over the DevTools Protocol. Taobao, Megamarket, DNS, Citilink and AliExpress work no other
-way — they have no anonymous tier. Ozon and Avito fall back to the browser only after
-the anonymous tier is refused. Lamoda splits the difference: search goes through the
-browser, the product card does not.
+Nine sources run their fetches inside a Chrome instance **you** started and logged
+into, over the DevTools Protocol. Taobao, Megamarket, DNS, Citilink, AliExpress and Cian work no other
+way — they have no anonymous tier. Ozon and Avito search fall back to the browser only after
+the anonymous tier is refused; Avito cards and sellers always read the page there. Lamoda
+splits the difference: search goes through the browser, the product card tries anonymous
+GraphQL first and the browser only when that is refused.
 
 **CDP grants any local process full control of the profile it is attached to**,
 including every session logged into that profile. That is the threat to understand
@@ -207,7 +210,7 @@ marketplaces there and nothing else. Full detail:
 [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
 Wildberries, Yandex Market and Detsky Mir never touch CDP. If those three cover your
-needs, leave the tier off — but the other eight sources cannot be read without it.
+needs, leave the tier off — but the other nine sources cannot be read without it.
 
 ## Other hardening in place
 
