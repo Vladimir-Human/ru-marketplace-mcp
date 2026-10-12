@@ -158,6 +158,21 @@ def test_item_review_count_never_includes_rating_decimal_digits():
     assert count_only["rating_count"] == 1
 
 
+def test_item_seller_never_takes_the_product_model_rating():
+    """Review of #120: the item page also rates the product model; that is not the seller."""
+    model = "<div><span>4,6</span><span>503 отзыва о модели</span></div>"
+    no_seller_rating = server.parse_item_seller(model + '<div data-marker="seller-info/name">Анна</div>')
+    assert no_seller_rating["rating_score"] is None
+    assert no_seller_rating["rating_count"] is None
+
+    seller_then_model = server.parse_item_seller(
+        '<div data-marker="seller-info/name">Анна</div><span>5,0</span>'
+        '<a data-marker="rating-caption/rating">563 отзыва</a>' + model
+    )
+    assert seller_then_model["rating_score"] == 5.0
+    assert seller_then_model["rating_count"] == 563
+
+
 def test_profile_without_name_or_score_is_raw_parser_drift():
     with pytest.raises(ParserDriftError):
         server.parse_seller_profile('<html><body><div data-marker="profile/summary">563 отзыва</div></body></html>')
@@ -296,6 +311,16 @@ async def test_selfcheck_chains_real_search_card_and_seller(monkeypatch):
     assert result.status == "success"
     assert result.healthy is True
     assert all(check.state == "healthy" for check in result.checks.values())
+
+
+async def test_selfcheck_card_without_a_price_is_still_healthy(monkeypatch):
+    """Review of #120: an ad with no price (exchange, price on request) is not drift."""
+    _patch_chain(monkeypatch, card_html=_card_html().replace('"price":"39990",', ""))
+
+    result = await server.avito_selfcheck()
+
+    assert result.checks["card"].state == "healthy"
+    assert "probe item has no price" in result.checks["card"].notes
 
 
 @pytest.mark.parametrize("stage", ["card", "seller"])

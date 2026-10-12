@@ -526,11 +526,19 @@ def _seller_profile_url(raw: str) -> str:
 
 
 def _score_after_name(document: _SellerPageHTML, name_node: dict[str, Any] | None) -> str | None:
-    """The first «d,d» text node within the few elements after the seller name."""
+    """The first «d,d» text node after the seller name, inside the seller block.
+
+    The scan stops at the seller's review caption (rating-caption/rating), which
+    follows the score in the block, so a product-model rating elsewhere on the
+    page can never be read as the seller's.
+    """
     if name_node is None:
         return None
     start = next(index for index, node in enumerate(document.nodes) if node is name_node)
-    for node in document.nodes[start + 1 : start + 60]:
+    caption = document.marked("rating-caption/rating")
+    stop = next((index for index, node in enumerate(document.nodes) if node is caption), None)
+    end = stop if stop is not None and stop > start else start + 60
+    for node in document.nodes[start + 1 : end]:
         text = _seller_text(node)
         if text and re.fullmatch(r"[0-5][.,]\d", text):
             return text
@@ -593,7 +601,9 @@ def parse_item_seller(html: str) -> dict[str, Any]:
                 except BadRequestError:
                     continue
     block_present = name_node is not None or score_node is not None or label is not None
-    review_text = _seller_text(rating_container) or " ".join(document.text)
+    # The count comes from the seller block only: the page also shows the product
+    # model's own «N отзывов о модели», which must never become the seller's.
+    review_text = _seller_text(rating_container) or _seller_text(document.marked("rating-caption/rating"))
     return {
         "name": _seller_text(name_node),
         "rating_score": _seller_score(score_text) if block_present else None,
@@ -1175,12 +1185,17 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
         try:
             async with asyncio.timeout(60):
                 card = await avito_card(item_handle, ctx=ctx)
-            healthy = bool(card.title) and card.price_rub is not None
+            # A missing price is legal (exchange, free, price on request); the title
+            # is what proves the Product was read.
+            healthy = bool(card.title)
+            notes = ["item page Product parsed"] if healthy else ["card carries no title"]
+            if healthy and card.price_rub is None:
+                notes.append("probe item has no price")
             checks["card"] = R.selfcheck_entry(
                 "healthy" if healthy else "drift",
                 baseline=card_baseline,
                 reason=None if healthy else "parse_smoke_failed",
-                notes=["item page title and price parsed" if healthy else "card carries no title or price"],
+                notes=notes,
             )
             seller_url = card.seller.profile_url if card.seller else None
         except Exception as exc:
