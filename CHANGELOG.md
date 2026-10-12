@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-12
+
 ### Added
 
 - `cian_card` returns `photo_urls`: the full-size image URLs in Cian's order,
