@@ -275,6 +275,11 @@ def _search_item_from_tile(tile: dict[str, Any]) -> LamodaSearchItemOut:
 
 # Transport only, following Cian's in-page POST pattern. Read in bounded chunks
 # before serialising through CDP, not with res.text() on an unbounded response.
+# Lamoda's anti-bot interstitial lives under this path (seen live 2026-10-12, also on
+# Megamarket); the wording check above only counts on a near-empty page.
+_CHALLENGE_PATH = "/xpvnsulc/"
+_JS_BODY_SNIPPET = "() => ((document.body && document.body.innerText) || '').slice(0, 2000)"
+
 _JS_POST = """async (args) => {
     const res = await fetch(args.url, {
         method: 'POST',
@@ -319,6 +324,19 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
     async def _attempt() -> tuple[int, str]:
         # open_page defaults to the origin host (www.lamoda.ru); no extra hosts.
         async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000) as page:
+            # A landing that stopped on the anti-bot page cannot post anything; say
+            # so at once instead of waiting out the fetch timeout (live 2026-10-12).
+            snippet = await asyncio.wait_for(page.evaluate(_JS_BODY_SNIPPET), timeout=10.0)
+            if _CHALLENGE_PATH in str(page.url) or (
+                isinstance(snippet, str) and len(snippet) < 1000 and _CHALLENGE_TEXT_RE.search(snippet)
+            ):
+                raise_tool_error(
+                    ChallengeRequiredError(
+                        "Lamoda requires user action in the connected Chrome. Complete the visible "
+                        "challenge on lamoda.ru, then retry.",
+                        provider="lamoda",
+                    )
+                )
             raw = await asyncio.wait_for(
                 page.evaluate(_JS_POST, {"url": GRAPHQL_URL, "body": {"query": query}, "cap": MAX_BODY_BYTES}),
                 timeout=30.0,
@@ -353,6 +371,8 @@ async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
         tier = "graphql_cdp"
         try:
             status_code, text = await _graphql_via_cdp(query, ctx)
+        except ToolError:
+            raise
         except Exception as exc:
             status_code, text = 0, _redact(f"{type(exc).__name__}: {exc}")
         if status_code != 200:

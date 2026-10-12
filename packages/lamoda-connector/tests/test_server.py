@@ -555,7 +555,11 @@ async def test_card_graphql_307_falls_back_to_cdp(monkeypatch):
     posted = []
 
     class Page:
-        async def evaluate(self, expression, args):
+        url = server.SITE_BASE + "/"
+
+        async def evaluate(self, expression, args=None):
+            if expression == server._JS_BODY_SNIPPET:
+                return "Каталог " * 300  # a normal, text-rich landing
             posted.append(args)
             assert expression == server._JS_POST
             assert "credentials: 'include'" in expression
@@ -591,6 +595,33 @@ async def test_card_graphql_307_falls_back_to_cdp(monkeypatch):
     cached = await server.lamoda_card("MP002XM1RMM3")
     assert cached.tier_used == "graphql_cdp"
     assert len(opened) == len(posted) == 1
+
+
+async def test_card_cdp_landing_on_the_challenge_page_is_challenge_required(monkeypatch):
+    """Live 2026-10-12: the landing stopped on /xpvnsulc/ and the POST timed out after 30 s."""
+    _patch_graphql_response(monkeypatch, {}, status=307)
+    posted = []
+
+    class Page:
+        url = server.SITE_BASE + "/xpvnsulc/?back_location=https%3A%2F%2Fwww.lamoda.ru%2F"
+
+        async def evaluate(self, expression, args=None):
+            if expression == server._JS_BODY_SNIPPET:
+                return ""
+            posted.append(args)
+            raise AssertionError("must not POST from a challenge page")
+
+    @asynccontextmanager
+    async def open_page(url, wait_ms):
+        yield Page()
+
+    monkeypatch.setattr(server, "open_page", open_page)
+
+    with pytest.raises(ToolError) as exc:
+        await server.lamoda_card("MP002XM1RMM3")
+
+    assert json.loads(str(exc.value))["error"] == "challenge_required"
+    assert posted == []
 
 
 async def test_card_graphql_200_skips_cdp(monkeypatch):

@@ -16,7 +16,8 @@
   `httpx.TransportError`. On 2026-10-12 GraphQL over HTTPS returned a 307 loop,
   so the HTTP-only path failed while the browser could read the card. Successful
   fallback reads report `tier_used: graphql_cdp`; HTTP 200 keeps the browser out
-  of the request.
+  of the request. A landing that stops on Lamoda's anti-bot page reports
+  `challenge_required` at once instead of waiting out the fetch timeout.
 - Yandex Market cards are read from `/card/{slug}/{id}`. Yandex retired
   `/product/{id}`, which now answers with an empty page frame, so every
   `yandex_card` and `compare_verify_offer` for Yandex came back as
