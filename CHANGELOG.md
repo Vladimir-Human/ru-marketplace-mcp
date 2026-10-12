@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-10-12
+
 ### Fixed
 
 - `avito_card` reads the item page's schema.org Product over CDP because
