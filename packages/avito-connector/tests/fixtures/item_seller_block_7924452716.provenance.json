@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/telefony/iphone_15_128_gb_sim_esim_7924452716",
+  "captured_at": "2026-10-12",
+  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP; trimmed to the seller block (the nearest ancestor of [data-marker=\"seller-info/name\"] with visible text) as outerHTML, byte-for-byte, plus the page's own seller profile link (first a[href*=\"/brands/\"]) re-emitted as one anchor. The page header, which shows the operator's own account, was not captured. The seller is a shop; no phone or e-mail in the block.",
+  "ground_truth": {
+    "note": "seller name «iStore | Техника Apple», rating 5,0, 563 отзыва, label «Частное лицо», «Данные подтверждены», «1327 продаж с Авито Доставкой»; profile link /brands/27696b66792f17b347ec073a8d1c2d93"
+  },
+  "sha256": "5186ec9bb100cc59df2f9ed275d8355ebee85450463b6398628858467c2416d9"
+}

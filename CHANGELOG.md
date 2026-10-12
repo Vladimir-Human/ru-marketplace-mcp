@@ -13,7 +13,16 @@
 
 - `avito_card` reads the item page's schema.org Product over CDP because
   `/web/1/js/items` now ignores `itemId` and answered a catalog envelope that
-  was returned as an empty successful card.
+  was returned as an empty successful card. Its seller block now supplies
+  reputation and the profile link instead of leaving `seller` empty.
+- `avito_seller` reads the rendered profile over CDP with the same pacing and
+  allowed hosts as cards. On 2026-10-12 `/web/1/js/items` ignored `userId` too:
+  different sellers received the same generic catalog with `totalCount: 1500`, falsely
+  reported as their active listings. `/brands/<hash>`, `/user/<hash>/profile` and
+  bare ids are accepted (32 hex characters select `brands`, other ids `user`);
+  unavailable `active_items` stays `null`, not the generic catalog total.
+- Avito's canary follows search → card → seller, taking the profile link from
+  the card rather than relying on a seller id that search may not expose.
 - Lamoda cards try HTTP GraphQL first (tier 1), then make one in-page GraphQL
   POST through the operator's Chrome over CDP (tier 2) on a non-200 response or
   `httpx.TransportError`. On 2026-10-12 GraphQL over HTTPS returned a 307 loop,

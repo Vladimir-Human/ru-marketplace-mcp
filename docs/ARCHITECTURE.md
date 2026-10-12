@@ -102,6 +102,15 @@ operator's Chrome over CDP (tier 2); successful fallback reads report
 2026-10-12 307 loop from GraphQL over HTTPS: following redirects does not fix
 that refusal. Lamoda search continues to use Chrome.
 
+Avito search keeps HTTP impersonation with CDP fallback; cards and seller
+profiles read rendered pages over CDP with the same pacing and allowed hosts.
+On 2026-10-12 `/web/1/js/items` ignored `itemId` and `userId`, returning the same
+generic catalog (`totalCount: 1500`) for different sellers. Cards parse schema.org
+Product plus the seller block's reputation/profile link; seller reads accept
+`/brands/<hash>`, `/user/<hash>/profile` or bare ids (32 hex characters select
+`brands`, other ids `user`). Unavailable `active_items` remains `None`. The canary
+chains search → card → seller profile without changing public response fields.
+
 ### `resilience` — tolerant readers
 
 Parsing an unofficial API can never be unbreakable, but it can break rarely, fail
@@ -207,7 +216,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-1959 offline tests, no network required. Three flavours:
+2002 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

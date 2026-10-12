@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/brands/27696b66792f17b347ec073a8d1c2d93",
+  "captured_at": "2026-10-12",
+  "method": "a genuine Avito seller profile page rendered in the operator's Chrome over CDP (it redirected to /brands/27696b66792f17b347ec073a8d1c2d93/all/telefony?sellerId=85441637b49a1ab13bcb7a093bacaabb); trimmed to the page <title> text and the [data-marker=\"profile\"] block outerHTML, byte-for-byte. The header with the operator's own account was not captured. The page carries no application/ld+json.",
+  "ground_truth": {
+    "note": "title names the seller «iStore | Техника Apple»; profile/score 5,0; profile/summary «563 отзыва»; no active-listing total in the block"
+  },
+  "sha256": "070921015a6cedef7ebdb9d97b2b7173d1bca2d5182db1e88484fca0de57598f"
+}

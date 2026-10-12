@@ -10,6 +10,7 @@ listing with no price).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from avito_connector import server
@@ -67,18 +68,6 @@ CARD_HTML = (
     + "</script></head><body></body></html>"
 )
 
-SELLER_PAYLOAD = {
-    "totalCount": 12,
-    "seller": {
-        "name": "ИП Сидоров",
-        "isCompany": True,
-        "ratingScore": 4.8,
-        "ratingCount": 152,
-        "profileUrl": "/user/987654/profile",
-    },
-    "items": [],
-}
-
 FIREWALL_BODY = '{"too-many-requests":{"link":"ru.avito://1/firewall/captcha/show","message":"Доступ с вашего IP-адреса временно ограничен"}}'
 
 
@@ -103,6 +92,18 @@ def _patch_fetch(monkeypatch, result):
 def _patch_item_page(monkeypatch, result):
     async def fake_fetch_item_page(url, ctx):
         return result
+
+    monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
+
+
+def _patch_selfcheck_pages(monkeypatch, product_html):
+    fixtures = Path(__file__).parent / "fixtures"
+    block = (fixtures / "item_seller_block_7924452716.html").read_text(encoding="utf-8")
+    profile = (fixtures / "seller_profile_brands_27696b66.html").read_text(encoding="utf-8")
+    card = product_html.replace("<body></body>", "<body>" + block + "</body>")
+
+    async def fake_fetch_item_page(url, ctx):
+        return 200, profile if "/brands/" in url else card, "cdp"
 
     monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
 
@@ -231,21 +232,28 @@ async def test_card_maps_404_to_not_found(monkeypatch):
 
 
 async def test_seller_parses_reputation_and_active_count(monkeypatch):
-    _patch_fetch(monkeypatch, _ok(SELLER_PAYLOAD))
+    html = (
+        "<title>ИП Сидоров - отзывы на Авито</title>"
+        '<span data-marker="profile/score">4,8</span>'
+        '<span data-marker="profile/summary">152 отзыва</span>'
+    )
+    _patch_item_page(monkeypatch, (200, html, "cdp"))
 
     result = await server.avito_seller("987654")
 
     assert result.seller is not None
     assert result.seller.rating_score == 4.8
     assert result.seller.rating_count == 152
-    assert result.active_items == 12
+    # Rendered reputation does not expose a trustworthy active-listing total.
+    assert result.active_items is None
 
 
 async def test_seller_warns_when_identity_is_missing(monkeypatch):
-    _patch_fetch(monkeypatch, _ok({"totalCount": 3, "items": []}))
+    _patch_item_page(monkeypatch, (200, '<span data-marker="profile/score">4,8</span>', "cdp"))
 
     result = await server.avito_seller("987654")
 
+    assert result.seller.name is None
     assert "seller_identity_missing" in result.meta.warnings
 
 
@@ -253,18 +261,8 @@ async def test_seller_warns_when_identity_is_missing(monkeypatch):
 
 
 async def test_selfcheck_reports_healthy_when_probes_parse(monkeypatch):
-    def fake_fetch_factory(payload):
-        async def fake_fetch(url, ctx):
-            return _ok(payload)
-
-        return fake_fetch
-
-    async def fake_fetch(url, ctx):
-        if "userId" in url:
-            return _ok(SELLER_PAYLOAD)
-        return _ok(SEARCH_PAYLOAD)
-
-    monkeypatch.setattr(server, "_fetch", fake_fetch)
+    _patch_fetch(monkeypatch, _ok(SEARCH_PAYLOAD))
+    _patch_selfcheck_pages(monkeypatch, CARD_HTML)
 
     result = await server.avito_selfcheck()
 
@@ -297,38 +295,28 @@ async def test_selfcheck_flags_drift_when_a_200_fails_the_parse_smoke(monkeypatc
 async def test_selfcheck_accepts_the_captured_live_payload(monkeypatch):
     """The real captured js/items payload must read as healthy through the
     whole selfcheck — registry comparison included."""
-    from pathlib import Path
-
     payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
-
-    async def fake_fetch(url, ctx):
-        if "userId" in url:
-            return _ok(SELLER_PAYLOAD)
-        return _ok(payload)
-
-    monkeypatch.setattr(server, "_fetch", fake_fetch)
+    _patch_fetch(monkeypatch, _ok(payload))
+    # This search capture is a different ad from the item-page capture. Adjust
+    # only the inline synthetic Product, never either immutable fixture.
+    _patch_selfcheck_pages(monkeypatch, CARD_HTML.replace("4612345678", "8105179339"))
 
     result = await server.avito_selfcheck()
 
     assert result.checks["search"].state == "healthy"
+    assert result.status == "success"
+    assert set(result.checks) == {"search", "card", "seller"}
 
 
 async def test_selfcheck_flags_drift_when_a_key_family_vanishes(monkeypatch):
     """'id' renamed past every alias while the titles survive: the parse smoke
     would happily serve id-less items; the shape comparison must cry drift and
     name the lost family."""
-    from pathlib import Path
-
     payload = json.loads((Path(__file__).parent / "fixtures" / "js_items_live.json").read_text(encoding="utf-8"))
     for item in payload["catalog"]["items"]:
         item["idRenamed"] = item.pop("id")
 
-    async def fake_fetch(url, ctx):
-        if "userId" in url:
-            return _ok(SELLER_PAYLOAD)
-        return _ok(payload)
-
-    monkeypatch.setattr(server, "_fetch", fake_fetch)
+    _patch_fetch(monkeypatch, _ok(payload))
 
     result = await server.avito_selfcheck()
 
