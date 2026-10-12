@@ -1,34 +1,37 @@
 """Lamoda MCP connector.
 
-Lamoda's anti-bot wall splits the catalog in two. One channel answers plain
-anonymous HTTPS: the GraphQL product endpoint, which enriches a SKU you already
-have with real prices, brands, sizes and availability. Everything that would
-let you *find* a SKU — search, catalog, HTML pages — sits behind the same
-self-referential 307 redirect loop as Ozon, so discovery runs in the operator's
-Chrome over CDP.
+Lamoda's GraphQL product endpoint enriches a known SKU with real prices,
+brands, sizes and availability. Discovery — search, catalog, HTML pages —
+runs in the operator's Chrome over CDP because plain HTTPS is blocked.
 
 Verified live July 2026 from a datacenter IP (docs/ANTI_BOT.md):
-  - ``POST /goapi/v2/catalog/graphql/products/`` — 200, real JSON (tier 1)
+  - ``POST /goapi/v2/catalog/graphql/products/`` — then 200, real JSON (tier 1)
   - catalog/search GET paths — 307 loop; HTML — 403; mobile API — 403
   - ``rating`` is not in the GraphQL schema (introspection disabled), so this
     connector reports no review data — Lamoda hides it entirely
 
-Two tiers, tried in cost order: GraphQL first for cards, CDP for search. The
-CDP route needs verification from the operator's machine for the same reason
-as Megamarket — run lamoda_selfcheck from your Chrome first.
+2026-10-12: the GraphQL endpoint answers plain HTTPS with a 307 loop too;
+the card falls back to an in-page POST in the operator's Chrome, which
+answers 200 with the normal Lamoda envelope.
+
+Two tiers, tried in cost order: HTTPS GraphQL first for cards, then one CDP
+GraphQL POST on transport failure. Search uses CDP directly. Run
+lamoda_selfcheck from your Chrome to check both paths.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
-# SCOPE: Read-only GraphQL cards and browser search; challenge recovery handoffs.
+# SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
 # DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
 # LINKS: M-LAMODA; M-COMPARE; M-MARKETPLACE; packages/lamoda-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
 # _search_item_from_tile: Normalize rendered price/title fields.
-# _graphql_card: Fetch product details, sizes and stock through GraphQL.
+# _graphql_via_https: POST the SKU query over plain HTTPS and return status/body.
+# _graphql_via_cdp: POST the query inside the operator's Chrome with bounded transport.
+# _graphql_card: Try HTTPS then CDP; parse and cache GraphQL product details, sizes and stock.
 # _cdp_render_search: Read browser search and recover explicit challenge handoffs.
 # lamoda_search: Return rendered catalog tiles with nullable prices.
 # lamoda_card: Return GraphQL-backed SKU details and availability.
@@ -122,7 +125,7 @@ mcp = FastMCP(
     instructions=(
         "Lamoda fashion catalog: text search runs in the operator's Chrome over "
         "CDP (discovery is behind a redirect loop); product cards come from the "
-        "anonymous GraphQL endpoint and work tier 1. Lamoda exposes no ratings. "
+        "GraphQL endpoint: HTTPS first, then an in-page Chrome POST if blocked. Lamoda exposes no ratings. "
         "Start with lamoda_search; lamoda_card takes a SKU or product URL."
     ),
 )
@@ -270,38 +273,124 @@ def _search_item_from_tile(tile: dict[str, Any]) -> LamodaSearchItemOut:
     )
 
 
+# Transport only, following Cian's in-page POST pattern. Read in bounded chunks
+# before serialising through CDP, not with res.text() on an unbounded response.
+# Lamoda's anti-bot interstitial lives under this path (seen live 2026-10-12, also on
+# Megamarket); the wording check above only counts on a near-empty page.
+_CHALLENGE_PATH = "/xpvnsulc/"
+_JS_BODY_SNIPPET = "() => ((document.body && document.body.innerText) || '').slice(0, 2000)"
+
+_JS_POST = """async (args) => {
+    const res = await fetch(args.url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify(args.body)
+    });
+    const reader = res.body.getReader();
+    let total = 0;
+    const chunks = [];
+    while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        total += value.length;
+        if (total > args.cap) {
+            await reader.cancel();
+            return JSON.stringify({status: 0, text: 'BODY_CAP_EXCEEDED'});
+        }
+        chunks.push(value);
+    }
+    const buf = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+    return JSON.stringify({status: res.status, text: new TextDecoder().decode(buf)});
+}"""
+
+
+async def _graphql_via_https(query: str, sku: str) -> tuple[int, str]:
+    """Tier 1: return the status and body of a plain HTTPS GraphQL POST."""
+    headers = dict(_HEADERS)
+    headers["Referer"] = f"{SITE_BASE}/p/{sku.lower()}/"
+    async with build_client(timeout_s=TIMEOUT, headers=headers, proxy=_proxy()) as client:
+        response = await client.post(GRAPHQL_URL, json={"query": query})
+    if response.status_code == 200 and len(response.content) > MAX_BODY_BYTES:
+        raise_tool_error(TransportDownError("GraphQL body over the cap"))
+    return response.status_code, response.text
+
+
+async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
+    """Tier 2: POST from a loaded Lamoda tab carrying the operator's cookies."""
+
+    async def _attempt() -> tuple[int, str]:
+        # open_page defaults to the origin host (www.lamoda.ru); no extra hosts.
+        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000) as page:
+            # A landing that stopped on the anti-bot page cannot post anything; say
+            # so at once instead of waiting out the fetch timeout (live 2026-10-12).
+            snippet = await asyncio.wait_for(page.evaluate(_JS_BODY_SNIPPET), timeout=10.0)
+            if _CHALLENGE_PATH in str(page.url) or (
+                isinstance(snippet, str) and len(snippet) < 1000 and _CHALLENGE_TEXT_RE.search(snippet)
+            ):
+                raise_tool_error(
+                    ChallengeRequiredError(
+                        "Lamoda requires user action in the connected Chrome. Complete the visible "
+                        "challenge on lamoda.ru, then retry.",
+                        provider="lamoda",
+                    )
+                )
+            raw = await asyncio.wait_for(
+                page.evaluate(_JS_POST, {"url": GRAPHQL_URL, "body": {"query": query}, "cap": MAX_BODY_BYTES}),
+                timeout=30.0,
+            )
+        result = json.loads(raw) if isinstance(raw, str) else raw
+        return int(result["status"]), str(result["text"])
+
+    try:
+        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+    except TimeoutError:
+        return 0, f"CDP timeout after {TIMEOUT}s"
+    except NavBlocked as exc:
+        return exc.status or 0, _redact(str(exc))
+
+
 async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
-    """Tier-1: POST the SKU-enrichment query over plain HTTPS."""
+    """Fetch and cache SKU enrichment: HTTPS first, one CDP fallback if refused."""
     cache_key = f"graphql:{sku}"
     cached = _cache.get(cache_key)
     if cached is not None:
         return cached
     await _polite_wait()
     query = _GRAPHQL_QUERY % json.dumps(sku)
+    tier = "graphql"
     try:
-        # Requests that work in a browser carry the product page as Referer.
-        # Tested against the live endpoint it made no difference either way, so
-        # this is alignment with a known-good request rather than a fix — kept
-        # because it costs nothing and removes one variable.
-        headers = dict(_HEADERS)
-        headers["Referer"] = f"{SITE_BASE}/p/{sku.lower()}/"
-        async with build_client(timeout_s=TIMEOUT, headers=headers, proxy=_proxy()) as client:
-            response = await client.post(GRAPHQL_URL, json={"query": query})
+        status_code, text = await _graphql_via_https(query, sku)
+        https_outcome = f"HTTP {status_code} over HTTPS. Body preview: {_redact(text[:200]) or '<empty>'}"
     except httpx.TransportError as exc:
-        raise_tool_error(TransportDownError(f"Lamoda GraphQL unreachable: {exc}"))
-    if response.status_code != 200:
-        raise_tool_error(
-            TransportDownError(
-                f"Lamoda GraphQL answered HTTP {response.status_code}. "
-                f"Body preview: {_redact(response.text[:200]) or '<empty>'}"
+        status_code, text = 0, ""
+        https_outcome = f"{type(exc).__name__} over HTTPS: {_redact(str(exc))}"
+    if status_code != 200:
+        tier = "graphql_cdp"
+        try:
+            status_code, text = await _graphql_via_cdp(query, ctx)
+        except ToolError:
+            raise
+        except Exception as exc:
+            status_code, text = 0, _redact(f"{type(exc).__name__}: {exc}")
+        if status_code != 200:
+            chrome_outcome = f"HTTP {status_code} via Chrome" if status_code else "transport failure via Chrome"
+            raise_tool_error(
+                TransportDownError(
+                    f"Lamoda GraphQL: {https_outcome}; {chrome_outcome}. "
+                    f"Body preview: {_redact(text[:200]) or '<empty>'}",
+                    status_code=status_code or None,
+                )
             )
-        )
-    if len(response.content) > MAX_BODY_BYTES:
+    log_event("lamoda_graphql.answered", tier_used=tier, status_code=status_code)
+    if len(text.encode()) > MAX_BODY_BYTES:
         raise_tool_error(TransportDownError("GraphQL body over the cap"))
     try:
-        payload = response.json()
+        payload = json.loads(text)
     except json.JSONDecodeError:
-        raise_tool_error(ParserDriftError(f"non-JSON GraphQL body; preview: {response.text[:200]}"))
+        raise_tool_error(ParserDriftError(f"non-JSON GraphQL body; preview: {text[:200]}"))
     # Lamoda does not use the standard GraphQL envelope. Captured live in July
     # 2026 against the real endpoint:
     #   found      {"error": null, "result": [{…}]}
@@ -342,6 +431,9 @@ async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
     product = products[0]
     if not isinstance(product, dict):
         raise_tool_error(ParserDriftError("GraphQL product entry is not an object"))
+    # Keep the answered tier with the successful product so cache hits do not
+    # misreport a browser-backed card as a plain HTTPS response.
+    product = {**product, "_tier_used": tier}
     _cache.set(cache_key, product)
     return product
 
@@ -473,7 +565,7 @@ async def lamoda_card(
     ],
     ctx: Context | None = None,
 ) -> LamodaCardResponse:
-    """Fetch one Lamoda product card via the anonymous GraphQL endpoint (tier 1).
+    """Fetch a GraphQL card over HTTPS, falling back to an in-page Chrome POST.
 
     ## Return Format
 
@@ -510,7 +602,7 @@ async def lamoda_card(
             is_available=product.get("is_available"),
             sizes=sizes,
             url=f"{SITE_BASE}/p/{sku.lower()}/",
-            tier_used="graphql",
+            tier_used=product.get("_tier_used", "graphql"),
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="lamoda_card")
         result.meta = MetaOut(**attached["_meta"])
@@ -528,7 +620,7 @@ async def lamoda_card(
 # client request.
 async def lamoda_selfcheck(ctx: Context | None = None) -> LamodaSelfcheckResponse:
     """Structural drift canary for Lamoda (tri-state). Probes the GraphQL card
-    path (tier 1) and the CDP search path (tier 2).
+    path (HTTPS with CDP fallback) and the CDP search path.
 
     GraphQL down is inconclusive for the card check; CDP down / a redirect loop
     is inconclusive for the search check. Only a reached payload that fails its

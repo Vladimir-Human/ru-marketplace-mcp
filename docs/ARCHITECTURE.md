@@ -95,6 +95,13 @@ diagnostics without raising.
 
 Playwright is imported lazily, so a tier-1-only connector never pays for it.
 
+Lamoda cards try HTTP GraphQL first (tier 1). A non-200 response or
+`httpx.TransportError` triggers exactly one in-page GraphQL POST through the
+operator's Chrome over CDP (tier 2); successful fallback reads report
+`tier_used: graphql_cdp`, while HTTP 200 skips CDP. The dated reason is the
+2026-10-12 307 loop from GraphQL over HTTPS: following redirects does not fix
+that refusal. Lamoda search continues to use Chrome.
+
 ### `resilience` — tolerant readers
 
 Parsing an unofficial API can never be unbreakable, but it can break rarely, fail
@@ -200,7 +207,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-1954 offline tests, no network required. Three flavours:
+1959 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

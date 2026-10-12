@@ -14,6 +14,13 @@
 - `avito_card` reads the item page's schema.org Product over CDP because
   `/web/1/js/items` now ignores `itemId` and answered a catalog envelope that
   was returned as an empty successful card.
+- Lamoda cards try HTTP GraphQL first (tier 1), then make one in-page GraphQL
+  POST through the operator's Chrome over CDP (tier 2) on a non-200 response or
+  `httpx.TransportError`. On 2026-10-12 GraphQL over HTTPS returned a 307 loop,
+  so the HTTP-only path failed while the browser could read the card. Successful
+  fallback reads report `tier_used: graphql_cdp`; HTTP 200 keeps the browser out
+  of the request. A landing that stops on Lamoda's anti-bot page reports
+  `challenge_required` at once instead of waiting out the fetch timeout.
 - Yandex Market cards are read from `/card/{slug}/{id}`. Yandex retired
   `/product/{id}`, which now answers with an empty page frame, so every
   `yandex_card` and `compare_verify_offer` for Yandex came back as
