@@ -133,8 +133,9 @@ mcp = FastMCP(
     version=SERVER_VERSION,
     instructions=(
         "Avito listings: search, item cards and seller profiles. Read-only, no "
-        "credentials. Tier 1 is impersonated HTTPS (works from residential RU "
-        "IPs); tier 2 fetches inside the operator's logged-in Chrome over CDP. "
+        "credentials. Search and seller try impersonated HTTPS first (works from "
+        "residential RU IPs), then the operator's logged-in Chrome over CDP; cards "
+        "always read the rendered item page in that Chrome. "
         "Start with avito_search; avito_card takes an item id or URL; "
         "avito_seller takes a seller profile URL or id from a card/search hit."
     ),
@@ -391,7 +392,13 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
         ):
             raise NotFoundError("Avito item page: announcement not found or removed.")
         raise ParserDriftError("avito_card: item page carries no schema.org Product")
-    product = next((p for p in products if item_id is not None and str(p.get("sku")) == str(item_id)), products[0])
+    product = next((p for p in products if item_id is not None and str(p.get("sku")) == str(item_id)), None)
+    if product is None:
+        # A Product for another sku (a recommendation block) must never stand in for
+        # the requested ad; only a lone Product without any sku is taken as the page's.
+        if item_id is not None and (len(products) != 1 or products[0].get("sku") not in (None, "")):
+            raise ParserDriftError(f"avito_card: no schema.org Product for item {item_id} on its page")
+        product = products[0]
     offers = product.get("offers")
     if isinstance(offers, list):
         offers = next((offer for offer in offers if isinstance(offer, dict)), {})

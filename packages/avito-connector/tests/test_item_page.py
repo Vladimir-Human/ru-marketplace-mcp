@@ -235,6 +235,15 @@ def test_requested_sku_wins_over_the_first_product():
     assert item["price_rub"] == 39990
 
 
+def test_a_product_for_another_sku_is_drift_not_the_card():
+    """Review of #119: a lone Product for a different ad must not pass as this ad."""
+    unrelated = _product()
+    unrelated.update(sku="4612345678", name="Не то объявление")
+
+    with pytest.raises(server.ParserDriftError):
+        server.parse_item_page(_html({"@graph": [unrelated]}), ITEM_ID)
+
+
 @pytest.mark.parametrize(
     "offers",
     [
