@@ -79,7 +79,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1872 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1931 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -276,6 +276,15 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 и текстовый поиск сравнимы напрямую. Часть крупных разделов WB помечает шардом
 `blackhole` — у них нет своей выдачи, и инструмент честно об этом говорит вместо
 пустого списка.
+
+Если с вашего адреса API WB отвечает 403 (так бывает: отказ зависит и от адреса,
+и от клиента), включите `WB_TRANSPORT=dom`. Тогда `wb_search` и `wb_card` читают
+отрисованные страницы WB в вашем Chrome через CDP, как DNS и Ситилинк, без
+обращений к API. В выдаче поиска `price_rub` — цена по WB Кошельку
+(`price_kind: wallet`); карточка отдаёт обычную цену, цену по Кошельку и
+зачёркнутую раздельно, а также магазин, склад, срок доставки, возврат, гарантию,
+значок «Оригинал» и строку «Все N предложений от X ₽». Подробности —
+[ANTI_BOT.md](docs/ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
 ### Яндекс Маркет — `yandex_*`
 
@@ -575,7 +584,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1872 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1931 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -641,7 +650,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1872 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1931 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -728,7 +737,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1872 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1931 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -790,6 +799,15 @@ WB's `shard` and `query`, and this one fetches the products behind them. Items u
 the same shape as `wb_search`, so a category walk and a text search are directly
 comparable. Several of WB's largest sections carry the shard `blackhole` and have no
 feed at all; the tool says so instead of returning an empty list.
+
+If WB's API answers 403 from your address (the refusal depends on both address and
+client), set `WB_TRANSPORT=dom`: `wb_search` and `wb_card` then read WB's rendered
+pages in your Chrome over CDP, like DNS and Citilink, with no API calls. On search
+tiles `price_rub` is the WB Wallet price (`price_kind: wallet`); the card reports
+the regular, Wallet and struck prices separately, plus the store, warehouse,
+delivery date, return policy, warranty, the «Оригинал» badge and «Все N
+предложений от X ₽». Details in
+[ANTI_BOT.md](docs/ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
 ### Yandex Market — `yandex_*`
 
@@ -1089,7 +1107,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1872 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1931 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1151,7 +1169,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1872 offline
+are confidently wrong, so the project is arranged around verification: 1931 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

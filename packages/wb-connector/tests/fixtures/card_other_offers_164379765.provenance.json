@@ -1,0 +1,9 @@
+{
+  "url": "https://www.wildberries.ru/catalog/164379765/detail.aspx",
+  "captured_at": "2026-10-01",
+  "sha256": "7ed7fe93bcd546bde6edf142a1f3d81a22f311d31d9f41c7ebaec01b7d21418c",
+  "method": "outerHTML of the «Все N предложений» block (div.multipleSellers…), read from the operator's Chrome over CDP with mcp_core open_page, 12 s after load; <svg> icon bodies replaced by empty <svg></svg>, nothing else edited",
+  "ground_truth": {
+    "note": "nm 164379765 (Modern Device) had no buy buttons that day; the block lists 3 of 26 other offers, each tile a /catalog/<nm>/detail.aspx link: 1605653581 UJII 7 413 ₽, 1605660096 FGGG 7 669 ₽, 1060828177 IT Склад 12 037 ₽. The tile shows no Wallet label; UJII's own card shows 7 565 ₽ regular / 7 413 ₽ with Wallet."
+  }
+}

@@ -59,6 +59,7 @@ from mcp_core.redact import redact_error_text as _redact
 from mcp_core.transport import get_text_budgeted, proxy_from_env
 from pydantic import Field
 
+from wb_connector import dom_transport
 from wb_connector.models_output import (
     MetaOut,
     WbCardItem,
@@ -703,6 +704,79 @@ def _card_products(data: dict[str, Any]) -> list[Any]:
     return products
 
 
+def _dom_dest_warning(dest: str) -> list[str]:
+    if dest and dest != WB_DEFAULT_DEST:
+        return [f"wb_dom: dest={dest} ignored — the region follows the scraping-profile Chrome (set it on the site)"]
+    return []
+
+
+async def _wb_card_dom(nm_ids: list[int], dest: str, ctx: Context | None) -> WbCardResponse:
+    """wb_card over rendered product pages (WB_TRANSPORT=dom). One navigation per SKU."""
+    warnings = _dom_dest_warning(dest)
+    wanted = list(dict.fromkeys(nm_ids))
+    if len(wanted) > _settings.dom_max_cards:
+        warnings.append(
+            f"wb_dom_card: {len(wanted)} nm_ids requested, read the first {_settings.dom_max_cards} "
+            "(each is a page navigation; raise WB_DOM_MAX_CARDS if needed)"
+        )
+        wanted = wanted[: _settings.dom_max_cards]
+    items: list[WbCardItem] = []
+    for nm in wanted:
+        if ctx is not None:
+            await ctx.debug(f"wb_card[dom]: nm={nm}")
+        payload = await dom_transport.render(dom_transport.card_url(nm), dom_transport.CARD_EXTRACT_JS, "card")
+        item, item_warnings = dom_transport.parse_card_page(payload, nm)
+        warnings.extend(item_warnings)
+        if item is not None:
+            items.append(WbCardItem(**item))
+    if any(item.cross_border for item in items):
+        warnings.append(
+            "wb_dom_card: cross-border listing (foreign seller / AliExpress on WB) — longer delivery, returns by request"
+        )
+    log_event("wb_card.done", nm_count=len(nm_ids), items=len(items), transport="dom")
+    return WbCardResponse(
+        dest=dest,
+        count=len(items),
+        items=items,
+        meta=MetaOut(source="wb_card", healthy=bool(items) or not wanted, warnings=warnings[:10]),
+    )
+
+
+async def _wb_search_dom(
+    query: str, dest: str, page: int, ctx: Context | None
+) -> WbSearchResponse | WbNoResultsResponse:
+    """wb_search over the rendered search grid (WB_TRANSPORT=dom)."""
+    url = dom_transport.search_url(query, page)
+    if ctx is not None:
+        await ctx.debug(f"wb_search[dom]: {url}")
+    payload = await dom_transport.render(url, dom_transport.SEARCH_EXTRACT_JS, "search")
+    items, warnings = dom_transport.parse_search_page(payload)
+    if not items and page == 1 and not payload.get("page_says_empty"):
+        # An empty first page without WB's own «ничего не нашлось» means the tile
+        # selectors stopped matching; reporting no_results would hide the drift.
+        log_event("wb_search.dom_drift", query=query[:100], tiles=len(payload.get("tiles") or []))
+        raise_tool_error(
+            ParserDriftError(
+                "wb_search[dom]: the search page rendered no product tiles and no empty-result notice",
+                provider="wb",
+            )
+        )
+    if not items:
+        log_event("wb_search.no_results", transport="dom", query=query[:100], page=page)
+        return WbNoResultsResponse(query=query, page=page, total_ids=0)
+    warnings = _dom_dest_warning(dest) + warnings
+    log_event("wb_search.done", transport="dom", items=len(items), page=page)
+    return WbSearchResponse(
+        query=query,
+        page=page,
+        page_size=len(items),
+        total_ids=len(items),
+        count=len(items),
+        items=[WbCardItem(**item) for item in items],
+        meta=MetaOut(source="wb_search", healthy=True, warnings=warnings[:10]),
+    )
+
+
 @mcp.tool(
     name="wb_card",
     annotations=ToolAnnotations(
@@ -768,6 +842,9 @@ async def wb_card(
     if any(isinstance(n, bool) or not isinstance(n, int) or n <= 0 for n in nm_ids):
         log_event("wb_card.validation_failed", reason="non_positive_nm_ids")
         raise_tool_error(BadRequestError("nm_ids must be positive integers"))
+
+    if _settings.transport == "dom":
+        return await _wb_card_dom(nm_ids, dest, ctx)
 
     nm_param = ";".join(str(n) for n in nm_ids)
     params = httpx.QueryParams(
@@ -1480,6 +1557,9 @@ async def wb_search(
     if page < 1 or page > 20:
         log_event("wb_search.validation_failed", reason="bad_page", page=page)
         raise_tool_error(BadRequestError("page 1..20"))
+
+    if _settings.transport == "dom":
+        return await _wb_search_dom(query, dest, page, ctx)
 
     try:
         # PRIMARY: search.wb.ru v9 returns fully-populated product objects — same

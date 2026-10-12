@@ -15,6 +15,22 @@
   with floor plans flagged `is_layout`. The count in `photos` stays; the URLs
   let a client download and inspect the photos, which the CDN serves without
   the browser session.
+- Wildberries can read rendered pages instead of the API: `WB_TRANSPORT=dom`
+  (default `api`) makes `wb_search` and `wb_card` open the search grid and the
+  product page in the operator's Chrome over CDP and parse their text, for
+  addresses where `card.wb.ru` / `search.wb.ru` and the site's own `/__internal/`
+  API answer 403 to every client (#101). Search tiles report the WB Wallet price
+  (`price_kind: wallet`, flagged in `meta.warnings`); cards report the regular,
+  Wallet and struck prices separately, plus the store and its rating, warehouse,
+  delivery date, return policy, cross-border flag with the seller's legal entity
+  and country, warranty, the «Оригинал» badge, and «Все N предложений от X ₽»
+  with a counterfeit-risk warning below 60 % of the card's price. «Подозрительная
+  активность» and a visible captcha stop without retries. New settings:
+  `WB_TRANSPORT`, `WB_DOM_WAIT_S`, `WB_DOM_MIN_GAP`, `WB_DOM_SETTLE_MS`,
+  `WB_DOM_STORE_WAIT_S`, `WB_DOM_OFFERS_WAIT_S`, `WB_DOM_MAX_CARDS`. New
+  `WbCardItem` fields are optional and empty on the API path. An empty first search
+  page without WB's own «ничего не нашлось» notice is reported as `parser_drift`,
+  not as no results.
 
 ### Fixed
 
@@ -24,6 +40,25 @@
 - Review health no longer reports content key drift for a small sample of
   rating-only reviews: the all-empty-text alarm needs at least 10 returned
   reviews (#111).
+- `WB_TRANSPORT=dom` reads the other-offers header for a single other seller.
+  With one offer WB writes «1 предложение от 4 735 ₽» (singular, no «Все»), which
+  the «Все N предложений» pattern missed: nm 1345073040 listed its one other offer
+  (nm 1552408950) in `other_offers` while `other_offers_count` and
+  `other_offers_from_rub` stayed empty and the block's text was not cut out of
+  the card's own lines. Both forms are recognised now, and the render wait for
+  the block accepts the singular header too.
+- `WB_TRANSPORT=dom` no longer glues another seller's offer onto a card whose
+  own offer is unavailable. nm 164379765 (main seller Modern Device, no «Купить»
+  button) came back with supplier UJII, 7 413 ₽ and `in_stock: false`: those
+  belong to nm 1605653581, listed in the page's «Все N предложений» block, which
+  the price and store fallbacks mistook for the buy block. Without a buy block
+  the card now reports `in_stock: false` and empty price, Wallet and struck
+  prices, supplier, supplier rating, delivery and warehouse, plus a warning
+  `main offer unavailable; N other sellers from X ₽ (cheapest nm Y)`. The other
+  sellers are kept in the new optional `other_offers` (up to five cheapest: `nm_id`
+  from the tile's link, `supplier`, `price_rub`, `price_kind`, `delivery`; empty on
+  the API path), and the 60 % counterfeit-risk comparison runs only when the card
+  has its own offer.
 - Citilink search sends the query as `text`, the parameter citilink.ru reads.
   With `?q=` the site renders its generic search landing, so every search parsed
   zero tiles and was reported as drift while the site itself answered normally;

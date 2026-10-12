@@ -1,0 +1,9 @@
+{
+  "url": "https://www.wildberries.ru/catalog/1345073040/detail.aspx",
+  "captured_at": "2026-10-01",
+  "sha256": "7cbb65a42d5ee5d7a12e541b4f99bf193e16f777db019d6a4ee1d2f3573d408a",
+  "method": "outerHTML of the other-offers block (div.multipleSellers…), read from the operator's Chrome over CDP with mcp_core open_page, 12 s after load; <svg> icon bodies replaced by empty <svg></svg>, nothing else edited",
+  "ground_truth": {
+    "note": "nm 1345073040 (Находки из Китая) with its own offer; the block's header reads «1 предложение от 4 735 ₽» (singular, no «Все») and holds one tile: nm 1552408950, 4 735 ₽, delivery 12 октября, Находки из Китая."
+  }
+}

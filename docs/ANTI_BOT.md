@@ -141,6 +141,29 @@ The real trap here was not anti-bot but a **stale index**:
 `search-goods.wildberries.ru` returns ids for delisted SKUs. See
 [the search fix](#the-wildberries-search-trap).
 
+#### When the API refuses: rendered pages (`WB_TRANSPORT=dom`)
+
+Measured 2026-09-30 from a residential Moscow address (MTS), Windows, Claude
+Desktop, CDP Chrome in a clean profile that had passed WB's own browser check:
+`card.wb.ru`, `search.wb.ru` and `catalog.wb.ru` answered 403 to httpx, to
+curl_cffi impersonation, and to a real Chrome navigating to them; the site's
+same-origin API (`/__internal/card/…`, `/__internal/search/…`,
+`/__internal/u-search/…`) answered 403 to a plain `fetch` issued from a
+wildberries.ru tab. The rendered pages were readable.
+
+`WB_TRANSPORT=dom` (default `api`) makes `wb_search` and `wb_card` open the search
+grid and the product page through `mcp_core.transport.chrome_cdp.open_page` and
+read their text. It does not call the API, replay tokens, alter the browser or
+solve challenges: «Проверяем браузер» is waited out (`WB_DOM_WAIT_S`),
+«Подозрительная активность» and a visible captcha stop the call without a retry.
+The product page renders in stages — prices and «Артикул», then the store block,
+then «Все N предложений» — and the reader waits for each within
+`WB_DOM_STORE_WAIT_S` / `WB_DOM_OFFERS_WAIT_S`. The Wallet price on the product
+page arrives last and may be missing (`wallet_price_rub: null`); the search tile
+carries it reliably. Page-wide `del` / `[class*=wallet]` / `[class*=seller]`
+matches also hit the «Смотрите также» carousel, so a DOM hint counts only when it
+names one of the offer's own figures. Other WB tools keep their HTTP paths.
+
 Two more endpoints were verified live for v1.1.0, each with a silent-failure mode
 worth knowing:
 
