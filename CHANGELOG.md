@@ -11,6 +11,9 @@
 
 ### Fixed
 
+- `avito_card` reads the item page's schema.org Product over CDP because
+  `/web/1/js/items` now ignores `itemId` and answered a catalog envelope that
+  was returned as an empty successful card.
 - Lamoda cards try HTTP GraphQL first (tier 1), then make one in-page GraphQL
   POST through the operator's Chrome over CDP (tier 2) on a non-200 response or
   `httpx.TransportError`. On 2026-10-12 GraphQL over HTTPS returned a 307 loop,

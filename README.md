@@ -80,7 +80,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 1938 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 1959 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -359,14 +359,19 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | Инструмент                                            | Что делает                                           |
 | ----------------------------------------------------- | ---------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API     |
-| `avito_card(item_id_or_url)`                          | Одно объявление: цена, описание, просмотры, продавец |
+| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов, активные объявления |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
 продавца и есть сигнал доверия. Бесплатное/обменное объявление приходит с
 `price_rub: null` — никогда не `0`, чтобы не оказаться «самым дешёвым» в
-сравнении. С датацентрового IP Авито отвечает 403-файрволом, поэтому коннектор
-двухуровневый: TLS-имперсонация, дальше ваш Chrome (как у Ozon).
+сравнении. Поиск и продавцы используют два уровня: TLS-имперсонацию и ваш Chrome.
+Карточки всегда читают schema.org Product со страницы объявления через CDP:
+на 2026-10-12 `/web/1/js/items` игнорирует `itemId` и возвращает каталог.
+Полный URL используется без query/fragment; для ID применяется `/{id}`: Авито перенаправляет его на страницу объявления.
+`location`, `posted_at`, `views`, `seller` остаются `null`: их нет в Product JSON-LD.
+Без Product или одновременно без названия и цены возвращается `parser_drift`,
+а не пустой успех. С датацентрового IP возможен 403-файрвол.
 
 ### Taobao — `taobao_*`
 
@@ -396,9 +401,8 @@ Chrome с CDP (`scripts/start_chrome_cdp.sh`) нужен остальным вс
 Lamoda — только для запасного уровня.
 
 Всего через CDP ходят восемь источников — эти плюс Taobao, AliExpress, Ozon и
-Авито, где Chrome лишь
-запасной уровень: их tier 1 обычно отвечает, а браузер включается, когда анонимный
-уровень упёрся в челлендж. `marketplace-mcp doctor` из вашего браузера скажет, какие
+Авито. У Ozon, а также у поиска и продавцов Авито Chrome — запасной уровень,
+когда анонимный tier 1 упёрся в челлендж; карточки Авито всегда требуют CDP. `marketplace-mcp doctor` из вашего браузера скажет, какие
 эндпоинты подтверждены.
 
 
@@ -589,7 +593,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1938 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 1959 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -655,7 +659,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 1938 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 1959 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -743,7 +747,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1938 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 1959 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -923,14 +927,18 @@ takes no part in `compare_prices`.
 | Tool                                              | What it does                                      |
 | ------------------------------------------------- | ------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id)` | Classified search through the internal `js/items` API |
-| `avito_card(item_id_or_url)`                      | One listing: price, description, views, seller     |
+| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count |
 | `avito_seller(seller_id_or_url)`                  | Seller rating, review count, active listings       |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the
 seller's reputation IS the trust signal. A free/swap listing arrives with
-`price_rub: null` — never `0`, so it cannot win "cheapest". From a datacenter
-IP Avito answers a 403 firewall, hence the two-tier transport: TLS impersonation
-first, then your Chrome, exactly like Ozon.
+`price_rub: null` — never `0`, so it cannot win "cheapest". Search and seller
+reads use TLS impersonation with Chrome fallback. Cards always read the item
+page's schema.org Product over CDP: as of 2026-10-12 `/web/1/js/items` ignores
+`itemId` and returns a catalog. Full URLs lose query/fragment; ids use `/{id}`, which Avito redirects to the item page.
+`location`, `posted_at`, `views` and `seller` stay `null`, absent from Product JSON-LD.
+Missing Product, or both name and price missing, raises `parser_drift`, not empty
+success. Datacenter IPs can still receive the 403 firewall.
 
 ### Taobao — `taobao_*`
 
@@ -1117,7 +1125,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 1938 offline tests
+uv run pytest -q -m "not live and not cdp"    # 1959 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1179,7 +1187,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 1938 offline
+are confidently wrong, so the project is arranged around verification: 1959 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

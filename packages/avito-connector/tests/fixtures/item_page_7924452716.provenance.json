@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/telefony/iphone_15_128_gb_sim_esim_7924452716",
+  "captured_at": "2026-10-12",
+  "sha256": "a399dd7a49928119fd2e1a52d7fefd4b7bd4a3fbb2aa3169d5fa53def09e290d",
+  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP (page.content()); trimmed to the <title> and the single application/ld+json script, both byte-for-byte as Avito served them. The rest of the 729 KB page (scripts, seller widgets, personal data surfaces) was dropped. The listing is a shop's, the description carries no phone or e-mail.",
+  "ground_truth": {
+    "note": "schema.org @graph: Product name «iPhone 15, 128 ГБ, SIM + eSIM», sku 7924452716, offers.price \"39990\" RUB, availability InStock, itemCondition NewCondition, 2 images; plus a BreadcrumbList. On 2026-10-12 /web/1/js/items?itemId=7924452716 answered the generic catalog envelope (no item object), which is why the card reads this page."
+  }
+}
