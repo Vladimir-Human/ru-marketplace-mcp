@@ -11,6 +11,12 @@
 
 ### Fixed
 
+- Lamoda cards try HTTP GraphQL first (tier 1), then make one in-page GraphQL
+  POST through the operator's Chrome over CDP (tier 2) on a non-200 response or
+  `httpx.TransportError`. On 2026-10-12 GraphQL over HTTPS returned a 307 loop,
+  so the HTTP-only path failed while the browser could read the card. Successful
+  fallback reads report `tier_used: graphql_cdp`; HTTP 200 keeps the browser out
+  of the request.
 - Yandex Market cards are read from `/card/{slug}/{id}`. Yandex retired
   `/product/{id}`, which now answers with an empty page frame, so every
   `yandex_card` and `compare_verify_offer` for Yandex came back as

@@ -131,6 +131,10 @@
   </entry>
   <entry id="V-M-LAMODA" module="M-LAMODA" file="packages/lamoda-connector/src/lamoda_connector/server.py">
     <test file="packages/lamoda-connector/tests/test_server.py" checks="Mocked GraphQL SKU/sizes/stock and CDP search, URL/SKU validation, missing-price None and empty-grid drift" />
+    <test file="packages/lamoda-connector/tests/test_server.py" title="test_card_graphql_307_falls_back_to_cdp" checks="HTTP 307 triggers one in-page GraphQL POST through Chrome CDP; successful fallback reports tier_used graphql_cdp; offline, not run" />
+    <test file="packages/lamoda-connector/tests/test_server.py" title="test_card_graphql_200_skips_cdp" checks="HTTP 200 uses tier 1 GraphQL without calling CDP; offline, not run" />
+    <test file="packages/lamoda-connector/tests/test_server.py" title="test_card_graphql_both_tiers_fail" checks="Failed HTTP GraphQL and CDP fallback surface a structured failure rather than a successful card; offline, not run" />
+    <test file="packages/lamoda-connector/tests/test_server.py" title="test_card_graphql_transport_error_falls_back_to_cdp" checks="httpx.TransportError triggers one CDP GraphQL fallback; successful fallback reports tier_used graphql_cdp; offline, not run" />
     <test file="packages/lamoda-connector/tests/test_search_extractor_dom.py" checks="Offline extractor current/old prices, wire shape and challenge false-positive versus visible wall behavior" />
     <test file="packages/lamoda-connector/tests/test_search_extractor_live_dom.py" checks="Offline captured titles rather than discount badges and prices through tile noise; not live-marked" />
     <test file="packages/lamoda-connector/tests/test_shape_reference.py" checks="Captured search shape/selfcheck registry and absent required price family" />
