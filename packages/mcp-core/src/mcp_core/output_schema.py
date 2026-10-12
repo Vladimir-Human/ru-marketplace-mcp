@@ -15,6 +15,16 @@ detection through ``public_contract.json``, which pins the property name set.
 The compact form keeps no ``$defs``, no per-field descriptions, defaults or
 nested types — that is deliberate, and a test guards it.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Reduce advertised MCP output schemas to top-level property names.
+# SCOPE: Schema compaction and registered local Tool mutation; not result parsing.
+# DEPENDS: FastMCP and fastmcp.tools.Tool; stdlib typing.
+# LINKS: M-OUTPUT-SCHEMA; M-MODELS.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# compact_output_schema: Keep object property names with permissive value schemas.
+# apply_compact_output_schemas: Rewrite local Tool schemas and count rewritten tools.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

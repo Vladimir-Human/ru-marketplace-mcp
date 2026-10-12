@@ -31,6 +31,23 @@ is the exact bug class this connector's parsers exist to prevent.
 
 NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
+# SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests.
+# DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction; models_output; settings.
+# LINKS: M-MPSTATS; M-MARKETPLACE; packages/mpstats-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _cookie_header: Resolve the required auth secret without exposing its value.
+# _post_json_budgeted: Bound paced HTTP retries and response size.
+# _call: Classify HTTP/body auth, rate-limit, transport and parser failures.
+# _parse_item_entry: Normalize analytics graphs, totals and missing values.
+# _parse_warehouses_entry: Normalize warehouse and FBS/FBO stock data.
+# _validate_skus: Enforce valid identifiers and batch limits.
+# mpstats_item: Read per-SKU sales/stock analytics.
+# mpstats_warehouses: Read per-SKU warehouse stock splits.
+# mpstats_selfcheck: Probe operator auth/quota/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

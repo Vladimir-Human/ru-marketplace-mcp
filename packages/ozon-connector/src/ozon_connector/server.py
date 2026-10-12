@@ -13,6 +13,24 @@ exfiltrate /api/v3/personal/orders or navigate to /i/logout.
 
 NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Ozon product cards, reviews and search through composer data.
+# SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
+# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP; models_output; settings.
+# LINKS: M-OZON; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
+# _canonical_composer_path: Restrict browser fetch routes and query keys.
+# _fetch_composer: Select paced impersonated HTTP or operator-browser fetch.
+# _parse_widgets: Normalize card widget fields without inventing missing prices.
+# _safe_review_page_path: Rebuild pagination from validated review components.
+# _parse_search_tile: Preserve offer identity, price kinds and stock warnings.
+# ozon_card: Read a validated SKU/product path.
+# ozon_reviews: Read sorted, bounded pages of product reviews.
+# ozon_search: Search and normalize composer result tiles.
+# ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

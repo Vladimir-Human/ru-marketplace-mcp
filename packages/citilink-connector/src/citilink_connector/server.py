@@ -19,6 +19,21 @@ first — its verdict tells you which case you are in.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Citilink product search and cards from rendered pages.
+# SCOPE: Read-only operator-browser DOM; paced CDP reads; Qrator refusal detection.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
+# LINKS: M-CITILINK; M-COMPARE; M-MARKETPLACE; packages/citilink-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _extract_product_id: Validate bare handles or product URLs before navigation.
+# _search_item_from_tile: Normalize attached/current and old-price tile fields.
+# _cdp_render: Serialize paced browser navigation and extractor execution.
+# _is_qrator_wall: Distinguish proof-of-work pages from catalog data.
+# citilink_search: Return rendered search tiles and nullable prices.
+# citilink_card: Read buy-block price/stock and warn on in-stock missing prices.
+# citilink_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

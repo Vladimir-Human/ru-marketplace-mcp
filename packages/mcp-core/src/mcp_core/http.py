@@ -1,3 +1,14 @@
+# START_MODULE_CONTRACT
+# PURPOSE: Build HTTP timeouts and normalize retry delays and HTTP failures.
+# SCOPE: Shared helper values; no requests, sleeping or response-body redaction.
+# DEPENDS: httpx; mcp_core.errors lazily; stdlib email.utils,math,functools.
+# LINKS: M-HTTP; M-CORE; M-ERRORS; M-HTTP-TIER.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# get_timeout: Cache a configured httpx timeout object.
+# parse_retry_after: Parse seconds/date delays, rejecting nonfinite values.
+# classify_http_error: Map HTTP statuses to provider-neutral connector errors.
+# END_MODULE_MAP
 from __future__ import annotations
 
 import email.utils

@@ -29,6 +29,22 @@ Sporadic 502s and read timeouts are normal here; transport retries absorb them.
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 ``log_event`` (stderr) or the ``Context`` logging methods.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
+# SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
+# DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings.
+# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; packages/detmir-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _resolve_region: Validate and normalize explicit or configured region codes.
+# _fetch_json: Perform bounded, retried API reads and classify failures.
+# _body_error_status: Detect error status embedded inside HTTP-success JSON.
+# _parse_product: Normalize product fields and preserve missing-price semantics.
+# detmir_card: Read one product with a region filter.
+# detmir_category: List a validated category alias with pagination.
+# detmir_categories: Discover category rows, optionally by parent.
+# detmir_selfcheck: Probe operator endpoint/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

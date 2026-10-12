@@ -31,6 +31,22 @@ convert explicitly — a baked-in rate would go silently stale.
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 ``log_event`` (stderr) or the ``Context`` logging methods.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Taobao search and item cards with prices kept in CNY.
+# SCOPE: Read-only operator-browser DOM/state; explicit login/challenge handoffs.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
+# LINKS: M-TAOBAO; M-COMPARE; M-MARKETPLACE; packages/taobao-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _extract_item_id: Validate item identifiers before constructing browser URLs.
+# _search_item_from_tile: Normalize rendered tiles without currency conversion.
+# _cdp_render: Serialize paced browser reads and support challenge recovery.
+# _login_wall_markers: Detect title-less login walls from structural signals.
+# _page_challenge_kind: Distinguish login walls from anti-bot challenges.
+# taobao_search: Read rendered search tiles and preserve missing prices.
+# taobao_card: Read one item card and classify gone or blocked pages.
+# taobao_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

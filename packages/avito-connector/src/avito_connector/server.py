@@ -30,6 +30,23 @@ falls through to the CDP tier.
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 ``log_event`` (stderr) or the ``Context`` logging methods.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Avito listing search, item cards and seller reputation.
+# SCOPE: Read-only classifieds; paced impersonated HTTP with browser fallback.
+# DEPENDS: FastMCP; curl_cffi; mcp_core CDP/cache; models_output; settings; shape_reference.
+# LINKS: M-AVITO; M-COMPARE; M-MARKETPLACE; packages/avito-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _fetch: Try JSON-shaped HTTP results before operator-browser fallback.
+# _raise_for_fetch_failure: Classify firewall, missing-item and transport failures.
+# _extract_item_id: Resolve numeric handles or Avito listing URLs.
+# _parse_search_items: Normalize listings, dates, places and nullable prices.
+# _build_search_url: Encode query, page and validated location/category identifiers.
+# avito_search: Read paginated classifieds search.
+# avito_card: Read listing details and seller information.
+# avito_seller: Read seller reputation and active listing count.
+# avito_selfcheck: Diagnose operator transport/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

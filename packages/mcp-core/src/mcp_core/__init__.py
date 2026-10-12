@@ -15,6 +15,16 @@ parse logic and nothing else:
 Never write to stdout from a stdio MCP server: it corrupts the JSON-RPC stream.
 Use ``log_event`` (stderr) or the FastMCP ``Context`` logging methods.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Publish shared connector runtime primitives and package version.
+# SCOPE: Public error, HTTP, logging and redaction exports; no server launch.
+# DEPENDS: mcp_core.errors,http,logging,redact; FastMCP and httpx transitively.
+# LINKS: M-CORE; M-ERRORS; M-HTTP; M-LOGGING; M-REDACT.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# __all__: Declare the shared package facade for connector imports.
+# __version__: Identify the shared runtime release.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

@@ -25,6 +25,23 @@ comparison runs with whatever is present.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Compare marketplace offers and verify shortlisted source-native cards.
+# SCOPE: Read-only concurrent sources; partial outcomes; RUB ranking and identity evidence.
+# DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
+# LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _available_sources: Import connectors defensively and report missing installations.
+# _dedupe: Merge duplicate offers while preserving source identity.
+# OfferBatch: Carry normalized offers plus source warnings and health evidence.
+# _run_source: Bound each source query and preserve structured partial failures.
+# _call_card_tool: Dispatch validated source-native card arguments.
+# compare_prices: Rank eligible RUB offers with per-source completeness and warnings.
+# compare_verify_offer: Re-read a card and compare price, identity and stock evidence.
+# compare_sources: Report searchable/installed/deselected source capabilities.
+# compare_browser_snapshot: Deliver a controlled browser snapshot using vision policy.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

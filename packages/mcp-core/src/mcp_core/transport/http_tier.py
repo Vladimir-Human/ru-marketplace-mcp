@@ -19,6 +19,22 @@ statuses (502/503/504) get a bounded retry with backoff. A 429 never does —
 retrying a rate limit deepens the hole — and neither does any other 4xx, since a
 repeat request cannot change a client error.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Read public endpoints politely with byte caps and bounded retries.
+# SCOPE: Anonymous HTTP clients; simple gateway retries or whole-operation budgets.
+# DEPENDS: httpx; stdlib asyncio,os,time,dataclasses,typing.
+# LINKS: M-HTTP-TIER; M-TRANSPORT; M-HTTP; M-PACING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# proxy_from_env: Prefer connector proxy knobs, then conventional HTTPS/ALL proxy.
+# PoliteGate: Describe a caller-supplied asynchronous pacing interface.
+# RateLimiter: Serialize configured inter-request gaps.
+# BodyTooLargeError: Report a streamed body beyond its byte cap.
+# read_capped_text: Buffer decoded chunks only within the supplied byte limit.
+# get_text_with_retries: Return status/text; retry transport faults and chosen statuses.
+# get_text_budgeted: Return status/text/error under one operation deadline.
+# build_client: Construct an httpx client with redirect-following disabled by default.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
@@ -111,6 +127,12 @@ async def read_capped_text(response: httpx.Response, max_bytes: int) -> str:
     return b"".join(chunks).decode(encoding, errors="replace")
 
 
+# START_CONTRACT: get_text_with_retries
+# PURPOSE: Fetch capped text with bounded transport and configured status retries.
+# INPUTS: AsyncClient, URL, byte caps, retry/backoff policy and optional limiter/headers.
+# OUTPUTS: Status/text tuple; raises body-cap or exhausted transport errors.
+# SIDE_EFFECTS: Send GETs, consume/close responses, wait on limiter and retry backoff.
+# END_CONTRACT: get_text_with_retries
 async def get_text_with_retries(
     client: httpx.AsyncClient,
     url: str,
@@ -178,6 +200,12 @@ async def get_text_with_retries(
     raise last_exc if last_exc else RuntimeError("request failed without an exception")
 
 
+# START_CONTRACT: get_text_budgeted
+# PURPOSE: Bound all GET attempts and retry waits by one wall-clock deadline.
+# INPUTS: AsyncClient, URL, positive byte cap, operation budget and optional retry gate.
+# OUTPUTS: Status/text/error tuple; HTTP statuses return without retries.
+# SIDE_EFFECTS: Stream/close responses and wait on transport backoff; gate runs before retries only.
+# END_CONTRACT: get_text_budgeted
 async def get_text_budgeted(
     client: httpx.AsyncClient,
     url: str,

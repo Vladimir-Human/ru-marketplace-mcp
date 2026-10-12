@@ -1,3 +1,23 @@
+# START_MODULE_CONTRACT
+# PURPOSE: Encode provider-neutral failures as machine-readable MCP ToolErrors.
+# SCOPE: Error taxonomy, retryability, optional status and challenge metadata.
+# DEPENDS: FastMCP ToolError; stdlib json,enum,typing.
+# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# ErrorCode: Enumerate stable wire codes and their retryability.
+# ConnectorError: Carry provider/status/retry metadata and serialize failures.
+# AuthMissingError: Represent missing authentication with status 401.
+# RateLimitedError: Represent provider throttling and optional retry delay.
+# UpstreamTimeoutError: Represent upstream request deadlines.
+# TransportDownError: Represent transport refusal or outage.
+# ParserDriftError: Represent upstream parser/schema drift.
+# BadRequestError: Represent invalid requests with status 400.
+# NotFoundError: Represent unavailable resources with status 404.
+# PermissionDeniedError: Represent forbidden access with status 403.
+# ChallengeRequiredError: Add user-action, challenge and optional handoff metadata.
+# raise_tool_error: Raise FastMCP ToolError containing serialized connector error.
+# END_MODULE_MAP
 from __future__ import annotations
 
 import json

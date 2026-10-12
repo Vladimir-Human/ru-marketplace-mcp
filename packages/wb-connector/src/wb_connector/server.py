@@ -23,6 +23,27 @@ Polite rate limit: 1.5s gap on residential IP. Don't disable.
 
 NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
+# SCOPE: Read-only MCP tools; paced HTTP/CDN access and optional DOM card/search.
+# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport.
+# LINKS: M-WB; M-COMPARE; M-MARKETPLACE; packages/wb-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
+# _extract_price_rub: Separate current and basic prices, converting kopecks to rubles.
+# _wb_card_dom: Adapt operator-browser cards into the public response model.
+# _wb_search_dom: Adapt operator-browser search with explicit price semantics.
+# wb_card: Read a batch of product cards.
+# wb_root_info: Read root identity, variants and specifications from basket CDN.
+# wb_reviews: Read product review pools with sorting and pagination.
+# wb_questions: Read buyer questions from the questions endpoint.
+# wb_search: Search products with bounded result/page handling.
+# wb_seller: Read seller metadata from static seller endpoints.
+# wb_categories: Read and filter the category menu tree.
+# wb_category_products: Read paginated products for a catalog shard.
+# wb_selfcheck: Probe endpoint/parser health for operators; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

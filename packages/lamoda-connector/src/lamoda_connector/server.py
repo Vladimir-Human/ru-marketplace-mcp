@@ -19,6 +19,21 @@ as Megamarket — run lamoda_selfcheck from your Chrome first.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Lamoda product discovery and SKU enrichment.
+# SCOPE: Read-only GraphQL cards and browser search; challenge recovery handoffs.
+# DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
+# LINKS: M-LAMODA; M-COMPARE; M-MARKETPLACE; packages/lamoda-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _extract_sku: Resolve and normalize SKU handles or product URLs.
+# _search_item_from_tile: Normalize rendered price/title fields.
+# _graphql_card: Fetch product details, sizes and stock through GraphQL.
+# _cdp_render_search: Read browser search and recover explicit challenge handoffs.
+# lamoda_search: Return rendered catalog tiles with nullable prices.
+# lamoda_card: Return GraphQL-backed SKU details and availability.
+# lamoda_selfcheck: Diagnose operator endpoint/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

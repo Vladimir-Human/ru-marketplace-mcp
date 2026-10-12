@@ -24,6 +24,24 @@ Everything is injectable (clock, sleep, limits) so the tests exercise real
 concurrency without real waiting. Nothing here knows about Playwright or CDP:
 it is a budget, and ``open_page`` is the only caller that spends it.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Bound concurrent CDP navigation and cool down repeatedly refusing hosts.
+# SCOPE: Process-wide permits and host state; page lifetime does not hold permits.
+# DEPENDS: stdlib asyncio,os,time,contextlib,dataclasses; injectable clock/sleep.
+# LINKS: M-CDP-BUDGET; M-CHROME-CDP; M-TRANSPORT.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _env_int: Select valid integer configuration or a default.
+# _env_float: Select nonnegative cooldown configuration or a default.
+# HostRefusingError: Report an open host breaker and remaining cooldown.
+# Slot: Settle one outcome and release its permit idempotently.
+# NavigationBudget: Manage global/per-host semaphores and refusal history.
+# NavigationBudget.acquire: Check the breaker and acquire navigation capacity.
+# NavigationBudget.slot: Release a permit when its context exits.
+# NavigationBudget.snapshot: Report capacity and host breaker diagnostics.
+# navigation_budget: Lazily construct the shared budget from environment knobs.
+# budget_snapshot: Inspect the shared budget without navigating.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

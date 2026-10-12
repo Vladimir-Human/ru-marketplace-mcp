@@ -33,6 +33,22 @@ Chrome first — its verdict tells you which case you are in.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
+# SCOPE: Read-only CDP; search landing then card tab; x5sec refusal classification.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings.
+# LINKS: M-ALIEXPRESS; M-COMPARE; M-MARKETPLACE; packages/aliexpress-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _extract_item_id: Validate numeric item handles and AliExpress URLs.
+# _tile_prices: Separate current, old and conditional/coupon tile prices.
+# _cdp_render_search: Read the rendered search grid from a landing page.
+# _cdp_card: Open the item from the landing page and inspect the new tab.
+# _card_prices: Pair glyph-scored card prices without inventing absent modules.
+# aliexpress_search: Return normalized rendered offers and price warnings.
+# aliexpress_card: Return item details, ratings and orders, not review texts.
+# aliexpress_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

@@ -51,6 +51,21 @@ false positives. Only SmartCaptcha markers count.
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 ``log_event`` (stderr) or the ``Context`` logging methods.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Expose Yandex Market search and cards from server-rendered state.
+# SCOPE: Read-only paced HTML fetches; distinct everyday, Plus and old prices.
+# DEPENDS: FastMCP; httpx; mcp_core transport/cache; ssr; models_output; settings.
+# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; packages/yandex-connector/tests.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _fetch_html: Retry bounded page reads and classify HTTP/transport refusals.
+# _guard_parse_status: Distinguish captcha, empty product shell and parser drift.
+# _guard_values_drift: Reject implausible parsed field values.
+# _to_product: Adapt SSR fields to the public product model.
+# yandex_search: Return SSR/zone/fallback offers with explicit price and SKU identity.
+# yandex_card: Read product details and the card's embedded review sample.
+# yandex_selfcheck: Probe operator transport/parser health; not an MCP tool.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

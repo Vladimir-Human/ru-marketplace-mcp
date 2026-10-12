@@ -12,6 +12,17 @@ no gain. Nothing here is persisted, so a restart always re-reads upstream.
 
 Set ``*_CACHE_TTL=0`` (per connector) to disable caching entirely.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Cache idempotent reads with bounded LRU capacity and TTL expiry.
+# SCOPE: Process-local values and counters; no disk persistence or network policy.
+# DEPENDS: stdlib asyncio,time,collections,dataclasses,typing.
+# LINKS: M-CACHE; M-CORE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# CacheStats: Count hits, misses, evictions and expirations; derive hit rate.
+# TTLCache: Manage disabled caching, LRU access, invalidation and expiry.
+# TTLCache.get_or_fetch: Serialize misses and await the supplied factory.
+# END_MODULE_MAP
 
 from __future__ import annotations
 

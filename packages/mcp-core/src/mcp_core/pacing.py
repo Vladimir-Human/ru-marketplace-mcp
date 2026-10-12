@@ -21,6 +21,20 @@ live here once:
 Pure and dependency-free: the clock and the sleep are injectable, so the tests
 run in microseconds rather than really waiting.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Space source requests and back off after marketplace refusals.
+# SCOPE: Per-source in-memory pacing, refusal counters and operator hints.
+# DEPENDS: stdlib asyncio,random,time,collections.abc; injectable clock/sleep.
+# LINKS: M-PACING; M-HTTP-TIER; M-CDP-BUDGET.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# Pacer: Hold shared source timing, lock and consecutive refusal state.
+# Pacer.wait: Enforce the normal or one-shot jittered refusal gap.
+# Pacer.record_success: Reset refusal count and pending penalty.
+# Pacer.record_refusal: Increment refusal count and penalize the next wait.
+# Pacer.rotation_hint: Explain when the source needs IP/session intervention.
+# Pacer.reset: Clear pacing and refusal history.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
