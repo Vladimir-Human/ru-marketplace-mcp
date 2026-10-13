@@ -571,12 +571,13 @@ def test_wb_search_warns_when_no_result_has_a_price(monkeypatch):
     asyncio.run(scenario())
 
 
-def test_wb_search_rate_limit_is_surfaced_not_masked_by_fallback(monkeypatch):
+@pytest.mark.parametrize("err", [None, "HTTP 429"])
+def test_wb_search_rate_limit_is_surfaced_not_masked_by_fallback(monkeypatch, err):
     """A 429 from v9 must raise, not silently degrade to the stale-id path."""
 
     async def fake_safe_get_text(client, url):
         if "v9/search" in url:
-            return 429, "", None
+            return 429, "", err
         raise AssertionError("a 429 must not trigger the fallback")
 
     async def no_wait():
@@ -757,10 +758,107 @@ def test_wb_search_legacy_429_html_is_not_a_refusal(monkeypatch, endpoint):
     async def scenario():
         monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
-        result = await server.wb_search("x")
-        assert result.status == "no_results"
+        with pytest.raises(ToolError) as excinfo:
+            await server.wb_search("x")
+        payload = _tool_error_payload(excinfo)
+        assert payload["error"] == "rate_limited"
+        assert payload["status_code"] == 429
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("endpoint", ["search_goods", "fallback_enrich"])
+@pytest.mark.parametrize(
+    "reply, expected",
+    [
+        ((500, "", None), "transport_down"),
+        ((429, "", "HTTP 429"), "rate_limited"),
+        ((None, None, "connection failed"), "transport_down"),
+        ((200, "not JSON", None), "parser_drift"),
+        ((200, "{}", None), "parser_drift"),
+        ((200, "null", None), "parser_drift"),
+        ((200, '{"products": [null]}', None), "parser_drift"),
+    ],
+)
+def test_wb_search_failed_fallback_is_not_empty(monkeypatch, endpoint, reply, expected):
+    async def fake_safe_get_text(client, url):
+        if "v9/search" in url:
+            return 500, "", None
+        if "search-goods" in url and endpoint == "fallback_enrich":
+            return 200, json.dumps([123]), None
+        return reply
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(server.wb_search("x"))
+    assert _tool_error_payload(excinfo)["error"] == expected
+
+
+@pytest.mark.parametrize("endpoint", ["search_goods", "fallback_enrich"])
+def test_wb_search_fallback_http_exception_is_not_empty(monkeypatch, endpoint):
+    async def fake_safe_get_text(client, url):
+        if "v9/search" in url:
+            return 500, "", None
+        if "search-goods" in url and endpoint == "fallback_enrich":
+            return 200, json.dumps([123]), None
+        raise httpx.ConnectError("connection failed")
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(server.wb_search("x"))
+    assert _tool_error_payload(excinfo)["error"] == "transport_down"
+
+
+@pytest.mark.parametrize("body", ["not JSON", "{}", '{"products": null}'])
+def test_wb_search_primary_drift_survives_fallback_outage(monkeypatch, body):
+    async def fake_safe_get_text(client, url):
+        return (200, body, None) if "v9/search" in url else (500, "", None)
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(server.wb_search("x"))
+    assert _tool_error_payload(excinfo)["error"] == "parser_drift"
+
+
+def test_wb_search_unrecoverable_fallback_ids_without_positive_empty_are_drift(monkeypatch):
+    async def fake_safe_get_text(client, url):
+        return (500, "", None) if "v9/search" in url else (200, json.dumps([True, {"id": "²"}]), None)
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(server.wb_search("x"))
+    assert _tool_error_payload(excinfo)["error"] == "parser_drift"
+
+
+@pytest.mark.parametrize("body, total", [('{"products": [], "total": 0}', 0), ('{"products": []}', None)])
+def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, total):
+    async def fake_safe_get_text(client, url):
+        return (200, body, None) if "v9/search" in url else (500, "", None)
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    result = asyncio.run(server.wb_search("x"))
+    assert result.status == "no_results"
+    assert result.total_ids == total
 
 
 def test_wb_search_returns_no_results_when_both_paths_are_empty(monkeypatch):

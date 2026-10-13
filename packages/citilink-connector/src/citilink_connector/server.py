@@ -21,7 +21,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Citilink product search and cards from rendered pages.
-# SCOPE: Read-only operator-browser DOM; paced CDP reads; Qrator refusal detection.
+# SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
 # LINKS: M-CITILINK; M-COMPARE; M-MARKETPLACE; packages/citilink-connector/tests.
 # END_MODULE_CONTRACT
@@ -29,10 +29,11 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _extract_product_id: Validate bare handles or product URLs before navigation.
 # _search_item_from_tile: Normalize attached/current and old-price tile fields.
 # _cdp_render: Serialize paced browser navigation and extractor execution.
-# _is_qrator_wall: Distinguish proof-of-work pages from catalog data.
-# citilink_search: Return rendered search tiles and nullable prices.
-# citilink_card: Read buy-block price/stock and warn on in-stock missing prices.
-# citilink_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# _is_qrator_wall: Detect positive document-title or Qrator markup evidence.
+# _reject_qrator_wall: Invalidate cached walls and request operator browser action.
+# citilink_search: Validate rendered tiles before caching; allow nullable prices.
+# citilink_card: Validate before caching; warn only on in-stock missing prices.
+# citilink_selfcheck: Report walls as inconclusive(blocked); not an MCP tool.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -52,6 +53,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.dom import JS_HELPERS, prices_from_tile, title_from_tile
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     ParserDriftError,
     ToolError,
     TransportDownError,
@@ -76,7 +78,7 @@ from citilink_connector.shape_reference import SEARCH_REQUIRED_KEYS, SEARCH_SHAP
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.5.1"
+SERVER_VERSION = "2.5.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.citilink.ru"
@@ -228,7 +230,9 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    return JSON.stringify({items: out, title: document.title || ''});
+    // Qrator-specific DOM hooks are positive evidence; ordinary body words are not.
+    const qratorWall = docs.some(doc => !!doc.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]'));
+    return JSON.stringify({items: out, title: document.title || '', qrator_wall: qratorWall});
 }
 """
 
@@ -238,7 +242,9 @@ _CARD_EXTRACT_TEMPLATE = """
     // h1 first: the generic [class*="title"] fallback can pick a section heading.
     const titleEl = document.querySelector('h1')
         || document.querySelector('[class*="product-card-top__title"]');
-    const title = cleanText(titleEl) || document.title || null;
+    // Document titles describe the page, not necessarily a product (or even a card).
+    const title = cleanText(titleEl) || null;
+    const qratorWall = !!document.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]');
 
     // Scope the price hunt to the product's own buy block. Scanning the whole
     // body sweeps in recommendation snippets, instalment offers and bonus
@@ -274,7 +280,8 @@ _CARD_EXTRACT_TEMPLATE = """
         old_price_text: cleanText(oldPriceEl),
         price_texts: priceTexts,
         is_available: available,
-        page_title: document.title || ''
+        page_title: document.title || '',
+        qrator_wall: qratorWall
     });
 }
 """
@@ -321,8 +328,25 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:
-    title = str(data.get("title") or data.get("page_title") or "")
-    return "доступ ограничен" in title.lower() or "qrator" in title.lower() or not title.strip()
+    """Require positive challenge evidence, never an empty document title."""
+    # Cards keep the product title separate. Even a blank page_title is authoritative;
+    # search and legacy payloads store the document title under title instead.
+    title = str(data.get("page_title" if "page_title" in data else "title") or "").lower()
+    return "доступ ограничен" in title or "qrator" in title or data.get("qrator_wall") is True
+
+
+def _reject_qrator_wall(payload: dict[str, Any], url: str) -> None:
+    """Guard fresh and legacy cached payloads before any catalog mapping."""
+    if _is_qrator_wall(payload):
+        _cache.invalidate(url)
+        raise_tool_error(
+            ChallengeRequiredError(
+                "Citilink requires user action: open citilink.ru in the scraping-profile Chrome, "
+                "pass the Qrator check, then retry.",
+                provider="citilink",
+                challenge_type="qrator",
+            )
+        )
 
 
 @mcp.tool(
@@ -344,8 +368,11 @@ async def citilink_search(
 
     ## Error Format
 
-    ToolError: TransportDownError on CDP/Qrator failures; ParserDriftError when
-    a rendered page yields zero product tiles.
+    ToolError: ChallengeRequiredError (challenge_required) on a detected Qrator
+    wall: open citilink.ru in the scraping-profile Chrome, pass the check, retry.
+    TransportDownError on CDP/navigation failures; ParserDriftError when a
+    rendered page yields zero product tiles without challenge evidence.
+    Only validated successful searches are cached; cached legacy walls are invalidated.
     """
     log_event("citilink_search.start", query=query[:60])
     try:
@@ -365,7 +392,7 @@ async def citilink_search(
                     )
                 )
             tier = "cdp"
-            _cache.set(url, payload)
+        _reject_qrator_wall(payload, url)
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:
             raise_tool_error(
@@ -380,6 +407,8 @@ async def citilink_search(
         result = CitilinkSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="citilink_search")
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -415,8 +444,11 @@ async def citilink_card(
     ## Error Format
 
     ToolError: BadRequestError when the URL carries no product id;
-    TransportDownError on CDP/Qrator failures; ParserDriftError when a rendered
-    card has neither title nor price.
+    ChallengeRequiredError (challenge_required) on a detected Qrator wall: open
+    citilink.ru in the scraping-profile Chrome, pass the check, then retry.
+    TransportDownError on CDP/navigation failures; ParserDriftError when a rendered
+    card has neither product title nor price without challenge evidence.
+    Only validated successful cards are cached; cached legacy walls are invalidated.
     """
     log_event("citilink_card.start", input=product_url[:80])
     try:
@@ -441,7 +473,7 @@ async def citilink_card(
             except NavBlocked as exc:
                 raise_tool_error(TransportDownError(f"Citilink navigation blocked (HTTP {exc.status})."))
             tier = "cdp"
-            _cache.set(url, payload)
+        _reject_qrator_wall(payload, url)
         title = title_from_tile(payload)
         price, old_price = prices_from_tile(payload)
         if title is None and price is None:
@@ -471,6 +503,8 @@ async def citilink_card(
             result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="citilink_card"
         )
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -487,8 +521,9 @@ async def citilink_selfcheck(ctx: Context | None = None) -> CitilinkSelfcheckRes
     """Structural drift canary for Citilink (tri-state). Renders one live search
     page in the operator's Chrome and checks tiles extract.
 
-    Qrator-blocked or CDP-down is ``inconclusive`` (transport), NEVER drift.
-    Only a rendered page that yields zero tiles is ``drift``.
+    A detected Qrator wall is ``inconclusive`` with reason ``blocked``; CDP-down
+    is ``inconclusive`` with reason ``transport_down``, NEVER drift. Rendered
+    pages without challenge evidence can report tile or required-shape drift.
 
     ## Return Format
 
@@ -532,7 +567,11 @@ async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResp
         )
     else:
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
-        if items_raw:
+        if _is_qrator_wall(payload):
+            checks["search"] = R.selfcheck_entry(
+                "inconclusive", baseline=baseline, reason="blocked", notes=["Qrator challenge in rendered page"]
+            )
+        elif items_raw:
             # Tiles extract — now ask the second question: did the SHAPE move?
             # The registry was measured on a captured page; a live payload that
             # loses a parser-critical path is structural drift even while tiles

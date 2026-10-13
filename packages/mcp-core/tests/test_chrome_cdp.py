@@ -1,10 +1,8 @@
-"""Tests for the pure helpers in ``mcp_core.transport.chrome_cdp``.
+"""Offline helpers and fake attach/raw-CDP tests for ``chrome_cdp``.
 
-The CDP tier itself needs a real Chrome and the operator's own session, so it
-cannot be tested offline. These functions can: they compute paths, candidate
-binaries, ports and hints from the environment and the platform, and they are
-exactly where a quiet mistake would send the connector looking for Chrome in the
-wrong place on someone else's OS.
+The helpers compute paths, candidate binaries, ports and environment hints;
+fake Playwright and HTTP objects reproduce attach-timeout diagnostics without
+an operator session.
 
 Platform-specific branches are driven by patching ``sys.platform``, so Linux CI
 still covers the Windows and macOS paths.
@@ -376,6 +374,133 @@ def test_socket_module_is_the_real_one():
     assert chrome_cdp.socket is socket
 
 
+# ----------------------------------------------------------- attach timeout ----
+
+
+@pytest.mark.parametrize("page_count", [0, 10])
+async def test_attach_timeout_reports_open_tabs_and_preserves_raw_fallback(monkeypatch, page_count):
+    import json
+    import urllib.request
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    from mcp_core.errors import TransportDownError
+
+    calls = []
+
+    async def connect(url, *, timeout):
+        assert (url, timeout) == (chrome_cdp.CDP_URL, 10_000)
+        raise chrome_cdp._PlaywrightTimeoutError("attach stalled")
+
+    @asynccontextmanager
+    async def playwright():
+        yield SimpleNamespace(chromium=SimpleNamespace(connect_over_cdp=connect))
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            return json.dumps([{"type": "page"}] * page_count + [{"type": "service_worker"}]).encode()
+
+    def urlopen(url, *, timeout):
+        calls.append((url, timeout))
+        return Response()
+
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: True)
+    monkeypatch.setattr(chrome_cdp, "async_playwright", playwright)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(chrome_cdp._CdpConnectTimeout) as caught:
+        async with chrome_cdp.get_browser():
+            pytest.fail("a failed attach must not yield a browser")
+
+    message = str(caught.value)
+    assert "timed out after 10 s" in message
+    assert f"{page_count} tabs are open in the scraping Chrome" in message
+    assert "close tabs" in message.lower() and "retry" in message.lower()
+    assert "version" not in message.lower() and "newer" not in message.lower()
+    assert isinstance(caught.value, TransportDownError)
+    assert isinstance(caught.value, RuntimeError)
+    assert caught.value.to_dict()["error"] == "transport_down"
+    assert calls == [(f"{chrome_cdp.CDP_URL}/json/list", 2.0)]
+
+
+async def test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too(monkeypatch):
+    """When the raw-CDP fallback also fails, the error still names the open tabs."""
+    from contextlib import asynccontextmanager
+
+    from mcp_core.errors import TransportDownError
+
+    @asynccontextmanager
+    async def attach_times_out(_url, _wait_ms):
+        raise chrome_cdp._CdpConnectTimeout("attach timed out after 10 s; 12 tabs are open in the scraping Chrome.")
+        yield
+
+    @asynccontextmanager
+    async def raw_fails(_url, _wait_ms):
+        raise TimeoutError("raw navigation stalled")
+        yield
+
+    monkeypatch.setattr(chrome_cdp, "_playwright_page", attach_times_out)
+    monkeypatch.setattr(chrome_cdp, "_raw_cdp_page", raw_fails)
+
+    with pytest.raises(TransportDownError) as caught:
+        async with chrome_cdp.open_page("https://example.com/", 0):
+            pytest.fail("a failed fallback must not yield a page")
+
+    message = str(caught.value)
+    assert "12 tabs are open" in message
+    assert "raw-CDP fallback failed too: TimeoutError" in message
+
+
+@pytest.mark.parametrize("failure", ["network", "invalid_json", "not_a_list"])
+async def test_attach_timeout_reports_unavailable_tab_count_neutrally(monkeypatch, failure):
+    import urllib.request
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    async def connect(*_args, **_kwargs):
+        raise chrome_cdp._PlaywrightTimeoutError("attach stalled")
+
+    @asynccontextmanager
+    async def playwright():
+        yield SimpleNamespace(chromium=SimpleNamespace(connect_over_cdp=connect))
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            return b"not JSON" if failure == "invalid_json" else b"{}"
+
+    def urlopen(*_args, **_kwargs):
+        if failure == "network":
+            raise OSError("private upstream details must not leak")
+        return Response()
+
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: True)
+    monkeypatch.setattr(chrome_cdp, "async_playwright", playwright)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(chrome_cdp._CdpConnectTimeout) as caught:
+        async with chrome_cdp.get_browser():
+            pytest.fail("a failed attach must not yield a browser")
+
+    message = str(caught.value)
+    assert "timed out after 10 s" in message
+    assert "open tab count could not be obtained" in message
+    assert "close tabs" in message.lower() and "retry" in message.lower()
+    assert "version" not in message.lower() and "newer" not in message.lower()
+    assert "private upstream" not in message
+
+
 # ------------------------------------------------------------- probe_session ----
 
 
@@ -410,8 +535,7 @@ def test_probe_session_never_raises(monkeypatch):
 
 
 def test_probe_session_reports_reachable_when_only_the_playwright_attach_fails(monkeypatch):
-    """Chrome >= 151: Playwright cannot attach, but raw CDP answers — the probe
-    must say reachable (the transport falls back), not 'down'."""
+    """A timed-out Playwright attach can leave raw CDP usable, not 'down'."""
 
     class _AttachFails:
         async def __aenter__(self):
@@ -432,10 +556,10 @@ def test_probe_session_reports_reachable_when_only_the_playwright_attach_fails(m
     assert "raw CDP" in str(result["reason"])
 
 
-# ------------------------------------------------- raw-CDP fallback (Chrome >=151) ----
+# ----------------------------------------------------------- raw-CDP fallback ----
 #
-# Chrome >= 151 no longer answers Playwright's connect_over_cdp handshake, so
-# open_page falls back to driving one tab over raw CDP. The wrapper JS and the
+# When Playwright's attach times out, open_page falls back to driving one tab
+# over raw CDP. The wrapper JS and the
 # page shim are testable offline; the websocket below is a fake that replays
 # canned CDP messages.
 

@@ -23,6 +23,7 @@ Ground truth at capture time: 89 990 ₽ now, 105 990 crossed out, in stock
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -89,3 +90,53 @@ def test_availability_is_read_from_text_content_not_inner_text() -> None:
     code = "\n".join(line.split("//")[0] for line in server._CARD_EXTRACT_JS.splitlines())
     assert "innerText" not in code, "card extractor went back to innerText"
     assert "textContent" in code
+
+
+def _extract_inline(html: str) -> dict:
+    source = (
+        "() => { document.documentElement.innerHTML = "
+        + json.dumps(html)
+        + "; return ("
+        + server._CARD_EXTRACT_JS
+        + ")(); }"
+    )
+    return _extract(source)
+
+
+@pytest.mark.parametrize("page_title", ["Доступ ограничен", "Qrator", "Citilink", ""])
+def test_card_document_title_is_not_a_product_title(page_title):
+    payload = _extract_inline(f"<head><title>{page_title}</title></head><body>Check your browser</body>")
+    assert payload["title"] is None
+    assert payload["page_title"] == page_title
+    assert server._is_qrator_wall(payload) is (page_title in ("Доступ ограничен", "Qrator"))
+
+
+def test_card_document_title_does_not_override_product_title():
+    payload = _extract_inline("<head><title>Доступ ограничен</title></head><body><h1>Ноутбук Lenovo</h1></body>")
+    assert payload["title"] == "Ноутбук Lenovo"
+    assert payload["page_title"] == "Доступ ограничен"
+    assert server._is_qrator_wall(payload) is True
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        '<script src="https://qrator.net/challenge.js"></script>',
+        '<div id="qrator-challenge"></div>',
+        '<div class="qrator-check"></div>',
+    ],
+)
+def test_card_extractor_detects_qrator_markup_without_document_title(markup):
+    payload = _extract_inline(f"<head><title></title></head><body>{markup}</body>")
+    assert payload["title"] is None
+    assert payload["qrator_wall"] is True
+    assert server._is_qrator_wall(payload) is True
+
+
+def test_card_extractor_ignores_qrator_words_in_product_content():
+    payload = _extract_inline(
+        "<head><title>Citilink</title></head><body><h1>Qrator notebook</h1><p>Доступ ограничен</p></body>"
+    )
+    assert payload["title"] == "Qrator notebook"
+    assert payload["qrator_wall"] is False
+    assert server._is_qrator_wall(payload) is False

@@ -268,6 +268,18 @@ def test_prices_in_skips_instalments_and_reads_nbsp() -> None:
     assert D.prices_in("−45% РАСПРОДАЖА") == []
 
 
+@pytest.mark.parametrize("sign", ["-", "−", "–"])
+@pytest.mark.parametrize("space", ["", " ", "\u00a0"])
+def test_prices_in_rejects_negative_discount_badges(sign: str, space: str) -> None:
+    assert D.prices_in(f"Скидка {sign}{space}1 500 ₽; цена 2 000 ₽") == [2000.0]
+
+
+@pytest.mark.parametrize("amount", ["1 234,56", "1\u00a0234.56", "1234,5"])
+def test_prices_in_preserves_fractional_roubles(amount: str) -> None:
+    expected = 1234.5 if amount.endswith(",5") else 1234.56
+    assert D.prices_in(f"{amount} ₽") == [expected]
+
+
 # --------------------------------------------------------------- search grid
 
 
@@ -554,6 +566,39 @@ def test_dom_search_empty_grid_is_drift_unless_the_page_says_empty(
         assert json.loads(str(exc.value))["error"] == "parser_drift"
     else:
         assert _run(server.wb_search(query="UPD2018", page=page)).status == "no_results"
+
+
+def test_dom_empty_search_keeps_nondefault_region_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "dom")
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        return {"tiles": [], "page_says_empty": True}
+
+    monkeypatch.setattr(D, "render", fake_render)
+    result = _run(server.wb_search(query="nothing", dest="-1029256"))
+    assert result.status == "no_results"
+    data = result.model_dump(mode="json")
+    assert data["meta"]["source"] == "wb_search"
+    assert data["meta"]["healthy"] is True
+    assert data["meta"]["warnings"] == server._dom_dest_warning("-1029256")
+    assert json.loads(result.model_dump_json())["meta"] == data["meta"]
+
+
+def test_dom_empty_search_without_warnings_keeps_compact_wire(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "dom")
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        return {"tiles": [], "page_says_empty": True}
+
+    monkeypatch.setattr(D, "render", fake_render)
+    result = _run(server.wb_search(query="nothing"))
+    assert result.model_dump(mode="json") == {
+        "status": "no_results",
+        "query": "nothing",
+        "page": 1,
+        "total_ids": 0,
+        "meta": None,
+    }
 
 
 def test_tools_route_to_dom_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:

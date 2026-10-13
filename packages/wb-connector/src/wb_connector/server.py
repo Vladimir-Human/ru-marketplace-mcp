@@ -33,7 +33,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
 # _extract_price_rub: Separate current and basic prices, converting kopecks to rubles.
 # _wb_card_dom: Adapt operator-browser cards into the public response model.
-# _wb_search_dom: Adapt operator-browser search with explicit price semantics.
+# _wb_search_dom: Adapt operator-browser search with price semantics and region warnings.
+# _search_via_search_goods: Return legacy products or typed failures, never failed emptiness.
 # wb_card: Read a batch of product cards.
 # wb_root_info: Read root identity, variants and specifications from basket CDN.
 # wb_reviews: Read product review pools with sorting and pagination.
@@ -67,6 +68,7 @@ from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
+    ConnectorError,
     NotFoundError,
     ParserDriftError,
     RateLimitedError,
@@ -102,7 +104,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.5.1"
+SERVER_VERSION = "2.5.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
@@ -782,10 +784,15 @@ async def _wb_search_dom(
                 provider="wb",
             )
         )
+    warnings = _dom_dest_warning(dest) + warnings
     if not items:
         log_event("wb_search.no_results", transport="dom", query=query[:100], page=page)
-        return WbNoResultsResponse(query=query, page=page, total_ids=0)
-    warnings = _dom_dest_warning(dest) + warnings
+        return WbNoResultsResponse(
+            query=query,
+            page=page,
+            total_ids=0,
+            meta=MetaOut(source="wb_search", healthy=True, warnings=warnings[:10]) if warnings else None,
+        )
     log_event("wb_search.done", transport="dom", items=len(items), page=page)
     return WbSearchResponse(
         query=query,
@@ -1547,24 +1554,23 @@ async def wb_search(
 ) -> WbSearchResponse | WbNoResultsResponse:
     """Search WB catalog by text query.
 
-    Uses the lightweight `search-goods.wildberries.ru/search` endpoint which
-    returns just product IDs (no PoW protection, very high rate limit). Then
-    enriches via `wb_card` for full details.
+    Uses search.wb.ru v9 product data, with a warned legacy IDs/card fallback.
+    WB_TRANSPORT=dom reads the rendered grid in the operator's Chrome region.
 
     ## Return Format
 
     WbSearchResponse: {query, page, page_size, total_ids, count, items, meta},
     with items in the same shape as wb_card. Zero matches — or a page past the
     end — returns WbNoResultsResponse {status: "no_results", query, page,
-    total_ids} instead. That is NOT an error.
+    total_ids} instead. Optional meta reports DOM warnings only when present.
+    That is NOT an error; unknown totals remain null.
 
     ## Error Format
 
     ToolError: BadRequestError on a page outside 1..20; RateLimitedError on
-    HTTP 429 from the v9 search endpoint; TransportDownError on HTTP 401/403,
-    HTML walls from either search path, or unexpected internal errors.
-    Plain transport failures of both search paths degrade to
-    a no_results response rather than an error.
+    HTTP 429; ParserDriftError on malformed JSON/shapes when neither path
+    answers successfully; TransportDownError on refusals or transport failures.
+    Failed reads never become no_results without a positive empty answer.
 
     Args:
         query: Russian text.
@@ -1612,7 +1618,7 @@ async def wb_search(
 
         products: list[Any] = []
         total_found: int | None = None
-        v9_error: str | None = None
+        v9_error: ConnectorError | None = None
 
         try:
             async with _wb_client() as client:
@@ -1628,24 +1634,24 @@ async def wb_search(
                         status_code=status_code,
                     )
                 )
-            if err:
-                v9_error = err
-            elif status_code == 429:
+            if status_code == 429:
                 # v9 is 429-prone by design; surface it honestly rather than
                 # silently degrading to the stale-id path.
                 log_event("wb_search.rate_limited", endpoint="v9")
                 raise_tool_error(RateLimitedError("wb", retry_after_s=60.0))
-            elif status_code != 200:
-                v9_error = f"HTTP {status_code}"
+            if err or status_code != 200:
+                v9_error = TransportDownError(
+                    _redact(err or f"wb_search v9: HTTP {status_code}"), provider="wb", status_code=status_code
+                )
             else:
                 try:
                     v9_data = json.loads(text or "")
                 except json.JSONDecodeError as exc:
-                    v9_error = f"invalid JSON: {exc}"
+                    v9_error = ParserDriftError(f"wb_search v9: invalid JSON: {exc}", provider="wb")
                 else:
                     v9_obj, v9_shape_error = _expect_json_object(v9_data, "wb_search v9 response")
                     if v9_shape_error or v9_obj is None:
-                        v9_error = "unexpected response shape"
+                        v9_error = ParserDriftError("wb_search v9: unexpected response shape", provider="wb")
                     else:
                         raw_products = v9_obj.get("products")
                         if not isinstance(raw_products, list):
@@ -1660,24 +1666,32 @@ async def wb_search(
                                 if isinstance(metadata, dict):
                                     total_found = R.coerce_int(metadata.get("total"))
                         else:
-                            v9_error = "no products array in response"
+                            v9_error = ParserDriftError("wb_search v9: no products array in response", provider="wb")
         except ToolError:
             raise
         except httpx.HTTPError as exc:
-            v9_error = f"{type(exc).__name__}: {exc}"
+            v9_error = TransportDownError(_redact(f"{type(exc).__name__}: {exc}"), provider="wb")
 
         fallback_used = False
         if not products:
-            # FALLBACK: the legacy two-step path. Its ids skew stale, but a stale
-            # result beats no result when v9 is unavailable, and the response is
-            # flagged so the caller knows which path produced it.
-            log_event("wb_search.v9_unavailable", error=_redact(v9_error or "empty result"))
+            # Legacy data is flagged when usable. Failure is not emptiness; only
+            # a positively empty primary response can survive a failed fallback.
+            log_event("wb_search.v9_unavailable", error=_redact(str(v9_error) if v9_error else "empty result"))
             fallback_used = True
-            products, total_found = await _search_via_search_goods(query, dest, page, ctx)
+            try:
+                products, total_found = await _search_via_search_goods(query, dest, page, ctx)
+            except ConnectorError as fallback_error:
+                log_event("wb_search.fallback_failed", error=_redact(str(fallback_error)))
+                if v9_error is not None:
+                    if isinstance(fallback_error, RateLimitedError):
+                        raise_tool_error(fallback_error)
+                    if isinstance(v9_error, ParserDriftError):
+                        raise_tool_error(v9_error)
+                    raise_tool_error(fallback_error)
 
         if not products:
             log_event("wb_search.no_results", query=query[:100])
-            return WbNoResultsResponse(query=query, page=page, total_ids=total_found or 0)
+            return WbNoResultsResponse(query=query, page=page, total_ids=total_found)
 
         # Past the end, WB repeats page 1 rather than returning nothing. Honour
         # the documented contract — a page past the end is "no results" — instead
@@ -1689,7 +1703,7 @@ async def wb_search(
                 _page1_fingerprints.set(fp_key, fingerprint)
         elif fingerprint and _page1_fingerprints.get(fp_key) == fingerprint:
             log_event("wb_search.page_wrapped", query=query[:100], page=page)
-            return WbNoResultsResponse(query=query, page=page, total_ids=total_found or 0)
+            return WbNoResultsResponse(query=query, page=page, total_ids=total_found)
 
         page_size = 100 if not fallback_used else 30
         item_dicts: list[dict[str, Any]] = []
@@ -1836,9 +1850,9 @@ async def _search_via_search_goods(
     skew stale — verified Jul 2026, a query whose v9 results were all in stock came
     back from this path entirely delisted — so callers are warned when it is used.
 
-    Returns ``(products, total)``; an empty list simply means "nothing usable",
-    which the caller reports as no results. A refusal (401/403 or an HTML wall)
-    raises transport_down instead, so a block never reads as an empty search (#101).
+    Returns ``(products, total)`` only for parsed upstream answers. Transport,
+    throttling and malformed payloads raise typed ConnectorErrors for the caller
+    to combine with v9's outcome. Refusals remain immediate ToolErrors (#101).
     """
     sg_params = httpx.QueryParams({"query": query, "dest": dest})
     sg_url = f"https://search-goods.wildberries.ru/search?{sg_params}"
@@ -1860,21 +1874,30 @@ async def _search_via_search_goods(
                     status_code=status_code,
                 )
             )
-        if err or status_code != 200 or not text:
-            log_event("wb_search.fallback_failed", status=status_code, error=_redact(err or ""))
-            return [], None
-        ids = json.loads(text)
-    except (httpx.HTTPError, json.JSONDecodeError) as exc:
-        log_event("wb_search.fallback_failed", error=_redact(str(exc)))
-        return [], None
+        if status_code == 429:
+            raise RateLimitedError("wb")
+        if err or status_code != 200:
+            raise TransportDownError(
+                _redact(err or f"wb_search search-goods: HTTP {status_code}"), provider="wb", status_code=status_code
+            )
+        ids = json.loads(text or "")
+    except httpx.HTTPError as exc:
+        raise TransportDownError(_redact(str(exc)), provider="wb") from exc
+    except json.JSONDecodeError as exc:
+        raise ParserDriftError(f"wb_search search-goods: invalid JSON: {exc}", provider="wb") from exc
 
-    if not isinstance(ids, list) or not ids:
-        return [], None
+    if not isinstance(ids, list):
+        raise ParserDriftError("wb_search search-goods: expected an ids list", provider="wb")
+    if not ids:
+        return [], 0
 
     page_size = 30
     start = (page - 1) * page_size
-    page_ids = _recover_search_ids(ids[start : start + page_size])
+    raw_page_ids = ids[start : start + page_size]
+    page_ids = _recover_search_ids(raw_page_ids)
     if not page_ids:
+        if raw_page_ids:
+            raise ParserDriftError("wb_search search-goods: no recoverable ids", provider="wb")
         return [], len(ids)
 
     card_params = httpx.QueryParams(
@@ -1904,21 +1927,26 @@ async def _search_via_search_goods(
                     status_code=status_code,
                 )
             )
-        if err or status_code != 200 or not text:
-            log_event("wb_search.fallback_enrich_failed", status=status_code, error=_redact(err or ""))
-            return [], len(ids)
-        card_data = json.loads(text)
-    except (httpx.HTTPError, json.JSONDecodeError) as exc:
-        log_event("wb_search.fallback_enrich_failed", error=_redact(str(exc)))
-        return [], len(ids)
+        if status_code == 429:
+            raise RateLimitedError("wb")
+        if err or status_code != 200:
+            raise TransportDownError(
+                _redact(err or f"wb_search fallback card: HTTP {status_code}"), provider="wb", status_code=status_code
+            )
+        card_data = json.loads(text or "")
+    except httpx.HTTPError as exc:
+        raise TransportDownError(_redact(str(exc)), provider="wb") from exc
+    except json.JSONDecodeError as exc:
+        raise ParserDriftError(f"wb_search fallback card: invalid JSON: {exc}", provider="wb") from exc
 
     card_obj, shape_error = _expect_json_object(card_data, "wb_search fallback card response")
     if shape_error or card_obj is None:
-        return [], len(ids)
+        raise ParserDriftError("wb_search fallback card: expected an object", provider="wb")
     products, products_error = _card_products_checked(card_obj)
-    if products_error:
-        log_event("wb_search.fallback_enrich_failed", error=products_error)
-        return [], len(ids)
+    if products_error or any(not isinstance(product, dict) for product in products):
+        raise ParserDriftError(
+            f"wb_search fallback card: {products_error or 'products contain non-objects'}", provider="wb"
+        )
     return products, len(ids)
 
 

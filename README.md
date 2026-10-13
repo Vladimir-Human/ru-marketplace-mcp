@@ -67,7 +67,7 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
-**Проверка 2.5.1:** 12 октября с одного адреса selfcheck прошли Ozon, Яндекс Маркет (поиск и карточка), Детский мир, Авито (поиск, карточка, продавец), Taobao, Ситилинк, AliExpress и Циан; Lamoda, DNS и Мегамаркет прошли после прохождения проверки в Chrome, но их куки живут минуты; Wildberries отвечает через `WB_TRANSPORT=dom`. Дрейфа не найдено, визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.1.md).
+**Проверка 2.5.2:** 13 октября с одного адреса selfcheck прошли Ozon, Яндекс Маркет, Детский мир, Авито (поиск, карточка, продавец), Taobao, Ситилинк, AliExpress и Циан; Wildberries отвечает через `WB_TRANSPORT=dom`. Lamoda, DNS и Мегамаркет честно отвечают «заблокировано», пока человек не пройдёт их проверку в Chrome: куки живут минуты (12 октября после проверки они работали). Дрейфа не найдено, визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.2.md).
 
 ## Быстрый старт
 
@@ -80,7 +80,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2002 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2266 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -600,7 +600,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2002 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2266 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -666,7 +666,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2002 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2266 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -703,7 +703,7 @@ hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
 
-**2.5.1 verification:** on 12 October, from one address, Ozon, Yandex Market (search and card), Detsky Mir, Avito (search, card, seller), Taobao, Citilink, AliExpress and Cian passed selfcheck; Lamoda, DNS and Megamarket passed right after the browser check was cleared, but their cookies last minutes; Wildberries answers through `WB_TRANSPORT=dom`. No drift; no visual acceptance. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.1.md).
+**2.5.2 verification:** on 13 October, from one address, Ozon, Yandex Market, Detsky Mir, Avito (search, card, seller), Taobao, Citilink, AliExpress and Cian passed selfcheck; Wildberries answers through `WB_TRANSPORT=dom`. Lamoda, DNS and Megamarket report blocked until a human clears their browser check, whose cookies last minutes (on 12 October they worked right after it). No drift; no visual acceptance. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.2.md).
 
 ## What you get
 
@@ -754,7 +754,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2002 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2266 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -1139,7 +1139,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2002 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2266 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1201,7 +1201,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2002 offline
+are confidently wrong, so the project is arranged around verification: 2266 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

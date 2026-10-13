@@ -183,11 +183,12 @@ jobs:
         # suite without coverage. Deselects live/cdp so the measured percentage
         # matches the offline suite the floor was derived from.
         #
-        # Measured branch-coverage total on the offline suite was 77.74%; the
-        # 70% floor sits a couple of points below so unrelated churn does not
-        # break the build while the number still ratchets up. --cov reads its
+        # Measured branch-coverage total on the offline suite was 83.2% at
+        # v2.5.1 (77.74% when the floor was introduced at 70%); the 80% floor
+        # sits a few points below so unrelated churn does not break the build
+        # while the number still ratchets up. --cov reads its
         # source/omit (and branch=true) from [tool.coverage.run] in pyproject.toml.
-        run: uv run pytest -q -m "not live and not cdp" --cov --cov-report=term-missing --cov-fail-under=70
+        run: uv run pytest -q -m "not live and not cdp" --cov --cov-report=term-missing --cov-fail-under=80
 
   smoke:
     name: Server smoke test

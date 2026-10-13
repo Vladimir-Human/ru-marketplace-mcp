@@ -174,10 +174,107 @@ async def test_challenge_recovery_reads_browser_again_and_caches_only_success(mo
 
 
 async def test_product_card_mentioning_captcha_remains_product_data(monkeypatch):
-    _patch_render(monkeypatch, {**CARD_EXTRACTED, "body_snippet": "Please complete CAPTCHA"})
+    # A passive widget contributes to raw body text, not the visible snippet.
+    payload = {
+        **CARD_EXTRACTED,
+        "body_snippet": "Please complete CAPTCHA",
+        "challenge_snippet": CARD_EXTRACTED["title"],
+    }
+    _patch_render(monkeypatch, payload)
     result = await server.taobao_card("123456789012")
     assert result.title == CARD_EXTRACTED["title"]
     assert result.price_cny == CARD_EXTRACTED["price_cny"]
+
+
+@pytest.mark.parametrize(
+    "price_fields",
+    [{}, {"price_cny": 12.5}, {"price_texts": {"attached": ["¥12.5"], "other": []}}],
+    ids=["no_price", "legacy_price", "extracted_price"],
+)
+async def test_card_generic_title_challenge_is_not_cached_and_retry_reads_browser(monkeypatch, price_fields):
+    from mcp_core.cache import TTLCache
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+    blocked = {
+        "title": "淘宝网",
+        "page_title": "淘宝网",
+        "body_snippet": "亲，请拖动下方滑块完成验证后继续浏览",
+        "_handoff_expires_at": "2026-10-13T09:00:00Z",
+        "_handoff_id": "taobao-card-handoff",
+        **price_fields,
+    }
+    reads = []
+
+    async def render(url, extract_js, wait_ms, ctx):
+        reads.append(url)
+        return blocked if len(reads) == 1 else CARD_EXTRACTED
+
+    monkeypatch.setattr(server, "_cdp_render", render)
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_card("123456789012")
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["provider"] == "taobao"
+    assert error["challenge_type"] == "captcha"
+    assert error["requires_user_action"] is True
+    assert error["handoff_expires_at"] == blocked["_handoff_expires_at"]
+    assert error["handoff_id"] == blocked["_handoff_id"]
+    assert len(server._cache) == 0
+
+    recovered = await server.taobao_card("123456789012")
+    assert recovered.status == "success"
+    assert recovered.title == CARD_EXTRACTED["title"]
+    assert recovered.tier_used == "cdp"
+    assert len(reads) == 2
+    cached = await server.taobao_card("123456789012")
+    assert cached.tier_used == "cache"
+    assert len(reads) == 2
+
+
+@pytest.mark.parametrize("legacy_marker", [False, True], ids=["visible_challenge", "legacy_marker"])
+async def test_card_positive_challenge_evidence_precedes_product_mapping(monkeypatch, legacy_marker):
+    payload = {
+        **CARD_EXTRACTED,
+        "title": "__BLOCKED__" if legacy_marker else CARD_EXTRACTED["title"],
+        "body_snippet": "Please complete CAPTCHA",
+    }
+    assert server._anti_bot_challenge(payload) is True
+    _patch_render(monkeypatch, payload)
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_card("123456789012")
+    assert json.loads(str(excinfo.value))["error"] == "challenge_required"
+    assert len(server._cache) == 0
+
+
+@pytest.mark.parametrize(
+    "title,price_fields",
+    [
+        ("淘宝网", {}),
+        ("淘宝网", {"price_cny": 12.5}),
+        ("淘宝网", {"price_texts": {"attached": ["¥12.5"], "other": []}}),
+        (CARD_EXTRACTED["title"], {"price_cny": 9999.0}),
+        ("__BLOCKED__", {"price_cny": 9999.0}),
+    ],
+    ids=["generic_title", "legacy_price", "extracted_price", "product_fields", "legacy_marker"],
+)
+def test_card_handoff_classifier_recognizes_challenge_despite_title_or_price(title, price_fields):
+    payload = {
+        "title": title,
+        "page_title": "淘宝网",
+        "body_snippet": "Please complete CAPTCHA",
+        **price_fields,
+    }
+    assert server._page_challenge_kind(payload) == "captcha"
+
+
+def test_card_handoff_classifier_ignores_passive_hidden_widget_text():
+    payload = {
+        **CARD_EXTRACTED,
+        "body_snippet": "Please complete CAPTCHA",
+        "challenge_snippet": CARD_EXTRACTED["title"],
+    }
+    assert server._anti_bot_challenge(payload) is False
+    assert server._page_challenge_kind(payload) is None
 
 
 async def test_search_maps_zero_items_to_parser_drift(monkeypatch):

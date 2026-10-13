@@ -190,6 +190,9 @@ class WbNoResultsResponse(BaseModel):
     query: str = Field(default="", description="Search query text.")
     page: int | None = Field(default=None, description="Search page number if applicable.")
     total_ids: int | None = Field(default=None, description="Total ids from search-goods if applicable.")
+    # Plain None rather than a custom serializer: a wrap serializer turns the
+    # advertised output schema into a bare object and drops every field.
+    meta: MetaOut | None = Field(default=None, description="Validation metadata; null unless there are warnings.")
 
 
 class WbSelfCheckEntry(SelfCheckEntryBase):

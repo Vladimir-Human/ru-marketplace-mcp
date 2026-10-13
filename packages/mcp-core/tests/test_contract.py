@@ -11,6 +11,7 @@ Offline by construction: no network, no Chrome, just the helpers and fixtures.
 
 from __future__ import annotations
 
+import pytest
 from mcp_core import resilience as R
 
 # ----------------------------------------------------------- None-not-zero ----
@@ -82,11 +83,10 @@ def test_megamarket_reports_whether_an_items_container_existed():
 def test_avito_firewall_body_is_not_parsed_as_items():
     """The firewall JSON must not silently yield a plausible empty result."""
     from avito_connector.server import _parse_search_items
+    from mcp_core.errors import ConnectorError
 
-    items, total = _parse_search_items({"too-many-requests": {"message": "blocked"}})
-
-    assert items == [], "a firewall body produced items"
-    assert total is None
+    with pytest.raises(ConnectorError):
+        _parse_search_items({"too-many-requests": {"message": "blocked"}})
 
 
 def test_megamarket_code7_is_detected_as_a_block_not_data():

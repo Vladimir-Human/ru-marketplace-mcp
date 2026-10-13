@@ -9,6 +9,51 @@
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-10-13
+
+### Fixed
+
+- DNS and Citilink: a Qrator page served with HTTP 200 was cached before any
+  check, and a card took the page's own title («Доступ ограничен») as the
+  product name and answered success. The wall check existed but was never
+  called. Walls are now recognised from positive evidence (document title or
+  Qrator markup, never an empty title alone) before mapping and caching, answer
+  `challenge_required`, and selfcheck reports them as blocked, not drift.
+- Taobao cards check for a challenge before mapping, whatever the title or
+  price; text inside hidden widgets cannot fake one.
+- `wb_search`: when v9 failed and the legacy fallback failed too (429, HTTP
+  error, bad JSON), the answer was `no_results`. It is now `rate_limited`,
+  `parser_drift` or `transport_down`; `no_results` needs a positive empty
+  answer, and an unknown total stays `null`. With `WB_TRANSPORT=dom` an empty
+  search keeps the warning that Chrome's region was used instead of `dest`, a
+  «-500 ₽» badge is no longer read as a price, and kopecks are kept.
+- Avito search: an HTTP-200 error envelope raises `challenge_required`,
+  `rate_limited` or `transport_down`; a body without an items list is
+  `parser_drift`. Previously both were an empty successful search.
+- `avito_card` reads shop listings that carry no schema.org Product from the
+  page markers (title, a price with an explicit ₽, description); the page's
+  item id must match. On 2026-10-13 one listing in six had no Product, and the
+  canary reported drift whenever such a listing came first. `images` is `null`
+  when the page does not say, not 0.
+- `wb_search` no-results answers carry `meta: null` unless there are warnings.
+- Ozon: a body without `widgetStates` is `parser_drift`, not an empty card;
+  a later review page without it still returns the collected reviews as
+  partial. Megamarket: a `success: false` envelope no longer becomes a card
+  stamped with the requested id, and is never cached.
+- Browser tier: an attach timeout reports how many tabs are open in the
+  scraping Chrome instead of blaming the Chrome version; an idle-expired
+  handoff frees its tab at the idle deadline; `aliexpress_card` matches the
+  full item id, closes only the popup it opened and bounds every close;
+  a cancellation during tab hand-over closes the tab. When the raw-CDP
+  fallback fails after an attach timeout, the error keeps the tab count, and
+  `doctor` advises closing unused tabs.
+- `scripts/start_chrome_cdp.ps1` parses in Windows PowerShell 5.1 (it had
+  non-ASCII dashes in a file without a BOM).
+
+### Changed
+
+- The CI coverage floor is 80 % (was 70 %); the offline suite measures 84.7 %.
+
 ## [2.5.1] - 2026-10-12
 
 ### Fixed

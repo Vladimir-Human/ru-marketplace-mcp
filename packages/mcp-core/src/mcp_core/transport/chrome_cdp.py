@@ -34,15 +34,17 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # START_MODULE_CONTRACT
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
-# DEPENDS: Playwright; optional websockets; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT.
+# DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
 # _start_chrome_with_cdp: Spawn a dedicated-profile Chrome on loopback.
 # _ensure_cdp_running: Serialize loopback-only autostart and bounded readiness wait.
 # _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
-# get_browser: Attach Playwright and bound detach without owning browser shutdown.
+# _CdpConnectTimeout: Preserve raw fallback while reporting a transport-down attach timeout.
+# get_browser: Attach Playwright, diagnose timeout tab counts and bound detach without shutdown.
+# _page_target_count: Count HTTP page targets or report an unavailable list.
 # get_context: Yield the attached browser's existing default context.
 # NavBlocked: Carry rejected main-document status and final URL.
 # probe_session: Return CDP reachability and raw-fallback diagnostics.
@@ -51,7 +53,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # current_page_url: Refresh raw main-frame URL without extracting document content.
 # reveal_owned_page: Best-effort foreground activation of only the owned target.
 # _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
-# _new_tab: Claim a Playwright page by its created CDP target ID.
+# _new_tab: Claim a created target ID and close it if cancellation prevents handback.
 # _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
 # NavigationPolicyError: Report a final URL outside the caller's policy.
 # open_page: Budget navigation, select transport and yield an owned page until cleanup.
@@ -80,6 +82,7 @@ from urllib.parse import urlsplit, urlunsplit
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
+from mcp_core.errors import TransportDownError
 from mcp_core.transport.cdp_budget import navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
@@ -445,14 +448,11 @@ def cdp_setup_hint() -> str:
     return "run scripts/start_chrome_cdp.sh"
 
 
-class _CdpConnectTimeout(RuntimeError):
-    """Chrome listens on the CDP port, but Playwright cannot finish the attach.
+class _CdpConnectTimeout(TransportDownError, RuntimeError):
+    """Playwright's attach timed out; callers may still try raw CDP.
 
-    Chrome >= 151 stopped answering Playwright's connect_over_cdp handshake:
-    the websocket connects, then the driver's attach sequence hangs until
-    timeout while plain CDP commands over the same socket answer fine. Callers
-    that see this should fall back to the raw-CDP path instead of blaming the
-    marketplace.
+    Attaching waits for existing pages to initialize, so numerous or stalled
+    tabs can exhaust the attach budget even when plain CDP commands work.
     """
 
 
@@ -472,9 +472,20 @@ async def get_browser() -> AsyncIterator[Browser]:
         try:
             browser = await p.chromium.connect_over_cdp(CDP_URL, timeout=10_000)
         except _PlaywrightTimeoutError as exc:
+            tabs = None
+            try:
+                async with asyncio.timeout(2.0):
+                    tabs = await asyncio.to_thread(_page_target_count, path="/json/list", timeout_s=2.0)
+            except Exception:
+                pass
+            detail = (
+                f"{tabs} tabs are open in the scraping Chrome"
+                if tabs is not None
+                else "the open tab count could not be obtained"
+            )
             raise _CdpConnectTimeout(
-                f"Playwright could not attach to Chrome on {CDP_HOST}:{CDP_PORT} "
-                "(Chrome newer than Playwright's CDP handshake supports)"
+                f"Playwright attach to Chrome on {CDP_HOST}:{CDP_PORT} timed out after 10 s; {detail}. "
+                "Close tabs it does not need and retry."
             ) from exc
         try:
             yield browser
@@ -548,7 +559,10 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
         pages = _raw_page_count()
         result["reachable"] = True
         result["contexts"] = pages
-        result["reason"] = "playwright attach unsupported by this Chrome; raw CDP answers"
+        result["reason"] = (
+            f"playwright attach timed out with {pages} tabs open; raw CDP answers. "
+            "Close the tabs the scraping Chrome does not need."
+        )
     except Exception as exc:
         result["reachable"] = False
         result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
@@ -558,8 +572,8 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 # Raw-CDP fallback
 #
-# Chrome >= 151 no longer completes Playwright's connect_over_cdp handshake,
-# but the same browser answers plain CDP over the websocket without trouble.
+# Playwright can time out while initializing existing tabs during its attach,
+# even when the same browser still answers plain CDP over the websocket.
 # Everything below drives one tab over that raw protocol, exposing exactly the
 # two things the connectors use from a Playwright Page: ``evaluate`` and
 # ``url``. It only ever runs when the Playwright attach timed out.
@@ -572,16 +586,23 @@ _RAW_MAX_FRAME_BYTES = max(
 )
 
 
-def _raw_page_count() -> int:
-    """Count page targets via the CDP HTTP endpoint (no websocket needed)."""
+def _page_target_count(*, path: str, timeout_s: float) -> int | None:
+    """Count HTTP-discovered page targets, distinguishing failure from zero tabs."""
     import urllib.request
 
     try:
-        with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
+        with urllib.request.urlopen(f"{CDP_URL}{path}", timeout=timeout_s) as resp:
             targets = json.loads(resp.read())
+        if not isinstance(targets, list):
+            return None
         return sum(1 for t in targets if isinstance(t, dict) and t.get("type") == "page")
     except Exception:
-        return 0
+        return None
+
+
+def _raw_page_count() -> int:
+    """Count page targets via the CDP HTTP endpoint (no websocket needed)."""
+    return _page_target_count(path="/json", timeout_s=3) or 0
 
 
 def _browser_ws_url() -> str | None:
@@ -971,7 +992,20 @@ async def _new_tab(ctx: BrowserContext) -> Page:
     except Exception:
         return await ctx.new_page()
     target_id: str | None = None
-    claimed = False
+    claimed_page: Page | None = None
+
+    async def close_owned_target() -> None:
+        try:
+            # The browser CDP session may already be disposed during detach.
+            close = (
+                claimed_page.close()
+                if claimed_page is not None
+                else cdp.send("Target.closeTarget", {"targetId": target_id})
+            )
+            await asyncio.wait_for(close, timeout=_RAW_CONNECT_TIMEOUT_S)
+        except Exception:
+            pass
+
     try:
         async with asyncio.timeout(_TAB_OP_TIMEOUT_S):
             created = await cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
@@ -996,19 +1030,19 @@ async def _new_tab(ctx: BrowserContext) -> Page:
                     except Exception:
                         continue
                     if info.get("targetInfo", {}).get("targetId") == target_id:
-                        claimed = True
+                        claimed_page = page
                         return page
                 await asyncio.sleep(0.01)
     finally:
-        if target_id is not None and not claimed:
-            try:
-                await asyncio.wait_for(
-                    cdp.send("Target.closeTarget", {"targetId": target_id}), timeout=_RAW_CONNECT_TIMEOUT_S
-                )
-            except Exception:
-                pass
+        if target_id is not None and claimed_page is None:
+            await close_owned_target()
         try:
             await asyncio.wait_for(cdp.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+        except asyncio.CancelledError:
+            # A claimed page is not handed back until this detach completes.
+            if claimed_page is not None:
+                await asyncio.shield(close_owned_target())
+            raise
         except Exception:
             pass
 
@@ -1085,7 +1119,7 @@ async def open_page(
         yielding a page that only looks like content;
       * tab creation, navigation and teardown are individually bounded, so a
         wedged CDP session cannot hang a tool call indefinitely;
-      * when Playwright cannot finish its attach handshake (Chrome >= 151),
+      * when Playwright times out initializing existing tabs during attach,
         the same tab lifecycle runs over raw CDP instead.
 
     Host allowlisting stays the caller's responsibility — each connector knows
@@ -1118,8 +1152,17 @@ async def open_page(
     try:
         try:
             page = await stack.enter_async_context(_playwright_page(url, wait_ms))
-        except _CdpConnectTimeout:
-            page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+        except _CdpConnectTimeout as attach_exc:
+            try:
+                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+            except (NavBlocked, NavigationPolicyError):
+                raise
+            except Exception as raw_exc:
+                # Keep the attach diagnosis (open tab count) in what the
+                # operator sees; the raw error alone hides the likely cause.
+                raise TransportDownError(
+                    f"{attach_exc} The raw-CDP fallback failed too: {type(raw_exc).__name__}: {str(raw_exc)[:160]}"
+                ) from raw_exc
         _check_final_host(page.url, host_policy)
         permit.ok()
     except NavBlocked as exc:

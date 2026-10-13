@@ -55,6 +55,8 @@
     <test file="packages/mcp-core/tests/test_http_tier.py" title="test_returns_status_and_body" coverage="facade import" checks="HTTP primitives imported via transport; no exact __all__ or optional-browser import isolation assertion" />
   </entry>
   <entry id="V-M-BROWSER-HANDOFF" module="M-BROWSER-HANDOFF" file="packages/mcp-core/src/mcp_core/transport/browser_handoff.py">
+    <test file="packages/mcp-core/tests/test_browser_handoff.py" title="test_idle_expiry_closes_owned_page_without_further_requests" checks="Fake retained page closes without another request when idle is shorter than lifetime; registry slot and visibility guard are released" />
+    <test file="packages/mcp-core/tests/test_browser_handoff.py" title="test_idle_budget_restarts_after_completed_read_or_snapshot" checks="Fake read and snapshot completion refresh idle waits without extending the immutable lifetime; idle expiry performs owned cleanup" />
     <test file="packages/mcp-core/tests/test_browser_handoff.py" title="test_challenge_resumes_exact_page_with_new_read_and_immutable_expiry" checks="Fake owned page reuse and immutable expiry; companion scope/operation/query/endpoint/profile isolation, busy/capacity, cancellation/deadline/shutdown, closure/payload release, host rechecks, snapshot liveness/ownership and queued-result cleanup" />
     <test file="packages/mcp-core/tests/test_handoff_reporting.py" title="test_the_resume_that_clears_the_challenge_reports_both_facts" checks="Fake resume/clear/data-change notes; companion unknown first comparison, unchanged payload, busy/full hints and opaque unknown versus owned expired handles" />
     <test file="packages/mcp-core/tests/test_handoff_liveness_consistency.py" title="test_an_idle_expired_lease_is_not_handed_out" checks="Live lifetime but expired idle budget yields no handle and snapshot rejection; companion live handle remains available" />
@@ -66,6 +68,10 @@
     <test file="packages/mcp-core/tests/test_review_regressions.py" title="test_our_own_policy_error_does_not_reset_the_hosts_refusal_record" checks="Neutral policy outcome preserves refusal count and open breaker" />
   </entry>
   <entry id="V-M-CHROME-CDP" module="M-CHROME-CDP" file="packages/mcp-core/src/mcp_core/transport/chrome_cdp.py">
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_attach_timeout_reports_open_tabs_and_preserves_raw_fallback" checks="Fake attach timeout retains transport-down/raw-fallback error compatibility, unchanged ten-second attach budget and bounded HTTP page-only tab count including zero" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too" checks="An attach timeout followed by a failed raw-CDP fallback surfaces transport_down that still names the open tab count" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_attach_timeout_reports_unavailable_tab_count_neutrally" checks="Mocked HTTP failure, invalid JSON and non-list response report unavailable tab count with retry advice and no Chrome-version blame" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_stealth.py" title="test_new_tab_closes_claimed_target_when_cancelled_during_detach" checks="Fake cancellation during final detach closes only the claimed Page even after CDP-session disposal; stalled close is bounded and cancellation is preserved" />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_probe_session_reports_reachable_when_only_the_playwright_attach_fails" checks="Mocked raw-fallback diagnostics; companion host/port/profile/binary/probe/platform/status helpers, optional Node evaluate-wrapper examples and fake raw command/event navigation assertions" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_raw_lifecycle.py" title="test_raw_target_closed_after_every_postcreation_failure" checks="Mocked discovery/JSON/socket/enable/navigation/body failure cleanup; exact target close on success and bounded cleanup preserving errors/cancellation" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_stealth.py" title="test_new_tab_matches_distinct_targets_under_interleaved_creation" checks="Six fake created target IDs stay distinct; companion background/fallback/session detach and mocked macOS profile PID/window hiding; no real desktop observation" />
@@ -79,6 +85,20 @@
   </entry>
   <entry id="V-M-WB" module="M-WB" file="packages/wb-connector/src/wb_connector/server.py">
     <test file="packages/wb-connector/tests/test_helpers.py" checks="Version/manifests, basket boundaries, IDs, tool/helper cases and mocked bounded transport failures" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_failed_fallback_is_not_empty" checks="Synthetic legacy ids/enrichment outages, 429, JSON and shape failures surface typed errors rather than no_results" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_fallback_http_exception_is_not_empty" checks="ConnectError on either legacy leg surfaces transport_down" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_primary_drift_survives_fallback_outage" checks="Primary JSON/container drift takes precedence over legacy transport failure" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_unrecoverable_fallback_ids_without_positive_empty_are_drift" checks="Invalid nonempty ids cannot certify an empty search when v9 failed" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_positive_empty_survives_fallback_failure" checks="Positive v9 empty answer remains no_results; absent total remains null" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_legacy_429_html_is_not_a_refusal" checks="Changed assertion: HTML 429 on either legacy leg is rate_limited, not no_results or a transport wall" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_rate_limit_is_surfaced_not_masked_by_fallback" checks="V9 HTTP429 wins even when transport supplies an error string" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_dom_empty_search_keeps_nondefault_region_warning" checks="Empty DOM search reports that requested dest was ignored for Chrome region" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_dom_empty_search_without_warnings_keeps_compact_wire" checks="No warning metadata is serialized on default-region empty searches" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_rejects_negative_discount_badges" checks="ASCII minus, Unicode minus and en dash discount amounts are never prices, including spaced signs" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_preserves_fractional_roubles" checks="Comma/dot decimals and grouped NBSP prices retain fractional roubles" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_region_warning_matches_shape_golden" checks="Synthetic no_results warning metadata shape is pinned inline" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_without_warning_matches_compact_shape_golden" checks="Unwarned no_results keeps its fields with meta null" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_output_schema_keeps_its_fields" checks="The no-results serialization schema lists status, query, page, total_ids and meta instead of a bare object" />
     <test file="packages/wb-connector/tests/test_parser_live.py" checks="Offline captured search-v9/card-v4 values, positive finite RUB prices, colors and recorded search/card price differences" />
     <test file="packages/wb-connector/tests/test_dom_transport.py" checks="Offline text fixtures and fake render: Wallet/regular/old prices and challenge stops" />
     <test file="packages/wb-connector/tests/test_pagination_wrap.py" checks="Order-sensitive leading-ID fingerprints, short/malformed pages, query/region scope and unseen-page-one disarming" />
@@ -88,6 +108,9 @@
   </entry>
   <entry id="V-M-OZON" module="M-OZON" file="packages/ozon-connector/src/ozon_connector/server.py">
     <test file="packages/ozon-connector/tests/test_server.py" checks="Mocked worker timeout/recovery, scrubbed environments, callable/path guards, redaction and composer card/review/search parsing" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_ozon_tools_require_widget_states_object" checks="Missing/renamed widgetStates raises parser_drift in card, reviews and search; existing nonobject guards remain covered" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_ozon_tools_preserve_empty_widget_states_success" checks="Present empty widgetStates objects retain existing successful response semantics" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_reviews_missing_widget_states_on_later_page_is_partial" checks="Missing/nonobject widgetStates after a valid review page keeps the collected reviews as partial=True with stop_reason parse" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" checks="Offline captured composer tiles, displayed prices, stock labels and canonical card inputs" />
     <test file="packages/ozon-connector/tests/test_shape_reference.py" checks="Captured composer normalization matches shape golden" />
     <test file="packages/ozon-connector/tests/test_settings_secrets.py" checks="Proxy secret absent from settings dumps but available to fetch" />
@@ -110,7 +133,22 @@
   </entry>
   <entry id="V-M-AVITO" module="M-AVITO" file="packages/avito-connector/src/avito_connector/server.py">
     <test file="packages/avito-connector/tests/test_server.py" coverage="offline; not run" checks="Mocked search envelopes, CDP Product-page cards and rendered seller profiles, nullable prices and unavailable fields, location/category rejection, firewall/nonJSON classification and search-card-seller canary verdicts" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_rejects_http200_json_error_envelopes" checks="Synthetic challenge/throttle/service error envelopes raise typed failures despite HTTP200, with refusal pacing" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_rejects_missing_or_invalid_items_container" checks="Absent, renamed and wrong-type known items containers raise parser_drift" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_accepts_explicit_empty_items_container" checks="Known top-level, catalog and data empty items lists remain valid healthy results" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_error_detection_ignores_listing_content" checks="Listing title keywords cannot be misclassified as envelope errors" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_selfcheck_http200_json_errors_are_inconclusive" checks="Challenge/rate/outage envelopes do not certify empty health or parser drift in operator selfcheck" />
     <test file="packages/avito-connector/tests/test_item_page.py" coverage="19 new offline cases; not run" checks="Captured Product ground truth, paced allowlisted page.content CDP path and stripped query/fragment, bare Product and matching SKU, nullable/non-RUB prices, missing/malformed/empty Product drift, catalog-envelope regression, removed ads, NavBlocked refusal backoff/404/503 and timeout taxonomy" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_card_captured_dom_page_matches_exact_ground_truth" checks="Captured no-JSON-LD B2C card reads exact DOM title, rouble price and page id, description and company seller reputation/profile without counting the seller logo as a listing image" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_selfcheck_first_dom_result_is_healthy" checks="Search-first captured DOM card and its seller block feed a healthy canary chain with a mocked profile smoke" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_card_dom_item_id_mismatch_is_parser_drift" checks="DOM identity for another listing raises typed parser_drift, never a successful card" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_card_dom_without_title_or_price_is_parser_drift" checks="Matching item id and description alone cannot make an empty DOM card successful" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_dom_missing_or_ambiguous_item_id_is_parser_drift" checks="Missing, mismatched or ambiguous page identity fails closed" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_dom_conflicting_item_id_markers_are_parser_drift" checks="A matching first item-id marker cannot hide a conflicting or empty duplicate identity" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_dom_missing_or_non_ruble_prices_are_none_never_zero" checks="Missing, zero, non-rouble, currency-less and ambiguous DOM prices stay null while title-only cards remain valid" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_dom_price_only_card_requires_matching_id" checks="A usable rouble price with verified identity suffices even without a DOM title" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_product_path_wins_over_conflicting_dom_markers" checks="Existing JSON-LD Product values win unchanged even when DOM markers disagree" />
+    <test file="packages/avito-connector/tests/test_item_page.py" title="test_empty_or_mismatched_product_does_not_fall_back_to_dom" checks="DOM fallback never hides an empty or wrong-SKU Product" />
     <test file="packages/avito-connector/tests/test_seller_pages.py" coverage="41 new offline cases (16 parser, 15 integration, 10 chain); not run" checks="parse_item_seller and parse_seller_profile reputation/profile extraction, brands/user URL and bare-id routing, paced allowlisted rendered CDP reads, unavailable active_items and search-card-seller canary chain" />
     <test file="packages/avito-connector/tests/test_live_payload_contract.py" checks="Offline captured envelope, price_detailed, place/URL fields, safe finite ISO timestamps, totals and absent seller" />
     <test file="packages/avito-connector/tests/test_shape_reference.py" checks="Captured required shape families, absent families and older envelope compatibility" />
@@ -118,6 +156,13 @@
   </entry>
   <entry id="V-M-TAOBAO" module="M-TAOBAO" file="packages/taobao-connector/src/taobao_connector/server.py">
     <test file="packages/taobao-connector/tests/test_server.py" checks="Fake rendered CNY items, nullable prices, login/challenge states and success-only recovery cache" />
+    <test file="packages/taobao-connector/tests/test_server.py" title="test_card_generic_title_challenge_is_not_cached_and_retry_reads_browser" checks="Synthetic generic-title CAPTCHA with absent/legacy/extracted price is rejected before cache; handoff metadata and immediate successful browser retry preserved" />
+    <test file="packages/taobao-connector/tests/test_server.py" title="test_card_positive_challenge_evidence_precedes_product_mapping" checks="Visible and legacy challenge evidence overrides otherwise plausible product fields" />
+    <test file="packages/taobao-connector/tests/test_server.py" title="test_card_handoff_classifier_recognizes_challenge_despite_title_or_price" checks="Handoff classifier ignores title/price success-looking fields when challenge evidence is positive" />
+    <test file="packages/taobao-connector/tests/test_server.py" title="test_card_handoff_classifier_ignores_passive_hidden_widget_text" checks="A visibility-filtered card snippet prevents passive hidden CAPTCHA text from becoming a handoff" />
+    <test file="packages/taobao-connector/tests/test_anti_bot_challenge_dom.py" title="test_card_extractor_generic_title_challenge_is_recognized_by_handoff" checks="Inline synthetic generic-title punish page is recognized from real card extractor output" />
+    <test file="packages/taobao-connector/tests/test_anti_bot_challenge_dom.py" title="test_card_extractor_hidden_widget_cannot_fake_a_challenge" checks="Inline synthetic hidden, aria-hidden, CSS display/visibility and baxia widget subtrees do not create card challenges" />
+    <test file="packages/taobao-connector/tests/test_anti_bot_challenge_dom.py" title="test_card_extractor_visible_challenge_overrides_product_fields" checks="Inline synthetic visible challenge overrides real extracted product title and price candidates" />
     <test file="packages/taobao-connector/tests/test_search_extractor_dom.py" checks="Offline extractor grid/IDs, attached yuan prices, hidden prices and shared helpers" />
     <test file="packages/taobao-connector/tests/test_card_extractor_dom.py" checks="Offline title/shop/sales/images and current/old prices excluding coupons" />
     <test file="packages/taobao-connector/tests/test_search_extractor_live_dom.py" checks="Offline captured titles, split-price layout and shop/sales/location; not live-marked" />
@@ -128,6 +173,11 @@
   </entry>
   <entry id="V-M-MEGAMARKET" module="M-MEGAMARKET" file="packages/megamarket-connector/src/megamarket_connector/server.py">
     <test file="packages/megamarket-connector/tests/test_server.py" checks="Mocked browser POST/redirect/address context, card/search totals, missing-price None, absent-container drift versus empty result and code7 refusal" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_card_failed_envelope_never_becomes_requested_id_success" checks="Synthetic failed envelopes raise not_found, transport_down or parser_drift; never cache phantom requested-id cards or record successful pacing" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_search_failed_envelope_with_empty_items_is_not_success" checks="Explicit service failures override an empty items container" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_existing_http_refusal_handling" checks="Existing HTTP401/403/429 refusal taxonomy and pacing remain unchanged" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_successful_empty_search_envelope" checks="Successful empty items with no errors remain valid" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_successful_empty_goods_as_not_found" checks="Successful empty goods remains not_found, never a phantom card" />
     <test file="packages/megamarket-connector/tests/test_parser_live.py" checks="Offline captured container/total/items and finite positive RUB values" />
     <test file="packages/megamarket-connector/tests/test_shape_reference.py" checks="Captured search normalization matches shape golden" />
   </entry>
@@ -144,18 +194,55 @@
   </entry>
   <entry id="V-M-DNS" module="M-DNS" file="packages/dns-connector/src/dns_connector/server.py">
     <test file="packages/dns-connector/tests/test_server.py" checks="Fake rendered search/card values, nullable prices, URL rejection, empty-grid/card drift and selfcheck health" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_qrator_wall_is_rejected_without_poisoning_cache" checks="Synthetic search/card title and markup walls; fresh and legacy-cached rejection, no cache writes, immediate recovery and success cache" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_empty_document_title_is_not_qrator_wall" checks="Absent, empty and null document titles alone never indicate a wall" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_qrator_wall_uses_document_title_not_product_name" checks="Card page_title is authoritative even when blank; product wording cannot create or hide a challenge" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_selfcheck_qrator_wall_is_inconclusive" checks="Synthetic title/markup walls are inconclusive/blocked with unknown health, including misleading tiles" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_unmarked_empty_page_remains_parser_drift" checks="Unmarked empty search/card remains parser_drift and is not cached" />
+    <test file="packages/dns-connector/tests/test_server.py" title="test_title_only_card_without_a_price_is_valid" checks="Product-only title with absent price remains a valid card with null price" />
+    <test file="packages/dns-connector/tests/test_card_extractor_dom.py" title="test_card_extractor_never_uses_document_title_as_product_name" checks="Inline synthetic wall and generic-page titles remain separate page_title, never product title" />
+    <test file="packages/dns-connector/tests/test_card_extractor_dom.py" title="test_extractors_surface_qrator_markup" checks="Inline synthetic Qrator node/script markup is surfaced by both extractors and classified as a wall" />
+    <test file="packages/dns-connector/tests/test_card_extractor_dom.py" title="test_extractors_ignore_qrator_words_in_product_text" checks="Inline synthetic product text mentioning Qrator or restricted access is not challenge evidence" />
     <test file="packages/dns-connector/tests/test_search_extractor_dom.py" checks="Offline real grid/tile roots, prices excluding installments, old prices without glyphs, concatenated-blob rejection and zero-as-None" />
     <test file="packages/dns-connector/tests/test_card_extractor_dom.py" checks="Offline captured title/current-only price/stock, installment exclusion and textContent" />
     <test file="packages/dns-connector/tests/test_shape_reference.py" checks="Captured search/card shapes" />
   </entry>
   <entry id="V-M-CITILINK" module="M-CITILINK" file="packages/citilink-connector/src/citilink_connector/server.py">
     <test file="packages/citilink-connector/tests/test_server.py" checks="Fake rendered tiles/cards, nullable prices/drift and in-stock missing-price warning with unhealthy metadata" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_qrator_wall_requires_positive_document_evidence" checks="Synthetic document-title precedence and explicit markup; blank titles and product wording are not walls" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_search_rejects_qrator_wall_before_mapping_and_never_caches" checks="Title/markup walls rejected before tile mapping and cache writes" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_card_rejects_qrator_wall_before_mapping_and_never_caches" checks="Title/markup walls rejected despite misleading product fields, with operator challenge instructions" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_qrator_wall_retry_renders_immediately_and_caches_success" checks="Fresh and legacy-cached search/card walls are removed; immediate browser retry and success-only cache" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_empty_page_is_drift_without_cache" checks="Unmarked empty search/card remains parser_drift and is not cached" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_search_with_empty_document_title_and_missing_prices_is_accepted" checks="Blank document title does not block real tiles with null prices" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_card_with_empty_document_title_and_missing_price_is_accepted" checks="Product-only title remains valid with a blank page title and null price" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_selfcheck_qrator_wall_is_blocked_not_drift" checks="Synthetic title/markup walls yield inconclusive/blocked even with misleading tiles" />
+    <test file="packages/citilink-connector/tests/test_server.py" title="test_selfcheck_empty_document_is_drift" checks="No positive wall evidence leaves an empty page as real drift" />
+    <test file="packages/citilink-connector/tests/test_search_extractor_dom.py" title="test_search_extractor_recognizes_document_title_wall" checks="Inline synthetic restricted-access and Qrator document titles identify walls" />
+    <test file="packages/citilink-connector/tests/test_search_extractor_dom.py" title="test_search_extractor_detects_qrator_markup_without_document_title" checks="Inline synthetic Qrator nodes/scripts surface explicit markup evidence" />
+    <test file="packages/citilink-connector/tests/test_search_extractor_dom.py" title="test_search_extractor_empty_document_is_not_a_wall" checks="An empty document without positive evidence is not a challenge" />
+    <test file="packages/citilink-connector/tests/test_search_extractor_dom.py" title="test_search_extractor_ignores_qrator_words_in_product_content" checks="Inline synthetic product wording never masquerades as a wall" />
+    <test file="packages/citilink-connector/tests/test_card_extractor_dom.py" title="test_card_document_title_is_not_a_product_title" checks="Inline synthetic wall and generic page titles never become product titles" />
+    <test file="packages/citilink-connector/tests/test_card_extractor_dom.py" title="test_card_document_title_does_not_override_product_title" checks="Product node and document title remain independent" />
+    <test file="packages/citilink-connector/tests/test_card_extractor_dom.py" title="test_card_extractor_detects_qrator_markup_without_document_title" checks="Inline synthetic Qrator nodes/scripts are explicit card challenge evidence" />
+    <test file="packages/citilink-connector/tests/test_card_extractor_dom.py" title="test_card_extractor_ignores_qrator_words_in_product_content" checks="Product title/body wording alone does not indicate a wall" />
     <test file="packages/citilink-connector/tests/test_search_extractor_dom.py" checks="Offline split glyph/current-old pairing, title/metadata hooks and bonus/delivery noise exclusion" />
     <test file="packages/citilink-connector/tests/test_card_extractor_dom.py" checks="Offline buy-block current/old prices, recommendation/credit/bonus exclusion and missing-meta fallback" />
     <test file="packages/citilink-connector/tests/test_card_out_of_stock_dom.py" checks="Offline unavailable card keeps None prices/false availability; recommendation price never substitutes" />
     <test file="packages/citilink-connector/tests/test_shape_reference.py" checks="Captured search/card shapes" />
   </entry>
   <entry id="V-M-ALIEXPRESS" module="M-ALIEXPRESS" file="packages/aliexpress-connector/src/aliexpress_connector/server.py">
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_popup_matches_full_item_id" checks="Fake sibling with a longer numeric item ID is never read or closed; full IDs with HTML suffix, query or end-of-URL succeed" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_popup_arriving_before_open_returns_is_owned" checks="Fake popup delivered before opener evaluation returns remains discoverable and is closed exactly as owned" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_cleanup_leaves_other_process_and_operator_tabs" checks="Same-item and unrelated-item foreign popups, unknown blank and preexisting operator tabs are neither extracted nor closed" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_cleans_only_positively_owned_blank_or_challenge_popup" checks="Fake opener attribution closes owned blank/challenge popups on discovery failure while unknown-owner siblings survive" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_cancellation_cleans_owned_popup" checks="Cancellation during window opening, popup discovery and extraction closes only the owned popup and releases the module lock" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_matched_popup_challenge_redirect_keeps_owned_cleanup" checks="Fake matched popup redirects during extraction and is closed exactly once without touching the operator tab" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_repeated_cancellation_waits_for_bounded_owned_cleanup" checks="Repeated caller cancellation keeps the lock until shielded close reaches its short deadline" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_cancellation_cleans_popup_registered_after_open_cancel" checks="Deterministically delayed registration after the first cleanup snapshot is observed and only the owned popup is closed" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_early_redirect_retains_popup_ownership" checks="Landing-page popup observer retains positive identity through a redirect before item discovery; listener removed after cleanup" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_cancelled_cleanup_task_does_not_spin" checks="Completed child cancellation propagates without a hot retry loop and releases listener and lock" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" title="test_card_popup_close_is_bounded_and_releases_lock" checks="Stalled fake popup close is cancelled at the short close budget; successful card result and lock release are preserved" />
     <test file="packages/aliexpress-connector/tests/test_server.py" checks="Fake CDP current/base/coupon pairing, None prices, reordered sticky modules, punish refusal, empty-grid drift and selfcheck" />
     <test file="packages/aliexpress-connector/tests/test_parser_live.py" coverage="offline fixtures plus one cdp-marked function; not run" checks="Three captured-grid/card jsdom tests; test_live_cdp_reads_a_real_grid_and_card skips without Chrome, requires real grid/title, permits None or positive card price" />
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" checks="Offline search/card extraction shape goldens" />
