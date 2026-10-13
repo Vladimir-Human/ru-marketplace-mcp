@@ -62,7 +62,7 @@ class AvitoCardResponse(BaseModel):
     location: str | None = Field(default=None, description="Item location string.")
     posted_at: str | None = Field(default=None, description="Publication time as reported by Avito.")
     views: int | None = Field(default=None, description="Total view count.")
-    images: int = Field(default=0, description="Number of images attached.")
+    images: int | None = Field(default=None, description="Number of images attached; None when the page does not say.")
     seller: AvitoSellerOut | None = Field(default=None, description="Seller info.")
     url: str = Field(default="", description="Canonical avito.ru listing URL.")
     tier_used: str = Field(default="", description="Fetch tier used.")

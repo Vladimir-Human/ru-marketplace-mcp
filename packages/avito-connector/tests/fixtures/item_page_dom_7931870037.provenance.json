@@ -1,0 +1,19 @@
+{
+  "url": "https://www.avito.ru/voronezh/noutbuki/shustrye_noutbuki_dlya_ucheby_raboty_pvz_na_ssd_7931870037",
+  "captured_at": "2026-10-13",
+  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP (page.content()), taken from the supplied full capture. Trimmed by selecting balanced original source spans for <title>, h1[data-marker=\"item-view/title-info\"], and the item-view/item-price-container, item-view/item-id, item-view/item-description and item-view/seller-info blocks, in source order, separated by LF. The one nested visibility-tracking <script> in the price container was dropped; every retained byte of the selected spans is unchanged (no HTML reserialization or invented markup). All other page content, especially the header showing the operator's own account and all other scripts, was dropped. The retained description and seller block contain no phone number or e-mail. The full capture is not part of this fixture.",
+  "ground_truth": {
+    "item_id": 7931870037,
+    "title": "Шустрые ноутбуки для учебы, работы, пвз на SSD",
+    "price_rub": 8700,
+    "seller": {
+      "name": "Роман 36 ноутбуков",
+      "rating_score": 5.0,
+      "rating_count": 116,
+      "is_company": true,
+      "profile_url": "https://www.avito.ru/brands/i224915198"
+    },
+    "note": "No application/ld+json in the full page. The document title is generic: «Авито — Объявления на сайте Авито». The item title is the marked h1; the price is 8&nbsp;700 with a nested &nbsp;₽&nbsp; span inside [data-marker=\"item-view/item-price\"] / span#bx_item-price-value (no price content/itemprop attributes); the item-id marker carries №&nbsp;7931870037. Description paragraphs are in item-view/item-description. Seller markers show «Роман 36 ноутбуков», «5,0», «116 отзывов», «Компания» and /brands/i224915198. No reliable listing image count in the retained blocks; the seller-block image is the seller logo, not a listing photo."
+  },
+  "sha256": "20be91b47fb4f0aceb1abd0365ed7c9f1476984e719e7c4cd43cdf2f410ce1bb"
+}
