@@ -19,6 +19,7 @@ jsdom).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,50 @@ def _extract(js_source: str) -> dict:
         )
     except JsdomUnavailable as exc:
         pytest.skip(str(exc))
+
+
+@pytest.mark.parametrize("page_title", ["Доступ ограничен", "DNS"])
+def test_card_extractor_never_uses_document_title_as_product_name(page_title) -> None:
+    js = (
+        "() => {"
+        f"document.head.innerHTML = {json.dumps('<title>' + page_title + '</title>')};"
+        "document.body.innerHTML = '<p>No product node</p>';"
+        f"return ({server._CARD_EXTRACT_JS})();"
+        "}"
+    )
+    payload = _extract(js)
+    assert payload["title"] is None
+    assert payload["page_title"] == page_title
+
+
+@pytest.mark.parametrize("extract_js", [server._SEARCH_EXTRACT_JS, server._CARD_EXTRACT_JS], ids=["search", "card"])
+@pytest.mark.parametrize(
+    "markup", ['<div id="qrator_challenge">Wait</div>', '<script src="/qrator/challenge.js"></script>']
+)
+def test_extractors_surface_qrator_markup(extract_js, markup) -> None:
+    js = (
+        "() => {"
+        "document.head.innerHTML = '<title>DNS</title>';"
+        f"document.body.innerHTML = {json.dumps(markup)};"
+        f"return ({extract_js})();"
+        "}"
+    )
+    payload = _extract(js)
+    assert payload.get("qrator_wall") is True
+    assert server._is_qrator_wall(payload) is True
+
+
+@pytest.mark.parametrize("extract_js", [server._SEARCH_EXTRACT_JS, server._CARD_EXTRACT_JS], ids=["search", "card"])
+def test_extractors_ignore_qrator_words_in_product_text(extract_js) -> None:
+    js = (
+        "() => {"
+        "document.head.innerHTML = '<title>DNS</title>';"
+        "document.body.innerHTML = '<h1>Qrator guide</h1><p>Доступ ограничен in a manual</p>';"
+        f"return ({extract_js})();"
+        "}"
+    )
+    payload = _extract(js)
+    assert server._is_qrator_wall(payload) is False
 
 
 def test_card_extractor_reads_the_product_card() -> None:

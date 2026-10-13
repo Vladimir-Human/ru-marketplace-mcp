@@ -35,6 +35,7 @@ Ground truth displayed on the page at capture time:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,55 @@ def test_stable_data_meta_hooks_are_what_the_extractor_keys_on() -> None:
     assert "Snippet__price" in code
     assert "data-meta-price" in code
     assert "app-catalog-" not in code, "extractor is selecting on a build-hashed class name"
+
+
+def _extract_inline(html: str) -> dict:
+    source = (
+        "() => { document.documentElement.innerHTML = "
+        + json.dumps(html)
+        + "; return ("
+        + server._SEARCH_EXTRACT_JS
+        + ")(); }"
+    )
+    return _extract(source)
+
+
+@pytest.mark.parametrize("page_title", ["Доступ ограничен", "Qrator"])
+def test_search_extractor_recognizes_document_title_wall(page_title):
+    payload = _extract_inline(f"<head><title>{page_title}</title></head><body>Check your browser</body>")
+    assert payload["items"] == []
+    assert payload["title"] == page_title
+    assert server._is_qrator_wall(payload) is True
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        '<script src="https://qrator.net/challenge.js"></script>',
+        '<div id="qrator-challenge"></div>',
+        '<div class="qrator-check"></div>',
+    ],
+)
+def test_search_extractor_detects_qrator_markup_without_document_title(markup):
+    payload = _extract_inline(f"<head><title></title></head><body>{markup}</body>")
+    assert payload["items"] == []
+    assert payload["qrator_wall"] is True
+    assert server._is_qrator_wall(payload) is True
+
+
+def test_search_extractor_empty_document_is_not_a_wall():
+    payload = _extract_inline("<head><title></title></head><body></body>")
+    assert payload["items"] == []
+    assert payload["qrator_wall"] is False
+    assert server._is_qrator_wall(payload) is False
+
+
+def test_search_extractor_ignores_qrator_words_in_product_content():
+    payload = _extract_inline(
+        '<head><title>Citilink</title></head><body><div data-meta-name="Snippet">'
+        '<a href="/product/2169270/" data-meta-name="Snippet__title">Qrator notebook</a>'
+        "<p>Доступ ограничен</p></div></body>"
+    )
+    assert payload["items"][0]["title"] == "Qrator notebook"
+    assert payload["qrator_wall"] is False
+    assert server._is_qrator_wall(payload) is False

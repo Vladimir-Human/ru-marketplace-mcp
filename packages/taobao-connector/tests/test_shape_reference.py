@@ -48,6 +48,7 @@ SEARCH_GOLDEN = [
 CARD_GOLDEN = [
     "anchors_total:int",
     "body_snippet:str",
+    "challenge_snippet:str",
     "description_images:int",
     "login_anchors:int",
     "page_title:str",
@@ -64,6 +65,8 @@ CARD_GOLDEN = [
 # Measured again 2026-09-10: the card extractor carries the same three
 # structural wall markers as the search extractor (item pages redirect to the
 # same login wall).
+# Measured again 2026-10-13 with the real extractor over item_card.html: cards
+# also carry a visibility-filtered challenge_snippet, separate from wall text.
 
 
 def _extract(js_source: str, fixture: Path, page_url: str) -> dict:

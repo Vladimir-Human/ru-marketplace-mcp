@@ -21,7 +21,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose DNS-Shop product search and cards from rendered pages.
-# SCOPE: Read-only operator-browser DOM; paced CDP reads; Qrator refusal detection.
+# SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
 # LINKS: M-DNS; M-COMPARE; M-MARKETPLACE; packages/dns-connector/tests.
 # END_MODULE_CONTRACT
@@ -29,10 +29,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _extract_product_id: Validate bare handles or product URLs before navigation.
 # _search_item_from_tile: Adapt DOM price/availability fields into public models.
 # _cdp_render: Serialize paced browser navigation and extractor execution.
-# _is_qrator_wall: Distinguish proof-of-work pages from catalog data.
-# dns_search: Read rendered search tiles and flag unrecognized empty grids.
-# dns_card: Read product price and stock without inventing absent values.
-# dns_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# _is_qrator_wall: Detect positive document-title or Qrator-markup evidence.
+# dns_search: Reject walls before mapping/cache; flag unrecognized empty grids.
+# dns_card: Read product-only title/price/stock; reject walls before mapping/cache.
+# dns_selfcheck: Classify walls as inconclusive/blocked; not an MCP tool.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -52,6 +52,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.dom import JS_HELPERS
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     ParserDriftError,
     ToolError,
     TransportDownError,
@@ -274,7 +275,9 @@ _SEARCH_EXTRACT_TEMPLATE = """
         });
         if (out.length >= 48) break;
     }
-    return JSON.stringify({items: out, title: document.title || ''});
+    // Explicit Qrator nodes/scripts, not words in product descriptions.
+    const qratorWall = !!document.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]');
+    return JSON.stringify({items: out, title: document.title || '', qrator_wall: qratorWall});
 }
 """
 
@@ -285,7 +288,7 @@ _CARD_EXTRACT_TEMPLATE = """
     // could otherwise pick a section heading.
     const titleEl = document.querySelector('h1')
         || document.querySelector('[class*="product-card-top__title"]');
-    const title = cleanText(titleEl) || document.title || null;
+    const title = cleanText(titleEl) || null;
 
     // Named price nodes, not a scan of body text: the body carries recommended
     // products, instalment offers and bonus amounts, any of which is smaller than
@@ -317,8 +320,11 @@ _CARD_EXTRACT_TEMPLATE = """
 
 
 
+    // Keep challenge evidence separate from the product name.
+    const qratorWall = !!document.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]');
     return JSON.stringify({
         title: title,
+        qrator_wall: qratorWall,
         price_text: priceText,
         old_price_text: oldPriceText,
         availability_text: availText,
@@ -378,8 +384,10 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:
-    title = str(data.get("title") or data.get("page_title") or "")
-    return "доступ ограничен" in title.lower() or "qrator" in title.lower() or not title.strip()
+    """Require positive wall evidence; a missing title can be parser drift."""
+    title_field = "page_title" if "page_title" in data else "title"
+    title = str(data.get(title_field) or "").lower()
+    return "доступ ограничен" in title or "qrator" in title or data.get("qrator_wall") is True
 
 
 @mcp.tool(
@@ -401,8 +409,9 @@ async def dns_search(
 
     ## Error Format
 
-    ToolError: TransportDownError on CDP/Qrator failures; ParserDriftError when
-    a rendered page yields zero product tiles.
+    ToolError: ChallengeRequiredError on a Qrator wall (never cached);
+    TransportDownError on CDP/navigation failures; ParserDriftError when
+    a rendered page yields zero product tiles without challenge evidence.
     """
     log_event("dns_search.start", query=query[:60])
     try:
@@ -420,7 +429,15 @@ async def dns_search(
                     )
                 )
             tier = "cdp"
-            _cache.set(url, payload)
+        if _is_qrator_wall(payload):
+            _cache.invalidate(url)
+            raise_tool_error(
+                ChallengeRequiredError(
+                    "DNS requires user action. Open dns-shop.ru in the scraping-profile Chrome, pass the Qrator check, then retry.",
+                    provider="dns",
+                    challenge_type="qrator",
+                )
+            )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:
             raise_tool_error(
@@ -435,6 +452,8 @@ async def dns_search(
         result = DnsSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="dns_search")
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -470,8 +489,9 @@ async def dns_card(
     ## Error Format
 
     ToolError: BadRequestError when the URL carries no product id;
-    TransportDownError on CDP/Qrator failures; ParserDriftError when a rendered
-    card has neither title nor price.
+    ChallengeRequiredError on a Qrator wall (never cached); TransportDownError
+    on CDP/navigation failures; ParserDriftError when a rendered card has neither
+    product title nor price and no challenge evidence.
     """
     log_event("dns_card.start", input=product_url[:80])
     try:
@@ -496,7 +516,15 @@ async def dns_card(
             except NavBlocked as exc:
                 raise_tool_error(TransportDownError(f"DNS navigation blocked (HTTP {exc.status})."))
             tier = "cdp"
-            _cache.set(url, payload)
+        if _is_qrator_wall(payload):
+            _cache.invalidate(url)
+            raise_tool_error(
+                ChallengeRequiredError(
+                    "DNS requires user action. Open dns-shop.ru in the scraping-profile Chrome, pass the Qrator check, then retry.",
+                    provider="dns",
+                    challenge_type="qrator",
+                )
+            )
         title = R.flatten_text(payload.get("title"))
         # price_text is what the current extractor returns; price_rub keeps a
         # cache entry written by an older build readable.
@@ -519,6 +547,8 @@ async def dns_card(
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="dns_card")
         result.meta = MetaOut(**attached["_meta"])
+        if tier == "cdp":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -535,8 +565,9 @@ async def dns_selfcheck(ctx: Context | None = None) -> DnsSelfcheckResponse:
     """Structural drift canary for DNS-Shop (tri-state). Renders one live search
     page in the operator's Chrome and checks tiles extract.
 
-    Qrator-blocked or CDP-down is ``inconclusive`` (transport), NEVER drift.
-    Only a rendered page that yields zero tiles is ``drift``.
+    A Qrator wall is ``inconclusive`` (blocked), and CDP-down is inconclusive
+    (transport), NEVER drift. Only an unblocked page with zero tiles or missing
+    required shape paths is ``drift``.
 
     ## Return Format
 
@@ -580,7 +611,16 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
         )
     else:
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
-        if items_raw:
+        if _is_qrator_wall(payload):
+            checks["search"] = R.selfcheck_entry(
+                "inconclusive",
+                baseline=baseline,
+                reason="blocked",
+                notes=[
+                    "Qrator challenge — open dns-shop.ru in the scraping-profile Chrome, pass the check, then retry"
+                ],
+            )
+        elif items_raw:
             # Tiles extract — now ask the second question: did the SHAPE move?
             # The registry was measured on a captured page; a live payload that
             # loses a parser-critical path is structural drift even while tiles

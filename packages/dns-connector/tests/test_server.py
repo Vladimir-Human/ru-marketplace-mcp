@@ -7,6 +7,8 @@ Qrator-passed page.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from dns_connector import server
 from fastmcp.exceptions import ToolError
@@ -52,6 +54,121 @@ def _patch_render(monkeypatch, payload):
         return payload
 
     monkeypatch.setattr(server, "_cdp_render", fake_render)
+
+
+# ---------------------------------------------------------- Qrator HTTP-200 walls ----
+
+
+@pytest.mark.parametrize("kind", ["search", "card"])
+@pytest.mark.parametrize("evidence", ["restricted_title", "qrator_title", "markup"])
+@pytest.mark.parametrize("cached_wall", [False, True])
+async def test_qrator_wall_is_rejected_without_poisoning_cache(monkeypatch, kind, evidence, cached_wall):
+    from mcp_core.cache import TTLCache
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+    doc_title = {"restricted_title": "Доступ ограничен", "qrator_title": "Qrator security check", "markup": "DNS"}[
+        evidence
+    ]
+    wall = {"title": doc_title, "items": [], "qrator_wall": evidence == "markup"}
+    if kind == "card":
+        wall = {"title": "A misleading heading", "page_title": doc_title, "qrator_wall": evidence == "markup"}
+    healthy = CARD_EXTRACTED if kind == "card" else SEARCH_EXTRACTED
+    call = server.dns_card if kind == "card" else server.dns_search
+    argument = "b7a1667f9b19ed20" if kind == "card" else "ноутбук"
+    url = (
+        f"{server.SITE_BASE}/product/{argument}/"
+        if kind == "card"
+        else f"{server.SEARCH_URL}?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA"
+    )
+    reads = []
+    writes = []
+    original_set = server._cache.set
+
+    def record_set(key, value):
+        writes.append(value)
+        original_set(key, value)
+
+    if cached_wall:
+        original_set(url, wall)
+    monkeypatch.setattr(server._cache, "set", record_set)
+
+    async def render(url, extract_js, wait_ms, ctx):
+        reads.append(url)
+        return healthy if cached_wall or len(reads) > 1 else wall
+
+    monkeypatch.setattr(server, "_cdp_render", render)
+    with pytest.raises(ToolError) as excinfo:
+        await call(argument)
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["provider"] == "dns"
+    assert error["requires_user_action"] is True
+    assert error["retryable"] is True
+    assert "dns-shop.ru" in error["message"]
+    assert "Chrome" in error["message"]
+    assert "retry" in error["message"]
+    assert len(server._cache) == 0
+    assert writes == [], "a wall must never reach cache.set, even temporarily"
+
+    recovered = await call(argument)
+    assert recovered.status == "success"
+    assert recovered.tier_used == "cdp"
+    assert (await call(argument)).tier_used == "cache"
+    assert len(reads) == (1 if cached_wall else 2)
+    assert writes == [healthy]
+
+
+@pytest.mark.parametrize("payload", [{}, {"title": ""}, {"title": None, "page_title": ""}])
+def test_empty_document_title_is_not_qrator_wall(payload):
+    assert server._is_qrator_wall(payload) is False
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"title": "Laptop", "page_title": "Доступ ограничен"}, True),
+        ({"title": "Qrator guide", "page_title": "DNS"}, False),
+        ({"title": "Доступ ограничен", "page_title": ""}, False),
+    ],
+)
+def test_qrator_wall_uses_document_title_not_product_name(payload, expected):
+    assert server._is_qrator_wall(payload) is expected
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"title": "Доступ ограничен", "items": []},
+        {"title": "Qrator", "items": []},
+        {"title": "", "items": [], "qrator_wall": True},
+        {**SEARCH_EXTRACTED, "title": "Доступ ограничен"},
+    ],
+)
+async def test_selfcheck_qrator_wall_is_inconclusive(monkeypatch, payload):
+    _patch_render(monkeypatch, payload)
+    result = await server.dns_selfcheck()
+    assert result.status == "inconclusive"
+    assert result.healthy is None
+    assert result.checks["search"].state == "inconclusive"
+    assert result.checks["search"].reason == "blocked"
+
+
+@pytest.mark.parametrize("kind", ["search", "card"])
+async def test_unmarked_empty_page_remains_parser_drift(monkeypatch, kind):
+    payload = {"title": "", "items": []} if kind == "search" else {"title": None, "page_title": ""}
+    _patch_render(monkeypatch, payload)
+    call = server.dns_search if kind == "search" else server.dns_card
+    with pytest.raises(ToolError) as excinfo:
+        await call("ноутбук" if kind == "search" else "b7a1667f9b19ed20")
+    assert json.loads(str(excinfo.value))["error"] == "parser_drift"
+    assert len(server._cache) == 0
+
+
+async def test_title_only_card_without_a_price_is_valid(monkeypatch):
+    _patch_render(monkeypatch, {"title": "Laptop", "page_title": "", "price_text": None})
+    result = await server.dns_card("b7a1667f9b19ed20")
+    assert result.title == "Laptop"
+    assert result.price_rub is None
 
 
 # ------------------------------------------------------------------ dns_search ----
