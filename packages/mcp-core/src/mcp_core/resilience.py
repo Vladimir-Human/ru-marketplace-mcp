@@ -103,9 +103,9 @@ def coerce_int(value: Any) -> int | None:
     Returns None (never 0) when no digits are present, so a missing count never
     masquerades as a real zero in comparisons.
 
-    Audit 2026-06-01 (CONFIRMED, but these helpers are not yet wired into any
-    connector — latent contract): a string carrying a sign, a decimal point, or
-    a K/M/тыс magnitude suffix is AMBIGUOUS — digit-concatenation silently
+    Audit 2026-06-01 (CONFIRMED; the helper is now used across the connectors):
+    a string carrying a sign, a decimal point, or a K/M/тыс magnitude suffix
+    is AMBIGUOUS — digit-concatenation silently
     fabricates a plausible-but-wrong count ('1.2K'->12, '-3'->3). Such inputs now
     return None (fail loud) rather than a fabricated integer. Pure grouped digits
     ('24 088', '1 057') still parse, because thousands separators are unambiguous.

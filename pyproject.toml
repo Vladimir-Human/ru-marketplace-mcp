@@ -180,7 +180,7 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 # Measured branch-coverage total on the offline suite (-m "not live and not
-# cdp") was 77.74%. The CI floor (--cov-fail-under=70) sits a couple of points
+# cdp") was 83.2% at v2.5.1. The CI floor (--cov-fail-under=80) sits a few points
 # below so unrelated churn does not break the build; it ratchets up as coverage
 # improves. The threshold is passed on the CI command line rather than fixed
 # here, keeping the number visible in the workflow.
