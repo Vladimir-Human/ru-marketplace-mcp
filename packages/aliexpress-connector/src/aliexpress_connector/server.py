@@ -35,7 +35,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
-# SCOPE: Read-only CDP; search landing then card tab; x5sec refusal classification.
+# SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings.
 # LINKS: M-ALIEXPRESS; M-COMPARE; M-MARKETPLACE; packages/aliexpress-connector/tests.
 # END_MODULE_CONTRACT
@@ -43,7 +43,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
 # _tile_prices: Separate current, old and conditional/coupon tile prices.
 # _cdp_render_search: Read the rendered search grid from a landing page.
-# _cdp_card: Open the item from the landing page and inspect the new tab.
+# _cdp_card: Match the full item ID on an owned popup and bound cleanup on all exits.
 # _card_prices: Pair glyph-scored card prices without inventing absent modules.
 # aliexpress_search: Return normalized rendered offers and price warnings.
 # aliexpress_card: Return item details, ratings and orders, not review texts.
@@ -391,6 +391,10 @@ def _unwrap_extract(raw: Any, what: str) -> dict[str, Any]:
     return data
 
 
+_POPUP_CLOSE_TIMEOUT_S = 5.0
+_POPUP_ARRIVAL_TIMEOUT_S = 2.0
+
+
 async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
     """Open the item in a NEW TAB from the loaded landing page and read its DOM.
 
@@ -399,22 +403,12 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
     nothing from the caller: the URL is rebuilt from SITE_BASE here.
     """
     item_id = _extract_item_id(url) or ""
+    wants = re.compile(rf"/item/{re.escape(item_id)}(?!\d)")
     async with _cdp_lock:
         await _polite_wait()
         async with open_page(_LANDING, wait_ms=9000) as page:
-            opener = (
-                "() => { try { window.open("
-                + json.dumps(url)
-                + ", '_blank', 'noopener,noreferrer'); return 'opened'; } "
-                "catch (e) { return 'error:' + String(e); } }"
-            )
-            opened = await asyncio.wait_for(page.evaluate(opener), timeout=10.0)
-            if not isinstance(opened, str) or "opened" not in opened:
-                raise ToolError(TransportDownError(f"could not open the item tab ({opened})"))
-            # The sibling-tab walk needs the Playwright-managed page handle; the
-            # raw-CDP fallback in mcp_core deliberately exposes only url/evaluate.
-            # On that fallback the two-hop card read cannot work, and the honest
-            # answer is a transport error, never a broken half-read.
+            # Raw CDP has no sibling-page handles: refuse before opening a popup
+            # that this transport could neither identify nor clean up.
             context = getattr(page, "context", None)
             if context is None:
                 raise ToolError(
@@ -424,34 +418,91 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                     )
                 )
             before = set(context.pages)
-            wants = f"/item/{item_id}"
-            target = None
-            # The tab must (a) be one THIS call opened and (b) carry the requested
-            # item id. Grabbing the nearest /item/ tab would silently answer with
-            # another product's card — a wrong price under a right id — and then
-            # close an operator's own tab.
-            for _ in range(20):
-                await asyncio.sleep(1)
-                for candidate in list(context.pages):
-                    if candidate in before:
+            owned: set[Any] = set()
+            arrived = asyncio.Event()
+
+            def observe_popup(candidate: Any) -> None:
+                if candidate in before:
+                    return
+                candidate_path = urllib.parse.urlsplit(candidate.url or "").path
+                if "/item/" in candidate_path and not wants.search(candidate_path):
+                    return
+                # This event belongs to our landing page, not the context's
+                # broadcast stream. Retain that identity through redirects.
+                owned.add(candidate)
+                arrived.set()
+
+            listen = getattr(page, "on", None)
+            unlisten = getattr(page, "remove_listener", None)
+            if not callable(listen) or not callable(unlisten):
+                raise ToolError(TransportDownError("aliexpress_card needs Playwright popup events"))
+            listen("popup", observe_popup)
+
+            async def collect_owned() -> None:
+                try:
+                    candidates = tuple(context.pages)
+                except Exception:
+                    return
+                for candidate in candidates:
+                    if candidate in before or candidate in owned:
                         continue
-                    page_url = candidate.url or ""
-                    if wants in page_url and "punish" not in page_url:
-                        target = candidate
-                        break
-                if target is not None:
-                    break
-            if target is None:
-                # The tab was never delivered, or was closed under us. This is a
-                # transport outcome, not a proven challenge: record_refusal would
-                # poison the pacer's backoff for a refusal that never happened.
-                raise ToolError(
-                    TransportDownError(
-                        "the item tab never materialised (popup blocked, closed, or challenged); "
-                        "open aliexpress.ru in the scraping profile and retry — this is not a parser failure"
-                    )
-                )
+                    try:
+                        candidate_url = candidate.url or ""
+                        matches = wants.search(urllib.parse.urlsplit(candidate_url).path)
+                        if not matches and candidate_url != "about:blank" and "punish" not in candidate_url:
+                            continue
+                        # URL and arrival time are not ownership: other CDP clients
+                        # see the same broadcasts, including the very same item.
+                        if await asyncio.wait_for(candidate.opener(), timeout=_POPUP_CLOSE_TIMEOUT_S) is page:
+                            owned.add(candidate)
+                    except Exception:
+                        continue
+
+            async def cleanup() -> None:
+                # Opening/discovery can fail before a target has been selected.
+                await collect_owned()
+                if not owned:
+                    try:
+                        await asyncio.wait_for(arrived.wait(), timeout=_POPUP_ARRIVAL_TIMEOUT_S)
+                    except TimeoutError:
+                        pass
+                    await collect_owned()
+                for candidate in tuple(owned):
+                    try:
+                        await asyncio.wait_for(candidate.close(), timeout=_POPUP_CLOSE_TIMEOUT_S)
+                    except Exception:
+                        pass
+
             try:
+                # Keep the opener relationship for positive ownership attribution.
+                opener = (
+                    "() => { try { window.open(" + json.dumps(url) + ", '_blank'); return 'opened'; } "
+                    "catch (e) { return 'error:' + String(e); } }"
+                )
+                opened = await asyncio.wait_for(page.evaluate(opener), timeout=10.0)
+                if not isinstance(opened, str) or "opened" not in opened:
+                    raise ToolError(TransportDownError(f"could not open the item tab ({opened})"))
+                target = None
+                for _ in range(20):
+                    await asyncio.sleep(1)
+                    await collect_owned()
+                    for candidate in context.pages:
+                        if candidate not in owned:
+                            continue
+                        candidate_url = candidate.url or ""
+                        if wants.search(urllib.parse.urlsplit(candidate_url).path) and "punish" not in candidate_url:
+                            target = candidate
+                            break
+                    if target is not None:
+                        break
+                if target is None:
+                    # No delivered item is a transport outcome, not a proven refusal.
+                    raise ToolError(
+                        TransportDownError(
+                            "the item tab never materialised (popup blocked, closed, or challenged); "
+                            "open aliexpress.ru in the scraping profile and retry — this is not a parser failure"
+                        )
+                    )
                 raw = None
                 # The sticky price module is client-rendered and lags the title:
                 # keep polling for gyph-attached prices; a title-only state is
@@ -478,22 +529,22 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                     raise ToolError(_challenge_error("the item tab opened onto an x5sec challenge"))
                 return data
             finally:
-                # Close the tab this call opened, matched or not, so a failed
-                # call cannot farm orphaned item tabs (the leak itself triggers
-                # x5sec). The scraping profile is dedicated to these fetches, so
-                # sweeping the freshly-created set is the safe bound.
+                task = asyncio.create_task(cleanup())
+                cancelled = False
                 try:
-                    await target.close()
-                except Exception:
-                    pass
-                for candidate in list(context.pages):
-                    if candidate in before:
-                        continue
-                    if "/item/" in (candidate.url or ""):
+                    while True:
                         try:
-                            await candidate.close()
-                        except Exception:
-                            pass
+                            await asyncio.shield(task)
+                            break
+                        except asyncio.CancelledError:
+                            if task.cancelled():
+                                raise
+                            # Keep the landing page and lock until bounded cleanup ends.
+                            cancelled = True
+                    if cancelled:
+                        raise asyncio.CancelledError
+                finally:
+                    unlisten("popup", observe_popup)
 
 
 def _card_prices(payload: dict[str, Any]) -> tuple[float | None, float | None]:
