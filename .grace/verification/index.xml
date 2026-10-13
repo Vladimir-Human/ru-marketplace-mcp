@@ -79,6 +79,19 @@
   </entry>
   <entry id="V-M-WB" module="M-WB" file="packages/wb-connector/src/wb_connector/server.py">
     <test file="packages/wb-connector/tests/test_helpers.py" checks="Version/manifests, basket boundaries, IDs, tool/helper cases and mocked bounded transport failures" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_failed_fallback_is_not_empty" checks="Synthetic legacy ids/enrichment outages, 429, JSON and shape failures surface typed errors rather than no_results" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_fallback_http_exception_is_not_empty" checks="ConnectError on either legacy leg surfaces transport_down" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_primary_drift_survives_fallback_outage" checks="Primary JSON/container drift takes precedence over legacy transport failure" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_unrecoverable_fallback_ids_without_positive_empty_are_drift" checks="Invalid nonempty ids cannot certify an empty search when v9 failed" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_positive_empty_survives_fallback_failure" checks="Positive v9 empty answer remains no_results; absent total remains null" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_legacy_429_html_is_not_a_refusal" checks="Changed assertion: HTML 429 on either legacy leg is rate_limited, not no_results or a transport wall" />
+    <test file="packages/wb-connector/tests/test_helpers.py" title="test_wb_search_rate_limit_is_surfaced_not_masked_by_fallback" checks="V9 HTTP429 wins even when transport supplies an error string" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_dom_empty_search_keeps_nondefault_region_warning" checks="Empty DOM search reports that requested dest was ignored for Chrome region" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_dom_empty_search_without_warnings_keeps_compact_wire" checks="No warning metadata is serialized on default-region empty searches" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_rejects_negative_discount_badges" checks="ASCII minus, Unicode minus and en dash discount amounts are never prices, including spaced signs" />
+    <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_preserves_fractional_roubles" checks="Comma/dot decimals and grouped NBSP prices retain fractional roubles" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_region_warning_matches_shape_golden" checks="Synthetic no_results warning metadata shape is pinned inline" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_without_warning_matches_compact_shape_golden" checks="Unwarned no_results shape stays unchanged" />
     <test file="packages/wb-connector/tests/test_parser_live.py" checks="Offline captured search-v9/card-v4 values, positive finite RUB prices, colors and recorded search/card price differences" />
     <test file="packages/wb-connector/tests/test_dom_transport.py" checks="Offline text fixtures and fake render: Wallet/regular/old prices and challenge stops" />
     <test file="packages/wb-connector/tests/test_pagination_wrap.py" checks="Order-sensitive leading-ID fingerprints, short/malformed pages, query/region scope and unseen-page-one disarming" />
@@ -88,6 +101,9 @@
   </entry>
   <entry id="V-M-OZON" module="M-OZON" file="packages/ozon-connector/src/ozon_connector/server.py">
     <test file="packages/ozon-connector/tests/test_server.py" checks="Mocked worker timeout/recovery, scrubbed environments, callable/path guards, redaction and composer card/review/search parsing" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_ozon_tools_require_widget_states_object" checks="Missing/renamed widgetStates raises parser_drift in card, reviews and search; existing nonobject guards remain covered" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_ozon_tools_preserve_empty_widget_states_success" checks="Present empty widgetStates objects retain existing successful response semantics" />
+    <test file="packages/ozon-connector/tests/test_server.py" title="test_reviews_missing_widget_states_on_later_page_is_partial" checks="Missing/nonobject widgetStates after a valid review page keeps the collected reviews as partial=True with stop_reason parse" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" checks="Offline captured composer tiles, displayed prices, stock labels and canonical card inputs" />
     <test file="packages/ozon-connector/tests/test_shape_reference.py" checks="Captured composer normalization matches shape golden" />
     <test file="packages/ozon-connector/tests/test_settings_secrets.py" checks="Proxy secret absent from settings dumps but available to fetch" />
@@ -110,6 +126,11 @@
   </entry>
   <entry id="V-M-AVITO" module="M-AVITO" file="packages/avito-connector/src/avito_connector/server.py">
     <test file="packages/avito-connector/tests/test_server.py" coverage="offline; not run" checks="Mocked search envelopes, CDP Product-page cards and rendered seller profiles, nullable prices and unavailable fields, location/category rejection, firewall/nonJSON classification and search-card-seller canary verdicts" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_rejects_http200_json_error_envelopes" checks="Synthetic challenge/throttle/service error envelopes raise typed failures despite HTTP200, with refusal pacing" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_rejects_missing_or_invalid_items_container" checks="Absent, renamed and wrong-type known items containers raise parser_drift" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_accepts_explicit_empty_items_container" checks="Known top-level, catalog and data empty items lists remain valid healthy results" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_search_error_detection_ignores_listing_content" checks="Listing title keywords cannot be misclassified as envelope errors" />
+    <test file="packages/avito-connector/tests/test_server.py" title="test_selfcheck_http200_json_errors_are_inconclusive" checks="Challenge/rate/outage envelopes do not certify empty health or parser drift in operator selfcheck" />
     <test file="packages/avito-connector/tests/test_item_page.py" coverage="19 new offline cases; not run" checks="Captured Product ground truth, paced allowlisted page.content CDP path and stripped query/fragment, bare Product and matching SKU, nullable/non-RUB prices, missing/malformed/empty Product drift, catalog-envelope regression, removed ads, NavBlocked refusal backoff/404/503 and timeout taxonomy" />
     <test file="packages/avito-connector/tests/test_seller_pages.py" coverage="41 new offline cases (16 parser, 15 integration, 10 chain); not run" checks="parse_item_seller and parse_seller_profile reputation/profile extraction, brands/user URL and bare-id routing, paced allowlisted rendered CDP reads, unavailable active_items and search-card-seller canary chain" />
     <test file="packages/avito-connector/tests/test_live_payload_contract.py" checks="Offline captured envelope, price_detailed, place/URL fields, safe finite ISO timestamps, totals and absent seller" />
@@ -128,6 +149,11 @@
   </entry>
   <entry id="V-M-MEGAMARKET" module="M-MEGAMARKET" file="packages/megamarket-connector/src/megamarket_connector/server.py">
     <test file="packages/megamarket-connector/tests/test_server.py" checks="Mocked browser POST/redirect/address context, card/search totals, missing-price None, absent-container drift versus empty result and code7 refusal" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_card_failed_envelope_never_becomes_requested_id_success" checks="Synthetic failed envelopes raise not_found, transport_down or parser_drift; never cache phantom requested-id cards or record successful pacing" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_search_failed_envelope_with_empty_items_is_not_success" checks="Explicit service failures override an empty items container" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_existing_http_refusal_handling" checks="Existing HTTP401/403/429 refusal taxonomy and pacing remain unchanged" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_successful_empty_search_envelope" checks="Successful empty items with no errors remain valid" />
+    <test file="packages/megamarket-connector/tests/test_server.py" title="test_post_preserves_successful_empty_goods_as_not_found" checks="Successful empty goods remains not_found, never a phantom card" />
     <test file="packages/megamarket-connector/tests/test_parser_live.py" checks="Offline captured container/total/items and finite positive RUB values" />
     <test file="packages/megamarket-connector/tests/test_shape_reference.py" checks="Captured search normalization matches shape golden" />
   </entry>

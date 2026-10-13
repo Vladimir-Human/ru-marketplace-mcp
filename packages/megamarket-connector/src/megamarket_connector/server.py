@@ -22,11 +22,13 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Megamarket search and cards from its mobile catalog API.
 # SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
+# INVARIANTS: Reject failed API envelopes before success pacing/cache; preserve empty results.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings.
 # LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# _post: Issue catalog API reads inside the operator's browser.
+# _post: Issue browser API reads; cache only envelopes without explicit failures.
+# _raise_failed_envelope: Distinguish not-found, refusal/service failures and malformed errors.
 # _resolve_address_id: Resolve delivery context; profile access requires opt-in.
 # _final_catalog_url: Resolve the catalog redirect before reading search parameters.
 # _is_ip_block: Detect code-7 ServicePipe refusals rather than treating them as data.
@@ -230,6 +232,48 @@ def _blocked_error(detail: str = "") -> TransportDownError:
     return TransportDownError(message, status_code=403)
 
 
+def _raise_failed_envelope(payload: dict[str, Any], what: str) -> None:
+    """Reject API failures before they can be cached or parsed as catalog data."""
+    errors = payload.get("errors") or payload.get("error")
+    if payload.get("success") is not False and not errors:
+        return
+
+    entries = errors if isinstance(errors, list) else [errors] if errors else []
+    if any(not isinstance(entry, (dict, str)) for entry in entries):
+        raise_tool_error(ParserDriftError(f"Megamarket {what} failure carried malformed errors"))
+    entries = [payload, *entries]
+    codes: list[str] = []
+    messages: list[str] = []
+    for entry in entries:
+        if isinstance(entry, str):
+            messages.append(entry)
+            continue
+        for key in ("code", "status", "statusCode"):
+            value = entry.get(key)
+            if isinstance(value, (str, int)) and not isinstance(value, bool):
+                codes.append(str(value))
+        for key in ("message", "error", "description"):
+            value = entry.get(key)
+            if isinstance(value, str):
+                messages.append(value)
+    detail = _redact("; ".join([*codes, *messages]))
+
+    # Preserve the existing ServicePipe/HTTP refusal verdict and pacing even
+    # when the API puts the refusal inside an HTTP-200 errors envelope.
+    if (
+        any(_is_ip_block(entry) for entry in entries)
+        or _is_ip_block({"error": detail})
+        or any(code in ("401", "403", "429") for code in codes)
+    ):
+        _pacer.record_refusal()
+        raise_tool_error(_blocked_error(detail))
+    if "404" in codes or re.search(r"(?:^|[\s_-])not[\s_-]*found\b|не\s+найден", detail, re.IGNORECASE):
+        raise_tool_error(NotFoundError(f"Megamarket {what} not found: {detail[:200]}"))
+    if not detail.strip():
+        raise_tool_error(ParserDriftError(f"Megamarket {what} reported failure without recognizable error details"))
+    raise_tool_error(TransportDownError(f"Megamarket {what} API failed: {detail[:200]}"))
+
+
 async def _post(api_path: str, body: dict[str, Any], ctx: Context | None, what: str) -> dict[str, Any]:
     """POST through CDP and unwrap the envelope, mapping failures to the taxonomy."""
     cache_key = f"{api_path}:{json.dumps(body, sort_keys=True, ensure_ascii=False)}"
@@ -256,6 +300,7 @@ async def _post(api_path: str, body: dict[str, Any], ctx: Context | None, what: 
         raise_tool_error(_blocked_error(str(payload)[:200]))
     if not isinstance(payload, dict):
         raise_tool_error(ParserDriftError(f"{what} payload is not a JSON object"))
+    _raise_failed_envelope(payload, what)
     _pacer.record_success()
     _cache.set(cache_key, payload)
     return payload

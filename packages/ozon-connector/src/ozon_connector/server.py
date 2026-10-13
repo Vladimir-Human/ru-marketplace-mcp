@@ -16,6 +16,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Ozon product cards, reviews and search through composer data.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
+# INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP; models_output; settings.
 # LINKS: M-OZON; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
@@ -26,9 +27,9 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # _parse_widgets: Normalize card widget fields without inventing missing prices.
 # _safe_review_page_path: Rebuild pagination from validated review components.
 # _parse_search_tile: Preserve offer identity, price kinds and stock warnings.
-# ozon_card: Read a validated SKU/product path.
-# ozon_reviews: Read sorted, bounded pages of product reviews.
-# ozon_search: Search and normalize composer result tiles.
+# ozon_card: Read a validated SKU/product path with a required widgetStates object.
+# ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data.
+# ozon_search: Search and normalize composer result tiles from a required widgetStates object.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
 # END_MODULE_MAP
 
@@ -708,7 +709,7 @@ async def ozon_card(
             payload = json.loads(body)
         except json.JSONDecodeError:
             raise_tool_error(ParserDriftError(f"non-JSON response body via {tier}; preview: {body[:200]}"))
-        if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates", {}), dict):
+        if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates"), dict):
             raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
 
         parsed = _parse_widgets(payload)
@@ -867,8 +868,9 @@ async def ozon_reviews(
     OzonReviewsResponse: {status, sort, rating_score, reviews_count, distribution,
     returned, partial, stop_reason, last_error, requested_limit, reviews,
     requested_item_id, own_reviews, pool_variants, meta}
-    on success. A later-page failure with reviews already collected is a
-    PARTIAL SUCCESS (partial=True, stop_reason set), NOT an error.
+    on success. A later-page transport, JSON-decode or pagination failure with
+    reviews already collected is a PARTIAL SUCCESS (partial=True, stop_reason
+    set), and so is a later page without a widgetStates object.
 
     ## Error Format
 
@@ -900,9 +902,9 @@ async def _ozon_reviews_impl(
 
     First-page failures raise ToolError (BadRequestError / TransportDownError /
     ParserDriftError). Once at least one review is collected, a later-page
-    failure degrades to a partial-success return (partial=True, stop_reason set)
-    rather than raising — no-results is NOT an error, and partial data is NOT an
-    error.
+    failure (including a missing widgetStates object) degrades to
+    a partial-success return (partial=True, stop_reason set). Valid empty
+    containers remain successful no-results responses.
     """
     if limit < 1 or limit > 100:
         raise_tool_error(BadRequestError("limit must be an integer from 1 to 100"))
@@ -1002,9 +1004,11 @@ async def _ozon_reviews_impl(
             stop_reason = "parse"
             last_error = {"type": "parse", "tier": tier, "preview": body[:200]}
             break
-        if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates", {}), dict):
+        if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates"), dict):
             if not collected:
                 raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
+            # A later page without widgetStates is drift or a throttle page; keep
+            # what was read and say so instead of discarding it.
             partial = True
             stop_reason = "parse"
             last_error = {"type": "parse", "tier": tier, "message": "expected object payload with widgetStates object"}
@@ -1431,7 +1435,7 @@ async def _ozon_search_impl(
         payload = json.loads(body)
     except json.JSONDecodeError:
         raise_tool_error(ParserDriftError(f"non-JSON response body via {tier}; preview: {body[:200]}"))
-    if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates", {}), dict):
+    if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates"), dict):
         raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
 
     items = _search_items_from_payload(payload)

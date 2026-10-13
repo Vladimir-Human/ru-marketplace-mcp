@@ -580,6 +580,89 @@ def test_ozon_tools_reject_non_object_payloads(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.parametrize("tool_name", ["ozon_card", "ozon_reviews", "ozon_search"])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({}, id="missing"),
+        pytest.param({"states": {}}, id="renamed"),
+        pytest.param({"widgetStates": None}, id="null"),
+        pytest.param({"widgetStates": []}, id="list"),
+        pytest.param({"widgetStates": ""}, id="string"),
+        pytest.param({"widgetStates": 0}, id="number"),
+        pytest.param({"widgetStates": False}, id="boolean"),
+    ],
+)
+async def test_ozon_tools_require_widget_states_object(monkeypatch, tool_name, payload):
+    async def fake_fetch(path, ctx):
+        return 200, json.dumps(payload), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    with pytest.raises(ToolError) as excinfo:
+        await getattr(server, tool_name)("123")
+
+    assert json.loads(str(excinfo.value))["error"] == "parser_drift"
+
+
+@pytest.mark.parametrize("tool_name", ["ozon_card", "ozon_reviews", "ozon_search"])
+async def test_ozon_tools_preserve_empty_widget_states_success(monkeypatch, tool_name):
+    async def fake_fetch(path, ctx):
+        return 200, json.dumps({"widgetStates": {}}), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    result = await getattr(server, tool_name)("123")
+
+    assert result.status == "success"
+    if tool_name == "ozon_card":
+        assert result.meta.healthy is True
+        assert result.title is None
+        assert result.price is None
+    elif tool_name == "ozon_reviews":
+        assert result.meta.healthy is True
+        assert result.returned == 0
+        assert result.reviews == []
+        assert result.partial is False
+    else:
+        assert result.count == 0
+        assert result.items == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({}, id="missing"),
+        pytest.param({"widgetStates": None}, id="null"),
+        pytest.param({"widgetStates": []}, id="list"),
+    ],
+)
+async def test_reviews_missing_widget_states_on_later_page_is_partial(monkeypatch, payload):
+    calls = []
+
+    async def fake_fetch(path, ctx):
+        calls.append(path)
+        if len(calls) == 1:
+            return (
+                200,
+                _reviews_body(
+                    reviews=[{"uuid": "r1", "content": {"comment": "good"}}],
+                    next_button="?page=2&page_key=abc&sort=published_at_desc",
+                ),
+                "fake",
+            )
+        return 200, json.dumps(payload), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    result = await server.ozon_reviews("123", limit=5)
+
+    assert result.partial is True
+    assert result.stop_reason == "parse"
+    assert result.returned == 1
+    assert len(calls) == 2
+
+
 def test_reviews_marks_partial_when_later_page_fails(monkeypatch):
     calls = []
     first_page_review = {
