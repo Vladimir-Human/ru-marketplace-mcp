@@ -6,8 +6,8 @@
 # All Chrome windows must be closed first (Chrome refuses CDP if already running).
 #
 # === SECURITY THREAT MODEL ===
-# CDP hands full control of the profile it attaches to — every session logged in
-# there — to any process running as this user. Bound to 127.0.0.1 ONLY (--remote-debugging-address)
+# CDP hands full control of the profile it attaches to - every session logged in
+# there - to any process running as this user. Bound to 127.0.0.1 ONLY (--remote-debugging-address)
 # but any process running as the operator can connect.
 #
 # Recommendations:
@@ -28,14 +28,14 @@ param(
 if (-not $Profile) {
     if ($AllowMainProfile) {
         $Profile = "$env:LOCALAPPDATA\Google\Chrome\User Data"
-        Write-Warning "[!] Using MAIN Chrome profile — banking/email/GitHub sessions exposed!"
+        Write-Warning "[!] Using MAIN Chrome profile - banking/email/GitHub sessions exposed!"
         Write-Warning "[!] CDP gives ANY local process full control of these sessions."
     } else {
         $Profile = "$env:LOCALAPPDATA\Chrome-Scraping"
         if (-not (Test-Path $Profile)) {
             New-Item -ItemType Directory -Force -Path $Profile | Out-Null
             Write-Host "[+] Created dedicated scraping profile: $Profile"
-            Write-Host "[+] Chrome will start with an empty session — log into marketplaces only."
+            Write-Host "[+] Chrome will start with an empty session - log into marketplaces only."
             Write-Host "[+] Banking/email session NOT present here = blast radius zero."
             Write-Host ""
         }
