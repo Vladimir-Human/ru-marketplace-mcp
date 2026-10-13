@@ -35,6 +35,7 @@
   item id must match. On 2026-10-13 one listing in six had no Product, and the
   canary reported drift whenever such a listing came first. `images` is `null`
   when the page does not say, not 0.
+- `wb_search` no-results answers carry `meta: null` unless there are warnings.
 - Ozon: a body without `widgetStates` is `parser_drift`, not an empty card;
   a later review page without it still returns the collected reviews as
   partial. Megamarket: a `success: false` envelope no longer becomes a card
@@ -43,13 +44,15 @@
   scraping Chrome instead of blaming the Chrome version; an idle-expired
   handoff frees its tab at the idle deadline; `aliexpress_card` matches the
   full item id, closes only the popup it opened and bounds every close;
-  a cancellation during tab hand-over closes the tab.
+  a cancellation during tab hand-over closes the tab. When the raw-CDP
+  fallback fails after an attach timeout, the error keeps the tab count, and
+  `doctor` advises closing unused tabs.
 - `scripts/start_chrome_cdp.ps1` parses in Windows PowerShell 5.1 (it had
   non-ASCII dashes in a file without a BOM).
 
 ### Changed
 
-- The CI coverage floor is 80 % (was 70 %); the offline suite measures 84.6 %.
+- The CI coverage floor is 80 % (was 70 %); the offline suite measures 84.7 %.
 
 ## [2.5.1] - 2026-10-12
 

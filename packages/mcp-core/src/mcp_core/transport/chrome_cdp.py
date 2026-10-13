@@ -559,7 +559,10 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
         pages = _raw_page_count()
         result["reachable"] = True
         result["contexts"] = pages
-        result["reason"] = "playwright attach timed out; raw CDP answers"
+        result["reason"] = (
+            f"playwright attach timed out with {pages} tabs open; raw CDP answers. "
+            "Close the tabs the scraping Chrome does not need."
+        )
     except Exception as exc:
         result["reachable"] = False
         result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
@@ -1149,8 +1152,17 @@ async def open_page(
     try:
         try:
             page = await stack.enter_async_context(_playwright_page(url, wait_ms))
-        except _CdpConnectTimeout:
-            page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+        except _CdpConnectTimeout as attach_exc:
+            try:
+                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+            except (NavBlocked, NavigationPolicyError):
+                raise
+            except Exception as raw_exc:
+                # Keep the attach diagnosis (open tab count) in what the
+                # operator sees; the raw error alone hides the likely cause.
+                raise TransportDownError(
+                    f"{attach_exc} The raw-CDP fallback failed too: {type(raw_exc).__name__}: {str(raw_exc)[:160]}"
+                ) from raw_exc
         _check_final_host(page.url, host_policy)
         permit.ok()
     except NavBlocked as exc:

@@ -1,6 +1,6 @@
 # v2.5.2 — 2026-10-13
 
-Патч про честность ответов: страница проверки, отказ сервиса или чужой ответ больше не выдаются за товар или за «ничего не найдено». Схемы параметров инструментов не изменились. В ответах изменились коды ошибок там, где раньше был ложный успех. `avito_card.images` теперь может быть `null`.
+Патч про честность ответов: страница проверки, отказ сервиса или чужой ответ больше не выдаются за товар или за «ничего не найдено». Схемы параметров инструментов не изменились. В ответах изменились коды ошибок там, где раньше был ложный успех. `avito_card.images` теперь может быть `null`, а ответ «ничего не найдено» у `wb_search` несёт `meta` (`null`, если предупреждений нет).
 
 ## Изменения
 
@@ -31,9 +31,9 @@
 
 ## Проверка поставки
 
-- Офлайн: 2263 passed, 1 skipped, 5 live deselected; покрытие ветвей 84.64 %.
+- Офлайн: 2265 passed, 1 skipped, 5 live deselected; покрытие ветвей 84.67 %.
 - Эксплуатационные тесты скриптов: 70 passed.
-- Ruff, форматирование, mypy host/win32/darwin, версия 2.5.2 в 84 местах, 30 пинов фикстур, защита stdout, счётчик тестов (2264 в 7 местах), wire budget.
+- Ruff, форматирование, mypy host/win32/darwin, версия 2.5.2 в 84 местах, 30 пинов фикстур, защита stdout, счётчик тестов (2266 в 7 местах), wire budget.
 - 16/16 настоящих stdio MCP-сессий на v2.5.2.
 
 Поставка содержит 16 wheels и 16 sdists; на PyPI пакеты не публикуются.
@@ -44,4 +44,4 @@ v2.5.2 stops several sources from presenting a failure as data. DNS and Citilink
 
 Live evidence, one address on 13 October: Ozon, Yandex Market, Detsky Mir, Avito (search, card, seller), Taobao, Citilink, AliExpress and Cian passed selfcheck; Wildberries answered through `WB_TRANSPORT=dom`; Lamoda, DNS and Megamarket were blocked because nobody cleared their browser checks that day. No drift; no visual acceptance.
 
-Offline gate: 2263 passed, coverage 84.64 %, mypy on three platforms, 84 version declarations, 16/16 stdio sessions.
+Offline gate: 2265 passed, coverage 84.67 %, mypy on three platforms, 84 version declarations, 16/16 stdio sessions.

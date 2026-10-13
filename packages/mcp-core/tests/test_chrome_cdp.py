@@ -429,6 +429,34 @@ async def test_attach_timeout_reports_open_tabs_and_preserves_raw_fallback(monke
     assert calls == [(f"{chrome_cdp.CDP_URL}/json/list", 2.0)]
 
 
+async def test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too(monkeypatch):
+    """When the raw-CDP fallback also fails, the error still names the open tabs."""
+    from contextlib import asynccontextmanager
+
+    from mcp_core.errors import TransportDownError
+
+    @asynccontextmanager
+    async def attach_times_out(_url, _wait_ms):
+        raise chrome_cdp._CdpConnectTimeout("attach timed out after 10 s; 12 tabs are open in the scraping Chrome.")
+        yield
+
+    @asynccontextmanager
+    async def raw_fails(_url, _wait_ms):
+        raise TimeoutError("raw navigation stalled")
+        yield
+
+    monkeypatch.setattr(chrome_cdp, "_playwright_page", attach_times_out)
+    monkeypatch.setattr(chrome_cdp, "_raw_cdp_page", raw_fails)
+
+    with pytest.raises(TransportDownError) as caught:
+        async with chrome_cdp.open_page("https://example.com/", 0):
+            pytest.fail("a failed fallback must not yield a page")
+
+    message = str(caught.value)
+    assert "12 tabs are open" in message
+    assert "raw-CDP fallback failed too: TimeoutError" in message
+
+
 @pytest.mark.parametrize("failure", ["network", "invalid_json", "not_a_list"])
 async def test_attach_timeout_reports_unavailable_tab_count_neutrally(monkeypatch, failure):
     import urllib.request

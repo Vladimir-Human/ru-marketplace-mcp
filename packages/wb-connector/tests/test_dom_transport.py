@@ -592,8 +592,13 @@ def test_dom_empty_search_without_warnings_keeps_compact_wire(monkeypatch: pytes
 
     monkeypatch.setattr(D, "render", fake_render)
     result = _run(server.wb_search(query="nothing"))
-    assert result.model_dump(mode="json") == {"status": "no_results", "query": "nothing", "page": 1, "total_ids": 0}
-    assert "meta" not in json.loads(result.model_dump_json())
+    assert result.model_dump(mode="json") == {
+        "status": "no_results",
+        "query": "nothing",
+        "page": 1,
+        "total_ids": 0,
+        "meta": None,
+    }
 
 
 def test_tools_route_to_dom_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:

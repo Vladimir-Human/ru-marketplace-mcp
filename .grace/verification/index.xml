@@ -69,6 +69,7 @@
   </entry>
   <entry id="V-M-CHROME-CDP" module="M-CHROME-CDP" file="packages/mcp-core/src/mcp_core/transport/chrome_cdp.py">
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_attach_timeout_reports_open_tabs_and_preserves_raw_fallback" checks="Fake attach timeout retains transport-down/raw-fallback error compatibility, unchanged ten-second attach budget and bounded HTTP page-only tab count including zero" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too" checks="An attach timeout followed by a failed raw-CDP fallback surfaces transport_down that still names the open tab count" />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_attach_timeout_reports_unavailable_tab_count_neutrally" checks="Mocked HTTP failure, invalid JSON and non-list response report unavailable tab count with retry advice and no Chrome-version blame" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_stealth.py" title="test_new_tab_closes_claimed_target_when_cancelled_during_detach" checks="Fake cancellation during final detach closes only the claimed Page even after CDP-session disposal; stalled close is bounded and cancellation is preserved" />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" title="test_probe_session_reports_reachable_when_only_the_playwright_attach_fails" checks="Mocked raw-fallback diagnostics; companion host/port/profile/binary/probe/platform/status helpers, optional Node evaluate-wrapper examples and fake raw command/event navigation assertions" />
@@ -96,7 +97,8 @@
     <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_rejects_negative_discount_badges" checks="ASCII minus, Unicode minus and en dash discount amounts are never prices, including spaced signs" />
     <test file="packages/wb-connector/tests/test_dom_transport.py" title="test_prices_in_preserves_fractional_roubles" checks="Comma/dot decimals and grouped NBSP prices retain fractional roubles" />
     <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_region_warning_matches_shape_golden" checks="Synthetic no_results warning metadata shape is pinned inline" />
-    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_without_warning_matches_compact_shape_golden" checks="Unwarned no_results shape stays unchanged" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_without_warning_matches_compact_shape_golden" checks="Unwarned no_results keeps its fields with meta null" />
+    <test file="packages/wb-connector/tests/test_shape_reference.py" title="test_no_results_output_schema_keeps_its_fields" checks="The no-results serialization schema lists status, query, page, total_ids and meta instead of a bare object" />
     <test file="packages/wb-connector/tests/test_parser_live.py" checks="Offline captured search-v9/card-v4 values, positive finite RUB prices, colors and recorded search/card price differences" />
     <test file="packages/wb-connector/tests/test_dom_transport.py" checks="Offline text fixtures and fake render: Wallet/regular/old prices and challenge stops" />
     <test file="packages/wb-connector/tests/test_pagination_wrap.py" checks="Order-sensitive leading-ID fingerprints, short/malformed pages, query/region scope and unseen-page-one disarming" />
