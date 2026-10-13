@@ -175,7 +175,7 @@ CARD_EXTRACT_JS = r"""
 # ---------------------------------------------------------------------------
 
 _SP = "[ \u00a0\u2009\u202f]"
-_PRICE_RE = re.compile(rf"(?<![\d.,])(\d{{1,3}}(?:{_SP}\d{{3}})+|\d+)(?:[.,]\d{{1,2}})?{_SP}*₽(?!{_SP}*/{_SP}*мес)")
+_PRICE_RE = re.compile(rf"(?<![\d.,])((?:\d{{1,3}}(?:{_SP}\d{{3}})+|\d+)(?:[.,]\d{{1,2}})?){_SP}*₽(?!{_SP}*/{_SP}*мес)")
 _MONTHS = "января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря"
 _DELIVERY_RE = re.compile(
     rf"^(сегодня|завтра|послезавтра|\d{{1,2}}(?:{_SP}*[–-]{_SP}*\d{{1,2}})?{_SP}+(?:{_MONTHS}))(?:{_SP}*,{_SP}*(.*))?$",
@@ -212,14 +212,15 @@ _CARD_LABELS = (
 
 
 def prices_in(text: str) -> list[float]:
-    """Every ruble amount in ``text``, in order; instalments («… ₽/мес») excluded."""
+    """Positive ruble amounts, including fractions; discounts and instalments excluded."""
     out: list[float] = []
     for match in _PRICE_RE.finditer(text or ""):
-        digits = re.sub(r"\D", "", match.group(1))
-        if digits:
-            value = float(int(digits))
-            if value > 0:
-                out.append(value)
+        if text[: match.start()].rstrip(" \u00a0\u2009\u202f").endswith(("-", "−", "–")):
+            continue
+        amount = re.sub(_SP, "", match.group(1)).replace(",", ".")
+        value = float(amount)
+        if value > 0:
+            out.append(value)
     return out
 
 

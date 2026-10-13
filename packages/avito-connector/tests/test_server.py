@@ -185,6 +185,123 @@ async def test_search_warns_on_empty_items_with_nonzero_total(monkeypatch):
     assert "empty_items_with_nonzero_total" in result.meta.warnings
 
 
+@pytest.mark.parametrize(
+    ("payload", "error_code"),
+    [
+        pytest.param(json.loads(FIREWALL_BODY), "challenge_required", id="firewall-captcha"),
+        pytest.param({"too-many-requests": {"message": "Try again later"}}, "rate_limited", id="rate-key"),
+        pytest.param({"error": {"code": 429, "message": "Request limit exceeded"}}, "rate_limited", id="rate-code"),
+        pytest.param({"error": {"code": "CAPTCHA_REQUIRED"}}, "challenge_required", id="captcha-code"),
+        pytest.param({"status": "error", "message": "Service unavailable"}, "transport_down", id="status-error"),
+        pytest.param({"success": False, "data": {"items": []}}, "transport_down", id="success-false"),
+        pytest.param({"error": "Unknown upstream failure", "items": []}, "transport_down", id="error-with-items"),
+        pytest.param({"errors": [{"message": "Service unavailable"}]}, "transport_down", id="errors-list"),
+    ],
+)
+async def test_search_rejects_http200_json_error_envelopes(monkeypatch, payload, error_code):
+    """An upstream refusal is not a healthy zero-result classifieds search."""
+    monkeypatch.setattr(server, "_pacer", server.Pacer(0))
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_search("ноутбук")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == error_code
+    assert error["provider"] == "avito"
+    assert error["retryable"] is True
+    assert server._pacer.consecutive_refusals == (0 if error_code == "transport_down" else 1)
+    if error_code == "rate_limited":
+        assert error["status_code"] == 429
+    if error_code == "challenge_required":
+        assert error["status_code"] == 403
+        assert error["requires_user_action"] is True
+        assert error["challenge_type"] == "captcha"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({}, id="absent-envelope"),
+        pytest.param({"totalCount": 0}, id="absent-items-zero-total"),
+        pytest.param({"catalog": {"listings": []}}, id="renamed-catalog-items"),
+        pytest.param({"data": {"listings": []}}, id="renamed-data-items"),
+        pytest.param({"items": None}, id="null-items"),
+        pytest.param({"items": {}}, id="object-items"),
+        pytest.param({"items": "[]"}, id="string-items"),
+        pytest.param({"items": False}, id="boolean-items"),
+        pytest.param({"catalog": None}, id="null-catalog"),
+        pytest.param({"catalog": {"items": None}}, id="null-catalog-items"),
+        pytest.param({"data": {"items": {}}}, id="object-data-items"),
+    ],
+)
+async def test_search_rejects_missing_or_invalid_items_container(monkeypatch, payload):
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_search("ноутбук")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "parser_drift"
+    assert error["provider"] == "avito"
+    assert error["retryable"] is False
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({"totalCount": 0, "items": []}, id="top-level"),
+        pytest.param({"totalCount": 0, "catalog": {"items": []}}, id="catalog"),
+        pytest.param({"totalCount": 0, "data": {"items": []}}, id="data"),
+        pytest.param({"items": [], "error": None, "errors": [], "success": True}, id="no-error-markers"),
+        pytest.param({"items": [], "error": False}, id="false-error"),
+        pytest.param({"items": [], "error": ""}, id="blank-error"),
+    ],
+)
+async def test_search_accepts_explicit_empty_items_container(monkeypatch, payload):
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    result = await server.avito_search("несуществующее объявление")
+
+    assert result.status == "success"
+    assert result.count == 0
+    assert result.items == []
+    assert result.meta.healthy is True
+    assert result.meta.warnings == []
+
+
+async def test_search_error_detection_ignores_listing_content(monkeypatch):
+    _patch_fetch(
+        monkeypatch,
+        _ok({"items": [{"id": 4612345678, "title": "captcha firewall too-many-requests software", "price": 100}]}),
+    )
+
+    result = await server.avito_search("software")
+
+    assert result.count == 1
+    assert result.items[0].title == "captcha firewall too-many-requests software"
+    assert result.meta.healthy is True
+
+
+@pytest.mark.parametrize(
+    ("payload", "error_code"),
+    [
+        pytest.param(json.loads(FIREWALL_BODY), "challenge_required", id="firewall-captcha"),
+        pytest.param({"error": {"code": 429}}, "rate_limited", id="rate-limit"),
+        pytest.param({"error": "Service unavailable"}, "transport_down", id="outage"),
+    ],
+)
+async def test_selfcheck_http200_json_errors_are_inconclusive(monkeypatch, payload, error_code):
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    result = await server.avito_selfcheck()
+
+    assert result.status == "inconclusive"
+    assert result.healthy is None
+    assert result.checks["search"].state == "inconclusive"
+    assert result.checks["search"].reason == error_code
+
+
 # ----------------------------------------------------------------- avito_card ----
 
 

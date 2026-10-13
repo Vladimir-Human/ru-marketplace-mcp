@@ -32,3 +32,31 @@ def test_search_normalization_matches_shape_golden() -> None:
     normalized = [server._card_item_dict(item) for item in payload["products"]]
 
     assert shape_signature({"products": normalized}) == SEARCH_GOLDEN
+
+
+def test_no_results_region_warning_matches_shape_golden() -> None:
+    response = server.WbNoResultsResponse(
+        query="nothing",
+        page=1,
+        total_ids=0,
+        meta=server.MetaOut(source="wb_search", healthy=True, warnings=server._dom_dest_warning("-1029256")),
+    )
+    assert shape_signature(response.model_dump(mode="json")) == [
+        "meta.healthy:bool",
+        "meta.source:str",
+        "meta.warnings[]:str",
+        "page:int",
+        "query:str",
+        "status:str",
+        "total_ids:int",
+    ]
+
+
+def test_no_results_without_warning_matches_compact_shape_golden() -> None:
+    response = server.WbNoResultsResponse(query="nothing", page=1, total_ids=0)
+    assert shape_signature(response.model_dump(mode="json")) == [
+        "page:int",
+        "query:str",
+        "status:str",
+        "total_ids:int",
+    ]

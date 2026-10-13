@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 
 class MetaOut(MetaOutBase):
@@ -190,6 +190,14 @@ class WbNoResultsResponse(BaseModel):
     query: str = Field(default="", description="Search query text.")
     page: int | None = Field(default=None, description="Search page number if applicable.")
     total_ids: int | None = Field(default=None, description="Total ids from search-goods if applicable.")
+    meta: MetaOut | None = Field(default=None, description="Validation metadata when warnings need reporting.")
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data = handler(self)
+        if self.meta is None or not self.meta.warnings:
+            data.pop("meta", None)
+        return data
 
 
 class WbSelfCheckEntry(SelfCheckEntryBase):

@@ -45,7 +45,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
-# SCOPE: Read-only HTTP/CDP search; paced allowlisted CDP item/seller pages; nullable unavailable data; chained drift canary.
+# SCOPE: Read-only HTTP/CDP search with explicit API-error/schema guards; paced allowlisted CDP pages; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors; models_output; settings; shape_reference.
 # LINKS: M-AVITO; M-COMPARE; M-MARKETPLACE; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
@@ -61,7 +61,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _check_rendered_page: Reject transport/challenge pages before HTML parsing.
 # _raise_for_fetch_failure: Classify firewall, missing-page and transport failures.
 # _extract_item_id: Resolve numeric handles or Avito listing URLs.
-# _parse_search_items: Normalize listings, dates, places and nullable prices.
+# _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
+# _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
 # _build_search_url: Encode query, page and validated location/category identifiers.
 # avito_search: Read paginated classifieds search.
 # avito_card: Read item-page Product and seller block over CDP; never use a catalog envelope.
@@ -87,8 +88,11 @@ from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
+    ConnectorError,
     NotFoundError,
     ParserDriftError,
+    RateLimitedError,
     ToolError,
     TransportDownError,
     raise_tool_error,
@@ -742,18 +746,53 @@ def _posted_at(item: dict[str, Any]) -> str | None:
     return moment.isoformat().replace("+00:00", "Z")
 
 
+def _raise_for_search_error(payload: dict) -> None:
+    """Reject explicit API errors even when the transport returned HTTP 200.
+
+    Inspect error metadata only, never listing titles/descriptions: ads may
+    legitimately mention captcha or firewall software. A captcha link takes
+    precedence over the firewall's misleading too-many-requests envelope key.
+    """
+    errors = {
+        key: payload[key] for key in ("error", "errors", "too-many-requests", "firewall", "captcha") if payload.get(key)
+    }
+    failed = payload.get("success") is False or payload.get("status") in ("error", "fail", "failed")
+    if not errors and not failed:
+        return
+    detail = json.dumps(
+        {**errors, **{key: payload[key] for key in ("code", "status", "message") if key in payload}},
+        ensure_ascii=False,
+    )
+    markers = detail.lower()
+    if any(marker in markers for marker in ("captcha", "challenge", "firewall", "капча", "не робот")):
+        raise ChallengeRequiredError(
+            "Avito search requires a browser challenge. Open avito.ru in the Chrome CDP profile, "
+            "solve the captcha, then retry.",
+            provider="avito",
+        )
+    if re.search(r"too[-_ ]many[-_ ]requests|rate[-_ ]?limit|\b429\b", markers):
+        raise RateLimitedError("avito")
+    raise TransportDownError(_redact(f"Avito search API returned an error: {detail}"), provider="avito")
+
+
 def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None]:
     """Best-effort extraction of items + total from a js/items payload.
 
     The endpoint has shipped several envelope shapes; tolerate the known ones
-    and record drift loudly rather than guessing.
+    and record drift loudly rather than guessing. Explicit API errors raise
+    ConnectorError; a missing list raises ParserDriftError, unlike a real [].
     """
+    _raise_for_search_error(payload)
     candidates = (
         payload.get("items"),
         payload.get("catalog", {}).get("items") if isinstance(payload.get("catalog"), dict) else None,
         payload.get("data", {}).get("items") if isinstance(payload.get("data"), dict) else None,
     )
-    items_raw = next((c for c in candidates if isinstance(c, list)), [])
+    items_raw = next((c for c in candidates if isinstance(c, list)), None)
+    if items_raw is None:
+        raise ParserDriftError(
+            "Avito search payload has no items list at items, catalog.items or data.items", provider="avito"
+        )
     total = R.first_present(payload, "totalCount", "total", "count")
     if not isinstance(total, int):
         total = R.coerce_int(total)
@@ -861,8 +900,10 @@ async def avito_search(
     ## Error Format
 
     ToolError: BadRequestError on malformed arguments; TransportDownError on
-    firewall blocks (with the captcha/proxy guidance inline); ParserDriftError
-    when a reached-200 body no longer parses as the expected envelope.
+    fetch failures or explicit API errors; ChallengeRequiredError/RateLimitedError
+    for HTTP200 JSON challenge/throttle envelopes. Non-200 firewall blocks keep
+    captcha/proxy guidance. ParserDriftError when a reached-200 body no longer
+    parses as the expected envelope, including missing/renamed items containers.
     """
     log_event("avito_search.start", query=query[:60], page=page)
     try:
@@ -902,6 +943,10 @@ async def avito_search(
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="avito_search")
         result.meta = MetaOut(**attached["_meta"])
         return result
+    except ConnectorError as exc:
+        if isinstance(exc, (RateLimitedError, ChallengeRequiredError)):
+            _pacer.record_refusal()
+        raise_tool_error(exc)
     except ToolError:
         raise
     except Exception as exc:
@@ -1133,6 +1178,17 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
             return
         try:
             verdict = smoke(payload)
+        except ConnectorError as exc:
+            drift = isinstance(exc, ParserDriftError)
+            if isinstance(exc, (RateLimitedError, ChallengeRequiredError)):
+                _pacer.record_refusal()
+            checks[name] = R.selfcheck_entry(
+                "drift" if drift else "inconclusive",
+                baseline=baseline,
+                reason="parse_smoke_failed" if drift else exc.code.value,
+                notes=[_redact(str(exc))[:160]],
+            )
+            return
         except Exception as exc:
             checks[name] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=[str(exc)[:160]]

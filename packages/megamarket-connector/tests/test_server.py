@@ -192,6 +192,154 @@ async def test_card_maps_an_empty_card_to_not_found(monkeypatch):
         await server.megamarket_card("1234567")
 
 
+@pytest.mark.parametrize(
+    ("payload", "expected_error", "refusal"),
+    [
+        pytest.param({"success": False}, "parser_drift", False, id="failed-without-detail"),
+        pytest.param({"success": False, "errors": []}, "parser_drift", False, id="failed-empty-errors"),
+        pytest.param(
+            {"success": False, "errors": [{"message": "Upstream service unavailable"}]},
+            "transport_down",
+            False,
+            id="service-failure",
+        ),
+        pytest.param({"error": "Upstream service unavailable"}, "transport_down", False, id="error-only"),
+        pytest.param(
+            {"success": False, "errors": [{"code": "PRODUCT_NOT_FOUND"}]},
+            "not_found",
+            False,
+            id="not-found-code",
+        ),
+        pytest.param(
+            {"success": False, "errors": [{"message": "Товар не найден"}]},
+            "not_found",
+            False,
+            id="not-found-message",
+        ),
+        pytest.param({"success": False, "errors": [{"code": 404}]}, "not_found", False, id="not-found-status"),
+        pytest.param({"success": False, "error": "Product not found"}, "not_found", False, id="not-found-error"),
+        pytest.param({"success": False, "code": 404}, "not_found", False, id="top-level-not-found"),
+        pytest.param(
+            {"success": True, "errors": [{"code": "INTERNAL_ERROR"}]},
+            "transport_down",
+            False,
+            id="errors-override-success",
+        ),
+        pytest.param({"success": False, "errors": [42]}, "parser_drift", False, id="malformed-errors"),
+        pytest.param(
+            {"success": False, "errors": [{"code": 7, "error": "VPN refusal"}]},
+            "transport_down",
+            True,
+            id="nested-ip-refusal",
+        ),
+        pytest.param(
+            {"success": False, "errors": [{"code": 429, "message": "Too many requests"}]},
+            "transport_down",
+            True,
+            id="nested-rate-refusal",
+        ),
+        pytest.param(IP_BLOCK_PAYLOAD, "transport_down", True, id="existing-ip-refusal"),
+    ],
+)
+async def test_card_failed_envelope_never_becomes_requested_id_success(monkeypatch, payload, expected_error, refusal):
+    calls = []
+    successes = []
+    refusals = []
+
+    async def fake_cdp_post(api_path, body, ctx):
+        calls.append(api_path)
+        return 200, json.dumps(payload)
+
+    monkeypatch.setattr(server, "_cdp_post_json", fake_cdp_post)
+    monkeypatch.setattr(server._pacer, "record_success", lambda: successes.append(True))
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: refusals.append(True))
+
+    for _ in range(2):
+        with pytest.raises(ToolError) as excinfo:
+            await server.megamarket_card("1234567")
+        error = json.loads(str(excinfo.value))
+        assert error["error"] == expected_error
+        assert error["retryable"] is (expected_error == "transport_down")
+
+    assert len(calls) == 2, "failed envelopes must never be cached as successful catalog data"
+    assert successes == []
+    assert len(refusals) == (2 if refusal else 0)
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+async def test_post_preserves_existing_http_refusal_handling(monkeypatch, status):
+    refusals = []
+
+    async def fake_cdp_post(api_path, body, ctx):
+        return status, "refused"
+
+    monkeypatch.setattr(server, "_cdp_post_json", fake_cdp_post)
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: refusals.append(True))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_card("1234567")
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+    assert refusals == [True]
+
+
+async def test_search_failed_envelope_with_empty_items_is_not_success(monkeypatch):
+    async def fake_cdp_post(api_path, body, ctx):
+        return 200, json.dumps(
+            {"success": False, "errors": [{"message": "Service unavailable"}], "items": [], "total": 0}
+        )
+
+    async def no_address(ctx):
+        return None
+
+    async def no_search_params(query, ctx):
+        return {}
+
+    monkeypatch.setattr(server, "_cdp_post_json", fake_cdp_post)
+    monkeypatch.setattr(server, "_resolve_address_id", no_address)
+    monkeypatch.setattr(server, "_resolve_search_params", no_search_params)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_search("телефон")
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+
+
+async def test_post_preserves_successful_empty_search_envelope(monkeypatch):
+    payload = {"success": True, "errors": [], "items": [], "total": 0}
+
+    async def fake_cdp_post(api_path, body, ctx):
+        return 200, json.dumps(payload)
+
+    async def no_address(ctx):
+        return None
+
+    async def no_search_params(query, ctx):
+        return {}
+
+    monkeypatch.setattr(server, "_cdp_post_json", fake_cdp_post)
+    monkeypatch.setattr(server, "_resolve_address_id", no_address)
+    monkeypatch.setattr(server, "_resolve_search_params", no_search_params)
+
+    result = await server.megamarket_search("ничего")
+
+    assert result.status == "success"
+    assert result.count == 0
+    assert result.items == []
+
+
+async def test_post_preserves_successful_empty_goods_as_not_found(monkeypatch):
+    async def fake_cdp_post(api_path, body, ctx):
+        return 200, json.dumps({"success": True, "errors": [], "goods": {}})
+
+    monkeypatch.setattr(server, "_cdp_post_json", fake_cdp_post)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_card("1234567")
+
+    assert json.loads(str(excinfo.value))["error"] == "not_found"
+
+
 # ------------------------------------------------------- megamarket_selfcheck ----
 
 
