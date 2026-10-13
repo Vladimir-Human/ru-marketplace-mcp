@@ -154,6 +154,11 @@ CARD_PAYLOAD = {
     "seller": ["Находки из Китая 5,0"] * 7 + ["Находки из Китая"],
 }
 
+# 2026-10-13: the extractor also reports the price the page strikes with CSS (not <del>);
+# this capture predates that, so the struck figure the page showed is added here.
+CARD_PAYLOAD_VERBATIM = dict(CARD_PAYLOAD)
+CARD_PAYLOAD = {**CARD_PAYLOAD, "del": [*CARD_PAYLOAD.get("del", []), "9 338 ₽"]}
+
 
 SAMSUNG_CARD_PAYLOAD = {
     # verbatim from wb_card_dump.py (nm 164379765, 2026-09-30): Russian seller, 222 ratings, no Wallet price
@@ -236,6 +241,11 @@ SAMSUNG_CARD_PAYLOAD = {
     "seller": ["Modern Device 4,9"] * 7 + ["Modern Device"],
 }
 
+SAMSUNG_CARD_PAYLOAD = {
+    **SAMSUNG_CARD_PAYLOAD,
+    "del": [*SAMSUNG_CARD_PAYLOAD.get("del", []), "29 249 ₽"],
+}  # CSS strike, see above
+
 
 # --------------------------------------------------------------- price logic
 
@@ -243,12 +253,12 @@ SAMSUNG_CARD_PAYLOAD = {
 @pytest.mark.parametrize(
     ("prices", "kwargs", "expected"),
     [
-        ([4961, 5063, 9338], {}, (5063, 4961, 9338)),  # product page: wallet < regular < struck
-        ([4961, 9338], {"wallet_label": True}, (None, 4961, 9338)),  # search tile
-        ([1000, 1500], {}, (1000, None, 1500)),  # no wallet discount
+        ([4961, 5063, 9338], {}, (None, None, None)),  # no strike evidence: roles unproven, never guessed
+        ([4961, 9338], {"wallet_label": True}, (None, 4961, None)),  # labelled Wallet price; the rest unproven
+        ([1000, 1500], {}, (None, None, None)),  # two unlabelled figures: the max is not assumed struck
         ([1000], {}, (1000, None, None)),
         ([], {}, (None, None, None)),
-        ([4961, 5063, 9338], {"wallet_hint": 4961.0}, (5063, 4961, 9338)),
+        ([4961, 5063, 9338], {"wallet_hint": 4961.0}, (None, 4961, None)),
         ([4961, 9338], {"wallet_hint": 4961.0}, (None, 4961, 9338)),  # 9338/4961 > 1.15 → struck
         ([4961, 5063], {"wallet_hint": 4961.0}, (5063, 4961, None)),  # small gap → regular
         ([1200, 1500], {"crossed_hint": 1500.0}, (1200, None, 1500)),
@@ -301,7 +311,7 @@ def test_search_tiles_parse_and_flag_wallet_prices() -> None:
 
     flat = by_nm[1552408950]
     assert flat["brand"] == ""  # «Нет бренда»
-    assert (flat["price_rub"], flat["price_original_rub"]) == (5155.0, 5684.0)
+    assert (flat["price_rub"], flat["price_original_rub"]) == (5155.0, None)  # no <del>: 5684 is not proven struck
     assert flat["price_kind"] == "wallet"
 
     hinted = by_nm[1000000001]
@@ -934,6 +944,8 @@ ONE_OTHER_OFFER_PAYLOAD = {
     "offers": [{"nm": "1552408950", "lines": ["4 735 ₽", "Нет оценок", "12 октября", "Находки из Китая"]}],
 }
 
+ONE_OTHER_OFFER_PAYLOAD = {**ONE_OTHER_OFFER_PAYLOAD, "del": [*ONE_OTHER_OFFER_PAYLOAD["del"], "9 231 ₽"]}  # CSS strike
+
 
 def test_single_other_offer_header_gives_count_and_floor() -> None:
     """Was: other_offers listed 1552408950, but count and floor were None — «1 предложение от …» matched nothing."""
@@ -985,3 +997,32 @@ def test_other_offers_html_fragment_single_tile_matches() -> None:
 
 def test_card_probe_waits_for_the_singular_header() -> None:
     assert r"предложени\S*\s+от" in D.PROBE_JS
+
+
+def test_search_tile_wallet_icon_marks_a_single_price_as_wallet() -> None:
+    """Live 2026-10-13, nm 471317158: the tile showed «4 341 ₽ −57%» with the Wallet icon but no
+    caption; the product page showed Wallet 4 341, regular 4 430, struck 10 490 ₽."""
+    tile = {
+        "nm": "471317158",
+        "lines": ["4 341 ₽", "−57%", "Кроссовки женские зимние черные высокие"],
+        "wallet_icon": True,
+    }
+    item = D.parse_search_tile(tile)
+    assert item is not None
+    assert (item["price_rub"], item["wallet_price_rub"], item["price_kind"]) == (4341.0, 4341.0, "wallet")
+    plain = D.parse_search_tile({**tile, "wallet_icon": False})
+    assert plain is not None and plain["price_kind"] == "regular"
+
+
+def test_search_tile_with_unproven_price_roles_is_null_and_warned() -> None:
+    items, warnings = D.parse_search_page({"tiles": [{"nm": "1", "lines": ["1 000 ₽", "1 500 ₽", "Товар"]}]})
+    assert (items[0]["price_rub"], items[0]["price_original_rub"], items[0]["in_stock"]) == (None, None, None)
+    assert any("without a struck mark" in w for w in warnings)
+
+
+def test_card_page_without_strike_evidence_leaves_roles_unknown() -> None:
+    """The 2026-09-30 capture as the old extractor saw it: three figures, no struck mark."""
+    item, warnings = D.parse_card_page(CARD_PAYLOAD_VERBATIM, 1345073040)
+    assert item is not None
+    assert (item["price_rub"], item["wallet_price_rub"], item["price_original_rub"]) == (None, None, None)
+    assert any("price roles unknown" in w for w in warnings)

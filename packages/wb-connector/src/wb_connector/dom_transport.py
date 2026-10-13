@@ -118,7 +118,11 @@ SEARCH_EXTRACT_JS = r"""
     const a = el.querySelector('a[href*="/catalog/"]');
     const label = a ? clean(a.getAttribute('aria-label') || a.getAttribute('title') || '') : '';
     const pick = sel => [...el.querySelectorAll(sel)].map(e => clean(e.innerText)).filter(t => t.indexOf('₽') >= 0).slice(0, 3);
-    tiles.push({nm: nm, lines: lines, label: label.slice(0, 300), del: pick('del, s'), wallet: pick('[class*="wallet" i]')});
+    // A Wallet price carries an icon beside the current price (live 2026-10-13); a narrow
+    // tile drops the «с WB Кошельком» caption but keeps the icon.
+    const cur = el.querySelector('[data-testid="product-card-current-price"]');
+    const walletIcon = !!(cur && cur.parentElement && cur.parentElement.querySelector(':scope > .mo-icon'));
+    tiles.push({nm: nm, lines: lines, label: label.slice(0, 300), del: pick('del, s'), wallet: pick('[class*="wallet" i]'), wallet_icon: walletIcon});
     if (tiles.length >= 60) break;
   }
   return JSON.stringify({title: document.title || '', url: location.href, tiles: tiles});
@@ -163,7 +167,11 @@ CARD_EXTRACT_JS = r"""
     h1: h1 ? clean(h1.innerText) : '',
     lines: lines,
     wallet: pick('[class*="wallet" i]', 8).filter(t => t.indexOf('₽') >= 0),
-    del: pick('del, s', 8).filter(t => t.indexOf('₽') >= 0),
+    // The product page strikes the old price with CSS, not <del> (live 2026-10-13).
+    del: [...pick('del, s', 8), ...[...root.querySelectorAll('span, div, p')]
+      .filter(e => e.children.length === 0 && (e.textContent || '').indexOf('₽') >= 0 &&
+                   getComputedStyle(e).textDecorationLine.indexOf('line-through') >= 0)
+      .map(e => clean(e.textContent)).slice(0, 8)].filter(t => t.indexOf('₽') >= 0),
     seller: pick('[class*="seller" i]', 10).filter(t => !/стать продавцом/i.test(t)),
     offers: offers
   });
@@ -238,15 +246,15 @@ def assign_prices(
     """Split the price figures of one offer into (regular, wallet, crossed).
 
     WB renders them ascending: wallet < regular < struck. The struck price is
-    settled first (a ``<del>`` hint, else the largest of two or more figures;
-    with a known Wallet price and one other figure, that figure is struck only
-    when it is far above the Wallet price). Of what stays below it, two figures
-    are (wallet, regular); a single one is the Wallet price when the tile says
-    «с WB Кошельком», otherwise the regular price.
+    settled first, from strike evidence (``<del>`` or a CSS line-through); with a
+    known Wallet price and one other figure, that figure is struck only when it
+    is far above the Wallet price. Of what stays below it, two figures are
+    (wallet, regular); a single one is the Wallet price when the tile says so
+    (caption or icon), otherwise the regular price.
 
-    Known blind spot: a page showing only wallet + regular, with no struck
-    price and no label, reads as (regular, struck). WB practically always shows
-    a struck price, and wb_card on the product page resolves the three figures.
+    Two or more figures beside the Wallet price with no strike evidence are
+    ambiguous: guessing the largest as struck could publish a regular price as
+    the original. Regular and struck then stay None and the caller warns.
     """
     ps = _dedupe(prices)
     wallet, crossed = wallet_hint, crossed_hint
@@ -256,7 +264,10 @@ def assign_prices(
             if others[0] > wallet * WALLET_GAP_MAX:
                 crossed = others[0]
         elif len(others) >= 2:
-            crossed = max(others)
+            # A Wallet caption/icon still proves the lowest figure is the Wallet price.
+            if wallet is None and wallet_label:
+                wallet = min(others)
+            return None, wallet, None
     below = sorted(
         p
         for p in ps
@@ -377,7 +388,7 @@ def parse_search_tile(tile: dict[str, Any]) -> dict[str, Any] | None:
     prices: list[float] = []
     for line in price_lines:
         prices.extend(prices_in(line))
-    wallet_label = any("кошельк" in line.lower() for line in lines)
+    wallet_label = tile.get("wallet_icon") is True or any("кошельк" in line.lower() for line in lines)
     regular, wallet, crossed = assign_prices(
         prices,
         wallet_hint=_first_price(tile.get("wallet"), prices),
@@ -395,7 +406,8 @@ def parse_search_tile(tile: dict[str, Any]) -> dict[str, Any] | None:
         "review_rating": rating,
         "feedbacks": feedbacks,
         "total_quantity": None,
-        "in_stock": price is not None,
+        # Figures with unproven roles say nothing about stock either way.
+        "in_stock": True if price is not None else (None if prices else False),
         "price_rub": price,
         "price_original_rub": crossed,
         "wallet_price_rub": wallet,
@@ -412,6 +424,13 @@ def parse_search_page(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], li
     tiles: list[Any] = raw_tiles if isinstance(raw_tiles, list) else []
     items = [item for item in (parse_search_tile(t) for t in tiles if isinstance(t, dict)) if item]
     warnings: list[str] = []
+    # in_stock is None only when a tile showed prices whose roles stayed unproven.
+    ambiguous = [item["nm_id"] for item in items if item["in_stock"] is None]
+    if ambiguous:
+        warnings.append(
+            f"wb_dom_search: {len(ambiguous)} tile(s) show several prices without a struck mark "
+            f"(e.g. nm {ambiguous[0]}); their prices are left null — read them with wb_card"
+        )
     if items and any(item["price_kind"] == "wallet" for item in items):
         warnings.append(
             "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is "
@@ -588,6 +607,10 @@ def parse_card_page(payload: dict[str, Any], requested_nm: int) -> tuple[dict[st
         )
         if regular is None and wallet is not None:
             warnings.append(f"wb_dom_card: nm {requested_nm} shows only a Wallet price; regular price unknown")
+        elif regular is None and wallet is None and prices:
+            warnings.append(
+                f"wb_dom_card: nm {requested_nm} shows several prices without a struck mark; price roles unknown"
+            )
         tail = lines[buy_index:]
         delivery, warehouse, delivery_index = parse_delivery(tail)
         store, store_rating = _store_from_buy_block(tail, delivery_index)
