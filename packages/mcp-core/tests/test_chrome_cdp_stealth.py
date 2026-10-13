@@ -249,6 +249,65 @@ async def test_new_tab_detaches_the_session_even_when_no_page_arrives(monkeypatc
     assert cdp.detached is True
 
 
+@pytest.mark.parametrize("close_stalls", [False, True])
+@pytest.mark.parametrize("detach_disposes", [False, True])
+async def test_new_tab_closes_claimed_target_when_cancelled_during_detach(monkeypatch, close_stalls, detach_disposes):
+    import asyncio
+
+    detaching = asyncio.Event()
+    closing = asyncio.Event()
+    closed = asyncio.Event()
+
+    async def close_target():
+        cdp.sent.append(("Target.closeTarget", {"targetId": "T1"}))
+        closing.set()
+        try:
+            if close_stalls:
+                await asyncio.Event().wait()
+            else:
+                await asyncio.sleep(0)
+        finally:
+            closed.set()
+
+    class OwnedPage:
+        async def close(self):
+            await close_target()
+
+    class Cdp(_FakeCdp):
+        async def detach(self):
+            self.detached = detach_disposes
+            detaching.set()
+            await asyncio.Event().wait()
+
+        async def send(self, method, params=None):
+            if self.detached:
+                raise RuntimeError("session already disposed")
+            if method == "Target.closeTarget":
+                await close_target()
+                return {}
+            return await super().send(method, params)
+
+    monkeypatch.setattr(chrome_cdp, "STEALTH", True)
+    monkeypatch.setattr(chrome_cdp, "_RAW_CONNECT_TIMEOUT_S", 0.05)
+    cdp = Cdp()
+    ctx = _FakeContext(_FakeBrowser(cdp))
+    ctx.pages = ["operator-tab", OwnedPage()]
+
+    async def page_session(page):
+        return _FakePageCdp("operator" if page == "operator-tab" else "T1")
+
+    monkeypatch.setattr(ctx, "new_cdp_session", page_session)
+    task = asyncio.create_task(chrome_cdp._new_tab(ctx))
+    await asyncio.wait_for(detaching.wait(), timeout=1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(task, timeout=1)
+
+    assert ("Target.closeTarget", {"targetId": "T1"}) in cdp.sent
+    assert all(params != {"targetId": "operator"} for _method, params in cdp.sent)
+    assert closing.is_set() and closed.is_set()
+
+
 async def test_new_tab_matches_distinct_targets_under_interleaved_creation(monkeypatch):
     """Broadcast pages arrive out of order while all six callers are pending."""
     import asyncio

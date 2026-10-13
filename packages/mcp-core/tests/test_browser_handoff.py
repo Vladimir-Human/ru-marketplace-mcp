@@ -166,6 +166,56 @@ async def test_retention_expires_and_closes_without_a_retry(browser, monkeypatch
     assert not handoff._leases
 
 
+async def test_idle_expiry_closes_owned_page_without_further_requests(browser, monkeypatch):
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_IDLE_S", "0.05")
+    await call()
+    lease = next(iter(handoff._leases.values()))
+    assert lease.deadline > asyncio.get_running_loop().time() + 1
+    assert not browser[0].closed
+    assert chrome_cdp._HANDOFF_VISIBILITY_GUARDS
+
+    # No retry, snapshot, or lookup triggers expiry: the worker owns the timer.
+    await asyncio.wait_for(browser[0].released.wait(), timeout=1)
+    await asyncio.wait_for(lease.task, timeout=1)
+    assert browser[0].closed
+    assert not handoff._leases
+    assert not chrome_cdp._HANDOFF_VISIBILITY_GUARDS
+
+
+@pytest.mark.parametrize("request_kind", ["read", "snapshot"])
+async def test_idle_budget_restarts_after_completed_read_or_snapshot(browser, monkeypatch, request_kind):
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_IDLE_S", "0.05")
+    _, expiry = await call()
+    lease = next(iter(handoff._leases.values()))
+    deadline = lease.deadline
+
+    async def slow_read(page):
+        # Idle time bounds waiting for requests, not a read already in flight.
+        await asyncio.sleep(0.1)
+        return await blocked(page)
+
+    if request_kind == "read":
+        assert (await call(read=slow_read))[1] == expiry
+    else:
+
+        async def slow_capture(page):
+            await asyncio.sleep(0.1)
+            return {"image_data": "encoded"}
+
+        monkeypatch.setattr(chrome_cdp, "capture_owned_viewport", slow_capture)
+        payload = await handoff.snapshot_handoff(scope="session-1", handoff_id=snapshot_id())
+        assert payload["handoff_expires_at"] == expiry
+
+    assert lease.deadline == deadline
+    assert len(browser) == 1 and not browser[0].closed
+    assert lease.last_used + handoff._idle_s() > asyncio.get_running_loop().time()
+    await asyncio.wait_for(browser[0].released.wait(), timeout=1)
+    await asyncio.wait_for(lease.task, timeout=1)
+    assert browser[0].closed
+    assert not handoff._leases
+    assert not chrome_cdp._HANDOFF_VISIBILITY_GUARDS
+
+
 async def test_deadline_cancels_extractor_and_closes(browser, monkeypatch):
     monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_S", "0.05")
     cancelled = asyncio.Event()

@@ -18,6 +18,7 @@ context manager alive; resuming never searches for tabs or navigates again.
 # _expired: Apply lifetime and idle liveness consistently.
 # has_pending_handoff: Detect exact-operation ownership even during cleanup.
 # get_handoff_id: Expose an opaque handle only for a live exact-operation lease.
+# _next_request: Bound each idle queue wait by the earlier idle/lifetime deadline.
 # _run: Own one page, service queued reads and settle callers on every exit.
 # _stop: Shield owned cleanup from repeated cancellation.
 # close_handoffs: Release all owned tabs during graceful shutdown.
@@ -239,6 +240,16 @@ def get_handoff_id(*, scope: str | None, operation: str, url: str) -> str | None
     return lease.handoff_id
 
 
+async def _next_request(lease: _Lease) -> _Request:
+    """Wait only until the earlier lifetime or current idle deadline."""
+    deadline = lease.deadline
+    idle = _idle_s()
+    if idle and lease.last_used > 0:
+        deadline = min(deadline, lease.last_used + idle)
+    async with asyncio.timeout_at(deadline):
+        return await lease.requests.get()
+
+
 async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
     current: _Request | None = None
     terminal_error: Exception = TransportDownError("Browser handoff ended; retry the operation")
@@ -268,11 +279,12 @@ async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
                                 page_origin=f"{parsed.scheme}://{origin_host}"
                                 + (f":{parsed.port}" if parsed.port else ""),
                             )
+                            lease.last_used = asyncio.get_running_loop().time()
                             current.result.set_result((payload, lease.expires_at))
                             del payload
                             current = None
                             lease.busy = False
-                            current = await lease.requests.get()
+                            current = await _next_request(lease)
                             continue
                         blocked = current.challenge(payload)
                         if not blocked:
@@ -280,11 +292,14 @@ async def _run(key: Key, lease: _Lease, url: str, wait_ms: int) -> None:
                             return
                         await chrome_cdp.reveal_owned_page(page)
                         lease.busy = False
+                        # Refresh idle before publishing the result and scheduling
+                        # the next wait; the immutable lifetime is never extended.
+                        lease.last_used = asyncio.get_running_loop().time()
                         current.result.set_result((payload, lease.expires_at))
                         # Do not retain payloads, futures, or caller closures between requests.
                         del payload
                         current = None
-                        current = await lease.requests.get()
+                        current = await _next_request(lease)
                 finally:
                     lease.cleaning = True
     except TimeoutError:
@@ -501,8 +516,6 @@ async def read_with_handoff(
         response = await asyncio.shield(result)
         if response[1] is None:
             await asyncio.shield(lease.task)
-        # The page was just used: the idle clock restarts, the lifetime does not.
-        lease.last_used = loop.time()
         if note_out is not None:
             note_out.update(_resume_note(lease, response, resumed=resumed, url=url))
         return response
