@@ -123,7 +123,7 @@ from avito_connector.shape_reference import missing_required_families
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.5.2"
+SERVER_VERSION = "2.5.3"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.avito.ru"

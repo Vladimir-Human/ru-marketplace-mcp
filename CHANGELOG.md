@@ -9,6 +9,21 @@
 
 ## [Unreleased]
 
+## [2.5.3] - 2026-10-13
+
+### Fixed
+
+- `wb_search` with `WB_TRANSPORT=dom`: a narrow tile drops the «с WB Кошельком»
+  caption but keeps the Wallet icon beside the price. Such tiles were read as
+  the regular price; on 13 October that was 43 tiles of 214 (for nm 471317158
+  the tile's 4 341 ₽ is the Wallet price, the regular price is 4 430 ₽). The
+  icon now marks the Wallet price.
+- WB product pages strike the old price with CSS, not `<del>`, so the struck
+  hint was empty and the original price was guessed as the largest figure.
+  The extractor now reads CSS line-through; without strike evidence, several
+  figures are no longer guessed — `price_rub`/`price_original_rub` stay null
+  with a warning (a Wallet caption still marks the lowest figure).
+
 ## [2.5.2] - 2026-10-13
 
 ### Fixed

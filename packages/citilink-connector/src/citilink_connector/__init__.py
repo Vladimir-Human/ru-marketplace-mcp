@@ -1,3 +1,3 @@
 """Citilink-Shop MCP connector."""
 
-__version__ = "2.5.2"
+__version__ = "2.5.3"
