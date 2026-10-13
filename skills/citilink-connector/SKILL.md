@@ -69,6 +69,9 @@ title comes from the `Snippet__title` anchor.
   page in the same Chrome and compare.
 - From a datacenter address the domain answers 429, so nothing can be verified
   there. This connector only means anything from the operator's own machine.
+- A Qrator page that loads with HTTP 200 answers `challenge_required`: open
+  citilink.ru in the scraping Chrome, pass the check, retry. It is never cached
+  and never returned as a product.
 - A missing price is `null`, never `0`: `price_rub: null` means Citilink had no
   usable price for the tile — treat it as no data, never as a free item.
 ## DSH activation

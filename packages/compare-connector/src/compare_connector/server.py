@@ -77,7 +77,7 @@ from compare_connector.models_output import (
 )
 from compare_connector.vision_policy import client_vision_hint, resolve_image_delivery
 
-SERVER_VERSION = "2.5.1"
+SERVER_VERSION = "2.5.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so

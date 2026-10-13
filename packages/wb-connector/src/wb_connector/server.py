@@ -104,7 +104,7 @@ from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.5.1"
+SERVER_VERSION = "2.5.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(

@@ -57,6 +57,9 @@ warning: that is drift to investigate, not "free".
   same session are fast.
 - Bursts get throttled by Qrator and degrade to `transport_down`. That is
   rate-limiting of the browser, not a parser fault — pace the calls.
+- A Qrator page that loads with HTTP 200 answers `challenge_required`: open
+  dns-shop.ru in the scraping Chrome, pass the check, retry. It is never cached
+  and never returned as a product.
 - From a datacenter address the site answers 401, so there is nothing to verify
   there. This connector is only meaningful from the operator's own machine.
 ## DSH activation
