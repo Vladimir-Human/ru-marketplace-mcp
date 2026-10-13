@@ -27,6 +27,7 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].product_id:str",
     "items[].title:str",
     "items[].url:str",
+    "qrator_wall:bool",
     "title:str",
 )
 
@@ -38,6 +39,7 @@ CARD_SHAPE_REFERENCE: tuple[str, ...] = (
     "price_text:str",
     "price_texts.attached[]:str",
     "price_texts.other[]:str",
+    "qrator_wall:bool",
     "title:str",
 )
 

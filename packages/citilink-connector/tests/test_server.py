@@ -7,6 +7,9 @@ Qrator-passed page.
 
 from __future__ import annotations
 
+import json
+import urllib.parse
+
 import pytest
 from citilink_connector import server
 from fastmcp.exceptions import ToolError
@@ -360,3 +363,173 @@ def test_the_dom_extractor_and_the_python_parser_agree():
     """
     assert "[A-Za-z0-9_-]+" in server._SEARCH_EXTRACT_JS, "the search extractor JS no longer uses the shared id charset"
     assert server._ID_CHARS == "[A-Za-z0-9_-]", "the Python id charset moved; update the JS to match"
+
+
+# ----------------------------------------------------------- Qrator regression ----
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({}, False),
+        ({"title": "   "}, False),
+        ({"title": "ДОСТУП ОГРАНИЧЕН"}, True),
+        ({"title": "Qrator challenge"}, True),
+        ({"title": "Ноутбук", "page_title": "Доступ ограничен"}, True),
+        ({"title": "Доступ ограничен", "page_title": "Citilink"}, False),
+        ({"title": "Qrator notebook", "page_title": ""}, False),
+        ({"title": "Qrator notebook", "page_title": None}, False),
+        ({"page_title": "", "qrator_wall": True}, True),
+        ({"page_title": "", "qrator_wall": False}, False),
+    ],
+)
+def test_qrator_wall_requires_positive_document_evidence(payload, expected):
+    assert server._is_qrator_wall(payload) is expected
+
+
+@pytest.mark.parametrize("evidence", [{"title": "Доступ ограничен"}, {"title": "", "qrator_wall": True}])
+async def test_search_rejects_qrator_wall_before_mapping_and_never_caches(monkeypatch, evidence):
+    payload = {**SEARCH_EXTRACTED, **evidence}
+    _patch_render(monkeypatch, payload)
+
+    def unexpected_mapping(_tile):
+        pytest.fail("Qrator wall must be rejected before product mapping")
+
+    monkeypatch.setattr(server, "_search_item_from_tile", unexpected_mapping)
+    with pytest.raises(ToolError) as caught:
+        await server.citilink_search("ноутбук")
+
+    error = json.loads(str(caught.value))
+    assert error["error"] == "challenge_required"
+    assert error["provider"] == "citilink"
+    assert error["requires_user_action"] is True
+    assert error["retryable"] is True
+    assert error["challenge_type"] == "qrator"
+    assert "citilink.ru" in error["message"]
+    assert "Chrome" in error["message"]
+    assert "scraping" in error["message"].lower()
+    assert "pass" in error["message"].lower()
+    assert "retry" in error["message"].lower()
+    assert len(server._cache) == 0
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        {"page_title": "ДОСТУП ОГРАНИЧЕН"},
+        {"page_title": "Qrator"},
+        {"page_title": "", "qrator_wall": True},
+    ],
+)
+async def test_card_rejects_qrator_wall_before_mapping_and_never_caches(monkeypatch, evidence):
+    _patch_render(monkeypatch, {**CARD_EXTRACTED, **evidence})
+
+    def unexpected_prices(_payload):
+        pytest.fail("Qrator wall must be rejected before product price mapping")
+
+    monkeypatch.setattr(server, "prices_from_tile", unexpected_prices)
+    with pytest.raises(ToolError) as caught:
+        await server.citilink_card("2169270")
+
+    error = json.loads(str(caught.value))
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert error["challenge_type"] == "qrator"
+    assert "citilink.ru" in error["message"]
+    assert "Chrome" in error["message"]
+    assert "retry" in error["message"].lower()
+    assert len(server._cache) == 0
+
+
+@pytest.mark.parametrize("operation", ["search", "card"])
+@pytest.mark.parametrize("legacy_cached_wall", [False, True])
+async def test_qrator_wall_retry_renders_immediately_and_caches_success(monkeypatch, operation, legacy_cached_wall):
+    if operation == "search":
+        tool, argument = server.citilink_search, "ноутбук"
+        url = f"{server.SEARCH_URL}?text={urllib.parse.quote(argument)}"
+        healthy = SEARCH_EXTRACTED
+        wall = {"title": "Доступ ограничен", "items": []}
+    else:
+        tool, argument = server.citilink_card, "2169270"
+        url = f"{server.SITE_BASE}/product/{argument}/"
+        healthy = CARD_EXTRACTED
+        # Older card extractors copied the challenge's document title into title.
+        wall = {"title": "Доступ ограничен", "price_rub": None}
+    rendered = []
+    if legacy_cached_wall:
+        server._cache.set(url, wall)
+
+    async def render(render_url, extract_js, wait_ms, ctx):
+        rendered.append(render_url)
+        return healthy if legacy_cached_wall or len(rendered) > 1 else wall
+
+    monkeypatch.setattr(server, "_cdp_render", render)
+    with pytest.raises(ToolError) as caught:
+        await tool(argument)
+    assert json.loads(str(caught.value))["error"] == "challenge_required"
+    assert server._cache.get(url) is None
+
+    result = await tool(argument)
+    assert result.tier_used == "cdp"
+    assert result.status == "success"
+    cached_result = await tool(argument)
+    assert cached_result.tier_used == "cache"
+    assert rendered == [url] * (1 if legacy_cached_wall else 2)
+
+
+@pytest.mark.parametrize("operation", ["search", "card"])
+async def test_empty_page_is_drift_without_cache(monkeypatch, operation):
+    _patch_render(monkeypatch, {"title": None, "page_title": "", "items": [], "price_rub": None})
+    tool, argument = (server.citilink_search, "ноутбук") if operation == "search" else (server.citilink_card, "2169270")
+
+    with pytest.raises(ToolError) as caught:
+        await tool(argument)
+    assert json.loads(str(caught.value))["error"] == "parser_drift"
+    assert len(server._cache) == 0
+
+
+async def test_search_with_empty_document_title_and_missing_prices_is_accepted(monkeypatch):
+    payload = {"title": "", "items": [SEARCH_EXTRACTED["items"][1]]}
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_search("ноутбук")
+    assert result.status == "success"
+    assert result.items[0].price_rub is None
+    assert "no_prices_on_page" in result.meta.warnings
+    assert len(server._cache) == 1
+
+
+async def test_card_with_empty_document_title_and_missing_price_is_accepted(monkeypatch):
+    payload = {"title": "Qrator notebook", "page_title": "", "price_rub": None, "is_available": False}
+    _patch_render(monkeypatch, payload)
+
+    result = await server.citilink_card("2169270")
+    assert result.title == "Qrator notebook"
+    assert result.price_rub is None
+    assert result.meta.healthy is True
+    assert len(server._cache) == 1
+
+
+@pytest.mark.parametrize(
+    "evidence", [{"title": "Доступ ограничен"}, {"title": "Qrator"}, {"title": "", "qrator_wall": True}]
+)
+@pytest.mark.parametrize("with_tiles", [False, True])
+async def test_selfcheck_qrator_wall_is_blocked_not_drift(monkeypatch, evidence, with_tiles):
+    _patch_render(
+        monkeypatch, {**SEARCH_EXTRACTED, **evidence, "items": SEARCH_EXTRACTED["items"] if with_tiles else []}
+    )
+
+    result = await server.citilink_selfcheck()
+    assert result.status == "inconclusive"
+    assert result.healthy is None
+    assert result.checks["search"].state == "inconclusive"
+    assert result.checks["search"].reason == "blocked"
+    assert len(server._cache) == 0
+
+
+async def test_selfcheck_empty_document_is_drift(monkeypatch):
+    _patch_render(monkeypatch, {"title": "", "items": []})
+
+    result = await server.citilink_selfcheck()
+    assert result.status == "drift_detected"
+    assert result.checks["search"].reason == "parse_smoke_failed"

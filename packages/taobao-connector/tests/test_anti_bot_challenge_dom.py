@@ -26,7 +26,9 @@ from mcp_core.domtest import JsdomUnavailable, run_extractor
 from taobao_connector import server
 
 GRID = Path(__file__).parent / "fixtures" / "search_grid.html"
+CARD = Path(__file__).parent / "fixtures" / "item_card.html"
 PAGE_URL = "https://s.taobao.com/search?q=%E6%89%8B%E6%9C%BA"
+CARD_URL = "https://item.taobao.com/item.htm?id=123456789012"
 
 # The hidden widget healthy pages carry in the DOM: display:none, but its text
 # still rides document.body.textContent — exactly what convicted them under the
@@ -120,3 +122,56 @@ def test_script_text_cannot_fake_a_challenge(tmp_path) -> None:
     for word in ("验证码", "captcha", "are you human"):
         assert word not in payload["body_snippet"], "script text leaked into the visible snippet"
     assert server._anti_bot_challenge(payload) is False
+
+
+def _extract_card(html_path: Path) -> dict:
+    try:
+        return run_extractor(server._CARD_EXTRACT_JS, html_path, page_url=CARD_URL)
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+
+def test_card_extractor_generic_title_challenge_is_recognized_by_handoff(tmp_path) -> None:
+    page = tmp_path / "card_challenge.html"
+    page.write_text(CHALLENGE_HTML, encoding="utf-8")
+    payload = _extract_card(page)
+
+    assert payload["title"] == "淘宝网", "the document-title fallback is not product evidence"
+    assert payload["page_title"] == "淘宝网"
+    assert server._anti_bot_challenge(payload) is True
+    assert server._page_challenge_kind(payload) == "captcha"
+
+
+@pytest.mark.parametrize(
+    "hidden_widget",
+    [
+        HIDDEN_BAXIA,
+        "<div hidden><p>Please complete CAPTCHA</p></div>",
+        '<div aria-hidden="true"><p>Please complete CAPTCHA</p></div>',
+        '<style>.passive {display: none}</style><div class="passive"><p>Please complete CAPTCHA</p></div>',
+        '<div style="visibility:hidden"><p>Please complete CAPTCHA</p></div>',
+    ],
+    ids=["baxia", "hidden_attribute", "aria_hidden", "stylesheet", "visibility_hidden"],
+)
+def test_card_extractor_hidden_widget_cannot_fake_a_challenge(tmp_path, hidden_widget) -> None:
+    html = CARD.read_text(encoding="utf-8")
+    page = tmp_path / "card_hidden_widget.html"
+    page.write_text(html.replace("</body>", f"{hidden_widget}</body>"), encoding="utf-8")
+    payload = _extract_card(page)
+
+    assert "验证" in payload["body_snippet"] or "CAPTCHA" in payload["body_snippet"]
+    assert server._anti_bot_challenge(payload) is False
+    assert server._page_challenge_kind(payload) is None
+
+
+def test_card_extractor_visible_challenge_overrides_product_fields(tmp_path) -> None:
+    html = CARD.read_text(encoding="utf-8")
+    page = tmp_path / "card_visible_challenge.html"
+    widget = '<div id="baxia-punish">Please complete CAPTCHA</div>'
+    page.write_text(html.replace("</body>", f"{widget}</body>"), encoding="utf-8")
+    payload = _extract_card(page)
+
+    assert payload["title"].startswith("Apple iPhone")
+    assert payload["price_texts"]["attached"]
+    assert server._anti_bot_challenge(payload) is True
+    assert server._page_challenge_kind(payload) == "captcha"

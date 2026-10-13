@@ -33,7 +33,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Taobao search and item cards with prices kept in CNY.
-# SCOPE: Read-only operator-browser DOM/state; explicit login/challenge handoffs.
+# SCOPE: Read-only operator-browser DOM/state; reject challenges before card mapping/cache; browser handoffs.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
 # LINKS: M-TAOBAO; M-COMPARE; M-MARKETPLACE; packages/taobao-connector/tests.
 # END_MODULE_CONTRACT
@@ -42,9 +42,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _search_item_from_tile: Normalize rendered tiles without currency conversion.
 # _cdp_render: Serialize paced browser reads and support challenge recovery.
 # _login_wall_markers: Detect title-less login walls from structural signals.
-# _page_challenge_kind: Distinguish login walls from anti-bot challenges.
+# _anti_bot_challenge: Read challenge evidence; ignore hidden card widget text.
+# _page_challenge_kind: Classify handoffs from challenge evidence, not card fields.
 # taobao_search: Read rendered search tiles and preserve missing prices.
-# taobao_card: Read one item card and classify gone or blocked pages.
+# taobao_card: Reject challenge evidence before item mapping and success caching.
 # taobao_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
 
@@ -380,6 +381,23 @@ _CARD_EXTRACT_TEMPLATE = """
     // there): item pages redirect to the same title-less login wall variant,
     // and the verdict is Python's, not the browser's.
     const wallText = cleanTextWithout(document.body, ['script', 'style']) || '';
+    // A card has no search-items gate: discard passive hidden widget subtrees
+    // before transporting challenge text, rather than trusting its title/price.
+    // 5 = SHOW_ELEMENT | SHOW_TEXT; 1/2/3 = ACCEPT/REJECT/SKIP.
+    const challengeParts = [];
+    const challengeWalker = document.createTreeWalker(document.body, 5, {
+        acceptNode(node) {
+            if (node.nodeType === 3) return 1;
+            if (node.matches('script, style, [hidden], [aria-hidden="true"]')) return 2;
+            const style = window.getComputedStyle(node);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return 2;
+            return 3;
+        }
+    });
+    let challengeNode;
+    while ((challengeNode = challengeWalker.nextNode())) {
+        challengeParts.push(challengeNode.textContent || '');
+    }
     return JSON.stringify({
         title: title,
         price_texts: priceTexts,
@@ -389,7 +407,8 @@ _CARD_EXTRACT_TEMPLATE = """
         page_title: document.title || '',
         anchors_total: document.querySelectorAll('a[href]').length,
         login_anchors: document.querySelectorAll('a[href*="login.jhtml"], a[href*="register.jhtml"]').length,
-        body_snippet: wallText.slice(0, 2000)
+        body_snippet: wallText.slice(0, 2000),
+        challenge_snippet: challengeParts.join('').replace(/\\s+/g, ' ').trim().slice(0, 2000)
     });
 }
 """
@@ -551,22 +570,25 @@ def _login_wall(data: dict[str, Any]) -> bool:
 # 2026-09-10: healthy logged-out pages rendering 29-38 items answered
 # __BLOCKED__ because the hidden baxia widget's text says «人机» — the selfcheck
 # reported inconclusive(blocked) and the shape-drift canary never ran. The
-# verdict moved here and is gated on ZERO extracted items; it reads the same
-# visibility-filtered body_snippet the wall marker reads (scripts/styles
-# removed), so inline JS strings cannot fake a challenge either. (验证 also
-# covers 验证码, so the old alternation's extra branch is not needed.)
+# search verdict moved here and is gated on ZERO extracted items. Cards have
+# no items gate, so their challenge_snippet also excludes hidden DOM subtrees;
+# older payloads fall back to body_snippet. Both snippets exclude scripts/styles.
+# 验证 also covers 验证码, so the old alternation's extra branch is not needed.
 _CHALLENGE_TEXT_RE = re.compile(r"验证|人机|captcha|are you human|access denied", re.IGNORECASE)
 
 
 def _anti_bot_challenge(data: dict[str, Any]) -> bool:
     """True when the payload is an anti-bot challenge rather than a catalog.
 
-    A real challenge REPLACES the catalog with its widget, so the text match
-    is gated on zero extracted items: challenge wording (验证/人机/captcha/…)
-    in the visibility-filtered ``body_snippet`` of a page that rendered no
-    items. A payload WITH items is never a challenge whatever its hidden
-    widgets put in the text — exactly the gate the JS verdict lacked when it
-    convicted healthy pages carrying the hidden baxia widget.
+    Search challenge wording (验证/人机/captcha/…) in ``body_snippet`` is
+    gated on zero extracted items. A search payload WITH items ignores hidden
+    widget wording — exactly the protection the old JS verdict lacked.
+
+    Cards instead use ``challenge_snippet``, which excludes scripts/styles and
+    hidden widget subtrees. Positive visible challenge evidence is independent
+    of the extracted title or price. Older card payloads without that field use
+    ``body_snippet``; an explicitly empty visible snippet never falls back to
+    hidden text.
 
     ``title == "__BLOCKED__"`` — the marker an older build's extractor JS
     baked in — is still honored, so a payload captured by that build reads
@@ -579,17 +601,15 @@ def _anti_bot_challenge(data: dict[str, Any]) -> bool:
     items = data.get("items")
     if isinstance(items, list) and items:
         return False
-    snippet = data.get("body_snippet")
+    snippet_field = "challenge_snippet" if "page_title" in data and "challenge_snippet" in data else "body_snippet"
+    snippet = data.get(snippet_field)
     return isinstance(snippet, str) and bool(_CHALLENGE_TEXT_RE.search(snippet))
 
 
 def _page_challenge_kind(data: dict[str, Any]) -> str | None:
+    """Classify handoffs from positive wall/challenge evidence, not card fields."""
     if _login_wall_markers(data):
         return "login_or_captcha"
-    if "page_title" in data:
-        price, _ = prices_from_tile(data)
-        if data.get("title") or price is not None or R.coerce_price(data.get("price_cny")) is not None:
-            return None
     return "captcha" if _anti_bot_challenge(data) else None
 
 
@@ -712,7 +732,9 @@ async def taobao_card(
     ToolError: BadRequestError when no id can be extracted; NotFoundError when
     the item page reports itself gone; challenge_required on login/CAPTCHA walls;
     TransportDownError on CDP failures; ParserDriftError when a rendered card has
-    neither title nor price and no detected challenge. Only successful cards are cached.
+    neither title nor price and no detected challenge. Positive challenge evidence
+    is checked before item mapping regardless of title/price; hidden widget text
+    is excluded by the card extractor. Only successful cards are cached.
     """
     log_event("taobao_card.start", input=item_id_or_url[:80])
     try:
@@ -751,14 +773,7 @@ async def taobao_card(
                     handoff_id=payload.get("_handoff_id"),
                 )
             )
-        title = payload.get("title")
-        page_title = str(payload.get("page_title") or "")
-        if "不存在" in page_title or "很抱歉" in page_title:
-            raise_tool_error(NotFoundError(f"Taobao item {item_id} reports itself gone ({page_title[:60]})."))
-        price, _old = prices_from_tile(payload)
-        if price is None:
-            price = R.coerce_price(payload.get("price_cny"))
-        if not title and price is None and _anti_bot_challenge(payload):
+        if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
                     "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
@@ -767,6 +782,13 @@ async def taobao_card(
                     handoff_id=payload.get("_handoff_id"),
                 )
             )
+        title = payload.get("title")
+        page_title = str(payload.get("page_title") or "")
+        if "不存在" in page_title or "很抱歉" in page_title:
+            raise_tool_error(NotFoundError(f"Taobao item {item_id} reports itself gone ({page_title[:60]})."))
+        price, _old = prices_from_tile(payload)
+        if price is None:
+            price = R.coerce_price(payload.get("price_cny"))
         if title is None and price is None:
             raise_tool_error(
                 ParserDriftError(
