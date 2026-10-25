@@ -9,6 +9,13 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Browser handoff: the idle bound no longer switches off when the event-loop
+  clock is young (under ~60 s since boot). `last_used` used `0.0` as "never
+  used", but loop time counts from boot, so a real timestamp can be zero or
+  negative; the marker is now `None`. Caught by the nightly CI on a fresh VM.
+
 ## [2.5.3] - 2026-10-13
 
 ### Fixed
