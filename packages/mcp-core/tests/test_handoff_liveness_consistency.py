@@ -78,3 +78,17 @@ async def test_a_live_lease_is_still_handed_out(browser):
     await _call()
 
     assert handoff.get_handoff_id(scope="session-1", operation="search", url=URL) is not None
+
+
+def test_idle_expiry_does_not_depend_on_the_clock_origin(monkeypatch):
+    # Loop time counts from boot on Linux, so on a freshly started CI VM a real
+    # "last used" timestamp can be zero or negative. It used to read as "never
+    # used" and switch the idle bound off (CI, 2026-10-24: the VM was ~40 s old).
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_S", "900")
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_IDLE_S", "60")
+    for last_used in (-5.0, 0.0):
+        lease = handoff._Lease(deadline=900.0, expires_at="unused", last_used=last_used)
+        assert handoff._expired(lease, last_used + 61), f"idle bound ignored at {last_used}"
+        assert not handoff._expired(lease, last_used + 59)
+    never_used = handoff._Lease(deadline=900.0, expires_at="unused")
+    assert not handoff._expired(never_used, 100.0), "an unstarted idle clock is not expiry"
