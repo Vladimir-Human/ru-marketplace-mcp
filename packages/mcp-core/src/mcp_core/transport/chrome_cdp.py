@@ -512,6 +512,9 @@ async def get_context() -> AsyncIterator[BrowserContext]:
 # goto() for these instead of raising, so we must refuse to hand a block page or
 # login wall to a parser as though it were data.
 _NAV_FAIL_STATUSES = frozenset({401, 403, 407, 429, 500, 502, 503, 504})
+# Ozon answers the first request with 403 and a JS check that reloads the page
+# by itself; only a 403 that survives this window is a block.
+_ANTIBOT_RECHECK_S = 10.0
 _TAB_OP_TIMEOUT_S = 25.0
 
 
@@ -703,6 +706,7 @@ class _RawCdpPage:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + _RAW_NAV_TIMEOUT_S
         nav_error: object = None
+        rechecking = False
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
@@ -725,6 +729,10 @@ class _RawCdpPage:
             elif method == "Page.frameNavigated":
                 self._note_event(msg)
             elif method == "Page.loadEventFired":
+                if statuses and statuses[-1] == 403 and not rechecking:
+                    rechecking = True
+                    deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
+                    continue
                 break
         if nav_error is not None:
             raise RuntimeError(f"CDP Page.navigate: {nav_error}")
@@ -1054,6 +1062,16 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
         try:
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
             status = resp.status if resp is not None else None
+            if status == 403:
+                try:
+                    resp = await page.wait_for_event(
+                        "response",
+                        predicate=lambda r: r.request.is_navigation_request() and r.frame == page.main_frame,
+                        timeout=_ANTIBOT_RECHECK_S * 1000,
+                    )
+                    status = resp.status
+                except _PlaywrightTimeoutError:
+                    pass
             if status in _NAV_FAIL_STATUSES:
                 final = ""
                 try:

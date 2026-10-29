@@ -82,6 +82,7 @@ def raw_browser(monkeypatch):
         return BytesIO(json.dumps(targets).encode())
 
     monkeypatch.setattr(chrome_cdp, "STEALTH", False)
+    monkeypatch.setattr(chrome_cdp, "_ANTIBOT_RECHECK_S", 0.05)
     monkeypatch.setattr(chrome_cdp, "_browser_ws_url", lambda: "ws://localhost/browser")
     monkeypatch.setattr(chrome_cdp, "_websockets", SimpleNamespace(connect=connect))
     monkeypatch.setattr(urllib.request, "urlopen", discover)

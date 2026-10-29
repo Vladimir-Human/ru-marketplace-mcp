@@ -632,6 +632,8 @@ class _FakeWs:
         import json as _json
 
         await _asyncio.sleep(0)
+        if not self._responses:
+            await _asyncio.Event().wait()
         return _json.dumps(self._responses.pop(0))
 
 
@@ -699,9 +701,11 @@ def test_goto_and_status_returns_the_last_document_status_and_stops_on_load():
     assert page.url == "https://x/final"
 
 
-def test_goto_and_status_reports_a_block_page():
-    """A 403 main document is a verdict open_page turns into NavBlocked."""
+def test_goto_and_status_reports_a_block_page(monkeypatch):
+    """A 403 that outlives the anti-bot recheck is a verdict open_page turns into NavBlocked."""
     import asyncio
+
+    monkeypatch.setattr(chrome_cdp, "_ANTIBOT_RECHECK_S", 0.05)
 
     ws = _FakeWs(
         [
@@ -716,3 +720,25 @@ def test_goto_and_status_reports_a_block_page():
     page = chrome_cdp._RawCdpPage(ws, "T1")
 
     assert asyncio.run(page.goto_and_status("https://x/")) == 403
+
+
+def test_goto_and_status_waits_out_an_antibot_reload():
+    """Ozon's 403 + self-reloading JS check ends on the real page, not a block."""
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"frameId": "F"}},
+            {"method": "Network.responseReceived", "params": {"type": "Document", "response": {"status": 403}}},
+            {"method": "Page.loadEventFired", "params": {}},
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "response": {"status": 200, "url": "https://x/real"}},
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    assert asyncio.run(page.goto_and_status("https://x/")) == 200
+    assert page.url == "https://x/real"
