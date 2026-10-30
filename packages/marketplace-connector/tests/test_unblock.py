@@ -64,6 +64,33 @@ def test_the_map_covers_exactly_the_browser_backed_doctor_sources():
     assert set(unblock.UNBLOCK_PAGES) == doctor_browser_sources
 
 
+def test_unblock_without_a_wall_has_nothing_to_do(monkeypatch, capsys):
+    """No source reports a wall: the command says so and opens nothing (audit S4-F20)."""
+    from mcp_core.transport import chrome_cdp
+
+    def healthy(only: set[str] | None):
+        return [(name, "success", "search:healthy", {"search": {"state": "healthy"}}) for name in sorted(only or ())]
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("a run with nothing to unblock must not start a browser")
+
+    monkeypatch.setattr(cli, "_run_selfchecks", healthy)
+    monkeypatch.setattr(chrome_cdp, "start_browser", forbidden)
+
+    assert cli.cmd_unblock(["--wait", "0"]) == 0
+
+    out = capsys.readouterr().out
+    assert "nothing to unblock" in out
+
+
+def test_unblock_rejects_an_unknown_source_name(capsys):
+    """A typo must not be opened as a page in the operator's browser (audit S4-F20)."""
+    assert cli.cmd_unblock(["nope"]) == 2
+
+    err = capsys.readouterr().err
+    assert "unknown source(s): nope" in err
+
+
 def test_a_named_non_browser_source_exits_two(capsys):
     assert cli.cmd_unblock(["wildberries"]) == 2
 
@@ -161,6 +188,36 @@ def test_recheck_waits_via_input_on_a_tty(monkeypatch, fake_browser, capsys):
     assert cli.cmd_unblock(["dns"]) == 0
 
     assert slept == []
+
+
+def test_unblock_ctrl_c_at_the_prompt_cancels_before_recheck(monkeypatch, fake_browser, capsys):
+    """R-CLI-UNBLOCK: Ctrl-C cancels the Enter prompt with exit 130 (audit S1-F6)."""
+    _channel, events = fake_browser
+    prompts: list[str] = []
+
+    def interrupted(prompt):
+        prompts.append(prompt)
+        raise KeyboardInterrupt
+
+    def unexpected_recheck(_only):
+        pytest.fail("cancelled unblock must not re-check sources")
+
+    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", interrupted)
+    monkeypatch.setattr(cli, "_run_selfchecks", unexpected_recheck)
+
+    try:
+        rc = cli.cmd_unblock(["dns"])
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C escaped the unblock prompt", pytrace=False)
+
+    assert rc == 130
+    assert prompts == ["Press Enter once you have passed the checks or logged in... "]
+    assert events["started"] == [True]
+    assert events["shown"] == ["target-1"]
+    captured = capsys.readouterr()
+    assert captured.err == "cancelled\n"
+    assert "Re-check after the manual step:" not in captured.out
 
 
 @pytest.mark.parametrize(

@@ -48,6 +48,9 @@ if (-not $Profile) {
     }
 }
 
+# A trailing backslash would escape the closing quote of --user-data-dir below.
+if ($Profile.Length -gt 3) { $Profile = $Profile.TrimEnd('\') }
+
 function Get-CdpVersion {
     # A CDP endpoint answers /json/version with its browser version. Read it
     # through System.Net with a 3-second timeout, the same way in Windows
@@ -88,9 +91,12 @@ if (-not (Test-Path $chrome)) {
 #    one with the same --user-data-dir. Other Chrome windows are fine.
 $profileInUse = $false
 try {
+    # The whole switch, quoted or bare, anchored at its end: a sibling profile
+    # such as "Chrome-Scraping-2" is not this one.
+    $profilePattern = '--user-data-dir="?' + [regex]::Escape($Profile) + '("|\s|$)'
     $running = Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction Stop
     foreach ($proc in $running) {
-        if ($proc.CommandLine -and $proc.CommandLine.IndexOf($Profile, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        if ($proc.CommandLine -and $proc.CommandLine -match $profilePattern) {
             $profileInUse = $true
             break
         }
@@ -118,7 +124,9 @@ Write-Host ""
 $chromeArgs = @(
     "--remote-debugging-port=$Port",
     "--remote-debugging-address=127.0.0.1",
-    "--user-data-dir=$Profile",
+    # Start-Process joins arguments with bare spaces, so a path with a space
+    # ("User Data", a user name) would split in two without these quotes.
+    "--user-data-dir=`"$Profile`"",
     "--no-first-run",
     "--no-default-browser-check"
 )
@@ -139,12 +147,18 @@ if ($Hidden) {
     $startParams.WindowStyle = "Hidden"
 }
 Start-Process @startParams
-Start-Sleep -Seconds 2
-if (Get-CdpVersion) {
-    Write-Host "CDP ready on 127.0.0.1:$Port"
-} else {
-    Write-Warning "Chrome started but CDP endpoint not responding yet. Wait a few seconds."
+# Wait up to about 12 s for the endpoint, like the shell launcher; a port that
+# never answers is a failure (exit 1), not a success with a warning.
+$ready = $false
+for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 400
+    if (Get-CdpVersion) { $ready = $true; break }
 }
+if (-not $ready) {
+    Write-Error "Chrome was launched but CDP did not bind within about 12 s. Check for another Chrome using $Profile, or try another -Port."
+    exit 1
+}
+Write-Host "CDP ready on 127.0.0.1:$Port"
 if ($Hidden) {
     Write-Host "The window is off-screen. To log in or pass a site check: marketplace-mcp browser show"
 }

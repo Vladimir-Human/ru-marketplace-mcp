@@ -45,9 +45,16 @@
   временным файлом и подменяется через `os.replace`. Кривой JSON и запись с тем
   же именем, но другим содержимым — отказ с кодом 2 (конфликт снимается
   `--force`); такая же запись — «already configured», без записи и без копии.
-  `--dry-run` печатает результат и путь и ничего не пишет. `install claude-code
-  --write` печатает готовую строку `claude mcp add`, `install dsh --write`
-  отказывается: у dsh свой формат, не `mcpServers`.
+  `--dry-run` печатает записи, которые добавит, только имена остальных серверов
+  и настроек (их содержимое, например ключи в `env`, не выводится) и путь, и
+  ничего не пишет. Конфиг с BOM читается; файл не в UTF-8 (например, UTF-16) —
+  отказ с кодом 2 и подсказкой сохранить его как UTF-8. Вторая запись в ту же
+  секунду получает копию `-1`, `-2`…, так что прежняя копия не затирается.
+  Конфиг-симлинк остаётся симлинком: пишется файл, на который он указывает.
+  `install claude-code --write` печатает готовую строку `claude mcp add`, без
+  `--write` — сначала её, потом блок для `.mcp.json` проекта под поясняющим
+  комментарием. `install dsh --write` отказывается: у dsh свой формат, не
+  `mcpServers`. Ctrl-C на вопросах `setup` и `unblock` — «cancelled» и код 130.
 - `marketplace-mcp --help` (и `help`) печатает короткий экран usage: команды, по
   примеру на каждую, и ссылку на `docs/QUICKSTART.md`. Неизвестная команда
   печатает объяснение и этот же usage, и завершается с кодом 2.
@@ -93,7 +100,8 @@
   выходит с кодом 0; если тот же профиль (`--user-data-dir`) уже занят другим
   Chrome — отказ с кодом 2; иначе Chrome запускается, даже когда другие окна
   Chrome открыты. Ручной запуск теперь видимый по умолчанию; `-Hidden` в
-  PowerShell и `--hidden` в shell возвращают окно за экран, `-Visible` по-прежнему
+  PowerShell возвращает окно за экран, `--hidden` в shell на macOS прячет
+  приложение (⌘H), на Linux ничего не меняет, `-Visible` по-прежнему
   принимается и ничего не меняет. Скрытый запуск заканчивает подсказкой
   `marketplace-mcp browser show`; автозапуск коннектора остаётся за экраном.
 - `scripts/check_lock_revision.py` — новый гейт: лок-файл, перезаписанный старым
@@ -171,9 +179,17 @@
   through a temporary file and `os.replace`. Malformed JSON and a same-name entry
   with different content are refused with exit 2 (the conflict needs `--force`);
   an identical entry prints "already configured" and writes nothing. `--dry-run`
-  prints the merged result and the target path and writes nothing. `install
-  claude-code --write` prints the exact `claude mcp add` line, and `install dsh
-  --write` is refused: dsh has its own format, not `mcpServers`.
+  prints the entries it would add, only the names of the other servers and
+  settings (never their content, such as keys in `env`) and the target path,
+  and writes nothing. A config saved with a BOM is read; a file that is not UTF-8
+  (UTF-16, for example) is refused with exit 2 and a save-as-UTF-8 hint. A second
+  write in the same second gets a `-1`, `-2`... backup, so an earlier backup is
+  never overwritten. A symlinked config stays a symlink: its target is written.
+  `install claude-code --write` prints the exact `claude mcp add` line; without
+  `--write` it prints that line first, then the block for a project's
+  `.mcp.json` under a comment that says so. `install dsh --write` is refused:
+  dsh has its own format, not `mcpServers`. Ctrl-C at a `setup` or `unblock`
+  prompt prints "cancelled" and exits 130.
 - `marketplace-mcp --help` (and `help`) prints a short usage screen: the verbs,
   one example each, and a pointer to `docs/QUICKSTART.md`. An unknown command
   prints the explanation and that screen, and exits 2.
@@ -217,8 +233,8 @@
   launcher says so and exits 0; when another Chrome holds the same profile
   (`--user-data-dir`), it refuses with exit 2; otherwise Chrome starts even
   while other Chrome windows are open. The manual launch is now visible by
-  default; `-Hidden` in PowerShell and `--hidden` in the shell park the window
-  off-screen, and `-Visible` is still accepted and changes nothing. A hidden
+  default; `-Hidden` in PowerShell parks the window off-screen, `--hidden` in the
+  shell hides the app (⌘H) on macOS and changes nothing on Linux, and `-Visible` is still accepted and changes nothing. A hidden
   launch ends with a pointer to `marketplace-mcp browser show`; the connector's
   autostart stays off-screen.
 - `scripts/check_lock_revision.py` — a new gate: a lockfile rewritten by an
@@ -270,6 +286,17 @@
   теперь тоже говорит, что сначала API отказал адресу. Раньше такая ошибка
   уходила общим `transport_down` без этой причины, и было непонятно, при чём
   тут Chrome. Найдено живым прогоном 30 октября.
+- Поиск Wildberries по странице (`WB_TRANSPORT=dom` и автоматический фолбэк):
+  одна плитка с несколькими ценами без зачёркнутой больше не роняет весь поиск.
+  Раньше её `in_stock` оставался пустым, ответ не проходил проверку модели, а
+  через фолбэк это выглядело как `transport_down`. Теперь такая плитка приходит
+  с `price_rub: null` и `in_stock: false`, а предупреждение называет её и
+  советует `wb_card`. Ошибка была с v2.5.3; найдена аудитом перед релизом.
+- Taobao: страница со ссылками на вход или регистрацию и без товаров больше не
+  считается сеткой, которая ещё грузится, даже если на ней написано «加载中» и
+  ссылок больше обычного. Раньше такая страница ждала 10 секунд и отвечала
+  повторяемым `timeout`; теперь сразу `parser_drift`, как до v2.6.0, если не
+  сработал признак стены входа. Найдено аудитом перед релизом.
 - `wb_selfcheck` учитывает `WB_TRANSPORT=dom`: проверки `card` и `search_v9`
   читают отрисованные страницы теми же парсерами, что инструменты, вместо
   неиспользуемых API-хостов. Капча остаётся `inconclusive` без решения и повторов;
@@ -280,12 +307,48 @@
 - Чек-лист релиза называл порог покрытия 70 %, а гейт требует 80 %
   (`--cov-fail-under=80`). В тексте теперь стоит то значение, которое
   проверяется.
+- Запуск Chrome из PowerShell (`start_chrome_cdp.ps1`): путь к профилю с
+  пробелом больше не разрывается на два аргумента. Раньше `-AllowMainProfile`
+  (папка `User Data`) и любое имя пользователя Windows с пробелом запускали
+  Chrome с другой папкой профиля, без входа на площадки. Если CDP не ответил за
+  ~12 секунд, скрипт выходит с кодом 1, а не 0. Проверка «профиль уже занят»
+  больше не путает профиль с соседним `Chrome-Scraping-2`.
+- Запуск Chrome из shell (`start_chrome_cdp.sh`): «Chrome уже запущен» скрипт
+  пишет, только когда порт отвечает как CDP. Чужой процесс на порту — отказ с
+  кодом 2 и подсказкой `--port`; раньше скрипт молча выходил с кодом 0.
+- Скрытие окна scraping-Chrome на Windows находит и процессы Edge и не трогает
+  соседний профиль с похожим именем.
+- `CHROME_CDP_HOST` с IPv6-адресом (`::1` или `[::1]`) работает: в URL адрес
+  берётся в скобки и считается локальным.
+- Предупреждение фолбэка Wildberries говорит, что цены и доставка взяты в
+  регионе, выбранном в браузере, а не по `dest`. Раньше при регионе по
+  умолчанию об этом не говорилось.
+- `docs/DEPLOYMENT.md`: команды установки из wheelhouse оставались на версии
+  прошлого релиза, потому что `bump_version.py` и `check_versions.py` их не
+  видели. Теперь это три места в таблице версий: 88 вместо 85.
+- Бюджет живых запросов мейнтейнера теперь считает страницу товара AliExpress,
+  открытую через `window.open`, и вкладки `unblock`. Журнал защищён файловой
+  блокировкой, поэтому два параллельных прогона больше не теряют записи. Чек-лист
+  релиза запускает doctor как `python scripts/live_check.py doctor`, под тем же
+  бюджетом.
 
 - Wildberries' fallback to the rendered page: when the browser driver itself
   fails after an API refusal (Playwright raises its own error, not a tool
   error), the answer now also says the API refused this address first. Before,
   such a failure surfaced as a bare `transport_down` that never explained why
   Chrome was involved. Found in the 30 October live run.
+- Wildberries search over the rendered page (`WB_TRANSPORT=dom` and the
+  automatic fallback): one tile showing several prices without a struck one no
+  longer fails the whole search. Its `in_stock` stayed empty, the answer failed
+  model validation, and through the fallback that looked like `transport_down`.
+  Such a tile now comes back with `price_rub: null` and `in_stock: false`, and
+  the warning names it and points at `wb_card`. The bug dates from v2.5.3; the
+  pre-release audit found it.
+- Taobao: a page with login or registration links and no products is no longer
+  taken for a grid that is still loading, even when it says «加载中» and has
+  more links than usual. It used to wait 10 seconds and answer a retryable
+  `timeout`; it now answers `parser_drift` at once, as before v2.6.0, unless a
+  login-wall marker fires. Found by the pre-release audit.
 - `wb_selfcheck` respects `WB_TRANSPORT=dom`: `card` and `search_v9` check
   rendered pages with the tools' parsers rather than unused API hosts. Captchas
   remain `inconclusive` without solving or retries; transport failures and parser
@@ -295,6 +358,42 @@
   in CNY (not ranked)`. Rouble-source detail and ranking are unchanged.
 - The release checklist named the coverage floor as 70 % while the gate enforces
   80 % (`--cov-fail-under=80`). The text now states the value that is checked.
+- Starting Chrome from PowerShell (`start_chrome_cdp.ps1`): a profile path
+  with a space is no longer split into two arguments. `-AllowMainProfile` (the
+  `User Data` folder) and any Windows user name with a space used to start
+  Chrome on a different profile folder, without the marketplace logins. When
+  CDP does not answer within about 12 seconds the script now exits 1, not 0.
+  The "profile already in use" check no longer mistakes a sibling such as
+  `Chrome-Scraping-2` for the profile.
+- Starting Chrome from the shell (`start_chrome_cdp.sh`): the script says
+  "already running" only when the port answers as CDP. Another process on the
+  port is refused with exit 2 and a `--port` hint; it used to exit 0 silently.
+- Hiding the scraping Chrome window on Windows also finds Edge processes and
+  leaves a sibling profile with a similar name alone.
+- An IPv6 `CHROME_CDP_HOST` (`::1` or `[::1]`) works: the address is bracketed
+  in URLs and counts as loopback.
+- The Wildberries fallback warning says prices and delivery follow the region
+  set in the browser, not `dest`. With the default region it used to say
+  nothing about it.
+- `docs/DEPLOYMENT.md`: the wheelhouse install commands kept the previous
+  release, because `bump_version.py` and `check_versions.py` never saw them.
+  They are now three sites in the version table: 88 instead of 85.
+- The maintainer's live request budget now counts the AliExpress item page
+  opened through `window.open` and the `unblock` tabs. A lock file guards the
+  ledger, so two parallel runs no longer lose bookings. The release checklist
+  runs doctor as `python scripts/live_check.py doctor`, under the same budget.
+
+### Security
+
+- Публикующие workflow по тегу: `mcp-publisher` сверяется с SHA-256 до
+  распаковки, checkout не оставляет токен на диске, сборка релиза не берёт кэш
+  uv, и один тег публикуется одним запуском за раз (`concurrency`). Найдено
+  аудитом перед релизом.
+
+- Tag-triggered publishing workflows: `mcp-publisher` is checked against its
+  SHA-256 before it is unpacked, checkout leaves no token on disk, the release
+  build restores no uv cache, and one tag publishes in one run at a time
+  (`concurrency`). Found by the pre-release audit.
 
 ## [2.6.0] - 2026-10-30
 

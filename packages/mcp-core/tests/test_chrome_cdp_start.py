@@ -68,6 +68,7 @@ async def test_hidden_launch_keeps_the_connector_off_screen_behaviour(monkeypatc
 
     assert result["ok"] is True
     assert result["visible"] is False
+    assert result["off_screen"] is True
     args = spawned[0]
     assert "--window-position=-32000,-32000" in args
     assert "--start-minimized" in args
@@ -105,6 +106,36 @@ async def test_a_remote_host_is_refused_without_spawning(monkeypatch):
     assert "loopback-only" in str(result["reason"])
 
 
+async def test_a_machine_without_chrome_is_told_to_set_the_binary(monkeypatch, spawned):
+    """No Chrome is the most likely real `browser start` failure (audit S4-F22)."""
+    monkeypatch.setattr(chrome_cdp, "_find_chrome", lambda: None)
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
+
+    result = await chrome_cdp.start_browser(visible=True)
+
+    assert result["ok"] is False
+    assert result["started"] is False
+    assert "CHROME_BINARY" in str(result["reason"])
+    assert spawned == []
+
+
+async def test_an_unusable_scraping_profile_is_reported(monkeypatch, spawned, tmp_path):
+    """The profile directory cannot be created: say so instead of "unknown" (audit S4-F22)."""
+    profile = tmp_path / "profile-file"
+    profile.write_text("this is a file, not a profile directory", encoding="utf-8")
+    monkeypatch.setattr(chrome_cdp, "SCRAPING_PROFILE", str(profile))
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
+
+    result = await chrome_cdp.start_browser(visible=True)
+
+    assert result["ok"] is False
+    assert result["started"] is False
+    reason = str(result["reason"])
+    assert "unusable scraping profile" in reason
+    assert profile.name in reason
+    assert spawned == []
+
+
 async def test_a_port_that_never_binds_names_the_profile_and_remote_debugging(monkeypatch, spawned):
     monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
 
@@ -134,6 +165,26 @@ async def test_hidden_launch_without_stealth_matches_the_autostart(monkeypatch, 
     result = await chrome_cdp.start_browser(visible=False)
 
     assert result["ok"] is True
+    assert result["off_screen"] is False
+    assert "--window-position=-32000,-32000" not in spawned[0]
+    assert hidden == []
+
+
+@pytest.mark.parametrize("platform", ["darwin", "linux"])
+async def test_hidden_launch_outside_windows_is_not_reported_off_screen(monkeypatch, spawned, platform):
+    """Parking the window is Windows-only, so --hidden elsewhere must not claim it (audit A4)."""
+    monkeypatch.setattr(chrome_cdp, "STEALTH", True)
+    monkeypatch.setattr(chrome_cdp.sys, "platform", platform)
+    monkeypatch.setattr(chrome_cdp, "_running_as_root", lambda: False)
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
+    monkeypatch.setattr(chrome_cdp, "_wait_for_cdp_port", _bind_now)
+    hidden: list[bool] = []
+    monkeypatch.setattr(chrome_cdp, "_hide_chrome_windows", lambda: hidden.append(True))
+
+    result = await chrome_cdp.start_browser(visible=False)
+
+    assert result["ok"] is True
+    assert result["off_screen"] is False
     assert "--window-position=-32000,-32000" not in spawned[0]
     assert hidden == []
 
@@ -195,3 +246,28 @@ async def test_open_tabs_treats_a_reply_without_a_target_id_as_a_failure(monkeyp
     assert result["ok"] is False
     assert result["target_ids"] == []
     assert "no target id" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "file:///C:/Windows/System32/config/SAM",
+        "javascript:alert(1)",
+        "chrome://settings",
+        "data:text/html,<b>x</b>",
+        "ftp://a.example/file",
+    ],
+)
+async def test_open_tabs_refuses_a_non_http_url_before_any_cdp_command(monkeypatch, url):
+    """The scheme guard open_page has, open_tabs needs too (audit S2-F7).
+
+    An authenticated browser must never be aimed at ``file:///``; the refusal
+    happens before the first CDP command, so no tab is opened at all.
+    """
+    channel = _TabChannel()
+    _fake_channel(monkeypatch, channel)
+
+    with pytest.raises(ValueError, match="open_tabs refuses a non-http"):
+        await chrome_cdp.open_tabs(["https://a.example/", url])
+
+    assert channel.sent == []

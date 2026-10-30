@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import socket
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
 from mcp_core.transport import chrome_cdp
@@ -77,6 +78,36 @@ def test_a_malformed_host_falls_back_to_loopback(monkeypatch, bad):
 def test_an_ipv6_host_with_colons_is_kept(monkeypatch):
     monkeypatch.setenv("CHROME_CDP_HOST", "::1")
     assert chrome_cdp._host_from_env() == "::1"
+
+
+@pytest.mark.parametrize("spelling", ["::1", "[::1]"])
+def test_an_ipv6_host_dials_in_brackets_and_stays_loopback(monkeypatch, spelling):
+    """(audit S1-F7) Bare ::1 used to build http://::1:9222; [::1] used to count as remote."""
+    monkeypatch.setenv("CHROME_CDP_HOST", spelling)
+    host = chrome_cdp._host_from_env()
+
+    assert host == "::1"
+    assert host in chrome_cdp._LOOPBACK_HOSTS
+    url = urlsplit(f"http://{chrome_cdp._url_host(host)}:9222/json/version")
+    assert (url.hostname, url.port) == ("::1", 9222)
+
+
+@pytest.mark.parametrize("bad", ["[::1", "::1]", "[[::1]]"])
+def test_a_half_bracketed_ipv6_host_falls_back_to_loopback(monkeypatch, bad):
+    monkeypatch.setenv("CHROME_CDP_HOST", bad)
+    assert chrome_cdp._host_from_env() == "127.0.0.1"
+
+
+def test_the_browser_websocket_of_an_ipv6_host_is_bracketed(monkeypatch):
+    monkeypatch.setattr(chrome_cdp, "CDP_HOST", "::1")
+    monkeypatch.setattr(chrome_cdp, "CDP_PORT", 9222)
+    monkeypatch.setattr(
+        chrome_cdp,
+        "_cdp_http_json",
+        lambda path, timeout_s: {"webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/browser/x"},
+    )
+
+    assert chrome_cdp._browser_ws_url() == "ws://[::1]:9222/devtools/browser/x"
 
 
 def test_cdp_url_uses_the_configured_host(monkeypatch):

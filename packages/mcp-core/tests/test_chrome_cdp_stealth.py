@@ -8,7 +8,9 @@ back", never a real browser.
 
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 
 import pytest
 from mcp_core.transport import chrome_cdp
@@ -58,6 +60,55 @@ def test_macos_profile_pids_empty_when_ps_raises(monkeypatch):
     monkeypatch.setattr(chrome_cdp.subprocess, "run", boom)
 
     assert chrome_cdp._scraping_profile_pids() == set()
+
+
+def test_windows_profile_pids_ask_for_an_anchored_match(monkeypatch):
+    """(audit S2-F6) The CIM query names Chrome and Edge and uses the anchored pattern."""
+    seen: list[list[str]] = []
+
+    def fake_run(args, **_k):
+        seen.append(list(args))
+        return _completed("200\n")
+
+    monkeypatch.setattr(chrome_cdp.sys, "platform", "win32")
+    monkeypatch.setattr(chrome_cdp, "SCRAPING_PROFILE", r"C:\Users\op\Chrome-Scraping")
+    monkeypatch.setattr(chrome_cdp.subprocess, "run", fake_run)
+
+    assert chrome_cdp._scraping_profile_pids() == {200}
+    command = seen[0][-1]
+    assert "Name='msedge.exe'" in command
+    assert chrome_cdp._windows_profile_match_expr(str(chrome_cdp.Path(r"C:\Users\op\Chrome-Scraping"))) in command
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="runs Windows PowerShell for real")
+def test_windows_profile_pattern_takes_our_profile_only():
+    """(audit S2-F6) Bare or quoted, our profile matches; a sibling profile never does."""
+    profile = r"C:\Users\John Doe\AppData\Local\Chrome-Scraping"
+    samples = {
+        rf"chrome.exe --remote-debugging-port=9222 --user-data-dir={profile} --no-first-run": True,
+        rf'chrome.exe "--user-data-dir={profile}" about:blank': True,
+        rf'chrome.exe --user-data-dir="{profile}" about:blank': True,
+        rf"chrome.exe --user-data-dir={profile}": True,
+        rf'chrome.exe "--user-data-dir={profile}-2" about:blank': False,
+        rf"chrome.exe --user-data-dir={profile}2 --no-first-run": False,
+        r"chrome.exe --restore-last-session": False,
+    }
+    script = (
+        "$p = " + chrome_cdp._windows_profile_match_expr(profile) + "; "
+        "[Environment]::GetEnvironmentVariable('PROFILE_SAMPLES') -split [char]10 "
+        "| ForEach-Object { [string]($_ -match $p) }"
+    )
+    env = {**os.environ, "PROFILE_SAMPLES": "\n".join(samples)}
+    proc = subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=env,
+        check=True,
+    )
+    got = [line.strip() == "True" for line in proc.stdout.splitlines() if line.strip()]
+    assert got == list(samples.values())
 
 
 def test_linux_profile_pids_never_shell_out(monkeypatch):

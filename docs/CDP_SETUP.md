@@ -111,7 +111,8 @@ starting anything.
 ### 2. The window and the two ways to reach it
 
 The launcher scripts start the manual Chrome **on-screen** so you can log in.
-`-Hidden` (PowerShell) or `--hidden` (shell) parks it off-screen instead, and
+`-Hidden` (PowerShell) parks it off-screen instead, `--hidden` (shell) hides the
+app with ⌘H on macOS and changes nothing on Linux, and
 `-Visible` is still accepted as a no-op. The connector's own autostart is
 different: on Windows it deliberately parks the window off-screen so it never
 takes focus. That is the window you cannot see, and logging in or passing a

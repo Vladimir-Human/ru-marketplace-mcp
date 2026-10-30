@@ -116,8 +116,11 @@ def test_bundle_ci_uses_plain_pip_and_installed_console_scripts():
     assert 'uv run python -m venv "$RUNNER_TEMP/pypi-venv"' in job
     assert '"$RUNNER_TEMP/pypi-venv/bin/python" -m pip install dist/pypi/*.whl' in job
     assert 'echo "$RUNNER_TEMP/pypi-venv/bin" >> "$GITHUB_PATH"' in job
-    assert "marketplace-mcp --help" in job
-    assert "ru-marketplace-mcp --help" in job
+    # Two separate console scripts are smoke-tested here, and one of them is a
+    # suffix of the other: a plain substring check would still pass when the
+    # `marketplace-mcp` line is gone (audit S4-F17).
+    assert re.search(r"^\s+marketplace-mcp --help$", job, re.M)
+    assert re.search(r"^\s+ru-marketplace-mcp --help$", job, re.M)
     assert '"$RUNNER_TEMP/pypi-venv/bin/python" scripts/e2e_stdio_check.py' in job
     assert "uv run python scripts/e2e_stdio_check.py" not in job
     assert "--system-site-packages" not in job

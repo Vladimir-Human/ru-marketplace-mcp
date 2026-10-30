@@ -45,7 +45,10 @@ The verbs cover the moments an operator actually needs help with:
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
 # _uv_cached_entry / _unified_entry: The selected profile entry: checkout uv, a pinned uv tool release, or installed script.
 # _config_path: Where a client's mcpServers file lives on this platform.
+# _config_target: Resolve a symlinked client config without replacing the link.
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
+# _read_config_text: Read a client config as UTF-8, tolerating a byte-order mark.
+# _backup_path: A backup name that no earlier backup has taken.
 # next_step: One fixed next-step string for a source that is not ok.
 # _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor, unblock and setup.
 # cmd_browser: browser status, browser show and browser start.
@@ -439,7 +442,7 @@ def _configured_profile(client: str) -> str | None:
         return None
     path = _config_path(client)
     try:
-        document = _parse_strict_json(path.read_text(encoding="utf-8"))
+        document = _parse_strict_json(_read_config_text(path))
     except (OSError, ValueError):
         return None
     servers = document.get("mcpServers") if isinstance(document, dict) else None
@@ -473,6 +476,18 @@ def _config_path(client: str) -> pathlib.Path:
     return home / ".config" / "Claude" / "claude_desktop_config.json"
 
 
+def _config_target(path: pathlib.Path) -> pathlib.Path:
+    """The file a config write must land in.
+
+    A symlinked client config points at the operator's real file (a dotfiles
+    repo, a synced folder). Replacing the link with a regular file would
+    detach the client from that file, so the write goes to the target.
+    """
+    if path.is_symlink():
+        return path.resolve()
+    return path
+
+
 def _parse_strict_json(raw: str) -> Any:
     """``json.loads`` that also refuses NaN/Infinity, which are not JSON."""
 
@@ -480,6 +495,32 @@ def _parse_strict_json(raw: str) -> Any:
         raise ValueError(f"{constant} is not valid JSON")
 
     return json.loads(raw, parse_constant=_reject)
+
+
+def _read_config_text(path: pathlib.Path) -> str:
+    """Read a client config as UTF-8, tolerating a byte-order mark.
+
+    A UTF-8 file with a BOM is valid JSON for the operator — some editors add
+    one — and ``utf-8-sig`` strips it while behaving like ``utf-8`` for
+    BOM-less files. A file that is not UTF-8 at all (UTF-16, for example)
+    raises UnicodeDecodeError, which is an encoding problem, not a JSON one.
+    """
+    return path.read_text(encoding="utf-8-sig")
+
+
+def _backup_path(path: pathlib.Path, stamp: str) -> pathlib.Path:
+    """A backup name that no earlier backup has taken yet.
+
+    The stamp has one-second resolution, so two writes in the same second
+    would land on the same name — and the second copy would overwrite the
+    only copy of the original file. ``-1``, ``-2``, ... keep every backup.
+    """
+    candidate = path.with_name(f"{path.name}.bak-{stamp}")
+    index = 0
+    while candidate.exists():
+        index += 1
+        candidate = path.with_name(f"{path.name}.bak-{stamp}-{index}")
+    return candidate
 
 
 def _atomic_write_json(path: pathlib.Path, document: Any) -> None:
@@ -515,8 +556,9 @@ def _quote(part: str) -> str:
 def _claude_mcp_add_line(name: str, entry: Mapping[str, Any]) -> str:
     """The exact ``claude mcp add`` command line for one entry.
 
-    Claude Code keeps its servers in its own store, not in an mcpServers file,
-    so the write for this client is a command the operator runs.
+    Claude Code keeps user-scoped servers in its own store; an mcpServers
+    block is a project .mcp.json alternative, not a user config. The write
+    for this client is therefore a command the operator runs.
     """
     parts = ["claude", "mcp", "add", name, "--scope", "user", "--", str(entry.get("command", ""))]
     parts.extend(str(arg) for arg in entry.get("args", []) or [])
@@ -531,7 +573,6 @@ def _write_client_config(
     dry_run: bool,
     profile: str | None = None,
     conflict_hint: str | None = None,
-    show_document: bool = True,
 ) -> int:
     """Merge the entries into the client's own mcpServers file.
 
@@ -539,15 +580,22 @@ def _write_client_config(
     untouched, a malformed file is never rewritten, and every change is backed
     up before it happens. When ``profile`` is given, a conflict names the
     profile the existing entry runs and the one that was asked for. A dry run
-    prints the merged file, or only the entries when ``show_document`` is
-    false: ``setup`` must not echo other servers' settings (their ``env``
-    blocks may hold keys) when the operator never asked to see the file.
+    prints only the entries it would write and the names of what it keeps:
+    other servers' ``env`` blocks may hold keys, and the output of an
+    agent-run install lands in that agent's context. A symlinked config is
+    read, backed up and replaced at its resolved target, leaving the link intact.
     """
-    path = _config_path(client)
+    path = _config_target(_config_path(client))
     document: dict[str, Any] = {}
     if path.exists():
         try:
-            parsed = _parse_strict_json(path.read_text(encoding="utf-8"))
+            parsed = _parse_strict_json(_read_config_text(path))
+        except UnicodeDecodeError:
+            # Another encoding (UTF-16, for example), not broken syntax:
+            # saying "not valid JSON" sends the operator to delete a config
+            # that is valid.
+            print(f"{path} is not UTF-8 text; save it as UTF-8 and re-run", file=sys.stderr)
+            return 2
         except ValueError as exc:
             print(f"{path} is not valid JSON ({exc}); refusing to change it", file=sys.stderr)
             return 2
@@ -594,10 +642,18 @@ def _write_client_config(
     merged = dict(document)
     merged["mcpServers"] = {**servers, **entries}
     if dry_run:
-        # Show the result of the merge, whether or not it would change
-        # anything: the operator asked to see the file, not to be told "fine".
-        shown = merged if show_document else {"mcpServers": entries}
-        print(json.dumps(shown, indent=2, ensure_ascii=False))
+        # Show what would be written, whether or not it would change anything,
+        # and only name the rest: never echo other servers' settings.
+        print(json.dumps({"mcpServers": entries}, indent=2, ensure_ascii=False))
+        replaced = sorted(name for name in entries if name in servers and servers[name] != entries[name])
+        if replaced:
+            print(f"replaces: {', '.join(replaced)}")
+        kept = sorted(name for name in servers if name not in entries)
+        if kept:
+            print(f"kept unchanged: {', '.join(kept)}")
+        other_settings = sorted(key for key in document if key != "mcpServers")
+        if other_settings:
+            print(f"other settings kept: {', '.join(other_settings)}")
         print(f"target: {path}")
         return 0
     if all(servers.get(name) == entry for name, entry in entries.items()):
@@ -607,7 +663,7 @@ def _write_client_config(
     backup: pathlib.Path | None = None
     if path.exists():
         stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        backup = path.with_name(f"{path.name}.bak-{stamp}")
+        backup = _backup_path(path, stamp)
         # No backup, no change: the old file stays exactly as it was.
         try:
             shutil.copy2(path, backup)
@@ -752,7 +808,9 @@ def cmd_install(argv: list[str]) -> int:
     ``--profile compare|decision|full`` selects the console script the entry
     runs; ``--per-source`` keeps the old per-source block and cannot be
     combined with a profile. ``--write`` merges the block into the client's
-    own configuration file, with a backup of the old one first.
+    own configuration file, with a backup of the old one first. Claude Code
+    gets ``claude mcp add`` lines, followed without ``--write`` by the project
+    ``.mcp.json`` alternative.
     """
     write = dry_run = force = per_source = False
     client: str | None = None
@@ -851,10 +909,11 @@ def cmd_install(argv: list[str]) -> int:
         print(_profile_note(chosen_profile))
 
     if client == "claude-code":
+        for name, entry in entries.items():
+            print(_claude_mcp_add_line(name, entry))
         if write:
-            for name, entry in entries.items():
-                print(_claude_mcp_add_line(name, entry))
             return 0
+        print("# Or add this to a project's .mcp.json (mcpServers):")
     elif write:
         return _write_client_config(
             client,
@@ -863,8 +922,8 @@ def cmd_install(argv: list[str]) -> int:
             dry_run=dry_run,
             profile=None if per_source else chosen_profile,
         )
-
-    print(f"# Add to your mcpServers block ({client}).")
+    else:
+        print(f"# Add to your mcpServers block ({client}).")
     print(json.dumps(entries, indent=2, ensure_ascii=False))
     print()
     print("# Notes:")
@@ -1274,8 +1333,10 @@ def _browser_start(hidden: bool) -> int:
         return 0
     print(f"Started Chrome with CDP on {endpoint}.")
     print(f"Profile: {result.get('profile')}")
-    if hidden:
+    if result.get("off_screen"):
         print("The window is off-screen. To log in or pass a site check: marketplace-mcp browser show")
+    elif hidden:
+        print("--hidden parks the window off-screen only on Windows with CHROME_STEALTH on; it opened as usual.")
     return 0
 
 
@@ -1295,6 +1356,7 @@ def cmd_unblock(argv: list[str]) -> int:
     This command never solves or automates a site's check: it opens a page in
     the operator's scraping Chrome, waits while the human passes the check or
     logs in, and runs the same selfchecks ``doctor`` runs for those sources.
+    Ctrl-C at the Enter prompt cancels with exit 130 before the re-check.
     """
     named: list[str] = []
     wait_s = UNBLOCK_WAIT_DEFAULT_S
@@ -1393,6 +1455,9 @@ def cmd_unblock(argv: list[str]) -> int:
             input("Press Enter once you have passed the checks or logged in... ")
         except EOFError:
             pass
+        except KeyboardInterrupt:
+            print("cancelled", file=sys.stderr)
+            return 130
     else:
         print(f"Waiting {wait_s:g}s for you to pass the checks or log in.")
         time.sleep(wait_s)
@@ -1432,7 +1497,9 @@ def cmd_setup(argv: list[str]) -> int:
     through ``_write_client_config`` (never with force), Chrome through
     ``start_browser``, health through doctor's shared helpers and a wall
     through ``cmd_unblock``. ``--dry-run`` prints the steps and files and
-    writes, starts and requests nothing.
+    writes, starts and requests nothing. For Claude Code alone, the closing
+    line tells the operator to run the printed add command before restarting.
+    Ctrl-C at the unblock offer cancels with exit 130 without opening pages.
     """
     dry_run = no_browser = no_doctor = False
     selected: list[str] = []
@@ -1527,7 +1594,6 @@ def cmd_setup(argv: list[str]) -> int:
                     f"setup skips {label}; to replace the existing entry run: "
                     f"marketplace-mcp install {client} --write --force --profile {client_profile}"
                 ),
-                show_document=False,
             )
             if rc == 0:
                 configured += 1
@@ -1579,6 +1645,9 @@ def cmd_setup(argv: list[str]) -> int:
             answer = input(f"   open the unblock pages for {', '.join(blocked)} now? [y/N] ")
         except EOFError:
             answer = ""
+        except KeyboardInterrupt:
+            print("cancelled", file=sys.stderr)
+            return 130
         if answer.strip().lower() in {"y", "yes"}:
             cmd_unblock(blocked)
         else:
@@ -1588,7 +1657,9 @@ def cmd_setup(argv: list[str]) -> int:
 
     ask = "«Сравни цены на iPhone 15 128 ГБ на Wildberries, Ozon и Яндекс Маркете»"
     print()
-    if targets:
+    if targets == ["claude-code"]:
+        print(f"Run the claude mcp add line above, then restart Claude Code and ask: {ask}")
+    elif targets:
         print(f"Restart {_join_labels(targets)}, then ask: {ask}")
     else:
         print(f"Once a client is wired, restart it, then ask: {ask}")

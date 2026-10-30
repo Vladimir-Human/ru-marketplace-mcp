@@ -41,7 +41,19 @@ def mini_tree(tmp_path: Path) -> Path:
     _write(tmp_path, "packages/a/src/a/__init__.py", '__version__ = "1.2.3"\n')
     _write(tmp_path, "packages/a/src/a/server.py", 'SERVER_VERSION = "1.2.3"\n')
     _write(tmp_path, "docker-compose.yml", "services:\n  a:\n    image: ru-marketplace-mcp:1.2.3\n")
-    _write(tmp_path, "docs/DEPLOYMENT.md", "docker build -t ru-marketplace-mcp:1.2.3 .\n")
+    _write(
+        tmp_path,
+        "docs/DEPLOYMENT.md",
+        "docker build -t ru-marketplace-mcp:1.2.3 .\n"
+        "python -m pip install --no-deps wheelhouse/mcp_core-1.2.3-py3-none-any.whl\n"
+        'python -m pip install --find-links wheelhouse "compare-connector[all]==1.2.3" '
+        '"aliexpress-connector==1.2.3"\n',
+    )
+    _write(
+        tmp_path,
+        "dsh/README.md",
+        "# dsh bundle\n\ndocker pull ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.3\n",
+    )
     _write(
         tmp_path,
         "server.json",
@@ -56,6 +68,55 @@ def _declared_files(root: Path) -> list[Path]:
     return sorted({declaration.path for declaration in version_sites.iter_declarations(root)})
 
 
+def test_the_expected_declaration_files_are_pinned_in_this_test(mini_tree: Path) -> None:
+    """The table under test must not be allowed to shrink unnoticed (audit S4-F11).
+
+    The expected set is written out here, so dropping a family - or one file of
+    a family, like the dsh bundle README - from ``version_sites`` fails this
+    test instead of quietly leaving that file on the previous release.
+    """
+    declared = {path.relative_to(mini_tree).as_posix() for path in _declared_files(mini_tree)}
+
+    assert declared == {
+        "docker-compose.yml",
+        "docs/DEPLOYMENT.md",
+        "dsh/README.md",
+        "dsh/package.json",
+        "packages/a/pyproject.toml",
+        "packages/a/src/a/__init__.py",
+        "packages/a/src/a/server.py",
+        "packages/mcp-core/pyproject.toml",
+        "pyproject.toml",
+        "server.json",
+    }
+
+
+def test_the_site_table_names_every_declaration_family(mini_tree: Path) -> None:
+    """One family per kind of declaration; the check and the bump share them."""
+    labels = {site.label for site in version_sites.build_sites(mini_tree)}
+
+    assert labels == {
+        "pyproject.toml",
+        "__init__.py",
+        "SERVER_VERSION",
+        "image tag",
+        "deployment release pin",
+        "mcp-core pin",
+        "server.json",
+        "OCI image tag",
+        "dsh/package.json",
+    }
+
+
+def test_the_bump_reaches_the_dsh_bundle_readme_image_tag(mini_tree: Path) -> None:
+    """The dsh README advertises the image tag; it must not keep the old one."""
+    assert bump_version.bump(mini_tree, NEW) == 0
+
+    readme = (mini_tree / "dsh" / "README.md").read_text(encoding="utf-8")
+    assert "ru-marketplace-mcp:1.3.0" in readme
+    assert OLD not in readme
+
+
 def test_every_site_family_is_bumped(mini_tree: Path) -> None:
     assert bump_version.bump(mini_tree, NEW) == 0
 
@@ -64,6 +125,40 @@ def test_every_site_family_is_bumped(mini_tree: Path) -> None:
         assert OLD not in text, f"{path.name} still carries {OLD}"
         assert NEW in text, f"{path.name} was not bumped"
     assert 'version = "1.3.0"' in (mini_tree / "packages/mcp-core/pyproject.toml").read_text(encoding="utf-8")
+
+
+def test_the_bump_reaches_the_deployment_guide_release_pins(mini_tree: Path) -> None:
+    """The guide installs one release: its wheel name and pins carry the version.
+
+    They were not in the site table, so the bump skipped them and the check
+    stayed green over a guide that installed the previous release (audit S3-F4).
+    """
+    assert bump_version.bump(mini_tree, NEW) == 0
+
+    guide = (mini_tree / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
+    assert "mcp_core-1.3.0-py3-none-any.whl" in guide
+    assert '"compare-connector[all]==1.3.0"' in guide
+    assert '"aliexpress-connector==1.3.0"' in guide
+    assert OLD not in guide
+
+
+def test_a_stale_deployment_guide_pin_fails_the_version_check(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The gate must read the guide's pins, not only the manifests (audit S3-F4)."""
+    _write(
+        mini_tree,
+        "docs/DEPLOYMENT.md",
+        "docker build -t ru-marketplace-mcp:1.2.3 .\n"
+        "python -m pip install --no-deps wheelhouse/mcp_core-1.2.2-py3-none-any.whl\n"
+        'python -m pip install --find-links wheelhouse "compare-connector[all]==1.2.3" '
+        '"aliexpress-connector==1.2.3"\n',
+    )
+
+    assert check_versions.main([], root=mini_tree) == 1
+
+    err = capsys.readouterr().err
+    assert "DEPLOYMENT.md:2: 1.2.2 should be 1.2.3" in err
 
 
 def test_dry_run_prints_the_plan_and_writes_nothing(mini_tree: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -148,3 +243,43 @@ def test_a_failed_post_write_check_makes_the_bump_fail(tmp_path: Path) -> None:
 
     assert bump_version.bump(tmp_path, NEW) == 1
     assert 'version = "1.3.0"' in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
+
+
+def test_the_version_check_fails_on_a_file_that_kept_the_old_version(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The gate exists for exactly this case (audit S4-F10).
+
+    One declaration site that was not rewritten must be reported with the
+    version it still carries, and the script must exit non-zero.
+    """
+    _write(mini_tree, "packages/a/src/a/__init__.py", '__version__ = "1.2.2"\n')
+
+    assert check_versions.main([], root=mini_tree) == 1
+
+    err = capsys.readouterr().err
+    assert "version disagreements" in err
+    # The path is printed with the platform separator, so only the file name,
+    # the line and the two versions are asserted here.
+    assert "__init__.py:1: 1.2.2 should be 1.2.3" in err
+
+
+def test_the_version_check_passes_when_every_declaration_agrees(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert check_versions.main([], root=mini_tree) == 0
+    assert "agreed in" in capsys.readouterr().err
+
+
+def test_the_version_check_refuses_a_version_the_root_does_not_say(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`check_versions.py 1.3.0` asserts the root version too (audit S4-F10)."""
+    assert check_versions.main([NEW], root=mini_tree) == 1
+
+    err = capsys.readouterr().err
+    assert f"root pyproject.toml says {OLD}, you asked for {NEW}" in err
+
+    # The same argument as the root version is accepted.
+    assert check_versions.main([OLD], root=mini_tree) == 0
+    assert "agreed in" in capsys.readouterr().err
