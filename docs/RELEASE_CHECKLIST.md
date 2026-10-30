@@ -15,7 +15,7 @@
 
 **Go** — всё сразу:
 
-- офлайн-гейт зелёный, покрытие выше порога 70;
+- офлайн-гейт зелёный, покрытие выше порога 80;
 - `e2e_stdio_check.py` даёт 16/16, у всех серверов версия релиза;
 - `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
   непроверенному источнику;
@@ -57,9 +57,17 @@ uv run mypy --platform darwin
 uv run python scripts/check_no_print.py
 uv run python scripts/check_versions.py
 uv run python scripts/check_test_count.py
+uv run python scripts/check_lock_revision.py
 uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=80
 uv run python scripts/e2e_stdio_check.py
 ```
+
+Порог покрытия — 80: ровно это значение требует гейт (`--cov-fail-under=80`),
+и `scripts/check_coverage_floor.py` читает его оттуда, а не из текста.
+
+Перелокить `uv.lock` нужно uv не старше 0.13.6 (`uvx --from uv==0.13.6 uv lock`):
+старый uv пишет в лок-файл `revision = 3`, и образы собираются из другого
+лок-файла. Проверка `scripts/check_lock_revision.py` стоит в CI.
 
 При замедлении используйте `--durations=10`: время зависит от машины и запуска
 DOM-процессов. Случайные обращения к живому пейсеру или Chrome нужно исключить
@@ -218,7 +226,7 @@ for.
 
 ## Go / no-go
 
-**Go** — all at once: the offline gate is green and above the 70% coverage
+**Go** — all at once: the offline gate is green and above the 80% coverage
 floor; `e2e_stdio_check.py` reports 16/16 at the release version; `doctor`
 returns `0`, or `2` with a clear account of every unverified source; every
 source that answered was compared by eye on price and availability; Taobao's
@@ -237,11 +245,14 @@ install, image build or CI is red.
 ## The steps
 
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
-   plus win32 and darwin, the no-print and version-consistency checks, the
-   coverage floor, `uv run pytest -q scripts` for operational gate regressions,
-   and a real stdio MCP session for all sixteen servers. Install the locked DOM
-   test dependencies with `npm ci --no-audit --no-fund`. Use `--durations=10` to
-   investigate slow tests; total runtime alone does not prove network access.
+   plus win32 and darwin, the no-print, version-consistency, test-count and
+   lock-revision checks, the 80% coverage floor, `uv run pytest -q scripts` for
+   operational gate regressions, and a real stdio MCP session for all sixteen
+   servers. Install the locked DOM test dependencies with
+   `npm ci --no-audit --no-fund`. Relocking `uv.lock` needs uv 0.13.6 or newer
+   (`uvx --from uv==0.13.6 uv lock`): an older uv downgrades the lockfile
+   revision the images build from. Use `--durations=10` to investigate slow
+   tests; total runtime alone does not prove network access.
 2. **Version consistency** — `scripts/check_versions.py` compares all
    eighty-four declarations (seventeen `pyproject.toml`, sixteen `__version__`,
    fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, eighteen image tags,

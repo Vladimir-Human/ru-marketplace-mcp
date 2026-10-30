@@ -35,6 +35,8 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
+from marketplace_connector.capabilities import CAPABILITIES
+
 
 class MarketplaceSourcesResponse(BaseModel):
     """Which connectors mounted, and why the others did not."""
@@ -80,77 +82,8 @@ _SKIPPED: dict[str, str] = {}
 # Routing metadata is deliberately static and cheap: it tells a model which
 # tool path to attempt before spending a request on a blocked source. It is
 # separate from selfcheck/doctor, which performs live network probes.
-_CAPABILITIES: dict[str, dict[str, object]] = {
-    "wildberries": {
-        "access": "anonymous_http",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "ozon": {
-        "access": "http_or_cdp",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "yandex_market": {
-        "access": "anonymous_http",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "detsky_mir": {
-        "access": "anonymous_http",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": False,
-    },
-    "avito": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
-    "taobao": {"access": "cdp", "requires_cdp": True, "requires_login": True, "currency": "cny", "text_search": True},
-    "megamarket": {
-        "access": "cdp",
-        "requires_cdp": True,
-        "requires_login": True,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "lamoda": {
-        "access": "graphql_or_cdp",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "dns": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": True},
-    "citilink": {
-        "access": "cdp",
-        "requires_cdp": True,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "aliexpress": {
-        "access": "cdp",
-        "requires_cdp": True,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": True,
-    },
-    "mpstats": {
-        "access": "api_token",
-        "requires_cdp": False,
-        "requires_login": False,
-        "currency": "rub",
-        "text_search": False,
-    },
-    # Real estate, not goods: search is by filters (deal, type, region, rooms,
-    # price, area), never by text, and it takes no part in compare_prices.
-    "cian": {"access": "cdp", "requires_cdp": True, "requires_login": False, "currency": "rub", "text_search": False},
-}
+# The table itself lives in marketplace_connector.capabilities so the operator
+# CLI can read it without importing this module (which mounts every connector).
 
 
 def _mount_all() -> None:
@@ -243,7 +176,7 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         skipped_count=len(_SKIPPED),
         capabilities={
             name: {**metadata, "mounted": name in {canonical(m) for m in _MOUNTED}}
-            for name, metadata in _CAPABILITIES.items()
+            for name, metadata in CAPABILITIES.items()
         },
         server_version=SERVER_VERSION,
     )

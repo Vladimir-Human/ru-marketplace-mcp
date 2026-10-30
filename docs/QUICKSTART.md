@@ -18,6 +18,9 @@ uv sync --frozen --all-packages
 Node and jsdom are needed for contributor DOM tests only. You can use the MCP
 servers without running the test suite or installing Node.
 
+The next step is to wire a client, and the CLI can do that for you:
+`marketplace-mcp install claude --write` (see step 2).
+
 ## 2. Choose one server for your task
 
 | Task | Command | Available tools |
@@ -26,7 +29,21 @@ servers without running the test suite or installing Node.
 | Inspect a shortlist with optional reviews | `decision-mcp` | Comparison tools plus `decision_inspect` |
 | Search a specific marketplace, read reviews, or use Cian | `marketplace-mcp` | All installed connectors |
 
-Start with one entry in your client's MCP configuration. Replace the absolute
+Let the CLI write the client configuration:
+
+```console
+uv run marketplace-mcp install claude --write
+```
+
+It adds one `marketplace` entry running the unified server to the client's own
+config file, fills in the absolute path to `uv` and to your checkout, keeps
+other servers and settings as they are, and saves the old file as
+`<file>.bak-<timestamp>`. Restart the client afterwards. `--dry-run` shows what
+would be written and writes nothing; `--per-source` writes one entry per source
+instead of the unified one.
+
+If you prefer to paste the configuration yourself, start with one entry in your
+client's MCP configuration. Replace the absolute
 path with the clone from step 1; use forward slashes on Windows as shown.
 
 ```json
@@ -48,12 +65,13 @@ format: follow its [bundle guide](../dsh/README.md).
 To generate individual source entries with your checkout path already filled in:
 
 ```console
-uv run marketplace-mcp install claude
+uv run marketplace-mcp install claude --per-source
 ```
 
-The command prints configuration for manual insertion. Copy only the sources
-you want. MPStats is optional and needs a paid token; ordinary marketplace
-queries do not need it. `install cursor`, `install claude-code`, and
+The command prints the per-source block for manual insertion. Copy only the
+sources you want; without `--per-source` it prints the single `marketplace`
+entry described above. MPStats is optional and needs a paid token; ordinary
+marketplace queries do not need it. `install cursor`, `install claude-code`, and
 `install dsh` are also supported.
 
 ## 3. Check two sources before adding a browser
@@ -74,7 +92,7 @@ and is never solved or retried. WB's other probes still use HTTP; see
 | --- | --- | --- |
 | `success`, exit 0 | Selected selfchecks passed | Try the request below |
 | `drift_detected`, exit 1 | A response no longer matched the parser checks | Report the affected source and diagnostic output |
-| `inconclusive` or `error`, exit 2 | Access or execution prevented a verdict | Read the reason; check network, browser, or required login |
+| `inconclusive` or `error`, exit 2 | Access or execution prevented a verdict | Follow the next step printed under the row |
 | Argument error, exit 2 | Unknown source, option, or missing argument | Correct the command; no source was queried |
 | Status-file write failure, exit 3 | The report could not be saved | Check the output path and permissions |
 
@@ -115,11 +133,20 @@ ruble prices.
 
 ## 5. Add browser-backed sources when needed
 
-Follow [Chrome setup](CDP_SETUP.md) to start the dedicated CDP browser. Sign in
-to Taobao or Megamarket if using those sources, then run a targeted check:
+Follow [Chrome setup](CDP_SETUP.md) to start the dedicated CDP browser. Your
+everyday Chrome can stay open. Sign in to Taobao or Megamarket if using those
+sources, then run a targeted check:
 
 ```console
 uv run marketplace-mcp doctor ozon aliexpress cian
+```
+
+On Windows the scraping window starts off-screen, so you cannot log in or pass a
+site's check until it is on-screen:
+
+```console
+uv run marketplace-mcp browser status   # is the endpoint reachable, where is the window
+uv run marketplace-mcp browser show     # bring the window on-screen and activate its first tab
 ```
 
 Repeat the call from the same client (the same MCP session, or the same stdio

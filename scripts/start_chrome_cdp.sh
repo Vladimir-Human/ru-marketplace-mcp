@@ -5,6 +5,9 @@
 # reliable way to read their catalogs is from inside a real browser session. This
 # script launches a Chrome dedicated to that job.
 #
+# Your everyday Chrome can stay open: this starts a separate Chrome with its own
+# --user-data-dir, which Chrome allows next to another profile.
+#
 # SECURITY — the profile this creates is a scraping profile, not your browser:
 #   * CDP grants any local process full control of every session in the profile
 #     it is attached to. That is why this uses a SEPARATE user-data-dir.
@@ -83,9 +86,17 @@ else
     LISTENING=0
 fi
 if [[ "${LISTENING:-0}" -gt 0 ]]; then
-    echo "CDP is already listening on 127.0.0.1:$PORT — nothing to do."
-    echo "Verify with: curl -s http://127.0.0.1:$PORT/json/version"
+    echo "Chrome with CDP is already running on port $PORT - nothing to start."
+    echo "To bring its window on-screen: marketplace-mcp browser show"
     exit 0
+fi
+
+# A Chrome that already holds THIS profile would refuse to start a second one
+# with the same --user-data-dir. Other Chrome windows are fine.
+if pgrep -f -- "--user-data-dir=$PROFILE" >/dev/null 2>&1; then
+    echo "ERROR: another Chrome is already using the profile $PROFILE." >&2
+    echo "Close that window (or choose another --profile) and re-run." >&2
+    exit 2
 fi
 
 mkdir -p "$PROFILE"

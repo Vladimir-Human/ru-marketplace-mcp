@@ -33,12 +33,15 @@ everything else is unaffected.
   Call this to tell the two apart: a name in `skipped` was never queried at all.
 
 ## Operator CLI
-- `marketplace-mcp install [client]` — print the exact mcpServers JSON to paste.
-  From a source checkout it prints the real filesystem path of that checkout, so
-  there's no `/path/to/ru-marketplace-mcp` placeholder to hand-edit; installed as a
-  wheel, it prints the console-script paths on PATH instead. `client` must be one of
-  `claude`, `claude-code`, `cursor` — an unknown name is rejected, not answered with
-  a Claude block.
+- `marketplace-mcp install [client]` — print the exact mcpServers JSON to paste, or
+  write it into the client's own config file with `--write` (the old file is kept as
+  `<file>.bak-<timestamp>`). From a source checkout it prints the real filesystem path
+  of that checkout, so there's no `/path/to/ru-marketplace-mcp` placeholder to
+  hand-edit; installed as a wheel, it prints the console-script paths on PATH
+  instead. The default block is one `marketplace` entry running the unified server;
+  `--per-source` prints one entry per source. `client` must be one of `claude`,
+  `claude-code`, `cursor` — an unknown name is rejected, not answered with a Claude
+  block.
 - `marketplace-mcp doctor [--status-file path]` — per-source health plus a CDP
   session probe, with an optional machine-readable JSON snapshot for monitoring. Exit
   codes are meaningful for cron and CI: `0` everything healthy, `1` a parser drifted

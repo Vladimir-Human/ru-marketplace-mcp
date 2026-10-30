@@ -32,9 +32,15 @@ uv run python scripts/check_no_print.py
 uv run python scripts/check_test_count.py
 uv run python scripts/check_provenance.py
 uv run python scripts/check_versions.py
+uv run python scripts/check_lock_revision.py
 uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
   --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
+
+Перелокить `uv.lock` нужно uv не старше 0.13.6:
+`uvx --from uv==0.13.6 uv lock`. Старый uv (0.11.x) пишет в лок-файл
+`revision = 3`, а образы собираются на uv 0.13.6 — такой лок-файл не тот, из
+которого собираются образы. `scripts/check_lock_revision.py` ловит это в CI.
 
 CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13.
 
@@ -155,9 +161,16 @@ uv run python scripts/check_no_print.py
 uv run python scripts/check_test_count.py
 uv run python scripts/check_provenance.py
 uv run python scripts/check_versions.py
+uv run python scripts/check_lock_revision.py
 uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
   --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
+
+Relocking `uv.lock` needs uv 0.13.6 or newer:
+`uvx --from uv==0.13.6 uv lock`. An older uv (0.11.x) writes `revision = 3`
+into the lockfile, while the images build with uv 0.13.6 — so the committed
+lockfile would not be the one the images are built from.
+`scripts/check_lock_revision.py` catches that in CI.
 
 CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,
 types and the no-print and version checks run once, on Ubuntu — mypy covers the other

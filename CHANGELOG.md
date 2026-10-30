@@ -9,6 +9,111 @@
 
 ## [Unreleased]
 
+### Added
+
+- `marketplace-mcp install <client> --write` пишет конфиг клиента сам. По умолчанию
+  в блок входит одна запись `marketplace` — объединённый сервер; `--per-source`
+  оставляет старый блок по источникам. Путь к `uv` и к консольной команде
+  абсолютный, если он найден: у десктопного клиента часто нет PATH терминала, и
+  голое `uv` — это сервер, который молча не стартует. Запись сливается в
+  `mcpServers`, чужие серверы и остальные настройки файла не теряются, старый
+  файл перед изменением копируется в `<файл>.bak-<метка>`, новая версия пишется
+  временным файлом и подменяется через `os.replace`. Кривой JSON и запись с тем
+  же именем, но другим содержимым — отказ с кодом 2 (конфликт снимается
+  `--force`); такая же запись — «already configured», без записи и без копии.
+  `--dry-run` печатает результат и путь и ничего не пишет. `install claude-code
+  --write` печатает готовую строку `claude mcp add`, `install dsh --write`
+  отказывается: у dsh свой формат, не `mcpServers`.
+- `marketplace-mcp --help` (и `help`) печатает короткий экран usage: команды, по
+  примеру на каждую, и ссылку на `docs/QUICKSTART.md`. Неизвестная команда
+  печатает объяснение и этот же usage, и завершается с кодом 2.
+- `marketplace-mcp doctor` печатает под каждой нездоровой строкой один следующий
+  шаг: поднять scraping Chrome, пройти проверку сайта или войти руками и
+  перепроверить источник, переключить Wildberries на `WB_TRANSPORT=dom`, задать
+  `MPSTATS_MP_AUTH`, разобрать дрейф парсера, подождать при отказе по частоте
+  запросов или открыть `docs/ANTI_BOT.md`. Тот же шаг попадает в `--status-file`
+  отдельным полем `next_step`. Шаг выбирается из кодов причин, которые реально
+  шлют коннекторы (`blocked`, `login_wall`, `not_authenticated`,
+  `transport_down`, `rate_limited`, `auth_missing`), и всегда один: без советов
+  про решатели капч, stealth-инструменты, пулы прокси и повторные попытки. Если
+  упал сам selfcheck (`error`), это не стена сайта: шаг предлагает открыть issue с
+  его выводом.
+- `marketplace-mcp browser status` и `marketplace-mcp browser show`: окно
+  scraping-Chrome на Windows стартует за экраном, поэтому человек не может ни
+  войти руками, ни пройти проверку сайта. `status` отвечает, достижим ли
+  CDP-эндпоинт, какая версия Chrome там отвечает, сколько открыто page-таргетов
+  и в каком состоянии окно (видно, за экраном, свёрнуто); при недостижимом
+  эндпоинте — код возврата 1 и подсказка, как запустить scraping Chrome.
+  `show` сворачивает и снова разворачивает окно (только так Windows поднимает
+  окно, которое лежит позади других), переносит его на экран
+  (80, 40; текущий размер сохраняется, если окно не меньше 800x600, иначе
+  1280x900) и активирует первую вкладку. Обе команды отправляют только
+  браузерные CDP-команды и не ходят ни в один сайт. Совет doctor's для
+  источника, закрытого браузером, теперь называет `marketplace-mcp browser show`.
+- `scripts/start_chrome_cdp.ps1` и `.sh` больше не требуют закрыть обычный
+  Chrome: если CDP-эндпоинт уже отвечает на порту, лаунчер сообщает об этом и
+  выходит с кодом 0; если тот же профиль (`--user-data-dir`) уже занят другим
+  Chrome — отказ с кодом 2; иначе Chrome запускается, даже когда другие окна
+  Chrome открыты. Без `-Visible` лаунчер заканчивает подсказкой
+  `marketplace-mcp browser show`.
+- `scripts/check_lock_revision.py` — новый гейт: лок-файл, перезаписанный старым
+  uv (revision 3 вместо 5), больше не проходит молча. Это не
+  `required-version` в `pyproject.toml`: тот флаг запретил бы оператору со
+  старым uv на PATH запустить сервер через запись `uv run --directory ...`,
+  которую пишет `install --write`. Правильный путь — перелочить uv не старше
+  0.13.6 (`uvx --from uv==0.13.6 uv lock`).
+
+- `marketplace-mcp install <client> --write` writes the client config itself. The
+  default block is one `marketplace` entry running the unified server; `--per-source`
+  keeps the old per-source block. `uv` and the console script are resolved to
+  absolute paths when found: a desktop client often has no terminal PATH, and a
+  bare `uv` is a server that silently never starts. The entry is merged into
+  `mcpServers` without dropping other servers or settings, the old file is copied
+  to `<file>.bak-<timestamp>` before any change, and the new version is written
+  through a temporary file and `os.replace`. Malformed JSON and a same-name entry
+  with different content are refused with exit 2 (the conflict needs `--force`);
+  an identical entry prints "already configured" and writes nothing. `--dry-run`
+  prints the merged result and the target path and writes nothing. `install
+  claude-code --write` prints the exact `claude mcp add` line, and `install dsh
+  --write` is refused: dsh has its own format, not `mcpServers`.
+- `marketplace-mcp --help` (and `help`) prints a short usage screen: the verbs,
+  one example each, and a pointer to `docs/QUICKSTART.md`. An unknown command
+  prints the explanation and that screen, and exits 2.
+- `marketplace-mcp doctor` prints one next step under every source that is not ok:
+  start the scraping Chrome, pass the site's check or log in by hand and recheck
+  the source, switch Wildberries to `WB_TRANSPORT=dom`, set `MPSTATS_MP_AUTH`,
+  diagnose a parser drift, wait out a rate limit, or open `docs/ANTI_BOT.md`. The
+  same step lands in `--status-file` as a `next_step` field. The step is chosen
+  from the reason codes the connectors really send (`blocked`, `login_wall`,
+  `not_authenticated`, `transport_down`, `rate_limited`, `auth_missing`), and it is
+  always one instruction — never a captcha solver, stealth tooling, a proxy pool or
+  a retry loop. A selfcheck that failed itself (`error`) is not a site wall: its
+  step asks for an issue with the output above.
+- `marketplace-mcp browser status` and `marketplace-mcp browser show`: the
+  scraping Chrome's window starts off-screen on Windows, so a human can neither
+  log in nor pass a site's check. `status` says whether the CDP endpoint is
+  reachable, which Chrome answers, how many page targets it holds and whether
+  the window is visible, off-screen or minimized; when the endpoint does not
+  answer it exits 1 and prints how to start the scraping Chrome. `show`
+  minimizes and restores the window (only a restore makes Windows raise a
+  window that sits behind others), moves it on-screen (80, 40;
+  the current size is kept when the window is at least 800x600, otherwise
+  1280x900) and activates the first tab. Both send browser-level CDP commands
+  only and request nothing from any website. The doctor's advice for a source
+  blocked by the browser now names `marketplace-mcp browser show`.
+- `scripts/start_chrome_cdp.ps1` and `.sh` no longer demand closing the
+  everyday Chrome: when the CDP endpoint already answers on the port, the
+  launcher says so and exits 0; when another Chrome holds the same profile
+  (`--user-data-dir`), it refuses with exit 2; otherwise Chrome starts even
+  while other Chrome windows are open. Started without `-Visible`, it ends with
+  a pointer to `marketplace-mcp browser show`.
+- `scripts/check_lock_revision.py` — a new gate: a lockfile rewritten by an
+  older uv (revision 3 instead of 5) no longer passes silently. This is not a
+  `required-version` floor in `pyproject.toml`: that flag would stop an
+  operator whose PATH carries an older uv from starting the server through the
+  `uv run --directory ...` entry that `install --write` writes. The fix is to
+  relock with uv 0.13.6 or newer (`uvx --from uv==0.13.6 uv lock`).
+
 ### Fixed
 
 - `wb_selfcheck` учитывает `WB_TRANSPORT=dom`: проверки `card` и `search_v9`
@@ -18,6 +123,9 @@
 - `compare_prices` считает цены Taobao в `source_outcomes[].detail` по
   `price_native`, а не по пустому `price_rub`: например, `20 results, 20 priced
   in CNY (not ranked)`. Рублёвые строки и ранжирование не изменились.
+- Чек-лист релиза называл порог покрытия 70 %, а гейт требует 80 %
+  (`--cov-fail-under=80`). В тексте теперь стоит то значение, которое
+  проверяется.
 
 - `wb_selfcheck` respects `WB_TRANSPORT=dom`: `card` and `search_v9` check
   rendered pages with the tools' parsers rather than unused API hosts. Captchas
@@ -26,6 +134,8 @@
 - `compare_prices` counts Taobao's native prices in `source_outcomes[].detail`
   instead of reporting zero rouble prices: for example, `20 results, 20 priced
   in CNY (not ranked)`. Rouble-source detail and ranking are unchanged.
+- The release checklist named the coverage floor as 70 % while the gate enforces
+  80 % (`--cov-fail-under=80`). The text now states the value that is checked.
 
 ## [2.6.0] - 2026-10-30
 

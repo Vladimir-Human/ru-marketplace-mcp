@@ -96,6 +96,13 @@ jobs:
         # pins are visible - and quarantined with dated reasons - instead of silent.
         run: uv run python scripts/check_provenance.py
 
+      - name: uv.lock revision is not downgraded
+        # uv 0.11.x rewrites uv.lock from revision 5 to revision 3 when a
+        # contributor relocks, while the Dockerfiles build with uv 0.13.6.
+        # The lockfile must stay at the revision the images build from; the
+        # contributor fixes it by relocking with a current uv.
+        run: uv run python scripts/check_lock_revision.py
+
       - name: MCP wire-cost baseline
         # Keep the model-facing surface measurable. A schema expansion over the
         # stored baseline is a review signal, not an invisible context-cost

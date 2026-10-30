@@ -101,14 +101,36 @@ Useful flags: `--port 9333`, `--profile /path/to/dir`, `--headless`.
 Headless is off by default and should stay off: anti-bot systems detect headless
 Chrome readily, which defeats the purpose of using a real browser.
 
-### 2. Log into the marketplaces you need — and nothing else
+**You do not need to close your everyday Chrome.** The launcher starts a second
+Chrome with its own `--user-data-dir`, which Chrome allows next to another
+profile. It refuses only the one case that cannot work: another Chrome already
+holding *this* profile, which would refuse to start a second time. If a CDP
+endpoint already answers on the port, the launcher says so and exits without
+starting anything.
+
+### 2. The window starts off-screen on Windows
+
+The scraping window is parked off-screen on purpose, so it never takes focus or
+drags the desktop to another Space. The price is that you cannot see it — and
+logging in or passing a site's check needs a human. Two verbs answer that:
+
+```console
+marketplace-mcp browser status   # is the endpoint reachable, which Chrome, how many tabs, where is the window
+marketplace-mcp browser show     # un-minimize the window, move it on-screen, activate its first tab
+```
+
+`browser status` exits 0 when the endpoint answers and 1 when it does not, and
+then prints how to start the scraping Chrome. `browser show` sends browser-level
+CDP commands only: it opens no page and requests nothing from any website.
+
+### 3. Log into the marketplaces you need — and nothing else
 
 In the window that opens, sign into whichever CDP sources you use — `ozon.ru`,
 `avito.ru`, `taobao.com`, `megamarket.ru`, `lamoda.ru`, `dns-shop.ru`,
 `citilink.ru`, `aliexpress.ru`. One profile serves them all. **Do not** sign into banking, email, or
 work accounts here. Keeping it single-purpose is what bounds the risk.
 
-### 3. Verify
+### 4. Verify
 
 ```bash
 curl -s http://127.0.0.1:9222/json/version
@@ -117,7 +139,7 @@ curl -s http://127.0.0.1:9222/json/version
 You should see Chrome's version JSON. On Windows you can also use
 `Test-NetConnection 127.0.0.1 -Port 9222`.
 
-### 4. Confirm the connector sees it
+### 5. Confirm the connector sees it
 
 ```bash
 uv run python -c "
