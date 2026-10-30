@@ -340,6 +340,15 @@
     <test file="packages/marketplace-connector/tests/test_model_routing_eval.py" coverage="offline evaluation" checks="Case bundle validation, slice/size/catalog completeness, scoring alternatives/forbidden/missing answers and prompts" />
     <test file="packages/marketplace-connector/tests/test_model_routing_eval_verdict.py" coverage="offline evaluation" checks="Complete versus partial verdict, invalid answer IDs, report fields and runner exit code" />
   </entry>
+  <entry id="V-M-TOOLSDOC" module="M-TOOLSDOC" file="scripts/gen_tools_doc.py">
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_generated_docs_are_deterministic_between_runs" checks="Two independent collect-and-render runs produce identical text with no CR characters" />
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_every_tool_of_each_profile_appears_exactly_once" checks="Each profile's rendered table has the measured row count, one row per sorted public tool name, with no duplicates" />
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_profile_table_uses_the_measured_payload_and_stated_token_rule" checks="The profile row carries the console script, tool count, exact tools/list UTF-8 byte length and the rounded bytes/4 token estimate" />
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_check_rejects_a_stale_docs_file_and_accepts_a_fresh_one" checks="Freshly generated docs in a temporary root pass --check; an appended line yields the exact stale message" />
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_readme_cost_blocks_are_rewritten_and_checked" checks="Both marked README blocks lose stale numbers, carry each measured token estimate, are idempotent, pass --check when fresh and fail with the README stale message when edited" />
+    <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_parameter_rendering_covers_required_default_enum_and_array" checks="Required, defaulted, enum, array and nullable parameters render from JSON schema without Python reprs" />
+    <note>Run in the worktree on 2026-10-30: the generator and --check gate passed, the four non-tmp_path tests passed, and the two tmp_path tests errored at setup because this Windows sandbox denies listing/removing .tmp-pytest (the same failure hits existing script tests). The fresh/stale check logic was also exercised manually in a workspace directory; no live server or network was involved.</note>
+  </entry>
   <entry id="V-DF-OPS" flows="DF-RELEASE,DF-SCHEMA,DF-DOCTOR,DF-FIXTURES,DF-BROWSER,DF-SETUP">
     <test file="scripts/test_ci_concurrency.py" checks="Event-aware concurrency groups; schedule cannot cancel or be cancelled; live job remains schedule/dispatch only" />
     <test file="scripts/test_distribution_contract.py" checks="Standalone wheelhouse/docs/extras/entrypoint parity with comparison source dependencies" />

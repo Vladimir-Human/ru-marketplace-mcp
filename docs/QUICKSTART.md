@@ -51,9 +51,10 @@ It adds one `marketplace` entry to the client's own config file, fills in the
 absolute path to `uv` and to your checkout, keeps other servers and settings as
 they are, and saves the old file as `<file>.bak-<timestamp>`. Restart the client
 afterwards. The default `--profile compare` writes `compare-mcp`: 4
-price-comparison tools, about 0.9k tokens per request. `--profile decision`
+price-comparison tools, the cheapest per request. `--profile decision`
 adds shortlist card inspection (5 tools), and `--profile full` writes
-`marketplace-mcp` with every per-source tool (about 13.6k tokens). The entry
+`marketplace-mcp` with every per-source tool, several times the cost (measured
+per profile in [TOOLS.md](TOOLS.md)). The entry
 name stays `marketplace`, and a config that already has it keeps its profile
 unless you pass `--profile`. `--dry-run` shows what would be written and writes
 nothing; `--per-source` writes one entry per source instead and cannot be

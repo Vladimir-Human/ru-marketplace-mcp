@@ -64,6 +64,7 @@
     <module id="M-LIVE-CONFTEST" file="conftest.py" purpose="Session-wide budget install for pytest -m live and a no-op for offline selections" depends="M-LIVE-BUDGET only when a selected item carries the live marker; pytest,stdlib os,sys,pathlib" exports="pytest_collection_modifyitems">
       <note>An offline selection imports no extra module and creates no ledger.</note>
     </module>
+    <module id="M-TOOLSDOC" file="scripts/gen_tools_doc.py" purpose="Generate the deterministic per-profile tool reference and the README context-cost blocks from in-process list_tools" depends="M-MARKETPLACE,M-COMPARE,M-OUTPUT-SCHEMA; stdlib argparse,asyncio,importlib,json,re" exports="docs/TOOLS.md; README.md tools-cost blocks; --check exit status" />
   </modules>
   <paths>
     <path id="P-SOURCE">packages/&lt;package&gt;/src/&lt;module&gt;: server.py, models_output.py, settings.py and connector-specific parsing helpers</path>
@@ -143,6 +144,11 @@
       <steps>Offline contract projection pins mounted names/arguments/output structure while excluding prose; operational stdio probes initialize and list advertised tools with bounded child cleanup. mcp_wire reports estimated wire tokens and compares selected profiles to the stored 10-percent budget. Routing evaluations score committed evidence/collected answers offline rather than call models.</steps>
       <read>P-WIRE; packages/marketplace-connector/tests/fixtures/public_contract.json; registered tool schemas; work/evals/model-routing-eval.json and work/evals/routing-cases-v1.json; supplied routing answer file/stdin.</read>
       <write>Probe diagnostics; optional mcp_wire --update-baseline replaces P-WIRE, --json-out writes report; explicit snapshot script regeneration replaces public_contract.json. Routing report/prompt files are written only when requested. Ordinary comparison/server tool calls do not update these artifacts.</write>
+    </flow>
+    <flow id="DF-TOOLSDOC" modules="M-TOOLSDOC,M-MARKETPLACE,M-COMPARE,M-OUTPUT-SCHEMA" source="scripts/gen_tools_doc.py; docs/TOOLS.md; README.md; .github/workflows/ci.yml">
+      <steps>Import compare, decision and full profiles in-process without starting a transport; call public list_tools after output-schema compaction; group the tools by name prefix and render their input schemas and first description paragraph. The same measurement produces the README tools-cost blocks, so the published per-profile cost cannot drift from docs/TOOLS.md. --check renders both outputs in memory and exits 1 when either file on disk differs.</steps>
+      <read>Registered tool schemas and descriptions; README.md markers; no network, marketplace endpoint or client configuration.</read>
+      <write>docs/TOOLS.md and the marked README blocks only when run without --check; --check writes nothing. CI runs the check in the existing lint job.</write>
     </flow>
     <flow id="DF-FIXTURES" modules="M-DOMTEST,M-DOM,M-RESILIENCE" source="scripts/check_provenance.py; packages/mcp-core/src/mcp_core/domtest.py; packages/*/tests/test_*dom*.py; packages/*/tests/test_*parser_live.py">
       <steps>Captured HTML/JSON and declared SHA-256 provenance feed offline parser/extractor assertions. Optional Node/jsdom executes actual extractor source over saved markup, without live Chrome; missing tooling can skip DOM assertions. Provenance gate verifies existing pinned pairs with raw/LF/CRLF normalization and reports stale exceptions.</steps>
