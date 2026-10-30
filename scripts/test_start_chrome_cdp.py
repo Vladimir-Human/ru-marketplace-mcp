@@ -59,14 +59,15 @@ def test_the_powershell_launcher_points_at_the_browser_show_verb_when_hidden():
 def test_the_powershell_launcher_stays_readable_by_windows_powershell_5_1():
     """v2.5.2: em-dashes in the BOM-less script broke the 5.1 parser.
 
-    The file must stay ASCII and LF-terminated, or Windows PowerShell 5.1
-    reads a long dash as a quote and the script stops parsing.
+    The file must stay ASCII without a BOM, or Windows PowerShell 5.1 reads a
+    long dash as a quote and the script stops parsing. Line endings are not
+    checked: 5.1 reads LF and CRLF alike, and a Windows checkout with
+    core.autocrlf turns LF into CRLF on disk.
     """
     raw = PS1.read_bytes()
 
     assert not raw.startswith(b"\xef\xbb\xbf"), "a BOM would change how 5.1 reads the first line"
     assert all(byte < 128 for byte in raw), "the launcher must stay ASCII for Windows PowerShell 5.1"
-    assert b"\r\n" not in raw, "the launcher must keep LF line endings"
 
 
 def test_the_shell_launcher_applies_the_same_three_steps():
