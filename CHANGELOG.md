@@ -7,7 +7,7 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
-## [Unreleased]
+## [2.5.4] - 2026-10-30
 
 ### Fixed
 
@@ -33,7 +33,8 @@
   to none. FastMCP stays on the 3.x line (3.4.11). Workflow actions are pinned
   to commit SHAs and the Docker base images to digests. Thanks @ilodezis (#132).
 - Dependabot now also watches the Docker base images, so the digest pins pick
-  up rebuilt images; the builder's uv moved to 0.13.6 (#134, #135).
+  up rebuilt images; the builder's uv moved to 0.13.6 and CI's setup-uv to
+  v10 (#134, #135, #136).
 
 ## [2.5.3] - 2026-10-13
 

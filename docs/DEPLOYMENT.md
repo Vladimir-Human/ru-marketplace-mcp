@@ -85,8 +85,8 @@ the version to match the release you downloaded.
 
 ```console
 python -m venv .venv
-.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.5.3-py3-none-any.whl
-.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.5.3" "aliexpress-connector==2.5.3"
+.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.5.4-py3-none-any.whl
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.5.4" "aliexpress-connector==2.5.4"
 .venv/bin/compare-mcp
 ```
 
@@ -162,7 +162,7 @@ the runtime stays on Python 3.12 until that is changed on purpose.
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:2.5.3 .
+docker build -t ru-marketplace-mcp:2.5.4 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -185,7 +185,7 @@ container, and publish the port to the host's loopback:
 
 ```bash
 docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.5.3
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.5.4
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
@@ -193,7 +193,7 @@ Run a different marketplace by overriding the command:
 
 ```bash
 docker run --rm -p 127.0.0.1:8001:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.5.3 yandex-mcp
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.5.4 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` keeps access local in addition to the MCP auth checks.
