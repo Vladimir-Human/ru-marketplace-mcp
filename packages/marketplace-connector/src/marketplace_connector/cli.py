@@ -1,12 +1,19 @@
 """Operator CLI for the marketplace connectors.
 
-Three verbs cover the three moments an operator actually needs help with:
+The verbs cover the moments an operator actually needs help with:
+
+``marketplace-mcp setup``
+    From zero to the first answer: detect a client, write its config with the
+    compare profile by default, start the scraping Chrome, run doctor's
+    selfchecks and offer ``unblock`` for a source the site walls off.
 
 ``marketplace-mcp install``
     Write the client config. Editing ``claude_desktop_config.json`` by hand is
     where every setup mistake lives (wrong slashes, a stale path, a missing
     comma), so the CLI prints the exact JSON block to paste — or, with
     ``--write``, merges it into the client's own file (backup first).
+    ``--profile compare|decision|full`` picks which server the one
+    ``marketplace`` entry runs.
 
 ``marketplace-mcp doctor``
     Run every connector's selfcheck and report per-source status. This is the
@@ -29,20 +36,21 @@ Three verbs cover the three moments an operator actually needs help with:
     A short usage screen: the verbs, one example each, and where to read more.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, and open unblock pages.
-# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
-# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs); local capabilities (static source table); local unblock map.
-# LINKS: M-MARKETPLACE; M-UNBLOCK.
+# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
+# SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
+# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
+# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-SETUP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
-# _unified_entry: The one "marketplace" entry that runs the unified server, plus the note for the operator.
+# _unified_entry: The one "marketplace" entry that runs the selected profile's server, plus the note for the operator.
 # _config_path: Where a client's mcpServers file lives on this platform.
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
 # next_step: One fixed next-step string for a source that is not ok.
-# _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor and unblock.
+# _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor, unblock and setup.
 # cmd_browser: browser status, browser show and browser start.
 # cmd_unblock: Open the pages a human passes, then re-check those sources.
+# _detected_clients / cmd_setup: Detect clients, write configs and walk an operator to the first answer.
 # cmd_install / cmd_doctor / main: The verbs.
 # END_MODULE_MAP
 
@@ -77,11 +85,31 @@ DSH_ENV_DIR = "RU_MARKETPLACE_MCP_DIR"
 DSH_ENV_FULL = "RU_MARKETPLACE_MCP_FULL"
 DSH_ENV_DECISION = "RU_MARKETPLACE_MCP_DECISION"
 
-# The default entry: one server, one name. The unified server mounts every
-# connector, so a client that needs a dozen entries needs a dozen tools the
-# agent pays for on every request.
+# The default entry: one server, one name. A profile selects which server the
+# `marketplace` entry runs, because a client pays for the mounted tool schemas
+# on every request: compare is 4 tools (~0.9k tokens), decision 5, full ~40
+# tools (~13.6k). New installs start with the cheap, recommended compare mode.
 UNIFIED_ENTRY = "marketplace"
 UNIFIED_SCRIPT = "marketplace-mcp"
+PROFILE_SCRIPTS: dict[str, str] = {
+    "compare": "compare-mcp",
+    "decision": "decision-mcp",
+    "full": UNIFIED_SCRIPT,
+}
+DEFAULT_PROFILE = "compare"
+PROFILE_DETAILS: dict[str, str] = {
+    "compare": "4 comparison tools, about 0.9k tokens per request",
+    "decision": "comparison plus shortlist card inspection, 5 tools",
+    "full": "every per-source tool, about 40 tools and 13.6k tokens per request",
+}
+
+# Clients `setup` can wire. dsh has its own bundle format and is not one of them.
+SETUP_CLIENTS: tuple[str, ...] = ("claude", "cursor", "claude-code")
+CLIENT_LABELS: dict[str, str] = {
+    "claude": "Claude Desktop",
+    "cursor": "Cursor",
+    "claude-code": "Claude Code",
+}
 
 # (config key, console script, human note)
 SERVERS: list[tuple[str, str, str]] = [
@@ -123,7 +151,9 @@ USAGE = """marketplace-mcp — Operator CLI and unified server for the marketpla
 
 Usage:
   marketplace-mcp                  start the unified MCP server (stdio)
+  marketplace-mcp setup            wire a detected client and check the first sources
   marketplace-mcp install <client> write the client config (claude, claude-code, cursor, dsh)
+                                   --profile compare|decision|full (default: compare)
   marketplace-mcp doctor [source]  run every connector's selfcheck and report health
   marketplace-mcp browser status   check the scraping Chrome and where its window is
   marketplace-mcp browser show     bring the scraping Chrome window on-screen
@@ -132,8 +162,8 @@ Usage:
   marketplace-mcp help             show this text
 
 Examples:
-  marketplace-mcp
-  marketplace-mcp install claude --write
+  marketplace-mcp setup
+  marketplace-mcp install claude --write --profile full
   marketplace-mcp doctor wildberries
   marketplace-mcp browser start
   marketplace-mcp unblock ozon --dry-run
@@ -264,14 +294,14 @@ def _config_block() -> tuple[dict[str, Any], str]:
     return block, note
 
 
-def _unified_entry() -> tuple[dict[str, Any], str]:
-    """The one entry that runs the unified server, plus the note for the operator.
+def _unified_entry(script: str = UNIFIED_SCRIPT) -> tuple[dict[str, Any], str]:
+    """The one entry that runs the selected profile's server, plus the note.
 
     From a source checkout the honest command is ``uv run --directory <root>
-    marketplace-mcp``, and ``uv`` is resolved to an absolute path: a desktop
-    client often does not inherit the terminal's PATH, and a bare ``uv`` is
-    then a server that silently never starts. From a wheel install there is
-    no checkout, so the console script on PATH is the command.
+    <script>``, and ``uv`` is resolved to an absolute path: a desktop client
+    often does not inherit the terminal's PATH, and a bare ``uv`` is then a
+    server that silently never starts. From a wheel install there is no
+    checkout, so the console script on PATH is the command.
 
     The note is returned, not printed: the caller shows it to the operator
     once per command run, on stderr. A warning printed from inside a helper
@@ -286,13 +316,65 @@ def _unified_entry() -> tuple[dict[str, Any], str]:
                 "\nuv was not found on PATH: the client may not be able to start the server — "
                 "install uv or point the command at it by hand."
             )
-        return {"command": uv or "uv", "args": ["run", "--directory", str(root), UNIFIED_SCRIPT]}, note
+        return {"command": uv or "uv", "args": ["run", "--directory", str(root), script]}, note
 
-    resolved = shutil.which(UNIFIED_SCRIPT)
+    resolved = shutil.which(script)
     note = "# Installed as a package: the command is the console script on PATH."
     if resolved is None:
-        note += f"\n# Not found on PATH, left unresolved: {UNIFIED_SCRIPT}"
-    return {"command": resolved or UNIFIED_SCRIPT, "args": []}, note
+        note += f"\n# Not found on PATH, left unresolved: {script}"
+    return {"command": resolved or script, "args": []}, note
+
+
+def _profile_note(profile: str) -> str:
+    """One line naming the profile, its cost and how to switch."""
+    script = PROFILE_SCRIPTS[profile]
+    switch = (
+        "Use --profile compare for the cheap price-comparison server."
+        if profile == "full"
+        else "Use --profile full for every per-source tool."
+    )
+    return f"# Profile: {profile} ({script}) — {PROFILE_DETAILS[profile]}. {switch}"
+
+
+def _entry_script(entry: Mapping[str, Any]) -> str | None:
+    """The profile console script an mcpServers entry runs, if it is one of ours."""
+    parts = [str(entry.get("command", ""))]
+    parts.extend(str(arg) for arg in entry.get("args") or [])
+    known = {script: profile for profile, script in PROFILE_SCRIPTS.items()}
+    for part in reversed(parts):
+        name = pathlib.PurePath(part).name.lower()
+        for script in known:
+            if name in (script, f"{script}.exe", f"{script}.cmd", f"{script}.bat"):
+                return script
+    return None
+
+
+def _entry_profile(entry: Mapping[str, Any]) -> str | None:
+    """The profile name of an mcpServers entry, or None for a foreign command."""
+    script = _entry_script(entry)
+    if script is None:
+        return None
+    return next(profile for profile, known in PROFILE_SCRIPTS.items() if known == script)
+
+
+def _configured_profile(client: str) -> str | None:
+    """The profile the client's existing ``marketplace`` entry runs, if any.
+
+    The compare default is for new installs only (owner decision, 2026-10-30):
+    re-running install or setup without ``--profile`` keeps what an operator
+    already chose. Read-only; a missing or unreadable file is "no profile",
+    and the write path reports such a file on its own.
+    """
+    if client not in ("claude", "cursor"):
+        return None
+    path = _config_path(client)
+    try:
+        document = _parse_strict_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    servers = document.get("mcpServers") if isinstance(document, dict) else None
+    entry = servers.get(UNIFIED_ENTRY) if isinstance(servers, dict) else None
+    return _entry_profile(entry) if isinstance(entry, dict) else None
 
 
 def _config_path(client: str) -> pathlib.Path:
@@ -371,12 +453,25 @@ def _claude_mcp_add_line(name: str, entry: Mapping[str, Any]) -> str:
     return " ".join(_quote(part) for part in parts)
 
 
-def _write_client_config(client: str, entries: dict[str, Any], *, force: bool, dry_run: bool) -> int:
+def _write_client_config(
+    client: str,
+    entries: dict[str, Any],
+    *,
+    force: bool,
+    dry_run: bool,
+    profile: str | None = None,
+    conflict_hint: str | None = None,
+    show_document: bool = True,
+) -> int:
     """Merge the entries into the client's own mcpServers file.
 
     The file belongs to the operator: other servers and other settings stay
     untouched, a malformed file is never rewritten, and every change is backed
-    up before it happens.
+    up before it happens. When ``profile`` is given, a conflict names the
+    profile the existing entry runs and the one that was asked for. A dry run
+    prints the merged file, or only the entries when ``show_document`` is
+    false: ``setup`` must not echo other servers' settings (their ``env``
+    blocks may hold keys) when the operator never asked to see the file.
     """
     path = _config_path(client)
     document: dict[str, Any] = {}
@@ -403,10 +498,27 @@ def _write_client_config(client: str, entries: dict[str, Any], *, force: bool, d
 
     conflicts = sorted(name for name, entry in entries.items() if name in servers and servers[name] != entry)
     if conflicts and not force:
-        print(
-            f"{path} already has a different {', '.join(conflicts)} entry; re-run with --force to replace it",
-            file=sys.stderr,
-        )
+        if profile is None:
+            print(
+                f"{path} already has a different {', '.join(conflicts)} entry; re-run with --force to replace it",
+                file=sys.stderr,
+            )
+        else:
+            details = []
+            for name in conflicts:
+                configured = _entry_profile(servers[name])
+                if configured is None:
+                    details.append(f"{name} has an unrecognized command")
+                else:
+                    details.append(f"{name} is configured as profile {configured} ({PROFILE_SCRIPTS[configured]})")
+            print(
+                f"{path} already has a different {', '.join(conflicts)} entry: "
+                f"{'; '.join(details)}; asked for profile {profile} ({PROFILE_SCRIPTS[profile]}); "
+                "re-run with --force to replace it",
+                file=sys.stderr,
+            )
+        if conflict_hint is not None:
+            print(conflict_hint, file=sys.stderr)
         return 2
 
     merged = dict(document)
@@ -414,7 +526,8 @@ def _write_client_config(client: str, entries: dict[str, Any], *, force: bool, d
     if dry_run:
         # Show the result of the merge, whether or not it would change
         # anything: the operator asked to see the file, not to be told "fine".
-        print(json.dumps(merged, indent=2, ensure_ascii=False))
+        shown = merged if show_document else {"mcpServers": entries}
+        print(json.dumps(shown, indent=2, ensure_ascii=False))
         print(f"target: {path}")
         return 0
     if all(servers.get(name) == entry for name, entry in entries.items()):
@@ -565,13 +678,17 @@ def _dsh_patch_block() -> tuple[str, str]:
 def cmd_install(argv: list[str]) -> int:
     """Print the client config block, or write it into the client's own file.
 
-    The default is one entry running the unified server. ``--per-source`` keeps
-    the old per-source block. ``--write`` merges the block into the client's
+    The default is one ``marketplace`` entry running the compare profile.
+    ``--profile compare|decision|full`` selects the console script the entry
+    runs; ``--per-source`` keeps the old per-source block and cannot be
+    combined with a profile. ``--write`` merges the block into the client's
     own configuration file, with a backup of the old one first.
     """
     write = dry_run = force = per_source = False
     client: str | None = None
-    for arg in argv:
+    profile: str | None = None
+    it = iter(argv)
+    for arg in it:
         if arg == "--write":
             write = True
         elif arg == "--dry-run":
@@ -580,9 +697,15 @@ def cmd_install(argv: list[str]) -> int:
             force = True
         elif arg == "--per-source":
             per_source = True
+        elif arg == "--profile":
+            raw = next(it, None)
+            if not raw or raw.startswith("-"):
+                print("--profile requires one of compare, decision or full", file=sys.stderr)
+                return 2
+            profile = raw
         elif arg.startswith("-"):
             print(
-                f"unknown install option {arg!r}; expected --write, --dry-run, --force or --per-source",
+                f"unknown install option {arg!r}; expected --write, --dry-run, --force, --per-source or --profile",
                 file=sys.stderr,
             )
             return 2
@@ -604,6 +727,19 @@ def cmd_install(argv: list[str]) -> int:
     if force and not write:
         print("--force only makes sense together with --write", file=sys.stderr)
         return 2
+    if per_source and profile is not None:
+        print(
+            "--per-source writes one entry per source and cannot be combined with --profile",
+            file=sys.stderr,
+        )
+        return 2
+    chosen_profile = profile or DEFAULT_PROFILE
+    if chosen_profile not in PROFILE_SCRIPTS:
+        print(
+            f"unknown profile {chosen_profile!r}; expected one of {', '.join(PROFILE_SCRIPTS)}",
+            file=sys.stderr,
+        )
+        return 2
 
     if client == "dsh":
         if write:
@@ -612,21 +748,37 @@ def cmd_install(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+        if profile is not None:
+            print(
+                "dsh emits all three rows (compare, decision, full); --profile does not apply",
+                file=sys.stderr,
+            )
         patch_block, patch_note = _dsh_patch_block()
         print(patch_block)
         print()
         print(patch_note)
         return 0
 
+    if write and not per_source and profile is None:
+        kept = _configured_profile(client)
+        if kept is not None:
+            chosen_profile = kept
+            print(
+                f"# {_config_path(client)} already runs profile {kept}; keeping it (--profile changes it).",
+                file=sys.stderr,
+            )
+
     if per_source:
         entries, note = _config_block()
     else:
-        entry, note = _unified_entry()
+        entry, note = _unified_entry(PROFILE_SCRIPTS[chosen_profile])
         entries = {UNIFIED_ENTRY: entry}
     # The note is operator information (where the commands point, what is
     # missing from PATH), not part of what gets pasted or written: stderr,
     # once per command run, in every mode.
     print(note, file=sys.stderr)
+    if not per_source:
+        print(_profile_note(chosen_profile))
 
     if client == "claude-code":
         if write:
@@ -634,7 +786,13 @@ def cmd_install(argv: list[str]) -> int:
                 print(_claude_mcp_add_line(name, entry))
             return 0
     elif write:
-        return _write_client_config(client, entries, force=force, dry_run=dry_run)
+        return _write_client_config(
+            client,
+            entries,
+            force=force,
+            dry_run=dry_run,
+            profile=None if per_source else chosen_profile,
+        )
 
     print(f"# Add to your mcpServers block ({client}).")
     print(json.dumps(entries, indent=2, ensure_ascii=False))
@@ -646,11 +804,12 @@ def cmd_install(argv: list[str]) -> int:
         print()
         print("# Or wire one entry: the unified 'marketplace-mcp' server mounts every source.")
     else:
-        print("#   - The unified server mounts every source; tool names stay the same (wb_*, ozon_*).")
+        print(f"#   - Profile {chosen_profile}: {PROFILE_DETAILS[chosen_profile]}.")
         print("#   - Some sources need your Chrome (CDP) — see docs/CDP_SETUP.md.")
         print("#   - mpstats is optional paid analytics — requires MPSTATS_MP_AUTH in the server environment.")
         print()
         print("# Need one entry per source instead? Add --per-source.")
+        print("# Need another tool set? Add --profile decision or --profile full.")
     return 0
 
 
@@ -1176,6 +1335,197 @@ def cmd_unblock(argv: list[str]) -> int:
     return _health_exit_code(blocked, drifted)
 
 
+def _join_labels(clients: list[str]) -> str:
+    """Human list of client names: "Claude Desktop, Cursor and Claude Code"."""
+    labels = [CLIENT_LABELS[client] for client in clients]
+    if len(labels) <= 1:
+        return "".join(labels)
+    return ", ".join(labels[:-1]) + " and " + labels[-1]
+
+
+def _detected_clients() -> list[str]:
+    """Clients that look installed: config folders for desktop clients, PATH for Claude Code."""
+    found: list[str] = []
+    if _config_path("claude").parent.is_dir():
+        found.append("claude")
+    if _config_path("cursor").parent.is_dir():
+        found.append("cursor")
+    if shutil.which("claude") is not None:
+        found.append("claude-code")
+    return found
+
+
+def cmd_setup(argv: list[str]) -> int:
+    """From zero to the first answer: detect a client, wire it, check the sources.
+
+    The steps are the existing verbs, not a second implementation: config goes
+    through ``_write_client_config`` (never with force), Chrome through
+    ``start_browser``, health through doctor's shared helpers and a wall
+    through ``cmd_unblock``. ``--dry-run`` prints the steps and files and
+    writes, starts and requests nothing.
+    """
+    dry_run = no_browser = no_doctor = False
+    selected: list[str] = []
+    profile: str | None = None
+    it = iter(argv)
+    for arg in it:
+        if arg == "--dry-run":
+            dry_run = True
+        elif arg == "--no-browser":
+            no_browser = True
+        elif arg == "--no-doctor":
+            no_doctor = True
+        elif arg == "--profile":
+            raw = next(it, None)
+            if not raw or raw.startswith("-"):
+                print("--profile requires one of compare, decision or full", file=sys.stderr)
+                return 2
+            profile = raw
+        elif arg == "--client":
+            raw = next(it, None)
+            if not raw or raw.startswith("-"):
+                print("--client requires a client name", file=sys.stderr)
+                return 2
+            if raw not in SETUP_CLIENTS:
+                print(
+                    f"unknown client {raw!r}; expected one of {', '.join(SETUP_CLIENTS)}",
+                    file=sys.stderr,
+                )
+                return 2
+            if raw not in selected:
+                selected.append(raw)
+        elif arg.startswith("-"):
+            print(
+                f"unknown setup option {arg!r}; expected --client, --profile, --dry-run, --no-browser or --no-doctor",
+                file=sys.stderr,
+            )
+            return 2
+        else:
+            print(f"setup takes no positional arguments, got {arg!r}", file=sys.stderr)
+            return 2
+    chosen_profile = profile or DEFAULT_PROFILE
+    if chosen_profile not in PROFILE_SCRIPTS:
+        print(
+            f"unknown profile {chosen_profile!r}; expected one of {', '.join(PROFILE_SCRIPTS)}",
+            file=sys.stderr,
+        )
+        return 2
+
+    targets = selected or _detected_clients()
+    configured = 0
+
+    print("1. Clients:")
+    if selected:
+        print(f"   chosen with --client: {_join_labels(targets)}")
+    elif targets:
+        print(f"   detected: {_join_labels(targets)}")
+    else:
+        print("   no supported client detected (Claude Desktop, Cursor, Claude Code).")
+        print("   wire one by hand:")
+        for client in SETUP_CLIENTS:
+            print(f"     marketplace-mcp install {client} --write")
+
+    print("2. Config:")
+    if not targets:
+        print("   no client to configure; see the install commands above.")
+    else:
+        notes_shown: set[str] = set()
+        for client in targets:
+            label = CLIENT_LABELS[client]
+            kept = None if profile is not None else _configured_profile(client)
+            client_profile = kept or chosen_profile
+            entry, note = _unified_entry(PROFILE_SCRIPTS[client_profile])
+            if note not in notes_shown:
+                print(note, file=sys.stderr)
+                notes_shown.add(note)
+            entries = {UNIFIED_ENTRY: entry}
+            how = "already configured, kept" if kept else "selected"
+            print(f"   {label}: profile {client_profile} ({how}): {PROFILE_DETAILS[client_profile]}")
+            if client == "claude-code":
+                print("     run this line once (setup does not run it):")
+                print(f"     {_claude_mcp_add_line(UNIFIED_ENTRY, entry)}")
+                configured += 1
+                continue
+            print(f"     {_config_path(client)}")
+            rc = _write_client_config(
+                client,
+                entries,
+                force=False,
+                dry_run=dry_run,
+                profile=client_profile,
+                conflict_hint=(
+                    f"setup skips {label}; to replace the existing entry run: "
+                    f"marketplace-mcp install {client} --write --force --profile {client_profile}"
+                ),
+                show_document=False,
+            )
+            if rc == 0:
+                configured += 1
+            else:
+                print(f"   {label}: config skipped (exit {rc}).", file=sys.stderr)
+
+    if no_browser:
+        print("3. Browser: skipped (--no-browser).")
+    elif dry_run:
+        print("3. Browser: would start the scraping Chrome on-screen; skipped in --dry-run.")
+    else:
+        from mcp_core.transport.chrome_cdp import start_browser
+
+        print("3. Browser:")
+        started = asyncio.run(start_browser(visible=True))
+        if not started.get("ok"):
+            print(
+                f"   could not start the scraping Chrome: {started.get('reason', 'unknown reason')}; continuing.",
+                file=sys.stderr,
+            )
+        elif started.get("already_running"):
+            print(f"   Chrome with CDP is already running on {started.get('host', '?')}:{started.get('port', '?')}.")
+        else:
+            print(f"   started Chrome with CDP on {started.get('host', '?')}:{started.get('port', '?')}.")
+
+    results: list[tuple[str, str, str, dict[str, Any]]] = []
+    if no_doctor:
+        print("4. Health: skipped (--no-doctor).")
+    elif dry_run:
+        print("4. Health: would run live selfchecks (live requests to the marketplaces); skipped in --dry-run.")
+    else:
+        print("4. Health: running live selfchecks; this makes live requests to the marketplaces.")
+        results = _run_selfchecks(None)
+        steps, cdp_note = _health_steps(results)
+        print("\nMarketplace connector health (selfcheck):")
+        _print_health_rows(results, steps)
+        print(f"\n  {cdp_note}")
+
+    print("5. Unblock:")
+    blocked = _blocked_sources(results) if results else []
+    if dry_run:
+        print("   would offer unblock for any source whose checks report a wall; nothing was opened.")
+    elif not results:
+        print("   no health results; run `marketplace-mcp doctor`, then `marketplace-mcp unblock <source>`.")
+    elif not blocked:
+        print("   no browser source reports a wall right now.")
+    elif sys.stdin.isatty():
+        try:
+            answer = input(f"   open the unblock pages for {', '.join(blocked)} now? [y/N] ")
+        except EOFError:
+            answer = ""
+        if answer.strip().lower() in {"y", "yes"}:
+            cmd_unblock(blocked)
+        else:
+            print(f"   skipped; run: marketplace-mcp unblock {' '.join(blocked)}")
+    else:
+        print(f"   {', '.join(blocked)} report a wall; run: marketplace-mcp unblock {' '.join(blocked)}")
+
+    ask = "«Сравни цены на iPhone 15 128 ГБ на Wildberries, Ozon и Яндекс Маркете»"
+    print()
+    if targets:
+        print(f"Restart {_join_labels(targets)}, then ask: {ask}")
+    else:
+        print(f"Once a client is wired, restart it, then ask: {ask}")
+
+    return 0 if configured else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] in ("-h", "--help", "help"):
@@ -1188,6 +1538,8 @@ def main(argv: list[str] | None = None) -> int:
         print(USAGE)
         return 0
     command, rest = args[0], args[1:]
+    if command == "setup":
+        return cmd_setup(rest)
     if command == "install":
         return cmd_install(rest)
     if command == "doctor":
@@ -1196,7 +1548,7 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_browser(rest)
     if command == "unblock":
         return cmd_unblock(rest)
-    print(f"unknown command {command!r}; expected install, doctor, browser or unblock", file=sys.stderr)
+    print(f"unknown command {command!r}; expected setup, install, doctor, browser or unblock", file=sys.stderr)
     print(USAGE, file=sys.stderr)
     log_event("marketplace.cli.unknown", command=command)
     return 2
