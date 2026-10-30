@@ -16,7 +16,7 @@ dependencies = [
     "pydantic-settings>=2.2",
     # Every Cian read runs inside the operator's Chrome over CDP, and
     # mcp_core.transport.chrome_cdp imports playwright at module load.
-    "playwright>=1.40",
+    "playwright>=1.47",
 ]
 
 [project.scripts]

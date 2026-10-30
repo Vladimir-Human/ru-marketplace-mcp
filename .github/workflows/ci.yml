@@ -331,6 +331,47 @@ jobs:
         # own, since the in-process check never reads serverInfo.
         run: uv run python scripts/e2e_stdio_check.py
 
+  pypi-bundle:
+    # Additional install evidence; existing ruleset-required job names stay unchanged.
+    name: PyPI bundle installs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync build environment
+        run: uv sync --frozen --all-packages
+
+      - name: Build the additional PyPI bundle
+        run: uv run python scripts/build_pypi_bundle.py
+
+      - name: Install the wheel with plain pip outside the workspace
+        run: |
+          uv run python -m venv "$RUNNER_TEMP/pypi-venv"
+          "$RUNNER_TEMP/pypi-venv/bin/python" -m pip install dist/pypi/*.whl
+          echo "$RUNNER_TEMP/pypi-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Installed CLI entry points show help
+        run: |
+          marketplace-mcp --help
+          ru-marketplace-mcp --help
+
+      - name: Real stdio sessions use the installed console scripts
+        # The probe resolves scripts on PATH, now headed by the pip-only venv.
+        # It calls local introspection only, never marketplace tools or doctor.
+        env:
+          PYTHONPATH: ""
+          MCP_TRANSPORT: stdio
+        run: '"$RUNNER_TEMP/pypi-venv/bin/python" scripts/e2e_stdio_check.py'
+
   live:
     name: Live endpoint canaries (nightly / manual)
     # Runs on a schedule and on demand, never on a push: live endpoints drift

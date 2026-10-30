@@ -3,9 +3,9 @@ name: Release
 # Fires when a version tag is pushed (e.g. v1.1.0). Builds a wheel and sdist for
 # every workspace package and attaches them to the GitHub Release for that tag.
 #
-# Deliberately NOT publishing to PyPI: the distribution names (wb-connector and
-# friends) are too generic and undecided, so the packages are not on PyPI yet
-# (see docs/RELEASE_CHECKLIST.md). This job only builds and attaches artifacts.
+# This workflow only builds and attaches the 16 workspace distributions.
+# The additional single PyPI bundle is handled by pypi-publish.yml, disabled
+# until the owner registers its trusted publisher (docs/DEPLOYMENT.md).
 on:
   push:
     tags:

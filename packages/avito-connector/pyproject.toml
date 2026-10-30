@@ -19,7 +19,7 @@ dependencies = [
     # server.py imports mcp_core.transport.chrome_cdp at module load for the
     # tier-2 fallback, and that module imports playwright. Without this the
     # connector installs fine and then dies on the first Avito ban.
-    "playwright>=1.40",
+    "playwright>=1.47",
 ]
 
 [project.scripts]

@@ -1,0 +1,69 @@
+name: PyPI publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish the PyPI bundle
+    # Off until the owner registers the pending publisher on pypi.org, creates
+    # the `pypi` environment and sets the repository variable PYPI_PUBLISH=true
+    # (docs/DEPLOYMENT.md, "PyPI (maintainer)"). Until then the job is skipped.
+    if: vars.PYPI_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          # A publishing job never restores a cache another workflow could have written.
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync build environment
+        run: uv sync --frozen --all-packages
+
+      - name: Build the single PyPI bundle
+        run: uv run python scripts/build_pypi_bundle.py
+
+      - name: Check wheel version against the selected tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          uv run python - <<'PY'
+          import os
+          from email.parser import BytesParser
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          tag = os.environ["RELEASE_TAG"]
+          if os.environ["RELEASE_REF_TYPE"] != "tag" or not tag.startswith("v"):
+              raise SystemExit("Select a v* tag for workflow_dispatch; branch publishing is refused")
+          wheels = list(Path("dist/pypi").glob("*.whl"))
+          sdists = list(Path("dist/pypi").glob("*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(f"Expected one wheel and one sdist, got {len(wheels)} and {len(sdists)}")
+          with ZipFile(wheels[0]) as wheel:
+              metadata = BytesParser().parsebytes(wheel.read(next(name for name in wheel.namelist() if name.endswith("/METADATA"))))
+          if metadata["Version"] != tag.removeprefix("v"):
+              raise SystemExit(f"Wheel version {metadata['Version']} does not match tag {tag}")
+          print(f"[R-PYPI-PUBLISH] ok: wheel version {metadata['Version']} matches {tag}")
+          PY
+
+      - name: Publish through the trusted publisher
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist/pypi/

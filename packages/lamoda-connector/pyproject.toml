@@ -15,7 +15,7 @@ dependencies = [
     "httpx>=0.27",
     "pydantic>=2.12",
     "pydantic-settings>=2.2",
-    "playwright>=1.40",
+    "playwright>=1.47",
 ]
 
 [project.scripts]

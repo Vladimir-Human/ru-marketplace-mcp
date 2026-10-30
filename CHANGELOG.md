@@ -11,6 +11,20 @@
 
 ### Added
 
+- Подготовлен один дополнительный PyPI-бандл `ru-marketplace-mcp`: скрипт
+  `scripts/build_pypi_bundle.py` выводит метаданные из манифестов workspace,
+  отказывает при конфликте зависимостей или консольных имён и собирает wheel/sdist
+  со всеми импортами и `py.typed`; README идёт в описание пакета, а не файлом в site-packages. Алиас `ru-marketplace-mcp` ведёт в CLI;
+  workspace, его 16 отдельных пакетов и Docker остаются. Общие минимумы
+  `curl-cffi` и Playwright согласованы с более высокими уже существовавшими
+  требованиями; версии runtime в lock-файле не меняются. Новый CI job проверяет
+  wheel в чистом pip-venv. Trusted publishing выключен до регистрации владельцем
+  одного pending publisher и включения переменной; шаги — в DEPLOYMENT.md.
+- `install` и `setup`, запущенные из кеша uv tool, пишут абсолютный путь к uv и
+  `tool run --from ru-marketplace-mcp==<версия>` вместо временной консольной
+  команды. Вывод объясняет пин релиза и обновление через `install --write --force`;
+  запуск из checkout и обычного venv остаётся прежним.
+
 - `wb_card` и `wb_search` в режиме `api` сами перечитывают запрос через
   отрисованную страницу в scraping-Chrome, когда API WB отказывает адресу:
   HTTP 401/403/498 или HTML-стена на месте JSON. Ответ получает предупреждение
@@ -123,6 +137,20 @@
   того же замера. `--check` в CI (`lint`) падает, если файл или блок устарели.
   Прежние цифры были устаревшими: compare стоит около 2,2 тыс. токенов на
   запрос, а не 0,9 тыс., полный набор — около 17,5 тыс., а не 13,6 тыс.
+
+- Prepared one additional `ru-marketplace-mcp` PyPI bundle. The builder derives
+  metadata from workspace manifests, rejects dependency/script conflicts, and
+  builds a wheel/sdist with every import package and `py.typed`; the README is the package description, not a file in site-packages. The
+  `ru-marketplace-mcp` alias enters the CLI; the 16-member workspace, subset
+  artifacts and Docker builds remain. Shared curl-cffi/Playwright minimums are
+  aligned with the higher requirements already present; locked runtime versions
+  stay unchanged. A new CI job checks a clean pip-venv install. Trusted publishing
+  stays off until the owner registers one pending publisher and enables the
+  repository switch; DEPLOYMENT.md contains the owner steps.
+- `install` and `setup` running from uv's tool cache now persist an absolute uv
+  command and `tool run --from ru-marketplace-mcp==<version>`, never the temporary
+  console-script path. The note explains the release pin and refresh through
+  `install --write --force`; checkout and ordinary-venv entries are unchanged.
 
 - In `api` mode, `wb_card` and `wb_search` now re-read the same request through the
   rendered page in the scraping Chrome when WB's API refuses the address: HTTP

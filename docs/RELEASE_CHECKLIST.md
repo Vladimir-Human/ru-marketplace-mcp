@@ -217,6 +217,26 @@ git push origin vX.Y.Z
 Пуш тега запускает release workflow: он собирает 32 артефакта (16 wheel и 16
 sdist) и прикладывает их к релизу.
 
+## PyPI (maintainer)
+
+Одноразовая настройка pending publisher, окружения и переключателя описана в
+[DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer): это единственный
+список точных полей для владельца. До его выполнения job публикации пропускается;
+токен API не нужен. Публикуется только дополнительный бандл, а не 16 workspace-пакетов.
+
+Перед включённым выпуском проверьте:
+
+- `scripts/build_pypi_bundle.py --print-pyproject` показывает метаданные из
+  манифестов; обычный запуск собирает один wheel и один sdist в `dist/pypi/`;
+- новый CI job **PyPI bundle installs** зелёный: чистый pip-venv запускает оба
+  CLI help и stdio-проверку установленных консольных команд;
+- wheel `METADATA` содержит версию выбранного `v*` тега; ручной
+  `workflow_dispatch` тоже запускайте на теге, не на ветке;
+- README не рекламирует публичную установку до первой успешной публикации;
+  конфиг из uv tool использует пин релиза, обновляемый через `install --write --force`.
+
+32 артефакта существующего GitHub Release workflow остаются как прежде.
+
 ## 8. Проверка после публикации
 
 Установить релиз с нуля, как это сделает посторонний человек:
@@ -305,3 +325,15 @@ install, image build or CI is red.
    sdists).
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page.
+
+## PyPI (maintainer, English)
+
+Follow the single owner-registration checklist in
+[DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer). Until the owner
+completes it, the publish job is skipped; no API token is used. Only the additional
+bundle goes to PyPI, not the 16 workspace distribution names. Check the generated
+metadata and both local artifacts, the **PyPI bundle installs** CI job, and the
+wheel `METADATA` version against the selected `v*` tag (also for manual dispatch).
+Keep public-install advertising out of README until the first successful publish.
+The existing 32 GitHub Release artifacts and Docker builds stay unchanged;
+uv-tool client entries pin a release and refresh it with `install --write --force`.
