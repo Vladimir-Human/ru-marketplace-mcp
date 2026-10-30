@@ -108,6 +108,7 @@ def test_setup_detects_cursor_by_its_folder(cursor_config, no_claude_code, capfd
 
 
 def test_setup_detects_claude_code_on_path_and_prints_the_add_line(claude_config, monkeypatch, capfd):
+    """R-CLI-SETUP: run the printed add line before the restart/ask (audit S1-F5)."""
     monkeypatch.setattr(cli.shutil, "which", lambda script: "/usr/bin/claude" if script == "claude" else None)
 
     rc = cli.cmd_setup(["--no-browser", "--no-doctor"])
@@ -117,6 +118,11 @@ def test_setup_detects_claude_code_on_path_and_prints_the_add_line(claude_config
     assert "detected: Claude Code" in out
     assert "claude mcp add marketplace" in out
     assert "compare-mcp" in out
+    assert "run this line once (setup does not run it):" in out
+    assert out.splitlines()[-1] == (
+        "Run the claude mcp add line above, then restart Claude Code and ask: "
+        "«Сравни цены на iPhone 15 128 ГБ на Wildberries, Ozon и Яндекс Маркете»"
+    )
     assert not claude_config.exists()
 
 
@@ -236,6 +242,53 @@ def test_setup_tty_yes_runs_unblock(claude_config, no_claude_code, fake_browser,
 
     assert rc == 0
     assert calls == [["ozon"]]
+
+
+def test_setup_tty_no_skips_the_unblock_pages(
+    claude_config, no_claude_code, fake_browser, blocked_selfchecks, monkeypatch, capfd
+):
+    """Answering "no" must not open the pages and must name the command (audit S4-F20)."""
+    calls: list[list[str]] = []
+    monkeypatch.setattr(cli, "cmd_unblock", lambda names: calls.append(list(names)) or 0)
+    monkeypatch.setattr(cli.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", lambda prompt: "n")
+    claude_config.parent.mkdir()
+
+    rc = cli.cmd_setup(["--client", "claude", "--no-browser"])
+
+    assert rc == 0
+    out = capfd.readouterr().out
+    assert "skipped; run: marketplace-mcp unblock ozon" in out
+    assert calls == []
+
+
+def test_setup_ctrl_c_at_the_prompt_cancels_before_unblock(
+    claude_config, no_claude_code, blocked_selfchecks, monkeypatch, capfd
+):
+    """R-CLI-SETUP: Ctrl-C cancels the unblock offer with exit 130 (audit S1-F6)."""
+    calls: list[list[str]] = []
+    prompts: list[str] = []
+
+    def interrupted(prompt):
+        prompts.append(prompt)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, "cmd_unblock", lambda names: calls.append(list(names)) or 0)
+    monkeypatch.setattr(cli.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", interrupted)
+    claude_config.parent.mkdir()
+
+    try:
+        rc = cli.cmd_setup(["--client", "claude", "--no-browser"])
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C escaped the setup prompt", pytrace=False)
+
+    assert rc == 130
+    assert prompts == ["   open the unblock pages for ozon now? [y/N] "]
+    assert calls == []
+    captured = capfd.readouterr()
+    assert "cancelled" in captured.err.splitlines()
+    assert "Restart Claude Desktop" not in captured.out
 
 
 def test_setup_browser_failure_prints_the_reason_and_continues(claude_config, no_claude_code, monkeypatch, capfd):

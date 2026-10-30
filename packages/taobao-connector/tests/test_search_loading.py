@@ -216,3 +216,20 @@ async def test_selfcheck_loading_at_deadline_is_inconclusive_timeout(monkeypatch
 
 
 # END_BLOCK_LOADING_VERDICTS
+
+
+# A wall variant with more links than the wall gate allows: no wall marker
+# fires, yet its login routes prove it is not a grid that is merely late.
+WIDE_WALL = {**WALL, "anchors_total": 45}
+
+
+async def test_a_page_with_login_routes_is_never_polled_as_a_loading_grid(monkeypatch) -> None:
+    """Pre-release audit 2026-10-30: «加载中» alone used to turn this page into a retryable timeout."""
+    assert not server._login_wall_markers(WIDE_WALL), "precondition: the link-count gate keeps the markers silent"
+    page = FakePage([WIDE_WALL])
+    _patch_page(monkeypatch, page)
+    with pytest.raises(ToolError) as excinfo:
+        await asyncio.wait_for(server.taobao_search("iphone 15"), timeout=1.0)
+    assert json.loads(str(excinfo.value))["error"] == "parser_drift"
+    assert page.reads == 1, "a page with login routes must not be polled"
+    assert page.opens == page.closes == 1

@@ -7,6 +7,7 @@ the documented measurement rule, not from a checked-in copy of the table.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -173,8 +174,37 @@ def test_dsh_readme_mode_table_is_generated_and_checked(
     assert gen.check_outputs(tmp_path) == [gen.STALE_DSH_README]
 
 
-def test_the_token_estimate_is_the_one_mcp_wire_uses(measurements: tuple[gen.Measurement, ...]) -> None:
-    import mcp_wire
+def test_the_printed_token_numbers_follow_the_stated_rule(measurements: tuple[gen.Measurement, ...]) -> None:
+    """The published cost must be the rule's result, not the estimator's echo (audit S4-F18).
+
+    ``Measurement.token_estimate`` *is* ``mcp_wire.wire_tokens(...)``, so
+    comparing the two proved nothing. The number is therefore recomputed here,
+    by hand, from the documented rule ("a Cyrillic character as 1/3 token and
+    any other character as 1/4"), and the figures an operator reads - the
+    README cost blocks, the dsh bundle table and the per-profile header - are
+    checked against it.
+    """
+
+    def by_the_stated_rule(tool: dict) -> int:
+        text = json.dumps(tool, ensure_ascii=False, separators=(",", ":"))
+        cyrillic = sum(1 for ch in text if "\u0400" <= ch <= "\u04ff")
+        return int(cyrillic / 3.0 + (len(text) - cyrillic) / 4.0)
+
+    readme = gen.render_readme(STALE_README, measurements)
+    dsh_readme = gen.render_dsh_readme(STALE_DSH_README, measurements)
+    docs = gen.render_docs(measurements)
+
+    expected = {
+        measurement.profile.name: gen.format_tokens(sum(by_the_stated_rule(dict(tool)) for tool in measurement.tools))
+        for measurement in measurements
+    }
+
+    # The README blocks publish the three costs: every number in them is a
+    # measured one, and none of the three is missing.
+    assert set(re.findall(r"≈([0-9.]+k?)", readme)) == set(expected.values())
 
     for measurement in measurements:
-        assert measurement.token_estimate == mcp_wire.wire_tokens([dict(tool) for tool in measurement.tools])
+        printed = expected[measurement.profile.name]
+        label = gen.DSH_MODE_LABELS[measurement.profile.name]
+        assert f"| {label} | ~{printed} tokens per request | {measurement.tool_count} |" in dsh_readme
+        assert f"(≈{printed} tokens)" in docs

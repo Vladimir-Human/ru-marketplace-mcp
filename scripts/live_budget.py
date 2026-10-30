@@ -11,8 +11,9 @@ moved instead of silently counting nothing.
 Limits come from ``LIVE_BUDGET_TOTAL``, ``LIVE_BUDGET_PER_SOURCE`` and
 ``LIVE_BUDGET_GAP_S``. The ledger lives in memory, or in the JSON file named by
 ``LIVE_BUDGET_LEDGER`` (atomic replace), so several ``live_check.py`` commands
-share one run. Loopback requests (the local Chrome CDP endpoint) are not
-counted.
+share one run. Two processes share one file too (``pytest -m live`` next to
+``live_check.py``), so the file is read and written under a lock file next to
+it. Loopback requests (the local Chrome CDP endpoint) are not counted.
 
 A request over either cap raises ``BudgetExhausted`` before it is sent. A
 request that comes too soon after the previous one to the same marketplace
@@ -21,8 +22,8 @@ stderr: ``[req n/40] ozon 3/8 httpx https://...``.
 
 START_MODULE_CONTRACT
 PURPOSE: Enforce the owner's live-run request budget across every transport a connector uses.
-SCOPE: Env limits, grouped ledger (memory/file, atomic), reservation/gap, transport hooks, install/uninstall.
-DEPENDS: stdlib asyncio,contextlib,datetime,ipaddress,json,os,sys,tempfile,threading,time,urllib.parse; httpx, curl_cffi, Playwright, mcp_core.transport.chrome_cdp, ozon_connector.server at install time.
+SCOPE: Env limits, grouped ledger (memory/file, atomic, cross-process lock), reservation/gap, transport hooks, install/uninstall.
+DEPENDS: stdlib asyncio,contextlib,datetime,ipaddress,json,os,re,sys,tempfile,threading,time,urllib.parse; httpx, curl_cffi, Playwright, mcp_core.transport.chrome_cdp, ozon_connector.server at install time.
 LINKS: M-LIVE-BUDGET, R-LIVE-BUDGET, R-TRANSPORT.
 START_MODULE_MAP
   BudgetExhausted      raised before a request over the total or per-source cap
@@ -30,6 +31,8 @@ START_MODULE_MAP
   Budget               limits, reservation, gap waits and stderr lines
   source_group         marketplace group for a host
   is_loopback          local CDP hosts that are not counted
+  _window_open_url     the URL a window.open() evaluation would load
+  _ledger_lock         the cross-process lock around the ledger file
   install              wrap every hook point, loudly on a missing one
   uninstall            restore the wrapped methods
 END_MODULE_MAP
@@ -44,11 +47,12 @@ import datetime as dt
 import ipaddress
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -56,6 +60,12 @@ from urllib.parse import urlsplit
 DEFAULT_TOTAL = 40
 DEFAULT_PER_SOURCE = 8
 DEFAULT_GAP_S = 3.0
+
+# The cross-process lock around the ledger file: how often to retry, how long
+# to wait before giving up, and when a lock file counts as abandoned.
+LOCK_RETRY_S = 0.05
+LOCK_TIMEOUT_S = 10.0
+LOCK_STALE_S = 60.0
 
 # Marketplace host groups. A request is charged to the group whose suffix it
 # matches, so card and content CDNs count against the same marketplace.
@@ -153,6 +163,58 @@ class Ledger:
             raise
 
 
+def _lock_is_stale(lock_path: Path) -> bool:
+    """True when a lock file is older than a minute: its owner is gone."""
+    try:
+        age = time.time() - lock_path.stat().st_mtime
+    except OSError:
+        return False
+    return age > LOCK_STALE_S
+
+
+@contextlib.contextmanager
+def _ledger_lock(path: Path | None) -> Iterator[None]:
+    """Hold the cross-process lock on the ledger while it is read and written.
+
+    The ledger is a read-modify-write: two processes that read it at the same
+    time both append and the second save drops the first one's bookings. The
+    lock file is created exclusively next to the ledger, so only one process
+    can be inside the critical section; the holder releases it in ``finally``,
+    and a lock older than a minute is treated as abandoned and removed.
+
+    ``None`` means the ledger lives in memory, where no other process can see
+    it and no lock is needed.
+    """
+    if path is None:
+        yield
+        return
+    lock_path = path.with_name(path.name + ".lock")
+    deadline = time.monotonic() + LOCK_TIMEOUT_S
+    while True:
+        try:
+            handle = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as busy:
+            if _lock_is_stale(lock_path):
+                with contextlib.suppress(OSError):
+                    os.unlink(lock_path)
+                continue
+            if time.monotonic() >= deadline:
+                raise BudgetExhausted(
+                    f"live budget ledger is locked by another run: {lock_path} "
+                    f"(waited {int(LOCK_TIMEOUT_S)} s; the lock is removed after {int(LOCK_STALE_S)} s)"
+                ) from busy
+            time.sleep(LOCK_RETRY_S)
+            continue
+        break
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(f"{os.getpid()}\n")
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(lock_path)
+
+
 class Budget:
     """The caps, the ledger and the gaps between requests."""
 
@@ -193,12 +255,14 @@ class Budget:
         Raises ``BudgetExhausted`` before booking when the request is over a
         cap. The booking time already includes a concurrent caller's gap, so
         two coroutines cannot both fire at the previous request's timestamp.
+        The whole read-check-append-save runs under the ledger lock, so a
+        second process cannot lose this booking by saving over it.
         """
         host = urlsplit(url).hostname
         if is_loopback(host):
             return 0.0
         group = source_group(host or "")
-        with self._lock:
+        with self._lock, _ledger_lock(self.ledger.path):
             entries = self.ledger.load()
             mine = [entry for entry in entries if entry.get("group") == group]
             if len(entries) >= self.total:
@@ -291,6 +355,31 @@ def _fetch_url(expression: Any, arg: Any) -> str | None:
     return None
 
 
+# The URL a `window.open(...)` call would load: the first argument, when it is
+# a JSON string literal. Anything else (a variable, a template, a number) is
+# not a URL this hook can read.
+_WINDOW_OPEN = re.compile(r"window\.open\(\s*(\"(?:[^\"\\]|\\.)*\")")
+
+
+def _window_open_url(expression: Any) -> str | None:
+    """The URL a ``window.open(...)`` evaluation would load, when it names one.
+
+    The opener AliExpress builds is ``window.open(<json url>, '_blank')``, so
+    the URL is read as a JSON string literal instead of by hand. A URL that is
+    not http(s) is ignored: it is not a marketplace request.
+    """
+    match = _WINDOW_OPEN.search(str(expression))
+    if match is None:
+        return None
+    try:
+        url = json.loads(match.group(1))
+    except ValueError:
+        return None
+    if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+        return None
+    return url
+
+
 def _install_httpx(budget: Budget, restores: list[tuple[Any, str, Any, Any]]) -> None:
     import httpx
 
@@ -345,6 +434,7 @@ def _install_chrome_cdp(budget: Budget, restores: list[tuple[Any, str, Any, Any]
         "mcp_core.transport.chrome_cdp._RawCdpPage.evaluate",
     )
     page_evaluate = _hook(Page, "evaluate", "playwright.async_api.Page.evaluate")
+    open_tabs = _hook(chrome_cdp, "open_tabs", "mcp_core.transport.chrome_cdp.open_tabs")
 
     @contextlib.asynccontextmanager
     async def counted_playwright_page(url: str, *args: Any, **kwargs: Any) -> Any:
@@ -358,22 +448,35 @@ def _install_chrome_cdp(budget: Budget, restores: list[tuple[Any, str, Any, Any]
         async with raw_cdp_page(url, *args, **kwargs) as page:
             yield page
 
-    async def counted_raw_evaluate(self: Any, expression: Any, arg: Any = None, *args: Any, **kwargs: Any) -> Any:
+    async def book_evaluation(expression: Any, arg: Any) -> None:
+        """Book every marketplace request an in-page evaluation would send."""
         url = _fetch_url(expression, arg)
         if url:
             await budget.reserve_async("in-page fetch", url)
+        opened = _window_open_url(expression)
+        if opened:
+            await budget.reserve_async("in-page open", opened)
+
+    async def counted_raw_evaluate(self: Any, expression: Any, arg: Any = None, *args: Any, **kwargs: Any) -> Any:
+        await book_evaluation(expression, arg)
         return await raw_evaluate(self, expression, arg, *args, **kwargs)
 
     async def counted_page_evaluate(self: Any, expression: Any, arg: Any = None, *args: Any, **kwargs: Any) -> Any:
-        url = _fetch_url(expression, arg)
-        if url:
-            await budget.reserve_async("in-page fetch", url)
+        await book_evaluation(expression, arg)
         return await page_evaluate(self, expression, arg, *args, **kwargs)
+
+    async def counted_open_tabs(urls: list[str]) -> Any:
+        # Every URL is booked before the first tab is opened: a run that would
+        # pass a cap must not open one tab of it.
+        for url in urls:
+            await budget.reserve_async("chrome-tab", url)
+        return await open_tabs(urls)
 
     _replace(chrome_cdp, "_playwright_page", counted_playwright_page, restores, "chrome_cdp._playwright_page")
     _replace(chrome_cdp, "_raw_cdp_page", counted_raw_cdp_page, restores, "chrome_cdp._raw_cdp_page")
     _replace(chrome_cdp._RawCdpPage, "evaluate", counted_raw_evaluate, restores, "chrome_cdp._RawCdpPage.evaluate")
     _replace(Page, "evaluate", counted_page_evaluate, restores, "playwright.async_api.Page.evaluate")
+    _replace(chrome_cdp, "open_tabs", counted_open_tabs, restores, "chrome_cdp.open_tabs")
 
 
 def _install_ozon(budget: Budget, restores: list[tuple[Any, str, Any, Any]]) -> None:

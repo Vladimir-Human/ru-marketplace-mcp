@@ -6,6 +6,12 @@ on:
       - "v*"
   workflow_dispatch:
 
+# One run per tag: a tag push and a manual dispatch for the same ref queue
+# instead of publishing side by side (pre-release audit, 2026-10-30).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish the PyPI bundle

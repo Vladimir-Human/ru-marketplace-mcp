@@ -365,7 +365,12 @@ def _dom_fallback_reason(status_code: int, text: str | None) -> str | None:
 
 
 def _dom_fallback_warning(reason: str) -> str:
-    return f"dom_fallback: WB API refused this address ({reason}); read through the scraping Chrome"
+    # The page carries no dest: prices and delivery follow the Chrome profile's
+    # WB region, even for the default dest (audit S2-F3).
+    return (
+        f"dom_fallback: WB API refused this address ({reason}); read through the scraping Chrome, "
+        "in the WB region set in that browser rather than dest"
+    )
 
 
 def _raise_dom_failure_after_refusal(exc: Exception, reason: str) -> NoReturn:
@@ -865,7 +870,10 @@ async def _wb_search_dom(
         page_size=len(items),
         total_ids=len(items),
         count=len(items),
-        items=[WbCardItem(**item) for item in items],
+        # A tile whose prices kept unproven roles has in_stock None (the parser's
+        # warning names it). WbCardItem.in_stock is True only with a usable price,
+        # so that tile is not in stock here; it must never fail the whole page.
+        items=[WbCardItem(**{**item, "in_stock": item["in_stock"] is True}) for item in items],
         meta=MetaOut(source="wb_search", healthy=True, warnings=warnings[:10]),
     )
 

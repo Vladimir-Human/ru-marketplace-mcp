@@ -51,6 +51,10 @@ JSON_TOP_LEVEL_VERSION = re.compile(r'^(?P<indent>[ \t]*)"version"[ \t]*:[ \t]*"
 # invisible - `uv.sources = { workspace = true }` overrides the constraint - so
 # only a release install ever notices it drifting.
 CORE_PIN = re.compile(r'^[ \t]*"mcp-core==([^"]+)",', re.MULTILINE)
+# The release the deployment guide installs: the mcp-core wheel file name and
+# the two requirement specifiers. They name the release like every other
+# declaration does, so the bump must rewrite them and the check must read them.
+DEPLOYMENT_RELEASE = re.compile(r"(?:mcp_core-|\"compare-connector\[all\]==|\"aliexpress-connector==)(\d+\.\d+\.\d+)")
 
 
 @dataclass(frozen=True)
@@ -120,7 +124,8 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     """The site table for one repository root, in reporting order."""
     packages = root / "packages"
     manifests = _sorted([root / "pyproject.toml", *packages.glob("*/pyproject.toml")])
-    image_files = [root / "docker-compose.yml", root / "docs" / "DEPLOYMENT.md", root / "dsh" / "README.md"]
+    deployment_doc = root / "docs" / "DEPLOYMENT.md"
+    image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
     server_manifest = root / "server.json"
     dsh_manifest = root / "dsh" / "package.json"
 
@@ -144,6 +149,12 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             tuple(p for p in image_files if p.exists()),
             required=False,
             description="a compose or deployment image tag",
+        ),
+        Site(
+            "deployment release pin",
+            DEPLOYMENT_RELEASE,
+            (deployment_doc,) if deployment_doc.exists() else (),
+            description="a release pin in the deployment guide",
         ),
         Site(
             "mcp-core pin",

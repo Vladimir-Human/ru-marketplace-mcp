@@ -8,8 +8,8 @@ slot: with `cancel-in-progress: true` whichever starts second silently kills the
 first. A cancelled canary reports nothing at all — it does not go red, it just stops
 existing — so the loss is invisible in the run history.
 
-These tests read ci.yml as text rather than through a YAML parser: the file is
-checked into the repository, the two facts under test are two scalars in a block we
+These tests read the workflow files as text rather than through a YAML parser: they are
+checked into the repository, the facts under test are two scalars in a block we
 control, and the project does not declare a YAML dependency for its own tests.
 """
 
@@ -21,11 +21,12 @@ from pathlib import Path
 import pytest
 
 CI = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "ci.yml"
+IMAGE_CHECK = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "image-check.yml"
 
 
-def _section(header: str) -> str:
-    """Return the indented body of the `header:` line in ci.yml."""
-    text = CI.read_text(encoding="utf-8")
+def _section(header: str, workflow: Path = CI) -> str:
+    """Return the indented body of the `header:` line in the workflow."""
+    text = workflow.read_text(encoding="utf-8")
     indent = len(header) - len(header.lstrip())
     lines = text.splitlines()
     for index, line in enumerate(lines):
@@ -37,17 +38,17 @@ def _section(header: str) -> str:
                     break
                 body.append(line)
             return "\n".join(body)
-    raise AssertionError(f"ci.yml no longer contains a {header!r} line")
+    raise AssertionError(f"{workflow.name} no longer contains a {header!r} line")
 
 
-def _child_scalar(header: str, key: str) -> str:
+def _child_scalar(header: str, key: str, workflow: Path = CI) -> str:
     """Read one scalar that sits directly under the `header:` line.
 
     Only the immediate children count: a job body contains steps, and a step also
     has an `if:`, so matching at any depth would read the wrong line.
     """
     indent = len(header) - len(header.lstrip()) + 2
-    matches = re.findall(rf"^ {{{indent}}}{re.escape(key)}:\s*(?P<value>\S.*?)\s*$", _section(header), re.M)
+    matches = re.findall(rf"^ {{{indent}}}{re.escape(key)}:\s*(?P<value>\S.*?)\s*$", _section(header, workflow), re.M)
     assert len(matches) == 1, f"expected exactly one {key!r} directly under {header!r}, found {len(matches)}"
     return matches[0]
 
@@ -197,6 +198,20 @@ def test_the_live_job_stays_schedule_and_dispatch_only() -> None:
         "the live job must stay off ordinary pushes; a per-push live run would "
         "hammer the marketplaces and is not what the canary is for"
     )
+
+
+def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> None:
+    """A manual image build must not cancel a pull-request build (audit S4-F16).
+
+    The image check runs on a pull request and on a manual dispatch. Without
+    the event name in the group both share one slot, and with
+    `cancel-in-progress: true` whichever starts second kills the first - the
+    failure `test_ci_concurrency.py` exists to prevent for ci.yml.
+    """
+    group = _child_scalar("concurrency:", "group", workflow=IMAGE_CHECK)
+
+    assert "github.event_name" in group
+    assert _render_group(group, event="push") != _render_group(group, event="workflow_dispatch")
 
 
 @pytest.mark.parametrize(

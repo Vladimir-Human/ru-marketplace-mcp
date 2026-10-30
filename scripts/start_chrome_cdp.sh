@@ -79,8 +79,15 @@ CHROME="$(find_chrome)" || {
     exit 1
 }
 
-# Refuse to double-start: Chrome enforces user-data-dir exclusivity anyway, but a
-# clear message beats a silently exiting second process.
+# 1. A CDP endpoint that already answers means the browser is up: nothing to do.
+if curl -sf -m 1 "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1; then
+    echo "Chrome with CDP is already running on port $PORT - nothing to start."
+    echo "To bring its window on-screen: marketplace-mcp browser show"
+    exit 0
+fi
+
+# A listener that does not answer as CDP would make Chrome's bind fail; say so
+# now instead of waiting 12 s for a port that never answers.
 if command -v ss >/dev/null 2>&1; then
     LISTENING="$(ss -ltn "sport = :$PORT" 2>/dev/null | grep -c LISTEN || true)"
 elif command -v lsof >/dev/null 2>&1; then
@@ -89,14 +96,14 @@ else
     LISTENING=0
 fi
 if [[ "${LISTENING:-0}" -gt 0 ]]; then
-    echo "Chrome with CDP is already running on port $PORT - nothing to start."
-    echo "To bring its window on-screen: marketplace-mcp browser show"
-    exit 0
+    echo "ERROR: port $PORT is taken by a process that does not answer as a CDP endpoint." >&2
+    echo "Free the port, or pass --port <another port>." >&2
+    exit 2
 fi
 
 # A Chrome that already holds THIS profile would refuse to start a second one
 # with the same --user-data-dir. Other Chrome windows are fine.
-if pgrep -f -- "--user-data-dir=$PROFILE" >/dev/null 2>&1; then
+if pgrep -f -- "--user-data-dir=${PROFILE}( |\$)" >/dev/null 2>&1; then
     echo "ERROR: another Chrome is already using the profile $PROFILE." >&2
     echo "Close that window (or choose another --profile) and re-run." >&2
     exit 2

@@ -697,7 +697,8 @@ def test_card_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.Monke
     assert card.count == 1 and card.items[0].nm_id == 1345073040
     assert card.items[0].transport == "dom"
     assert (
-        "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome" in card.meta.warnings
+        "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, "
+        "in the WB region set in that browser rather than dest" in card.meta.warnings
     )
 
 
@@ -1275,6 +1276,28 @@ def test_search_tile_with_unproven_price_roles_is_null_and_warned() -> None:
     items, warnings = D.parse_search_page({"tiles": [{"nm": "1", "lines": ["1 000 ₽", "1 500 ₽", "Товар"]}]})
     assert (items[0]["price_rub"], items[0]["price_original_rub"], items[0]["in_stock"]) == (None, None, None)
     assert any("without a struck mark" in w for w in warnings)
+
+
+def test_dom_search_keeps_a_tile_with_unproven_price_roles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One ambiguous tile used to fail model validation and lose the whole page (audit A1)."""
+    monkeypatch.setattr(server._settings, "transport", "dom")
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        return {
+            "tiles": [
+                {"nm": "1", "lines": ["1 000 ₽", "1 500 ₽", "Товар"]},
+                {"nm": "2", "lines": ["2 000 ₽", "Другой товар"]},
+            ]
+        }
+
+    monkeypatch.setattr(D, "render", fake_render)
+    result = _run(server.wb_search(query="товар"))
+    assert isinstance(result, server.WbSearchResponse)
+    by_nm = {item.nm_id: item for item in result.items}
+    assert set(by_nm) == {1, 2}
+    assert (by_nm[1].price_rub, by_nm[1].in_stock) == (None, False)
+    assert (by_nm[2].price_rub, by_nm[2].in_stock) == (2000.0, True)
+    assert any("without a struck mark" in w for w in result.meta.warnings)
 
 
 def test_card_page_without_strike_evidence_leaves_roles_unknown() -> None:

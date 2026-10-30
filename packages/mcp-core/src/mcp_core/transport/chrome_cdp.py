@@ -44,6 +44,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # _ensure_cdp_running: Serialize loopback-only autostart and bounded readiness wait.
 # start_browser: Operator launch, visible by default, with a report instead of an exception.
 # _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
+# _windows_profile_match_expr: PowerShell regex for our --user-data-dir, quoted or bare, never a sibling.
 # _CdpConnectTimeout: Preserve raw fallback while reporting a transport-down attach timeout.
 # get_browser: Attach Playwright, diagnose timeout tab counts and bound detach without shutdown.
 # _cdp_http_json: Fetch and parse one CDP HTTP endpoint.
@@ -149,15 +150,24 @@ def _host_from_env() -> str:
         return "127.0.0.1"
     if ":" in raw:
         # Colons are only legitimate in IPv6 literals: bare (::1) or bracketed.
-        if raw.count(":") > 1 or raw.startswith("["):
+        # Keep the bare form, which the socket dialer and the loopback test
+        # need; _url_host adds the brackets a URL needs.
+        if raw.startswith("[") and raw.endswith("]"):
+            raw = raw[1:-1]
+        if raw.count(":") > 1 and "[" not in raw and "]" not in raw:
             return raw
         return "127.0.0.1"
     return raw
 
 
+def _url_host(host: str) -> str:
+    """The host as a URL needs it: an IPv6 literal goes in brackets."""
+    return f"[{host}]" if ":" in host else host
+
+
 CDP_PORT = _port_from_env()
 CDP_HOST = _host_from_env()
-CDP_URL = f"http://{CDP_HOST}:{CDP_PORT}"
+CDP_URL = f"http://{_url_host(CDP_HOST)}:{CDP_PORT}"
 CDP_IS_LOOPBACK = CDP_HOST in _LOOPBACK_HOSTS
 
 
@@ -361,6 +371,7 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
         "started": False,
         "already_running": False,
         "visible": visible,
+        "off_screen": False,
         "host": CDP_HOST,
         "port": CDP_PORT,
         "profile": SCRAPING_PROFILE,
@@ -391,10 +402,26 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
             )
             return report
 
-        if not visible and STEALTH and sys.platform == "win32":
+        # Only the Windows stealth launch parks the window; elsewhere --hidden
+        # changes nothing, and the report must not claim otherwise.
+        off_screen = not visible and STEALTH and sys.platform == "win32"
+        if off_screen:
             await asyncio.to_thread(_hide_chrome_windows)
-        report.update(ok=True, started=True)
+        report.update(ok=True, started=True, off_screen=off_screen and not HEADLESS)
         return report
+
+
+def _windows_profile_match_expr(profile_marker: str) -> str:
+    """PowerShell expression: the regex for our profile's --user-data-dir switch.
+
+    The switch may be quoted (subprocess quotes a path with a space) and is
+    anchored on a closing quote, a space or the end, so a sibling profile such
+    as "Chrome-Scraping-2" is not matched. ``\\x22`` is the double quote, kept
+    out of the command line PowerShell has to parse. The match stays inside
+    PowerShell: a path with Cyrillic letters never crosses a console encoding.
+    """
+    escaped = profile_marker.replace("'", "''")
+    return "('--user-data-dir=\\x22?' + [regex]::Escape('" + escaped + "') + '(\\x22|\\s|$)')"
 
 
 def _scraping_profile_pids() -> set[int]:
@@ -436,11 +463,12 @@ def _scraping_profile_pids() -> set[int]:
     if sys.platform != "win32":
         return set()
     try:
+        # Edge is a valid scraping browser too (_chrome_candidates).
         ps_cmd = (
-            "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" "
-            "| Where-Object { $_.CommandLine -match [regex]::Escape('"
-            + profile_marker.replace("'", "''")
-            + "') } | Select-Object -ExpandProperty ProcessId"
+            "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe' OR Name='msedge.exe'\" "
+            "| Where-Object { $_.CommandLine -match "
+            + _windows_profile_match_expr(profile_marker)
+            + " } | Select-Object -ExpandProperty ProcessId"
         )
         proc = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
@@ -717,7 +745,7 @@ def _browser_ws_url() -> str | None:
     # The endpoint advertises its own loopback address even when we reached it
     # through CHROME_CDP_HOST — redial the host we know answers.
     parts = urlsplit(ws)
-    return urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+    return urlunsplit(parts._replace(netloc=f"{_url_host(CDP_HOST)}:{CDP_PORT}"))
 
 
 def _evaluate_expression(expression: str, arg: object) -> str:
@@ -1241,9 +1269,15 @@ async def open_tabs(urls: list[str]) -> dict[str, Any]:
 
     Browser-level ``Target.createTarget`` only: no existing tab is navigated
     and none is closed, so whatever the operator had open stays as it was.
-    Never raises; a failure is a report that says how many tabs were opened
-    before it, because those tabs stay open for the human.
+    A non-http(s) URL is refused outright (scheme guard), before any tab is
+    opened, so an authenticated browser is never aimed at ``file:///``. Any
+    other failure is a report that says how many tabs were opened before it,
+    because those tabs stay open for the human.
     """
+    for url in urls:
+        low = (url or "").strip().lower()
+        if not (low.startswith("http://") or low.startswith("https://")):
+            raise ValueError("open_tabs refuses a non-http(s) URL (scheme guard)")
     target_ids: list[str] = []
     try:
         async with _browser_cdp_channel() as channel:
