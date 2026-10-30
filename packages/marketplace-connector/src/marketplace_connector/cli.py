@@ -1,29 +1,54 @@
 """Operator CLI for the marketplace connectors.
 
-Two commands cover the two moments an operator actually needs help with:
+Three verbs cover the three moments an operator actually needs help with:
 
 ``marketplace-mcp install``
     Write the client config. Editing ``claude_desktop_config.json`` by hand is
     where every setup mistake lives (wrong slashes, a stale path, a missing
-    comma), so the CLI prints the exact JSON block to paste, per client.
+    comma), so the CLI prints the exact JSON block to paste — or, with
+    ``--write``, merges it into the client's own file (backup first).
 
 ``marketplace-mcp doctor``
     Run every connector's selfcheck and report per-source status. This is the
     answer to "is it broken, or is it me": a source blocked from your network
-    shows as inconclusive with the reason, a drifted parser shows as drift.
+    shows as inconclusive with the reason and one fixed next step, a drifted
+    parser shows as drift.
+
+``marketplace-mcp --help``
+    A short usage screen: the verbs, one example each, and where to read more.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step.
+# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), help.
+# DEPENDS: mcp_core.logging; mcp_core.source_selection; local capabilities (static source table).
+# LINKS: M-MARKETPLACE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _config_block: Today's per-source mcpServers block (kept for --per-source).
+# _unified_entry: The one "marketplace" entry that runs the unified server, plus the note for the operator.
+# _config_path: Where a client's mcpServers file lives on this platform.
+# _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
+# next_step: One fixed next-step string for a source that is not ok.
+# cmd_install / cmd_doctor / main: The verbs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
+import os
 import pathlib
 import shutil
 import sys
+import tempfile
+from collections.abc import Mapping
 from typing import Any
 
 from mcp_core.logging import log_event
 from mcp_core.source_selection import canonical
+
+from marketplace_connector.capabilities import CAPABILITIES, browser_backed
 
 # Clients whose config format this block is known to fit. A typo like
 # "cursour" should say so rather than silently printing a Claude block.
@@ -35,6 +60,12 @@ KNOWN_CLIENTS = {"claude", "claude-code", "cursor", "dsh"}
 DSH_ENV_DIR = "RU_MARKETPLACE_MCP_DIR"
 DSH_ENV_FULL = "RU_MARKETPLACE_MCP_FULL"
 DSH_ENV_DECISION = "RU_MARKETPLACE_MCP_DECISION"
+
+# The default entry: one server, one name. The unified server mounts every
+# connector, so a client that needs a dozen entries needs a dozen tools the
+# agent pays for on every request.
+UNIFIED_ENTRY = "marketplace"
+UNIFIED_SCRIPT = "marketplace-mcp"
 
 # (config key, console script, human note)
 SERVERS: list[tuple[str, str, str]] = [
@@ -69,6 +100,79 @@ _SELFCHECKS: list[tuple[str, str, str]] = [
     ("cian", "cian_connector.server", "cian_selfcheck"),
     ("mpstats", "mpstats_connector.server", "mpstats_selfcheck"),
 ]
+
+# The usage screen. Short on purpose: it is read in a terminal, and the
+# details live in docs/QUICKSTART.md.
+USAGE = """marketplace-mcp — Operator CLI and unified server for the marketplace connectors.
+
+Usage:
+  marketplace-mcp                  start the unified MCP server (stdio)
+  marketplace-mcp install <client> write the client config (claude, claude-code, cursor, dsh)
+  marketplace-mcp doctor [source]  run every connector's selfcheck and report health
+  marketplace-mcp help             show this text
+
+Examples:
+  marketplace-mcp
+  marketplace-mcp install claude --write
+  marketplace-mcp doctor wildberries
+  marketplace-mcp help
+
+Read more: docs/QUICKSTART.md"""
+
+# Next-step strings. Fixed text, one per situation: the operator gets one
+# instruction, not a menu of possibilities, and never advice about captcha
+# solvers, stealth/fingerprint tooling, proxy pools or retry loops.
+NEXT_STEP_CDP_DOWN = (
+    "Start the scraping Chrome: `scripts/start_chrome_cdp.ps1` (Windows) or "
+    "`scripts/start_chrome_cdp.sh`, or let the connector start it on its first browser call."
+)
+NEXT_STEP_BROWSER_WALL = (
+    "Open the scraping Chrome window, pass the site's check or log in by hand, then rerun: "
+    "`marketplace-mcp doctor {source}`. On Windows the window starts off-screen; "
+    "`scripts/start_chrome_cdp.ps1 -Visible` shows it."
+)
+NEXT_STEP_WB_TRANSPORT = (
+    "WB's API refuses this address; set `WB_TRANSPORT=dom` to read WB pages through the scraping Chrome."
+)
+NEXT_STEP_MPSTATS_AUTH = "Set `MPSTATS_MP_AUTH` in the MCP server's environment (your MPStats token)."
+NEXT_STEP_DRIFT = (
+    "Parser drift: run `uv run python scripts/diagnose_drift.py {source}` and open an issue with its output."
+)
+# The diagnose script only knows a few sources: its argparse refuses every
+# other name, so advising it for a source it cannot probe sends the operator
+# to a command that fails before it starts. Those sources get the issue
+# advice instead — the drift report is what the issue needs.
+NEXT_STEP_DRIFT_ISSUE = (
+    "Parser drift: rerun `marketplace-mcp doctor {source} --status-file drift.json` and open an issue at "
+    "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues with that file."
+)
+NEXT_STEP_ANTIBOT = "See `docs/ANTI_BOT.md` for this source."
+# A rate limit is not a wall: the site asked us to slow down, and the fix is
+# to wait it out — a browser cannot do that for the operator.
+NEXT_STEP_RATE_LIMITED = (
+    "The site rate-limited this address; wait 10-15 minutes, then rerun `marketplace-mcp doctor {source}`."
+)
+# The selfcheck raised: the site never got to answer, so the advice cannot be
+# about the site. The error above is what the issue needs.
+NEXT_STEP_SELFCHECK_ERROR = (
+    "The selfcheck itself failed (error above); open an issue at "
+    "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues with this output."
+)
+
+# The sources scripts/diagnose_drift.py can actually probe: the keys of its
+# SOURCES table plus its API_SOURCES. Everything else (wildberries, ozon,
+# yandex_market, detsky_mir, avito, aliexpress, cian, mpstats) is rejected by
+# that script's argparse, so it must not be advertised as the way to diagnose
+# them. A test parses the script and keeps this set honest.
+DIAGNOSE_DRIFT_SOURCES = frozenset({"citilink", "dns", "lamoda", "taobao", "megamarket"})
+
+# The reason codes the connectors really emit for "the browser refused us"
+# or "the site wants a human". These are the selfcheck `reason` values, not
+# the error taxonomy: blocked (Avito, Ozon, DNS, Citilink, AliExpress, Cian,
+# Lamoda, Taobao challenge), login_wall (Taobao), not_authenticated
+# (Megamarket). A rate limit is NOT here — waiting IS the fix for it, and
+# waiting is not something the browser can do for the operator.
+WALL_REASONS = frozenset({"blocked", "login_wall", "not_authenticated", "challenge_required"})
 
 
 def _workspace_root() -> pathlib.Path | None:
@@ -115,6 +219,185 @@ def _config_block() -> tuple[dict[str, Any], str]:
     if unresolved:
         note += f"\n# Not found on PATH, left unresolved: {', '.join(unresolved)}"
     return block, note
+
+
+def _unified_entry() -> tuple[dict[str, Any], str]:
+    """The one entry that runs the unified server, plus the note for the operator.
+
+    From a source checkout the honest command is ``uv run --directory <root>
+    marketplace-mcp``, and ``uv`` is resolved to an absolute path: a desktop
+    client often does not inherit the terminal's PATH, and a bare ``uv`` is
+    then a server that silently never starts. From a wheel install there is
+    no checkout, so the console script on PATH is the command.
+
+    The note is returned, not printed: the caller shows it to the operator
+    once per command run, on stderr. A warning printed from inside a helper
+    fires once per call, and this one is called by every install path.
+    """
+    root = _workspace_root()
+    if root is not None:
+        note = f"# Paths point at this checkout: {root}"
+        uv = shutil.which("uv")
+        if uv is None:
+            note += (
+                "\nuv was not found on PATH: the client may not be able to start the server — "
+                "install uv or point the command at it by hand."
+            )
+        return {"command": uv or "uv", "args": ["run", "--directory", str(root), UNIFIED_SCRIPT]}, note
+
+    resolved = shutil.which(UNIFIED_SCRIPT)
+    note = "# Installed as a package: the command is the console script on PATH."
+    if resolved is None:
+        note += f"\n# Not found on PATH, left unresolved: {UNIFIED_SCRIPT}"
+    return {"command": resolved or UNIFIED_SCRIPT, "args": []}, note
+
+
+def _config_path(client: str) -> pathlib.Path:
+    """Where the client's mcpServers file lives on this platform.
+
+    Claude Desktop: ``%APPDATA%/Claude`` (Windows), ``~/Library/Application
+    Support/Claude`` (macOS), ``~/.config/Claude`` (Linux). Cursor:
+    ``~/.cursor/mcp.json``.
+
+    ``MARKETPLACE_MCP_CLAUDE_CONFIG`` / ``MARKETPLACE_MCP_CURSOR_CONFIG``
+    override the location, so an operator with an unusual install — and the
+    offline tests — can point the writer at a real file.
+    """
+    override = os.environ.get(f"MARKETPLACE_MCP_{client.upper()}_CONFIG")
+    if override:
+        return pathlib.Path(override).expanduser()
+    home = pathlib.Path.home()
+    if client == "cursor":
+        return home / ".cursor" / "mcp.json"
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        base = pathlib.Path(appdata) if appdata else home / "AppData" / "Roaming"
+        return base / "Claude" / "claude_desktop_config.json"
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    return home / ".config" / "Claude" / "claude_desktop_config.json"
+
+
+def _parse_strict_json(raw: str) -> Any:
+    """``json.loads`` that also refuses NaN/Infinity, which are not JSON."""
+
+    def _reject(constant: str) -> Any:
+        raise ValueError(f"{constant} is not valid JSON")
+
+    return json.loads(raw, parse_constant=_reject)
+
+
+def _atomic_write_json(path: pathlib.Path, document: Any) -> None:
+    """Write JSON through a temporary file in the same folder, then replace.
+
+    A half-written client config is a broken client: the write must land whole
+    or not at all, and the replacement has to happen on the same filesystem
+    for ``os.replace`` to be atomic.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_name = ""
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8") as fh:
+            json.dump(document, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+            tmp_name = fh.name
+        os.replace(tmp_name, path)
+    except BaseException:
+        if tmp_name:
+            pathlib.Path(tmp_name).unlink(missing_ok=True)
+        raise
+
+
+def _quote(part: str) -> str:
+    """Quote a command fragment that carries spaces or quotes."""
+    if not part:
+        return '""'
+    if any(character.isspace() for character in part) or '"' in part:
+        return '"' + part.replace('"', '\\"') + '"'
+    return part
+
+
+def _claude_mcp_add_line(name: str, entry: Mapping[str, Any]) -> str:
+    """The exact ``claude mcp add`` command line for one entry.
+
+    Claude Code keeps its servers in its own store, not in an mcpServers file,
+    so the write for this client is a command the operator runs.
+    """
+    parts = ["claude", "mcp", "add", name, "--scope", "user", "--", str(entry.get("command", ""))]
+    parts.extend(str(arg) for arg in entry.get("args", []) or [])
+    return " ".join(_quote(part) for part in parts)
+
+
+def _write_client_config(client: str, entries: dict[str, Any], *, force: bool, dry_run: bool) -> int:
+    """Merge the entries into the client's own mcpServers file.
+
+    The file belongs to the operator: other servers and other settings stay
+    untouched, a malformed file is never rewritten, and every change is backed
+    up before it happens.
+    """
+    path = _config_path(client)
+    document: dict[str, Any] = {}
+    if path.exists():
+        try:
+            parsed = _parse_strict_json(path.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            print(f"{path} is not valid JSON ({exc}); refusing to change it", file=sys.stderr)
+            return 2
+        except OSError as exc:
+            print(f"could not read {path}: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(parsed, dict):
+            print(f"{path} is not a JSON object; refusing to change it", file=sys.stderr)
+            return 2
+        document = parsed
+
+    servers = document.get("mcpServers")
+    if servers is None:
+        servers = {}
+    if not isinstance(servers, dict):
+        print(f"{path} has a non-object 'mcpServers'; refusing to change it", file=sys.stderr)
+        return 2
+
+    conflicts = sorted(name for name, entry in entries.items() if name in servers and servers[name] != entry)
+    if conflicts and not force:
+        print(
+            f"{path} already has a different {', '.join(conflicts)} entry; re-run with --force to replace it",
+            file=sys.stderr,
+        )
+        return 2
+
+    merged = dict(document)
+    merged["mcpServers"] = {**servers, **entries}
+    if dry_run:
+        # Show the result of the merge, whether or not it would change
+        # anything: the operator asked to see the file, not to be told "fine".
+        print(json.dumps(merged, indent=2, ensure_ascii=False))
+        print(f"target: {path}")
+        return 0
+    if all(servers.get(name) == entry for name, entry in entries.items()):
+        print(f"already configured in {path}; nothing to write")
+        return 0
+
+    backup: pathlib.Path | None = None
+    if path.exists():
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup = path.with_name(f"{path.name}.bak-{stamp}")
+        # No backup, no change: the old file stays exactly as it was.
+        try:
+            shutil.copy2(path, backup)
+        except OSError as exc:
+            print(f"could not back up {path} to {backup}: {exc}; nothing was changed", file=sys.stderr)
+            return 3
+    try:
+        _atomic_write_json(path, merged)
+    except OSError as exc:
+        print(f"could not write {path}: {exc}", file=sys.stderr)
+        return 3
+    print(f"wrote {path}")
+    if backup is not None:
+        print(f"backup: {backup}")
+    print(f"restart {client} to load it")
+    return 0
 
 
 def _yaml_double(value: str) -> str:
@@ -237,33 +520,94 @@ def _dsh_patch_block() -> tuple[str, str]:
 
 
 def cmd_install(argv: list[str]) -> int:
-    """Print the client config block to paste."""
-    if len(argv) > 1:
-        print("install accepts at most one client name", file=sys.stderr)
-        return 2
-    client = argv[0] if argv else "claude"
+    """Print the client config block, or write it into the client's own file.
+
+    The default is one entry running the unified server. ``--per-source`` keeps
+    the old per-source block. ``--write`` merges the block into the client's
+    own configuration file, with a backup of the old one first.
+    """
+    write = dry_run = force = per_source = False
+    client: str | None = None
+    for arg in argv:
+        if arg == "--write":
+            write = True
+        elif arg == "--dry-run":
+            dry_run = True
+        elif arg == "--force":
+            force = True
+        elif arg == "--per-source":
+            per_source = True
+        elif arg.startswith("-"):
+            print(
+                f"unknown install option {arg!r}; expected --write, --dry-run, --force or --per-source",
+                file=sys.stderr,
+            )
+            return 2
+        elif client is None:
+            client = arg
+        else:
+            print("install accepts at most one client name", file=sys.stderr)
+            return 2
+    client = client or "claude"
     if client not in KNOWN_CLIENTS:
         print(
             f"unknown client {client!r}; expected one of {', '.join(sorted(KNOWN_CLIENTS))}",
             file=sys.stderr,
         )
         return 2
+    if dry_run and not write:
+        print("--dry-run only makes sense together with --write", file=sys.stderr)
+        return 2
+    if force and not write:
+        print("--force only makes sense together with --write", file=sys.stderr)
+        return 2
+
     if client == "dsh":
+        if write:
+            print(
+                "dsh has no mcpServers file: install the plugin bundle instead — see dsh/README.md",
+                file=sys.stderr,
+            )
+            return 2
         patch_block, patch_note = _dsh_patch_block()
         print(patch_block)
         print()
         print(patch_note)
         return 0
-    block, note = _config_block()
+
+    if per_source:
+        entries, note = _config_block()
+    else:
+        entry, note = _unified_entry()
+        entries = {UNIFIED_ENTRY: entry}
+    # The note is operator information (where the commands point, what is
+    # missing from PATH), not part of what gets pasted or written: stderr,
+    # once per command run, in every mode.
+    print(note, file=sys.stderr)
+
+    if client == "claude-code":
+        if write:
+            for name, entry in entries.items():
+                print(_claude_mcp_add_line(name, entry))
+            return 0
+    elif write:
+        return _write_client_config(client, entries, force=force, dry_run=dry_run)
+
     print(f"# Add to your mcpServers block ({client}).")
-    print(note)
-    print(json.dumps(block, indent=2, ensure_ascii=False))
+    print(json.dumps(entries, indent=2, ensure_ascii=False))
     print()
     print("# Notes:")
-    for _, _, note_line in SERVERS:
-        print(f"#   - {note_line}")
-    print()
-    print("# Or wire one entry: the unified 'marketplace-mcp' server mounts every source.")
+    if per_source:
+        for _, _, note_line in SERVERS:
+            print(f"#   - {note_line}")
+        print()
+        print("# Or wire one entry: the unified 'marketplace-mcp' server mounts every source.")
+    else:
+        print("#   - The unified server mounts every source; tool names stay the same (wb_*, ozon_*).")
+        print("#   - Some sources need your Chrome (CDP) — see docs/CDP_SETUP.md.")
+        print("#   - mpstats is optional paid analytics — requires MPSTATS_MP_AUTH in the server environment.")
+        print()
+        print("# Need one entry per source instead? Add --per-source.")
     return 0
 
 
@@ -306,8 +650,13 @@ def _attr(obj: object, key: str, default: object = None) -> object:
     return getattr(obj, key, default)
 
 
-async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tuple[str, str, str]:
-    """Run one connector's selfcheck, returning (name, status, detail)."""
+async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tuple[str, str, str, dict[str, Any]]:
+    """Run one connector's selfcheck.
+
+    Returns (name, status, detail, checks). The per-check reasons travel with
+    the result: the next step is chosen from them, and a rendered string
+    cannot be told apart from a reason code.
+    """
     try:
         module = __import__(module_path, fromlist=[tool_name])
         tool = getattr(module, tool_name)
@@ -317,19 +666,105 @@ async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tup
         if not isinstance(checks, dict):
             raise TypeError("selfcheck checks must be a mapping")
         detail = ", ".join(f"{k}:{_check_detail(v)}" for k, v in checks.items()) or status
-        return name, status, detail
+        return name, status, detail, dict(checks)
     except Exception as exc:
-        return name, "error", f"{type(exc).__name__}: {str(exc)[:120]}"
+        return name, "error", f"{type(exc).__name__}: {str(exc)[:120]}", {}
+
+
+def _wb_api_check_failed(checks: Mapping[str, Any] | None) -> bool:
+    """True when WB's own API checks (card / search_v9) were refused."""
+    for key in ("card", "search_v9"):
+        entry = (checks or {}).get(key)
+        if entry is not None and str(_attr(entry, "reason", "")) == "transport_down":
+            return True
+    return False
+
+
+def next_step(
+    source: str,
+    status: str,
+    checks: Mapping[str, Any] | None = None,
+    *,
+    cdp_reachable: bool | None = None,
+    wb_transport: str = "api",
+) -> str | None:
+    """One fixed next step for a source that is not ok; None when it is ok.
+
+    Pure on purpose: the same selfcheck result always yields the same advice,
+    so the mapping can be tested offline and cannot change with the run. The
+    inputs are the source's own verdict (status plus per-check reasons), the
+    static capability table, the CDP probe result and the WB transport mode.
+
+    The advice is always one of a fixed set of strings. It never suggests a
+    captcha solver, stealth or fingerprint tooling, a proxy pool or a retry
+    loop: this project reads public pages and asks the operator to act.
+    """
+    if status == "success":
+        return None
+    if status == "error":
+        # The selfcheck itself raised, so the site never got to answer: there
+        # is no verdict to act on, and anti-bot or browser advice would send
+        # the operator after the wrong thing entirely.
+        return NEXT_STEP_SELFCHECK_ERROR
+
+    entries = list((checks or {}).values())
+    reasons = {str(_attr(entry, "reason", "") or "") for entry in entries}
+    states = {str(_attr(entry, "state", "") or "") for entry in entries}
+    capability = CAPABILITIES.get(source, {})
+    # WB in DOM mode reads pages through the scraping Chrome even though its
+    # static tier is anonymous HTTP.
+    uses_browser = browser_backed(capability) or (source == "wildberries" and wb_transport == "dom")
+
+    if status == "drift_detected" or "drift" in states:
+        if source in DIAGNOSE_DRIFT_SOURCES:
+            return NEXT_STEP_DRIFT.format(source=source)
+        return NEXT_STEP_DRIFT_ISSUE.format(source=source)
+    if "auth_missing" in reasons:
+        return NEXT_STEP_MPSTATS_AUTH
+    if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
+        return NEXT_STEP_WB_TRANSPORT
+    # A rate limit is the site's own answer about this address, so the
+    # browser is not what failed: it comes before the CDP and wall cases,
+    # and the fix is to wait.
+    if "rate_limited" in reasons:
+        return NEXT_STEP_RATE_LIMITED.format(source=source)
+    if uses_browser and cdp_reachable is False:
+        return NEXT_STEP_CDP_DOWN
+    if uses_browser and reasons & WALL_REASONS:
+        return NEXT_STEP_BROWSER_WALL.format(source=source)
+    return NEXT_STEP_ANTIBOT
+
+
+def _probe_cdp() -> tuple[bool | None, str]:
+    """Probe the operator's Chrome.
+
+    Returns (reachable, note). ``None`` means "could not tell" — the probe
+    itself failed — and must not be read as "the browser is down".
+    """
+    try:
+        from mcp_core.transport.chrome_cdp import probe_session
+
+        probe = asyncio.run(probe_session())
+        if probe.get("reachable"):
+            host = probe.get("host", "?")
+            port = probe.get("port", "?")
+            return True, (f"Chrome CDP: reachable on {host}:{port} ({probe.get('contexts', '?')} context(s)).")
+        return False, (
+            f"Chrome CDP: NOT reachable — {probe.get('reason')}. "
+            "Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink/AliExpress/Cian need it."
+        )
+    except Exception as exc:
+        return None, f"Chrome CDP: probe failed ({type(exc).__name__})."
 
 
 def cmd_doctor(argv: list[str]) -> int:
     """Run every selfcheck and print a per-source health table.
 
     ``--status-file PATH`` also writes the machine-readable report: a JSON
-    snapshot with per-source status and a timestamp, so a cron job or dashboard
-    can watch drift without parsing the human table. The file is replaced
-    atomically, never appended to — a monitoring reader always gets one
-    complete snapshot.
+    snapshot with per-source status, the next step and a timestamp, so a cron
+    job or dashboard can watch drift without parsing the human table. The file
+    is replaced atomically, never appended to — a monitoring reader always
+    gets one complete snapshot.
     """
     status_file: str | None = None
     sources: list[str] = []
@@ -363,9 +798,19 @@ def cmd_doctor(argv: list[str]) -> int:
             continue
         results.append(asyncio.run(_run_one_selfcheck(name, module_path, tool_name)))
 
+    # CDP reachability decides two different next steps ("start the browser"
+    # vs "the browser was refused"), so it is probed before the table is
+    # printed rather than after it.
+    cdp_reachable, cdp_note = _probe_cdp()
+    wb_transport = os.environ.get("WB_TRANSPORT", "api")
+    steps = {
+        name: next_step(name, status, checks, cdp_reachable=cdp_reachable, wb_transport=wb_transport)
+        for name, status, _, checks in results
+    }
+
     print("Marketplace connector health (selfcheck):")
     healthy = blocked = drifted = 0
-    for name, status, detail in results:
+    for name, status, detail, _ in results:
         marker = {"success": "ok ", "drift_detected": "DRF", "inconclusive": "blk"}.get(status, "err")
         if status == "success":
             healthy += 1
@@ -374,39 +819,25 @@ def cmd_doctor(argv: list[str]) -> int:
         else:
             blocked += 1
         print(f"  {marker} {name:<14} {status:<15} {detail}")
+        step = steps.get(name)
+        if step:
+            print(f"      next: {step}")
     print(f"\n  {healthy} healthy, {blocked} blocked/inconclusive, {drifted} drifted.")
-    print("  'inconclusive' usually means the source is blocked from this network —")
-    print("  run it from a machine with your Chrome (CDP) or a Russian residential IP.")
+    print("  Every blocked row carries its own next step; 'inconclusive' means the source")
+    print("  could not be judged — the parser was never proven broken.")
 
-    # CDP-backed sources depend on the operator's Chrome being up and logged
-    # in; probe that session directly so a dead browser is reported as itself,
-    # not mistaken for five separate marketplace outages.
-    cdp_note = ""
-    try:
-        from mcp_core.transport.chrome_cdp import probe_session
-
-        probe = asyncio.run(probe_session())
-        if probe.get("reachable"):
-            cdp_note = (
-                f"Chrome CDP: reachable on {probe['host']}:{probe['port']} ({probe.get('contexts', '?')} context(s))."
-            )
-        else:
-            cdp_note = f"Chrome CDP: NOT reachable — {probe.get('reason')}. Avito/Taobao/Megamarket/Lamoda-search/DNS/Citilink/AliExpress/Cian need it."
-    except Exception as exc:
-        cdp_note = f"Chrome CDP: probe failed ({type(exc).__name__})."
     print(f"\n  {cdp_note}")
 
     if status_file:
-        import datetime
-        import pathlib
-        import tempfile
-
         report = {
             "checked_at": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
             "healthy": healthy,
             "blocked": blocked,
             "drifted": drifted,
-            "sources": {name: {"status": status, "detail": detail} for name, status, detail in results},
+            "sources": {
+                name: {"status": status, "detail": detail, "next_step": steps.get(name)}
+                for name, status, detail, _ in results
+            },
         }
         target = pathlib.Path(status_file)
         try:
@@ -437,8 +868,14 @@ def cmd_doctor(argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if not args or args[0] in ("-h", "--help"):
-        print(__doc__ or "marketplace-mcp CLI")
+    if args and args[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return 0
+    if not args:
+        # The console script starts the server for a bare `marketplace-mcp`
+        # (see __main__.py); reaching the CLI with no verb means the operator
+        # asked for help.
+        print(USAGE)
         return 0
     command, rest = args[0], args[1:]
     if command == "install":
@@ -446,6 +883,7 @@ def main(argv: list[str] | None = None) -> int:
     if command == "doctor":
         return cmd_doctor(rest)
     print(f"unknown command {command!r}; expected install or doctor", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
     log_event("marketplace.cli.unknown", command=command)
     return 2
 

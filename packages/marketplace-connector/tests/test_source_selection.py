@@ -65,7 +65,7 @@ def test_deselected_sources_are_reported_not_hidden(unified_env):
 
 
 def test_capabilities_flag_survives_the_naming_mismatch(unified_env):
-    """_MOUNTED says "yandex"/"detmir"; _CAPABILITIES is keyed canonically."""
+    """_MOUNTED says "yandex"/"detmir"; CAPABILITIES is keyed canonically."""
     server = unified_env("yandex,detmir")
     response = asyncio.run(server.marketplace_sources())
 

@@ -9,6 +9,63 @@
 
 ## [Unreleased]
 
+### Added
+
+- `marketplace-mcp install <client> --write` пишет конфиг клиента сам. По умолчанию
+  в блок входит одна запись `marketplace` — объединённый сервер; `--per-source`
+  оставляет старый блок по источникам. Путь к `uv` и к консольной команде
+  абсолютный, если он найден: у десктопного клиента часто нет PATH терминала, и
+  голое `uv` — это сервер, который молча не стартует. Запись сливается в
+  `mcpServers`, чужие серверы и остальные настройки файла не теряются, старый
+  файл перед изменением копируется в `<файл>.bak-<метка>`, новая версия пишется
+  временным файлом и подменяется через `os.replace`. Кривой JSON и запись с тем
+  же именем, но другим содержимым — отказ с кодом 2 (конфликт снимается
+  `--force`); такая же запись — «already configured», без записи и без копии.
+  `--dry-run` печатает результат и путь и ничего не пишет. `install claude-code
+  --write` печатает готовую строку `claude mcp add`, `install dsh --write`
+  отказывается: у dsh свой формат, не `mcpServers`.
+- `marketplace-mcp --help` (и `help`) печатает короткий экран usage: команды, по
+  примеру на каждую, и ссылку на `docs/QUICKSTART.md`. Неизвестная команда
+  печатает объяснение и этот же usage, и завершается с кодом 2.
+- `marketplace-mcp doctor` печатает под каждой нездоровой строкой один следующий
+  шаг: поднять scraping Chrome, пройти проверку сайта или войти руками и
+  перепроверить источник, переключить Wildberries на `WB_TRANSPORT=dom`, задать
+  `MPSTATS_MP_AUTH`, разобрать дрейф парсера, подождать при отказе по частоте
+  запросов или открыть `docs/ANTI_BOT.md`. Тот же шаг попадает в `--status-file`
+  отдельным полем `next_step`. Шаг выбирается из кодов причин, которые реально
+  шлют коннекторы (`blocked`, `login_wall`, `not_authenticated`,
+  `transport_down`, `rate_limited`, `auth_missing`), и всегда один: без советов
+  про решатели капч, stealth-инструменты, пулы прокси и повторные попытки. Если
+  упал сам selfcheck (`error`), это не стена сайта: шаг предлагает открыть issue с
+  его выводом.
+
+- `marketplace-mcp install <client> --write` writes the client config itself. The
+  default block is one `marketplace` entry running the unified server; `--per-source`
+  keeps the old per-source block. `uv` and the console script are resolved to
+  absolute paths when found: a desktop client often has no terminal PATH, and a
+  bare `uv` is a server that silently never starts. The entry is merged into
+  `mcpServers` without dropping other servers or settings, the old file is copied
+  to `<file>.bak-<timestamp>` before any change, and the new version is written
+  through a temporary file and `os.replace`. Malformed JSON and a same-name entry
+  with different content are refused with exit 2 (the conflict needs `--force`);
+  an identical entry prints "already configured" and writes nothing. `--dry-run`
+  prints the merged result and the target path and writes nothing. `install
+  claude-code --write` prints the exact `claude mcp add` line, and `install dsh
+  --write` is refused: dsh has its own format, not `mcpServers`.
+- `marketplace-mcp --help` (and `help`) prints a short usage screen: the verbs,
+  one example each, and a pointer to `docs/QUICKSTART.md`. An unknown command
+  prints the explanation and that screen, and exits 2.
+- `marketplace-mcp doctor` prints one next step under every source that is not ok:
+  start the scraping Chrome, pass the site's check or log in by hand and recheck
+  the source, switch Wildberries to `WB_TRANSPORT=dom`, set `MPSTATS_MP_AUTH`,
+  diagnose a parser drift, wait out a rate limit, or open `docs/ANTI_BOT.md`. The
+  same step lands in `--status-file` as a `next_step` field. The step is chosen
+  from the reason codes the connectors really send (`blocked`, `login_wall`,
+  `not_authenticated`, `transport_down`, `rate_limited`, `auth_missing`), and it is
+  always one instruction — never a captcha solver, stealth tooling, a proxy pool or
+  a retry loop. A selfcheck that failed itself (`error`) is not a site wall: its
+  step asks for an issue with the output above.
+
 ### Fixed
 
 - `wb_selfcheck` учитывает `WB_TRANSPORT=dom`: проверки `card` и `search_v9`

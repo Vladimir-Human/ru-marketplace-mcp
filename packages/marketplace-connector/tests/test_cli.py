@@ -6,6 +6,7 @@ that logic is testable without touching a network.
 
 from __future__ import annotations
 
+import ast
 import json
 import pathlib
 import re
@@ -27,8 +28,22 @@ def offline_cdp_probe(monkeypatch):
     monkeypatch.setattr(chrome_cdp, "probe_session", fake_probe)
 
 
-def test_install_prints_a_config_block_for_every_source(capsys):
+def test_install_defaults_to_one_unified_marketplace_entry(capsys):
+    """One entry, one server: a client pays for one tool list, not fourteen."""
     rc = cli.cmd_install(["claude"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert '"marketplace"' in out
+    assert '"wildberries"' not in out
+    assert "marketplace-mcp" in out
+    # The optional paid source still needs its token, whoever wires it in.
+    assert "optional paid analytics" in out
+    assert "MPSTATS_MP_AUTH" in out
+
+
+def test_install_per_source_keeps_the_old_block(capsys):
+    rc = cli.cmd_install(["claude", "--per-source"])
 
     assert rc == 0
     out = capsys.readouterr().out
@@ -111,10 +126,10 @@ def test_generated_dsh_modes_match_the_committed_patch():
 def test_doctor_reports_per_source_status(monkeypatch, capsys):
     async def fake_selfcheck(name, module_path, tool_name):
         table = {
-            "wildberries": ("wildberries", "success", "ok"),
-            "ozon": ("ozon", "inconclusive", "blocked"),
+            "wildberries": ("wildberries", "success", "ok", {}),
+            "ozon": ("ozon", "inconclusive", "blocked", {}),
         }
-        return table.get(name, (name, "success", "ok"))
+        return table.get(name, (name, "success", "ok", {}))
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -130,7 +145,7 @@ def test_doctor_reports_per_source_status(monkeypatch, capsys):
 
 def test_doctor_exits_nonzero_on_drift(monkeypatch, capsys):
     async def fake_selfcheck(name, module_path, tool_name):
-        return name, "drift_detected", "search:drift"
+        return name, "drift_detected", "search:drift", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -141,7 +156,7 @@ def test_doctor_exits_nonzero_on_drift(monkeypatch, capsys):
 
 def test_doctor_survives_a_selfcheck_that_raises(monkeypatch, capsys):
     async def fake_selfcheck(name, module_path, tool_name):
-        return name, "error", "RuntimeError: boom"
+        return name, "error", "RuntimeError: boom", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -149,6 +164,8 @@ def test_doctor_survives_a_selfcheck_that_raises(monkeypatch, capsys):
 
     out = capsys.readouterr().out
     assert "avito" in out
+    # A crashed selfcheck is not an anti-bot wall: the advice says so.
+    assert cli.NEXT_STEP_SELFCHECK_ERROR in out
     assert rc == 2  # unjudgeable, not healthy
 
 
@@ -160,7 +177,7 @@ def test_main_routes_subcommands_and_rejects_unknown(capsys):
 
 def test_doctor_writes_a_status_file(monkeypatch, capsys, tmp_path):
     async def fake_selfcheck(name, module_path, tool_name):
-        return name, "success", "ok"
+        return name, "success", "ok", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
     target = tmp_path / "status.json"
@@ -226,7 +243,7 @@ def test_doctor_accepts_install_source_names_and_includes_aliexpress(monkeypatch
 
     async def fake_selfcheck(name, module_path, tool_name):
         checked.append((name, module_path, tool_name))
-        return name, "success", "ok"
+        return name, "success", "ok", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -247,11 +264,16 @@ async def test_run_one_selfcheck_reads_dict_and_model_responses(as_dict, monkeyp
 
     monkeypatch.setitem(sys.modules, "cli_test_connector", SimpleNamespace(selfcheck=selfcheck))
 
-    assert await cli._run_one_selfcheck("test", "cli_test_connector", "selfcheck") == (
+    name, status, detail, checks = await cli._run_one_selfcheck("test", "cli_test_connector", "selfcheck")
+
+    assert (name, status, detail) == (
         "test",
         "inconclusive",
         "search:inconclusive (blocked http 403)",
     )
+    # The per-check reasons travel with the result: the next step is chosen
+    # from them, and a rendered string cannot be told apart from a code.
+    assert checks["search"]["reason"] == "blocked"
 
 
 def test_install_accepts_every_documented_client():
@@ -275,8 +297,8 @@ def test_doctor_exit_code_prefers_drift_over_inconclusive(monkeypatch, capsys):
 
     async def fake_selfcheck(name, module_path, tool_name):
         if name == "wildberries":
-            return name, "drift_detected", "search:drift"
-        return name, "inconclusive", "blocked"
+            return name, "drift_detected", "search:drift", {}
+        return name, "inconclusive", "blocked", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -285,7 +307,7 @@ def test_doctor_exit_code_prefers_drift_over_inconclusive(monkeypatch, capsys):
 
 def test_doctor_returns_zero_only_when_everything_is_healthy(monkeypatch, capsys):
     async def fake_selfcheck(name, module_path, tool_name):
-        return name, "success", "ok"
+        return name, "success", "ok", {}
 
     monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
 
@@ -353,3 +375,484 @@ def test_detail_reads_model_objects_as_well_as_dicts():
         code = None
 
     assert cli._check_detail(Entry()) == "inconclusive (transport_down)"
+
+
+# --------------------------------------------------------------- install --write ----
+
+
+@pytest.fixture
+def claude_config(tmp_path, monkeypatch):
+    """Point the Claude Desktop config at a temp file."""
+    path = tmp_path / "claude_desktop_config.json"
+    monkeypatch.setenv("MARKETPLACE_MCP_CLAUDE_CONFIG", str(path))
+    return path
+
+
+def test_install_write_creates_a_new_config_file(claude_config):
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    document = json.loads(claude_config.read_text(encoding="utf-8"))
+    entry = document["mcpServers"]["marketplace"]
+    assert entry["command"]
+    assert entry["args"][-1] == "marketplace-mcp"
+
+
+def test_install_write_keeps_other_servers_and_settings(claude_config):
+    claude_config.write_text(
+        json.dumps(
+            {
+                "mcpServers": {"other": {"command": "other-mcp", "args": []}},
+                "someSetting": {"keep": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    document = json.loads(claude_config.read_text(encoding="utf-8"))
+    assert document["mcpServers"]["other"] == {"command": "other-mcp", "args": []}
+    assert document["mcpServers"]["marketplace"]
+    assert document["someSetting"] == {"keep": True}
+
+
+def test_install_write_is_idempotent(claude_config, capsys):
+    assert cli.cmd_install(["claude", "--write"]) == 0
+    first = claude_config.read_bytes()
+    capsys.readouterr()
+
+    assert cli.cmd_install(["claude", "--write"]) == 0
+
+    out = capsys.readouterr().out
+    assert "already configured" in out
+    assert claude_config.read_bytes() == first
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+
+
+def test_install_write_leaves_a_backup_of_the_old_file(claude_config):
+    old = json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}})
+    claude_config.write_text(old, encoding="utf-8")
+
+    assert cli.cmd_install(["claude", "--write"]) == 0
+
+    backups = list(claude_config.parent.glob("claude_desktop_config.json.bak-*"))
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == old
+
+
+def test_install_write_refuses_malformed_json(claude_config):
+    broken = b"{ this is not json"
+    claude_config.write_bytes(broken)
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 2
+    assert claude_config.read_bytes() == broken
+
+
+def test_install_write_refuses_a_conflicting_entry(claude_config):
+    claude_config.write_text(
+        json.dumps({"mcpServers": {"marketplace": {"command": "something-else", "args": []}}}),
+        encoding="utf-8",
+    )
+    before = claude_config.read_bytes()
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 2
+    assert claude_config.read_bytes() == before
+
+
+def test_install_write_changes_nothing_when_the_backup_fails(claude_config, monkeypatch, capsys):
+    """A change is only made after the old file is safely copied."""
+    claude_config.write_text(json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}}), encoding="utf-8")
+    before = claude_config.read_bytes()
+
+    def refuse(src, dst):
+        raise PermissionError(13, "Permission denied", str(dst))
+
+    monkeypatch.setattr(cli.shutil, "copy2", refuse)
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 3
+    assert claude_config.read_bytes() == before
+    assert "nothing was changed" in capsys.readouterr().err
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+
+
+def test_install_write_force_replaces_a_conflicting_entry(claude_config):
+    claude_config.write_text(
+        json.dumps({"mcpServers": {"marketplace": {"command": "something-else", "args": []}}}),
+        encoding="utf-8",
+    )
+
+    rc = cli.cmd_install(["claude", "--write", "--force"])
+
+    assert rc == 0
+    document = json.loads(claude_config.read_text(encoding="utf-8"))
+    assert document["mcpServers"]["marketplace"]["command"] != "something-else"
+    assert list(claude_config.parent.glob("*.bak-*"))
+
+
+def test_install_dry_run_writes_nothing(claude_config, capsys):
+    rc = cli.cmd_install(["claude", "--write", "--dry-run"])
+
+    assert rc == 0
+    assert not claude_config.exists()
+    out = capsys.readouterr().out
+    assert "marketplace" in out
+    assert str(claude_config) in out
+
+
+def test_install_dry_run_shows_the_merged_json_of_an_existing_file(claude_config, capsys):
+    claude_config.write_text(json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}}), encoding="utf-8")
+    before = claude_config.read_bytes()
+
+    rc = cli.cmd_install(["claude", "--write", "--dry-run"])
+
+    assert rc == 0
+    assert claude_config.read_bytes() == before
+    out = capsys.readouterr().out
+    assert '"marketplace"' in out
+    assert '"other"' in out
+    assert str(claude_config) in out
+
+
+def test_install_claude_code_write_prints_a_claude_mcp_add_line(capsys):
+    rc = cli.cmd_install(["claude-code", "--write"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "claude mcp add marketplace" in out
+    assert "marketplace-mcp" in out
+
+
+def test_install_dsh_refuses_write(capsys):
+    rc = cli.cmd_install(["dsh", "--write"])
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "dsh" in captured.err
+    assert not captured.out
+
+
+@pytest.mark.parametrize(
+    ("flag", "message"),
+    [("--dry-run", "--dry-run only makes sense"), ("--force", "--force only makes sense")],
+)
+def test_install_flags_that_need_write_are_refused(flag, message, capsys):
+    rc = cli.cmd_install(["claude", flag])
+
+    assert rc == 2
+    assert message in capsys.readouterr().err
+
+
+def test_unified_entry_resolves_uv_to_an_absolute_path(monkeypatch):
+    monkeypatch.setattr(cli, "_workspace_root", lambda: pathlib.Path("/checkout"))
+    monkeypatch.setattr(cli.shutil, "which", lambda script: f"/usr/bin/{script}")
+
+    entry, note = cli._unified_entry()
+
+    assert entry["command"] == "/usr/bin/uv"
+    assert entry["args"] == ["run", "--directory", str(pathlib.Path("/checkout")), "marketplace-mcp"]
+    assert str(pathlib.Path("/checkout")) in note
+
+
+def test_unified_entry_falls_back_to_bare_uv_with_a_warning(monkeypatch):
+    monkeypatch.setattr(cli, "_workspace_root", lambda: pathlib.Path("/checkout"))
+    monkeypatch.setattr(cli.shutil, "which", lambda script: None)
+
+    entry, note = cli._unified_entry()
+
+    assert entry["command"] == "uv"
+    assert "uv was not found on PATH" in note
+
+
+def test_install_warns_once_on_stderr_when_uv_is_missing(monkeypatch, capsys):
+    """The warning is the caller's to print: once per command run, on stderr."""
+    monkeypatch.setattr(cli, "_workspace_root", lambda: pathlib.Path("/checkout"))
+    monkeypatch.setattr(cli.shutil, "which", lambda script: None)
+
+    assert cli.cmd_install(["claude"]) == 0
+
+    captured = capsys.readouterr()
+    assert captured.err.count("uv was not found on PATH") == 1
+
+
+def test_unified_entry_uses_the_installed_console_script(monkeypatch):
+    monkeypatch.setattr(cli, "_workspace_root", lambda: None)
+    monkeypatch.setattr(cli.shutil, "which", lambda script: f"/usr/local/bin/{script}")
+
+    entry, note = cli._unified_entry()
+
+    assert entry == {"command": "/usr/local/bin/marketplace-mcp", "args": []}
+    assert "console script" in note
+
+
+@pytest.mark.parametrize(
+    ("platform", "expected_parts"),
+    [
+        ("win32", ("AppData", "Roaming", "Claude", "claude_desktop_config.json")),
+        ("darwin", ("Library", "Application Support", "Claude", "claude_desktop_config.json")),
+        ("linux", (".config", "Claude", "claude_desktop_config.json")),
+    ],
+)
+def test_config_path_follows_the_platform(platform, expected_parts, monkeypatch, tmp_path):
+    monkeypatch.delenv("MARKETPLACE_MCP_CLAUDE_CONFIG", raising=False)
+    monkeypatch.setattr(cli.sys, "platform", platform)
+    monkeypatch.setattr(cli.pathlib.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "AppData" / "Roaming"))
+
+    path = cli._config_path("claude")
+
+    assert path == tmp_path.joinpath(*expected_parts)
+
+
+def test_config_path_for_cursor_is_under_the_home_directory(monkeypatch, tmp_path):
+    monkeypatch.delenv("MARKETPLACE_MCP_CURSOR_CONFIG", raising=False)
+    monkeypatch.setattr(cli.pathlib.Path, "home", classmethod(lambda cls: tmp_path))
+
+    assert cli._config_path("cursor") == tmp_path / ".cursor" / "mcp.json"
+
+
+# ------------------------------------------------------------------------- usage -----
+
+
+def test_help_prints_a_short_usage_screen(capsys):
+    assert cli.main(["--help"]) == 0
+
+    out = capsys.readouterr().out
+    assert "install" in out
+    assert "doctor" in out
+    assert "marketplace-mcp install claude --write" in out
+    assert "docs/QUICKSTART.md" in out
+    assert len(out.splitlines()) <= 25
+
+
+def test_help_verb_prints_the_same_screen(capsys):
+    assert cli.main(["help"]) == 0
+
+    assert "docs/QUICKSTART.md" in capsys.readouterr().out
+
+
+def test_an_unknown_verb_prints_the_usage_and_exits_two(capsys):
+    assert cli.main(["frobnicate"]) == 2
+
+    captured = capsys.readouterr()
+    assert "unknown command" in captured.err
+    assert "docs/QUICKSTART.md" in captured.err
+
+
+# --------------------------------------------------------------- doctor next step ----
+
+
+def test_next_step_for_an_unreachable_browser():
+    step = cli.next_step(
+        "avito",
+        "inconclusive",
+        {"search": {"state": "inconclusive", "reason": "transport_down"}},
+        cdp_reachable=False,
+    )
+
+    assert step == cli.NEXT_STEP_CDP_DOWN
+    assert "start_chrome_cdp.ps1" in step
+
+
+def test_next_step_for_a_login_wall():
+    step = cli.next_step(
+        "taobao",
+        "inconclusive",
+        {"search": {"state": "inconclusive", "reason": "login_wall"}},
+        cdp_reachable=True,
+    )
+
+    assert step == cli.NEXT_STEP_BROWSER_WALL.format(source="taobao")
+    assert "marketplace-mcp doctor taobao" in step
+
+
+def test_next_step_for_megamarket_not_authenticated():
+    step = cli.next_step(
+        "megamarket",
+        "inconclusive",
+        {"card": {"state": "inconclusive", "reason": "not_authenticated"}},
+        cdp_reachable=True,
+    )
+
+    assert step == cli.NEXT_STEP_BROWSER_WALL.format(source="megamarket")
+
+
+def test_next_step_for_wb_api_refusal():
+    step = cli.next_step(
+        "wildberries",
+        "inconclusive",
+        {"card": {"state": "inconclusive", "reason": "transport_down"}},
+        cdp_reachable=True,
+        wb_transport="api",
+    )
+
+    assert step == cli.NEXT_STEP_WB_TRANSPORT
+    assert "WB_TRANSPORT=dom" in step
+
+
+def test_next_step_in_wb_dom_mode_is_not_the_dom_advice():
+    step = cli.next_step(
+        "wildberries",
+        "inconclusive",
+        {"card": {"state": "inconclusive", "reason": "transport_down"}},
+        cdp_reachable=True,
+        wb_transport="dom",
+    )
+
+    assert step != cli.NEXT_STEP_WB_TRANSPORT
+    assert step == cli.NEXT_STEP_ANTIBOT
+
+
+def test_next_step_for_mpstats_auth():
+    step = cli.next_step("mpstats", "inconclusive", {"auth": {"state": "inconclusive", "reason": "auth_missing"}})
+
+    assert step == cli.NEXT_STEP_MPSTATS_AUTH
+    assert "MPSTATS_MP_AUTH" in step
+
+
+def test_next_step_for_drift():
+    step = cli.next_step(
+        "citilink",
+        "drift_detected",
+        {"search": {"state": "drift", "reason": "parse_smoke_failed"}},
+    )
+
+    assert step == cli.NEXT_STEP_DRIFT.format(source="citilink")
+    assert "diagnose_drift.py citilink" in step
+
+
+def test_next_step_for_drift_the_diagnose_script_cannot_probe():
+    """The script's argparse refuses every source outside its own tables."""
+    step = cli.next_step(
+        "ozon",
+        "drift_detected",
+        {"search": {"state": "drift", "reason": "parse_smoke_failed"}},
+    )
+
+    assert step == cli.NEXT_STEP_DRIFT_ISSUE.format(source="ozon")
+    assert "diagnose_drift.py" not in step
+    assert "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues" in step
+
+
+def test_the_diagnose_advice_matches_what_the_script_accepts():
+    """The advice must not name a script that rejects the source.
+
+    The script is parsed, not imported or run: importing it pulls the Chrome
+    transport in, and running it would touch a real browser.
+    """
+    script = pathlib.Path(__file__).resolve().parents[3] / "scripts" / "diagnose_drift.py"
+    tree = ast.parse(script.read_text(encoding="utf-8"))
+    tables: dict[str, ast.expr] = {}
+    for node in tree.body:
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            tables[node.target.id] = node.value
+        elif isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name):
+            tables[node.targets[0].id] = node.value
+    sources = ast.literal_eval(tables["SOURCES"])
+    api_sources = ast.literal_eval(tables["API_SOURCES"])
+    expected = frozenset(sources) | frozenset(api_sources)
+
+    assert expected == cli.DIAGNOSE_DRIFT_SOURCES
+    assert "ozon" not in cli.DIAGNOSE_DRIFT_SOURCES
+
+
+def test_next_step_for_a_rate_limited_source():
+    """A 429 is the site asking us to slow down: waiting is the fix."""
+    step = cli.next_step(
+        "avito",
+        "inconclusive",
+        {"search": {"state": "inconclusive", "reason": "rate_limited", "code": 429}},
+        cdp_reachable=True,
+    )
+
+    assert step == cli.NEXT_STEP_RATE_LIMITED.format(source="avito")
+    assert "wait 10-15 minutes" in step
+    assert "marketplace-mcp doctor avito" in step
+
+
+def test_next_step_for_a_crashed_selfcheck():
+    """The selfcheck raised: the site never answered, so it is not a wall."""
+    step = cli.next_step("avito", "error", {})
+
+    assert step == cli.NEXT_STEP_SELFCHECK_ERROR
+    assert "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues" in step
+
+
+def test_next_step_for_anything_else_inconclusive():
+    step = cli.next_step(
+        "yandex_market",
+        "inconclusive",
+        {"search": {"state": "inconclusive", "reason": "transport_down"}},
+    )
+
+    assert step == cli.NEXT_STEP_ANTIBOT
+
+
+def test_a_healthy_source_has_no_next_step():
+    assert cli.next_step("wildberries", "success", {"card": {"state": "healthy"}}) is None
+
+
+@pytest.mark.parametrize(
+    "step",
+    [
+        cli.NEXT_STEP_CDP_DOWN,
+        cli.NEXT_STEP_BROWSER_WALL,
+        cli.NEXT_STEP_WB_TRANSPORT,
+        cli.NEXT_STEP_MPSTATS_AUTH,
+        cli.NEXT_STEP_DRIFT,
+        cli.NEXT_STEP_DRIFT_ISSUE,
+        cli.NEXT_STEP_RATE_LIMITED,
+        cli.NEXT_STEP_SELFCHECK_ERROR,
+        cli.NEXT_STEP_ANTIBOT,
+    ],
+)
+def test_next_step_strings_never_suggest_a_solver_a_proxy_or_a_retry_loop(step):
+    """This project asks the operator to act; it never sells a workaround."""
+    lowered = step.lower()
+    for word in ("captcha", "solver", "stealth", "fingerprint", "proxy", "retry", "retries", "rotate"):
+        assert word not in lowered, f"{word!r} must not appear in operator advice: {step}"
+
+
+def test_doctor_prints_the_next_step_under_the_row(monkeypatch, capsys):
+    async def fake_selfcheck(name, module_path, tool_name):
+        return (
+            name,
+            "inconclusive",
+            "search:inconclusive (transport_down)",
+            {"search": {"state": "inconclusive", "reason": "transport_down"}},
+        )
+
+    monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
+
+    rc = cli.cmd_doctor(["avito"])
+
+    out = capsys.readouterr().out
+    assert cli.NEXT_STEP_CDP_DOWN in out
+    assert out.index("avito") < out.index(cli.NEXT_STEP_CDP_DOWN)
+    assert rc == 2
+
+
+def test_doctor_status_file_carries_the_next_step(monkeypatch, capsys, tmp_path):
+    async def fake_selfcheck(name, module_path, tool_name):
+        return (
+            name,
+            "inconclusive",
+            "search:inconclusive (rate_limited http 429)",
+            {"search": {"state": "inconclusive", "reason": "rate_limited"}},
+        )
+
+    monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
+    target = tmp_path / "status.json"
+
+    rc = cli.cmd_doctor(["yandex_market", "--status-file", str(target)])
+
+    assert rc == 2
+    report = json.loads(target.read_text(encoding="utf-8"))
+    assert report["sources"]["yandex_market"]["next_step"] == cli.NEXT_STEP_RATE_LIMITED.format(source="yandex_market")
