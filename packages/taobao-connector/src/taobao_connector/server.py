@@ -28,24 +28,39 @@ with the log-in fix inline and the selfcheck answers
 Prices stay in yuan (CNY). An agent comparing against ruble sources must
 convert explicitly — a baked-in rate would go silently stale.
 
+Search covers Taobao AND Tmall listings (owner decision, 2026-10-30): Tmall
+tiles are ordinary products, often the official brand stores, and leaving them
+out skews price comparisons. The ad-click trackers (``click.simba.taobao.com``)
+stay OUT on purpose — visiting one bills the advertiser, and it is not a product
+URL. ``taobao_card`` still speaks Taobao only: a Tmall card redirects to
+``detail.tmall.com``, which the card's host policy refuses, so the tool says so
+plainly instead of failing with a raw navigation error.
+
+A search grid that is still rendering («加载中») is not an empty catalog. The
+extractor transports that as a structural flag, the browser read re-checks the
+same page for a bounded while, and a grid that never finishes is a retryable
+timeout — never "parser drift".
+
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 ``log_event`` (stderr) or the ``Context`` logging methods.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Expose Taobao search and item cards with prices kept in CNY.
-# SCOPE: Read-only operator-browser DOM/state; reject challenges before card mapping/cache; browser handoffs.
+# PURPOSE: Expose Taobao/Tmall search and Taobao-only item cards with prices kept in CNY.
+# SCOPE: Read-only DOM/state; no ad-click trackers; bounded loading polls; explicit Tmall card refusal; challenge handoffs.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
-# LINKS: M-TAOBAO; M-COMPARE; M-MARKETPLACE; packages/taobao-connector/tests.
+# LINKS: M-TAOBAO; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# _search_url: Build canonical percent-encoded search/cache/handoff URLs.
+# _is_tmall_url: Recognize the exact unsupported card host without accepting its item id.
 # _extract_item_id: Validate item identifiers before constructing browser URLs.
-# _search_item_from_tile: Normalize rendered tiles without currency conversion.
-# _cdp_render: Serialize paced browser reads and support challenge recovery.
+# _search_item_from_tile: Normalize rendered Taobao/Tmall tiles without currency conversion.
+# _cdp_render: Serialize paced browser reads, bound empty-grid polling and support challenge recovery.
 # _login_wall_markers: Detect title-less login walls from structural signals.
 # _anti_bot_challenge: Read challenge evidence; ignore hidden card widget text.
 # _page_challenge_kind: Classify handoffs from challenge evidence, not card fields.
-# taobao_search: Read rendered search tiles and preserve missing prices.
-# taobao_card: Reject challenge evidence before item mapping and success caching.
+# taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid.
+# taobao_card: Refuse Tmall cards clearly; reject challenge evidence before item mapping and success caching.
 # taobao_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
 
@@ -71,6 +86,7 @@ from mcp_core.errors import (
     ParserDriftError,
     ToolError,
     TransportDownError,
+    UpstreamTimeoutError,
     raise_tool_error,
 )
 from mcp_core.logging import log_event
@@ -79,7 +95,7 @@ from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
-from mcp_core.transport.chrome_cdp import NavBlocked, open_page
+from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, open_page
 from pydantic import Field
 
 from taobao_connector.models_output import (
@@ -92,6 +108,7 @@ from taobao_connector.models_output import (
 from taobao_connector.settings import get_settings
 from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
 
+# START_BLOCK_CONFIG_AND_INPUTS
 _settings = get_settings()
 
 SERVER_VERSION = "2.5.4"
@@ -99,10 +116,16 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 
 SEARCH_BASE = "https://s.taobao.com/search"
 ITEM_BASE = "https://item.taobao.com/item.htm"
+_TMALL_CARD_MESSAGE = (
+    "Tmall listings are not readable by taobao_card. The search result already carries title, price, shop and URL."
+)
 
 TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
+# Additional render time only; no new navigation and no waiting on login/CAPTCHA walls.
+_GRID_POLL_INTERVAL_S = 1.5
+_GRID_LOADING_TIMEOUT_S = 10.0
 
 # Item ids are 11-12 digit strings; keep them as strings (they exceed the
 # JS-safe integer range, and the page itself treats them as strings).
@@ -113,10 +136,11 @@ mcp = FastMCP(
     lifespan=browser_handoff_lifespan,
     version=SERVER_VERSION,
     instructions=(
-        "Taobao listings: search and item cards, prices in yuan (CNY). Every "
+        "Taobao and Tmall search listings, Taobao item cards, prices in yuan (CNY). Every "
         "read runs in the operator's own Chrome over CDP — Taobao's data API is "
         "signed per session, so there is no anonymous tier. Start with "
-        "taobao_search; taobao_card takes an item id or URL."
+        "taobao_search; taobao_card takes a Taobao item id or URL and refuses Tmall cards. "
+        "Tmall search results already carry title, price, shop and URL."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -133,6 +157,26 @@ async def _polite_wait() -> None:
     pace without rebuilding the pacer.
     """
     await _pacer.wait(min_gap=_min_gap)
+
+
+def _search_url(query: str, page: int = 1) -> str:
+    """R-TAOBAO-QUERY: one canonical URL for navigation, cache and handoff keys.
+
+    A space is encoded as ``%20``, not ``+``: Taobao read ``q=iphone+15`` as
+    the literal text "iphone+15" (owner capture 2026-10-30), while the page's
+    own search box held "iphone 15" for ``q=iphone%2015``. ``quote_via=quote``
+    keeps a literal plus in the query as ``%2B`` — query data, not a space.
+    This URL is also the cache key and the browser-handoff key, so it is built
+    in ONE place and never re-encoded per call site.
+    """
+    params = urllib.parse.urlencode({"q": query.strip(), "page": str(page)}, quote_via=urllib.parse.quote)
+    return f"{SEARCH_BASE}?{params}"
+
+
+def _is_tmall_url(raw: str) -> bool:
+    """Recognize only the exact unsupported card host; never accept its id for navigation."""
+    parts = urllib.parse.urlsplit(raw.strip())
+    return parts.scheme in ("", "http", "https") and (parts.hostname or "").rstrip(".").lower() == "detail.tmall.com"
 
 
 def _extract_item_id(raw: str) -> str | None:
@@ -167,7 +211,10 @@ def _extract_item_id(raw: str) -> str | None:
     return None
 
 
-# In-page extractor: walks the rendered search DOM and returns plain data.
+# END_BLOCK_CONFIG_AND_INPUTS
+
+# START_BLOCK_DOM_EXTRACTION
+# In-page extractor: walks the rendered Taobao/Tmall search DOM and returns plain data.
 # Kept defensive — every panel is optional, because Taobao A/B tests layout
 # variants constantly and a missing shop block must not kill the item.
 # The shared helpers replace the per-connector heuristics that produced the
@@ -181,11 +228,22 @@ _SEARCH_EXTRACT_TEMPLATE = """
     //__SHARED_HELPERS__
     const ID_RE = /[?&]id=(\\d{9,13})/;
     const out = [];
-    const anchors = document.querySelectorAll('a[href*="item.taobao.com"], a[href*="//item.taobao.com"]');
+    // Taobao AND Tmall products: a Tmall listing is an ordinary product
+    // (often the official brand store) and skipping it skewed price
+    // comparisons — owner decision 2026-10-30.
+    const PRODUCT_ANCHORS = 'a[href*="item.taobao.com/item.htm"], a[href*="detail.tmall.com/item.htm"]';
+    const anchors = document.querySelectorAll(PRODUCT_ANCHORS);
     const seen = new Set();
     for (const a of anchors) {
-        const href = a.href || '';
-        const m = href.match(ID_RE);
+        let productUrl;
+        try { productUrl = new URL(a.href); } catch (_) { continue; }
+        // Direct product hosts only. click.simba.taobao.com ad-click trackers
+        // are deliberately excluded: following them bills the advertiser.
+        // Check the real host too, not a product URL embedded in a tracker query.
+        if (!['http:', 'https:'].includes(productUrl.protocol)
+            || !['item.taobao.com', 'detail.tmall.com'].includes(productUrl.hostname)
+            || productUrl.pathname !== '/item.htm') continue;
+        const m = productUrl.search.match(ID_RE);
         if (!m || seen.has(m[1])) continue;
         seen.add(m[1]);
         // tileRootFor, not closest(): an anchor whose own class looks like a
@@ -202,7 +260,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
         }
         if (!title) {
             let titleEl = null;
-            for (const cand of card.querySelectorAll('a[href*="item.taobao.com"], [class*="title"], [class*="Title"]')) {
+            for (const cand of card.querySelectorAll(PRODUCT_ANCHORS + ', [class*="title"], [class*="Title"]')) {
                 if (cleanText(cand)) { titleEl = cand; break; }
             }
             title = (titleEl ? cleanText(titleEl) : null) || (a.getAttribute('title') || null);
@@ -265,7 +323,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
             shop_name: shop,
             location: location,
             sales: sales,
-            url: href.split('?')[0] + '?id=' + m[1]
+            url: 'https://' + productUrl.hostname + '/item.htm?id=' + m[1]
         });
         if (out.length >= 48) break;
     }
@@ -288,6 +346,8 @@ _SEARCH_EXTRACT_TEMPLATE = """
         title: document.title || '',
         anchors_total: document.querySelectorAll('a[href]').length,
         login_anchors: document.querySelectorAll('a[href*="login.jhtml"], a[href*="register.jhtml"]').length,
+        // Structural text evidence only, before truncation; Python decides whether to wait.
+        grid_loading: wallText.includes('加载中'),
         body_snippet: wallText.slice(0, 2000)
     });
 }
@@ -414,8 +474,10 @@ _CARD_EXTRACT_TEMPLATE = """
 """
 
 _CARD_EXTRACT_JS = _CARD_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS_HELPERS)
+# END_BLOCK_DOM_EXTRACTION
 
 
+# START_BLOCK_BROWSER_READ
 def _search_item_from_tile(tile: dict[str, Any]) -> TaobaoSearchItemOut:
     """Map one extracted tile onto the wire shape, parsing prices in Python.
 
@@ -439,23 +501,59 @@ def _search_item_from_tile(tile: dict[str, Any]) -> TaobaoSearchItemOut:
     )
 
 
+# START_CONTRACT: _cdp_render
+# PURPOSE: Read one paced owned page, optionally polling an unfinished search grid.
+# INPUTS: Validated URL, extractor source, initial settle time and optional client context.
+# OUTPUTS: Capped extractor data; loading deadlines preserve the last payload for Python's timeout verdict.
+# SIDE_EFFECTS: Browser navigation/handoff and same-page evaluations; no challenge polling or ad clicks.
+# END_CONTRACT: _cdp_render
 async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | None) -> dict[str, Any]:
     """Open ``url`` in the operator's Chrome, wait for client-side render, extract.
 
     Serialized via _cdp_lock: a burst of searches must not spray tabs across the
-    operator's browser. The extracted JSON is capped like any HTTP body — an
-    inflated page would otherwise cross the CDP serialization pipeline raw.
+    operator's browser. Every extraction is capped like an HTTP body. An empty
+    loading search grid gets at most 10 extra seconds in this same page; login
+    walls and anti-bot challenges never wait. The deadline also bounds a stuck
+    poll evaluation, not only the sleeps between evaluations.
     """
 
+    def poll_needed(data: dict[str, Any]) -> bool:
+        return (
+            extract_js == _SEARCH_EXTRACT_JS
+            and data.get("items") == []
+            and data.get("grid_loading") is True
+            and not _login_wall_markers(data)
+            and not _anti_bot_challenge(data)
+        )
+
     async def read(page):
-        raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
-        if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
-            raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
-        data = json.loads(raw)
-        if not isinstance(data, dict):
-            raise_tool_error(ParserDriftError("page extractor returned a non-object payload"))
-        data.pop("_handoff_expires_at", None)
-        data.pop("_handoff_id", None)
+        async def extract() -> dict[str, Any]:
+            raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
+            if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
+                raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise_tool_error(ParserDriftError("page extractor returned a non-object payload"))
+            data.pop("_handoff_expires_at", None)
+            data.pop("_handoff_id", None)
+            return data
+
+        data = await extract()
+        if poll_needed(data):
+            log_event(
+                "[M-TAOBAO][BLOCK_BROWSER_READ] grid_loading.wait",
+                extra_timeout_s=_GRID_LOADING_TIMEOUT_S,
+                poll_interval_s=_GRID_POLL_INTERVAL_S,
+            )
+            try:
+                async with asyncio.timeout(_GRID_LOADING_TIMEOUT_S):
+                    while poll_needed(data):
+                        await asyncio.sleep(_GRID_POLL_INTERVAL_S)
+                        data = await extract()
+            except TimeoutError:
+                # Return the last valid read: the tool/selfcheck owns the verdict,
+                # and a loading timeout must not become a catch-all transport error.
+                log_event("[M-TAOBAO][BLOCK_BROWSER_READ] grid_loading.deadline")
         return data
 
     scope = current_client_scope(ctx)
@@ -487,6 +585,9 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         return data
 
 
+# END_BLOCK_BROWSER_READ
+
+# START_BLOCK_CHALLENGE_CLASSIFICATION
 # The word test for the wall body snippet: the same markers
 # scripts/diagnose_drift.py proved on the live wall (its walls.login test is
 # /войти|log ?in|sign ?in|登录/i over page text; the Russian branch cannot fire
@@ -613,6 +714,10 @@ def _page_challenge_kind(data: dict[str, Any]) -> str | None:
     return "captcha" if _anti_bot_challenge(data) else None
 
 
+# END_BLOCK_CHALLENGE_CLASSIFICATION
+
+
+# START_BLOCK_SEARCH_TOOL
 @mcp.tool(
     name="taobao_search",
     annotations=ToolAnnotations(
@@ -627,25 +732,28 @@ async def taobao_search(
     page: Annotated[int, Field(ge=1, le=100, description="Result page (1-based)")] = 1,
     ctx: Context | None = None,
 ) -> TaobaoSearchResponse:
-    """Search Taobao listings, rendered in the operator's Chrome.
+    """Search Taobao and Tmall listings, rendered in the operator's Chrome.
 
     ## Return Format
 
     TaobaoSearchResponse: {status, query, page, tier_used, count, items[], meta}.
     Items carry item_id (string), title, price_cny (None when hidden — never 0),
-    shop_name, sales label, url.
+    shop_name, sales label, url. The url keeps the listing's own host: Tmall
+    products answer with a detail.tmall.com link. Ad-click trackers are never
+    returned and never followed.
 
     ## Error Format
 
     ToolError: challenge_required when a login/CAPTCHA wall needs browser action;
     retry after completing it in the scraping profile. TransportDownError when
-    Chrome/CDP is unreachable; ParserDriftError for unexplained empty extraction.
-    Challenge pages are never cached as successful search results.
+    Chrome/CDP is unreachable; timeout (retryable) when the grid is still
+    rendering at the deadline; ParserDriftError for unexplained empty extraction
+    of a page that was NOT loading. Challenge pages are never cached as
+    successful search results.
     """
     log_event("taobao_search.start", query=query[:60], page=page)
     try:
-        params = urllib.parse.urlencode({"q": query.strip(), "page": str(page)})
-        url = f"{SEARCH_BASE}?{params}"
+        url = _search_url(query, page)
         pending = has_pending_handoff(scope=current_client_scope(ctx), operation="taobao_search", url=url)
         cached = None if pending else _cache.get(url)
         if cached is not None:
@@ -684,6 +792,17 @@ async def taobao_search(
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:
+            if payload.get("grid_loading") is True:
+                # The grid was still rendering when the read deadline passed:
+                # nothing drifted, the page simply had no products yet. A
+                # retryable timeout, not parser_drift (owner brief 2026-10-30).
+                raise_tool_error(
+                    UpstreamTimeoutError(
+                        "Taobao's search grid was still loading when the read deadline passed — "
+                        "the rendered page carried no products yet; retry the search",
+                        provider="taobao",
+                    )
+                )
             raise_tool_error(
                 ParserDriftError(
                     "rendered search page yielded zero items — either the query genuinely matched nothing or the DOM shape moved; verify manually before quoting"
@@ -733,15 +852,24 @@ async def taobao_card(
 
     ## Error Format
 
-    ToolError: BadRequestError when no id can be extracted; NotFoundError when
-    the item page reports itself gone; challenge_required on login/CAPTCHA walls;
-    TransportDownError on CDP failures; ParserDriftError when a rendered card has
-    neither title nor price and no detected challenge. Positive challenge evidence
-    is checked before item mapping regardless of title/price; hidden widget text
-    is excluded by the card extractor. Only successful cards are cached.
+    ToolError: BadRequestError when no id can be extracted, and when the
+    listing is a Tmall one (detail.tmall.com) — the card cannot read Tmall, and
+    the search result already carries its title, price, shop and URL;
+    NotFoundError when the item page reports itself gone; challenge_required on
+    login/CAPTCHA walls; TransportDownError on CDP failures; ParserDriftError
+    when a rendered card has neither title nor price and no detected challenge.
+    Positive challenge evidence is checked before item mapping regardless of
+    title/price; hidden widget text is excluded by the card extractor. Only
+    successful cards are cached.
     """
     log_event("taobao_card.start", input=item_id_or_url[:80])
     try:
+        if _is_tmall_url(item_id_or_url):
+            # A Tmall listing redirects to detail.tmall.com, which the card's
+            # host policy refuses. Say so plainly instead of spending a
+            # navigation on a refusal (owner brief 2026-10-30).
+            log_event("taobao_card.tmall_refused", input=item_id_or_url[:80])
+            raise_tool_error(BadRequestError(_TMALL_CARD_MESSAGE))
         item_id = _extract_item_id(item_id_or_url)
         if item_id is None:
             raise_tool_error(
@@ -761,6 +889,19 @@ async def taobao_card(
                 raise_tool_error(
                     TransportDownError(
                         f"Taobao navigation blocked (HTTP {exc.status}). Check the scraping-profile Chrome and retry."
+                    )
+                )
+            except NavigationPolicyError as exc:
+                if _is_tmall_url(exc.final_url):
+                    # Taobao answers a Tmall item id with a redirect to
+                    # detail.tmall.com, which this card's host policy refuses.
+                    # That is a known, non-retryable limitation — say it.
+                    log_event("taobao_card.tmall_refused", final_url=exc.final_url[:120])
+                    raise_tool_error(BadRequestError(_TMALL_CARD_MESSAGE))
+                raise_tool_error(
+                    TransportDownError(
+                        f"Taobao navigation left the allowed host policy ({_redact(exc.final_url)[:120]}); "
+                        "check the scraping-profile Chrome and retry."
                     )
                 )
             tier = "cdp"
@@ -847,8 +988,9 @@ async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckRespons
     CDP down, a login wall or an anti-bot challenge is ``inconclusive``
     (transport/session — a wall of any variant, titled or title-less, carries
     reason ``login_wall``; a challenge page carries ``blocked``), NEVER drift.
-    Only a rendered page that is neither and still yields zero items is
-    ``drift``.
+    A grid that is still rendering at the deadline is ``inconclusive`` with
+    reason ``timeout``, also NEVER drift. Only a rendered page that is none of
+    those and still yields zero items is ``drift``.
 
     ## Return Format
 
@@ -876,7 +1018,7 @@ async def taobao_selfcheck(ctx: Context | None = None) -> TaobaoSelfcheckRespons
 async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse:
     checks: dict[str, dict] = {}
     baseline = "cdp-search-v1"
-    url = f"{SEARCH_BASE}?{urllib.parse.urlencode({'q': '手机', 'page': '1'})}"
+    url = _search_url("手机")
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=6000, ctx=ctx)
@@ -950,12 +1092,27 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                         "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
                     )
             else:
-                # Rendered, no wall, no challenge, and still zero items — the
-                # only thing that means drift: the page was served and the
-                # parser could not read it.
-                checks["search"] = R.selfcheck_entry(
-                    "drift", baseline=baseline, reason="parse_smoke_failed", notes=["rendered page yielded zero items"]
-                )
+                # Rendered, no wall, no challenge, and still zero items. Was the
+                # grid still rendering? Then nothing drifted and the canary has
+                # nothing to say — inconclusive(timeout), the same verdict the
+                # render deadline produces (owner brief 2026-10-30).
+                if payload.get("grid_loading") is True:
+                    checks["search"] = R.selfcheck_entry(
+                        "inconclusive",
+                        baseline=baseline,
+                        reason="timeout",
+                        notes=["search grid was still loading — no products rendered before the deadline"],
+                    )
+                else:
+                    # Rendered, no wall, no challenge, and still zero items — the
+                    # only thing that means drift: the page was served and the
+                    # parser could not read it.
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason="parse_smoke_failed",
+                        notes=["rendered page yielded zero items"],
+                    )
 
     result_dict = R.selfcheck_result(
         "taobao",

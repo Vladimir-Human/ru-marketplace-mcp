@@ -32,6 +32,33 @@
   loopback HTTP servers to pin the client scope and the bearer-token check in
   both eras.
 
+### Fixed
+
+- Taobao search: a space in the query is sent as `%20`, not `+`. Taobao read
+  `q=iphone+15` as the literal text "iphone+15", while the page's own search
+  box held "iphone 15" for `q=iphone%2015`. The URL is built in one place and
+  stays the cache and browser-handoff key; a literal plus in the query is still
+  escaped as `%2B`.
+- Taobao search: Tmall listings are no longer skipped. A `detail.tmall.com`
+  tile is an ordinary product — often the official brand store — and leaving it
+  out skewed price comparisons, so search now returns Tmall items with their
+  real host, id, title, price and shop. The `click.simba.taobao.com` ad-click
+  trackers stay out on purpose: visiting one bills the advertiser, and it is
+  not a product URL.
+- Taobao card: a Tmall listing is refused with a clear, non-retryable
+  `bad_request` instead of a raw navigation-policy error. Taobao redirects
+  Tmall items to `detail.tmall.com`, which the card's host policy refuses;
+  the tool now says that Tmall listings are not readable by `taobao_card` and
+  that the search result already carries the title, price, shop and URL. The
+  host policy itself is unchanged.
+- Taobao search: a grid that is still rendering («加载中») is no longer
+  reported as `parser_drift`. The extractor transports the loading marker as a
+  structural flag, the browser read re-checks the same page for about 10
+  seconds, and a grid that never finishes is a retryable `timeout` — in
+  `compare_prices` too, where the source now reads as `timeout` instead of
+  `parser_drift`. A login wall or a CAPTCHA never waits and still answers
+  `challenge_required`; a genuinely empty page is still `parser_drift`.
+
 ## [2.5.4] - 2026-10-30
 
 ### Fixed

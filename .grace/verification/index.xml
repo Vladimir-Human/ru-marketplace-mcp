@@ -181,6 +181,14 @@
     <test file="packages/taobao-connector/tests/test_search_login_wall_live_dom.py" checks="Offline title-less wall maps to challenge_required/user-action and inconclusive login_wall, not parser drift" />
     <test file="packages/taobao-connector/tests/test_anti_bot_challenge_dom.py" checks="Hidden/script challenge false positives versus genuine visible empty challenge" />
     <test file="packages/taobao-connector/tests/test_shape_reference.py" checks="Captured search/card shapes, selfcheck registry, lost price family and lost wall markers" />
+    <test file="packages/taobao-connector/tests/test_search_urls_and_tmall_cards.py" title="test_search_query_encoding_and_cache_key" checks="R-TAOBAO-QUERY: a space is navigated as %20 and a literal plus as %2B; the canonical URL is the cache key and the old + form is not" />
+    <test file="packages/taobao-connector/tests/test_search_urls_and_tmall_cards.py" title="test_card_refuses_tmall_url_without_navigation" checks="R-TAOBAO-TMALL-CARD: a detail.tmall.com URL is refused as bad_request with the search-result hint and never navigates" />
+    <test file="packages/taobao-connector/tests/test_search_urls_and_tmall_cards.py" title="test_card_redirect_refusal_preserves_host_policy" checks="R-TAOBAO-TMALL-CARD, R-INPUT-TRUST: a refused navigation to detail.tmall.com becomes bad_request, an unrelated host stays transport_down, and the host policy is never widened" />
+    <test file="packages/taobao-connector/tests/test_search_tmall_live_dom.py" checks="R-TAOBAO-TMALL-SEARCH: the 2026-10-30 capture yields both Tmall products with id/title/price/shop/URL, keeps the Taobao tiles unchanged and leaves the simba ad tile out" />
+    <test file="packages/taobao-connector/tests/test_search_tmall_live_dom.py" title="test_loading_marker_is_transported_from_the_live_wall" checks="R-TAOBAO-GRID-LOADING: the captured wall carries the 加载中 marker and stays a wall" />
+    <test file="packages/taobao-connector/tests/test_search_tmall_live_dom.py" title="test_loading_marker_ignores_scripts_and_styles" checks="R-TAOBAO-GRID-LOADING: script/style wording is not visible evidence; the real grid still parses" />
+    <test file="packages/taobao-connector/tests/test_search_loading.py" checks="R-TAOBAO-GRID-LOADING: fake owned pages prove loading-then-items, the deadline timeout, a stalled evaluation, wall/challenge precedence, non-loading drift and the inconclusive selfcheck" />
+    <test file="packages/taobao-connector/tests/test_search_login_wall_live_dom.py" title="test_the_live_wall_is_never_waited_on" checks="R-TAOBAO-GRID-LOADING: the real captured wall answers challenge_required after one read and is never polled" />
   </entry>
   <entry id="V-M-MEGAMARKET" module="M-MEGAMARKET" file="packages/megamarket-connector/src/megamarket_connector/server.py">
     <test file="packages/megamarket-connector/tests/test_server.py" checks="Mocked browser POST/redirect/address context, card/search totals, missing-price None, absent-container drift versus empty result and code7 refusal" />
@@ -272,6 +280,7 @@
     <test file="packages/compare-connector/tests/test_browser_handoff.py" checks="Fake browser/MCP lease retention and resume for a handshake-era client and a sessionless stdio client, handshake session isolation, shutdown and snapshot ownership/delivery; sessionless HTTP/in-memory calls report the challenge and close the tab instead of retaining it; not real Chrome" />
     <test file="packages/compare-connector/tests/test_vision_policy.py" checks="Auto/always/never policy, explicit client refusal, capability hints, unknown capability and metadata-only requests" />
     <test file="packages/compare-connector/tests/test_decision_server.py" checks="Decision profile includes compare tools and decision_inspect; source rejection, canonical Detmir URL and invalid WB input; initial inventory assertion is a subset" />
+    <test file="packages/compare-connector/tests/test_server.py" title="test_taobao_loading_timeout_keeps_citilink_results" checks="R-TAOBAO-GRID-LOADING: the real Taobao tool's loading timeout maps to a retryable timeout outcome, not parser_drift, and the other source's offers survive" />
   </entry>
   <entry id="V-M-MPSTATS" module="M-MPSTATS" file="packages/mpstats-connector/src/mpstats_connector/server.py">
     <test file="packages/mpstats-connector/tests/test_server.py" checks="Two tools; offline graph/totals/stock parsing, nullable prices and zero stock distinct from missing stock" />

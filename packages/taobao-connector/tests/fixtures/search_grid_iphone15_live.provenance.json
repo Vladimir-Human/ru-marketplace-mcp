@@ -1,0 +1,72 @@
+{
+  "url": "https://s.taobao.com/search?q=iphone%2015&page=1",
+  "captured_at": "2026-10-30",
+  "sha256": "9f973a3d9f017a81eb7cef72d61ef1148ad0c2d14f7cdb09e682af883bf66e77",
+  "method": "Owner's Chrome over CDP via the project's open_page, 2026-10-30 at 08:25 UTC. Five tile wrappers sliced verbatim from the rendered raw capture: two item.taobao.com products, two detail.tmall.com products and one disjoint id-bearing click.simba.taobao.com ad. Only image src/data-src values and SVG bodies removed; tile structure, title nodes, split price parts, shops, sales and locations preserved. The outer document is a minimal offline wrapper. Ground truth read from the raw page before trimming; scripts are not executed and no resources are fetched. Ad trackers are retained only as offline negative evidence, never followed. The brief's link counts describe distinct URLs; the raw DOM repeats product anchors three times and contains two distinct ad URLs per ad tile.",
+  "raw_capture": "taobao_search_iphone15.html (outside git, .git/claude-review)",
+  "raw_sha256": "01c1c678bdd0986e0008ed537d61f11d87910a646e2fc86e8fd64c42924ce4f8",
+  "ground_truth": {
+    "distinct_link_counts": {
+      "taobao": 34,
+      "tmall": 4,
+      "simba_ad": 20
+    },
+    "anchor_counts": {
+      "taobao": 102,
+      "tmall": 12,
+      "simba_ad": 40
+    },
+    "items": [
+      {
+        "kind": "simba_ad",
+        "item_id": "1091859476001",
+        "title": "Apple/苹果 iPhone 15 Pro Max国行双卡15Pro全网通手机正品现货",
+        "price_cny": 4056,
+        "shop_name": "依云数码优品",
+        "sales": "100+人付款",
+        "location": "广东 深圳",
+        "host": "click.simba.taobao.com"
+      },
+      {
+        "kind": "taobao",
+        "item_id": "1072315198136",
+        "title": "Apple/苹果 iPhone 15 苹果15Plus 苹果15ProMax国行 苹果15手机",
+        "price_cny": 2919,
+        "shop_name": "优信数码科技",
+        "sales": "400+人付款",
+        "location": "广东 深圳",
+        "url": "https://item.taobao.com/item.htm?id=1072315198136"
+      },
+      {
+        "kind": "taobao",
+        "item_id": "1072508275689",
+        "title": "Apple/苹果 iPhone 15 苹果15Plus国行苹果15 双卡手机5G分期免息",
+        "price_cny": 2879,
+        "shop_name": "云朵朵数码店",
+        "sales": "200+人付款",
+        "location": "上海",
+        "url": "https://item.taobao.com/item.htm?id=1072508275689"
+      },
+      {
+        "kind": "tmall",
+        "item_id": "1096307293333",
+        "title": "瓴喵适用苹果iPhone18Pro/17/16/15系列手机壳凯夫拉芳纶纤维耐磨防摔磁吸无线充轻薄亲肤纹理保护套",
+        "price_cny": 349,
+        "shop_name": "瓴喵旗舰店",
+        "sales": "0人付款",
+        "location": "广东 深圳",
+        "url": "https://detail.tmall.com/item.htm?id=1096307293333"
+      },
+      {
+        "kind": "tmall",
+        "item_id": "1096194705635",
+        "title": "日系可爱卡通蜡笔小新头像适用苹果18promax手机壳iphone17pro新款16小众创意15pro双层18pm全包防摔保护套女",
+        "price_cny": 21.9,
+        "shop_name": "佐赞旗舰店",
+        "sales": "0人付款",
+        "location": "广东 深圳",
+        "url": "https://detail.tmall.com/item.htm?id=1096194705635"
+      }
+    ]
+  }
+}
