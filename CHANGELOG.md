@@ -18,11 +18,22 @@
   raises `NavBlocked`. The Playwright path waits for the new document to land,
   so the host check sees its URL and a redirect resolves to its final status.
   The raw-CDP path counts only main-frame documents: a 200 iframe on a block
-  page no longer turns the block into data.
+  page no longer turns the block into data. Thanks @dont99code (#133).
 - Browser handoff: the idle bound no longer switches off when the event-loop
   clock is young (under ~60 s since boot). `last_used` used `0.0` as "never
   used", but loop time counts from boot, so a real timestamp can be zero or
   negative; the marker is now `None`. Caught by the nightly CI on a fresh VM.
+
+### Security
+
+- Locked dependencies moved past every published advisory: pip-audit on the
+  exported lock went from 64 known vulnerabilities in 10 packages (Authlib,
+  certifi, cryptography, dnspython, FastMCP, filelock, mcp, opentelemetry-api,
+  PyJWT, virtualenv) to none, and npm audit on the dev-only lock from 2 high
+  to none. FastMCP stays on the 3.x line (3.4.11). Workflow actions are pinned
+  to commit SHAs and the Docker base images to digests. Thanks @ilodezis (#132).
+- Dependabot now also watches the Docker base images, so the digest pins pick
+  up rebuilt images; the builder's uv moved to 0.13.6 (#134, #135).
 
 ## [2.5.3] - 2026-10-13
 
