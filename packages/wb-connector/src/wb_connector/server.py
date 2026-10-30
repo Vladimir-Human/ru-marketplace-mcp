@@ -25,9 +25,9 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
-# SCOPE: Read-only MCP tools; paced HTTP/CDN access and optional DOM card/search.
+# SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport.
-# LINKS: M-WB; M-COMPARE; M-MARKETPLACE; packages/wb-connector/tests.
+# LINKS: M-WB; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -43,7 +43,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # wb_seller: Read seller metadata from static seller endpoints.
 # wb_categories: Read and filter the category menu tree.
 # wb_category_products: Read paginated products for a catalog shard.
-# wb_selfcheck: Probe endpoint/parser health for operators; not an MCP tool.
+# _wb_dom_selfcheck: Classify a one-shot DOM baseline and typed transport errors.
+# wb_selfcheck: Probe configured transport/parser health for operators; not an MCP tool.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -69,6 +70,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
     ConnectorError,
+    ErrorCode,
     NotFoundError,
     ParserDriftError,
     RateLimitedError,
@@ -2433,29 +2435,141 @@ async def wb_category_products(
         raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
 
 
+# START_BLOCK_SELFCHECK
+# START_CONTRACT: _wb_dom_selfcheck
+# PURPOSE: Probe one configured DOM path without retrying or solving challenges.
+# INPUTS: card or search; the same baseline, renderer and parser as the tools.
+# OUTPUTS: R.selfcheck_entry verdict with transport=dom; no escaping dependency errors.
+# SIDE_EFFECTS: One render call within a wall-clock bound covering the DOM page waits.
+# END_CONTRACT: _wb_dom_selfcheck
+async def _wb_dom_selfcheck(want: str) -> dict:
+    """R-WB-SELFCHECK-DOM: a rendered baseline, not an unused API host."""
+    nm = _SELFCHECK_NM
+    baseline = str(nm) if want == "card" else _SELFCHECK_SEARCH_QUERY
+    try:
+        # Reserve CDP navigation/cleanup and the 15s probe / 30s extractor waits
+        # in addition to the configured readiness, settling and politeness waits.
+        wall_s = 120.0 + _settings.dom_wait_s + _settings.dom_settle_ms / 1000 + _settings.dom_min_gap
+        async with asyncio.timeout(wall_s):
+            if want == "card":
+                payload = await dom_transport.render(dom_transport.card_url(nm), dom_transport.CARD_EXTRACT_JS, "card")
+                item, warnings = dom_transport.parse_card_page(payload, nm)
+                notes = [_redact(note)[:200] for note in warnings[:9]]
+                price = R.coerce_price(item.get("price_rub")) if item is not None else None
+                if item is None or not item.get("name"):
+                    return R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        transport="dom",
+                        reason="schema_drift",
+                        notes=[*notes, "rendered card has no named baseline product"],
+                    )
+                if price is None:
+                    # The DOM parser marks an unavailable/unpriced main offer OOS,
+                    # just as a price-less, sold-out API baseline is not drift.
+                    return R.selfcheck_entry(
+                        "drift" if item.get("in_stock") else "inconclusive",
+                        baseline=baseline,
+                        transport="dom",
+                        reason="schema_drift" if item.get("in_stock") else "baseline_gone",
+                        notes=[*notes, "baseline main offer has no usable price"],
+                    )
+                return R.selfcheck_entry("healthy", baseline=baseline, transport="dom", price=price, notes=notes)
+
+            payload = await dom_transport.render(
+                dom_transport.search_url(baseline, 1), dom_transport.SEARCH_EXTRACT_JS, "search"
+            )
+            items, warnings = dom_transport.parse_search_page(payload)
+            notes = [_redact(note)[:200] for note in warnings[:9]]
+            if not items:
+                empty = bool(payload.get("page_says_empty"))
+                return R.selfcheck_entry(
+                    "inconclusive" if empty else "drift",
+                    baseline=baseline,
+                    transport="dom",
+                    reason="baseline_gone" if empty else "schema_drift",
+                    notes=[*notes, "WB reports no results" if empty else "rendered search has no product anchors"],
+                )
+            identified = [
+                item
+                for item in items
+                if isinstance(item.get("nm_id"), int) and not isinstance(item.get("nm_id"), bool) and item["nm_id"] > 0
+            ]
+            priced = [item for item in identified if R.coerce_price(item.get("price_rub")) is not None]
+            if not identified or not priced:
+                return R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    transport="dom",
+                    reason="schema_drift",
+                    raw_len=len(items),
+                    recovered_ids=len(identified),
+                    priced=len(priced),
+                    notes=[*notes, "rendered products lack identified, priced anchors"],
+                )
+            return R.selfcheck_entry(
+                "healthy",
+                baseline=baseline,
+                transport="dom",
+                recovered_ids=len(identified),
+                priced=len(priced),
+                notes=notes,
+            )
+    except Exception as exc:
+        state, reason = "inconclusive", "dependency_unavailable"
+        if isinstance(exc, TimeoutError):
+            reason = "timeout"
+        elif isinstance(exc, ToolError):
+            try:
+                error = json.loads(str(exc))
+            except json.JSONDecodeError:
+                error = None
+            code = error.get("error") if isinstance(error, dict) else None
+            if code == ErrorCode.CHALLENGE_REQUIRED:
+                reason = "blocked"
+            elif code == ErrorCode.TRANSPORT_DOWN:
+                reason = "transport_down"
+            elif code == ErrorCode.PARSER_DRIFT:
+                state, reason = "drift", "schema_drift"
+        return R.selfcheck_entry(
+            state,
+            baseline=baseline,
+            transport="dom",
+            reason=reason,
+            notes=[f"{type(exc).__name__}: {_redact(str(exc))}"[:200]],
+        )
+
+
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls wb_selfcheck()
 # directly. It is deliberately NOT registered as an MCP tool — selfchecks are
 # operator diagnostics, and their input/output schemas would be billed in every
 # client request.
 async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     """Structural drift canary for WB (tri-state: success / drift_detected /
-    inconclusive). Probes EVERY endpoint family the tools depend on:
-      * card        — card.wb.ru v4 (wb_card / wb_search enrich): critical fields
-                      + price extract.
+    inconclusive). The check keys are stable across WB_TRANSPORT modes:
+      * card        — API mode: card.wb.ru v4 critical fields + price extract.
+                      DOM mode: the baseline card page via render/parse_card_page;
+                      a named product with a positive price is healthy.
       * reviews     — feedbacks2.wb.ru pool (wb_reviews): texts + productValuation.
-      * search_goods— search-goods.wildberries.ru (the legacy fallback path): the id
-                      list must still be a non-empty list of recoverable ids on a
-                      broad evergreen query, else wb_search silently returns no_results.
-      * search_v9   — search.wb.ru v9 (the PRIMARY path wb_search prefers): must
-                      answer 200 with identified, priced products, else a refusal of
-                      the primary path would only surface as the fallback's answers.
+      * search_goods— search-goods.wildberries.ru legacy id-list probe, unchanged;
+                      DOM mode notes that wb_search does not use this path.
+      * search_v9   — API mode: search.wb.ru v9 products, identified/priced counts.
+                      DOM mode: the same evergreen query's first grid via
+                      render/parse_search_page; identified, priced products are
+                      healthy, absent anchors are drift, WB's own empty notice
+                      makes the missing baseline inconclusive.
       * root_basket — basket-NN.wbbasket.ru (wb_root_info): imt_id must resolve,
                       else wb_root_info AND wb_reviews (indexed by imt_id) break.
 
+    WB_TRANSPORT=dom calls render exactly once for each of card/search_v9, never
+    those API hosts and never solves/retries captchas. Its wall-clock bounds
+    include the configured DOM waits plus CDP/extractor headroom. Reviews and
+    root_basket keep their API paths. An unavailable/unpriced main card offer is
+    inconclusive/baseline_gone; no named card is drift/schema_drift.
+
     Tri-state (audit 2026-06-01): an http!=200 / network error / OOS baseline is
-    `inconclusive` (transport/baseline rot), NEVER drift. Only a reached-200 body
-    whose parser-critical anchor is gone is `drift`. Run on demand before trusting
-    a batch.
+    `inconclusive` (transport/baseline rot), NEVER drift. A reachable body whose
+    parser-critical anchor is gone is `drift`. Run on demand before trusting a batch.
 
     ## Return Format
 
@@ -2467,133 +2581,148 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
 
     ## Error Format
 
-    Never raises ToolError: transport/timeout failures of individual
-    subchecks map to inconclusive entries, reached-200 shape failures to
-    drift entries — both are verdicts, not errors.
+    Never raises ToolError from a subcheck. DOM render ToolError JSON is mapped
+    by mcp_core.errors.ErrorCode: challenge_required -> inconclusive/blocked,
+    transport_down -> inconclusive/transport_down, parser_drift ->
+    drift/schema_drift. The subcheck's own wall-clock timeout is
+    inconclusive/timeout; unexpected failures are inconclusive/dependency_unavailable.
+    API transport/timeout and reached-200 shape verdicts remain unchanged.
     """
-    log_event("wb_selfcheck.start")
+    use_dom = _settings.transport == "dom"
+    log_event("wb_selfcheck.start", transport=_settings.transport)
     if ctx is not None:
-        await ctx.info("wb_selfcheck: probing card / reviews / search_goods / search_v9 / root_basket")
+        await ctx.info(
+            "wb_selfcheck: probing card / reviews / search_goods / search_v9 / root_basket "
+            f"(card/search_v9 transport={_settings.transport})"
+        )
     checks: dict[str, dict] = {}
 
-    # --- card v4 ---
+    # --- card (v4 API or rendered page) ---
     nm = _SELFCHECK_NM
-    card_url = f"https://card.wb.ru/cards/v4/detail?appType=1&curr=rub&dest={WB_DEFAULT_DEST}&locale=ru&spp=30&nm={nm}"
-    await _polite_wait()
-    try:
-        async with asyncio.timeout(45):  # whole-subcheck wall-clock (audit CRASH_HANG)
-            async with _wb_client() as client:
-                status_code, text, err = await _fresh_get_text(client, card_url)
-            if err or status_code != 200:
-                checks["card"] = R.selfcheck_entry(
-                    "inconclusive", baseline=str(nm), reason="transport_down", notes=[f"http {status_code} err={err}"]
-                )
-            else:
-                try:
-                    data = json.loads(text or "")
-                except json.JSONDecodeError as exc:
-                    checks["card"] = R.selfcheck_entry(
-                        "drift",
-                        baseline=str(nm),
-                        reason="parse_error",
-                        notes=[f"card 200 JSON parse error: {str(exc)[:120]}"],
-                    )
-                    data = None
-                if not isinstance(data, dict):
-                    if data is not None:
-                        checks["card"] = R.selfcheck_entry(
-                            "drift",
-                            baseline=str(nm),
-                            reason="schema_drift",
-                            notes=[f"card 200 root is {type(data).__name__}, not object"],
-                        )
-                    elif "card" not in checks:
-                        checks["card"] = R.selfcheck_entry(
-                            "drift",
-                            baseline=str(nm),
-                            reason="schema_drift",
-                            notes=["card 200 root is null, not object"],
-                        )
-                    products: list[Any] = []
-                else:
-                    products, products_error = _card_products_checked(data)
-                    if products_error:
-                        checks["card"] = R.selfcheck_entry(
-                            "drift",
-                            baseline=str(nm),
-                            reason="schema_drift",
-                            notes=[f"card 200 products container error: {products_error}"],
-                        )
-                if not isinstance(data, dict) or ("card" in checks and checks["card"].get("state") == "drift"):
-                    pass
-                elif not products:
-                    # A SINGLE-SKU baseline returning 0 products is indistinguishable
-                    # from deletion/OOS at this endpoint — baseline rot, NOT drift
-                    # (audit 2026-06-01 FALSE_POSITIVE: don't cry wolf on a gone SKU).
+    if use_dom:
+        checks["card"] = await _wb_dom_selfcheck("card")
+    else:
+        card_url = (
+            f"https://card.wb.ru/cards/v4/detail?appType=1&curr=rub&dest={WB_DEFAULT_DEST}&locale=ru&spp=30&nm={nm}"
+        )
+        await _polite_wait()
+        try:
+            async with asyncio.timeout(45):  # whole-subcheck wall-clock (audit CRASH_HANG)
+                async with _wb_client() as client:
+                    status_code, text, err = await _fresh_get_text(client, card_url)
+                if err or status_code != 200:
                     checks["card"] = R.selfcheck_entry(
                         "inconclusive",
                         baseline=str(nm),
-                        reason="baseline_gone",
-                        notes=[
-                            "no products on 200 body (baseline SKU deleted/OOS, "
-                            "or schema drift — cannot distinguish on one SKU)"
-                        ],
+                        reason="transport_down",
+                        notes=[f"http {status_code} err={err}"],
                     )
                 else:
-                    p = products[0]
-                    if not isinstance(p, dict):
+                    try:
+                        data = json.loads(text or "")
+                    except json.JSONDecodeError as exc:
                         checks["card"] = R.selfcheck_entry(
                             "drift",
                             baseline=str(nm),
-                            reason="schema_drift",
-                            notes=[f"card product entry is {type(p).__name__}, not object"],
+                            reason="parse_error",
+                            notes=[f"card 200 JSON parse error: {str(exc)[:120]}"],
+                        )
+                        data = None
+                    if not isinstance(data, dict):
+                        if data is not None:
+                            checks["card"] = R.selfcheck_entry(
+                                "drift",
+                                baseline=str(nm),
+                                reason="schema_drift",
+                                notes=[f"card 200 root is {type(data).__name__}, not object"],
+                            )
+                        elif "card" not in checks:
+                            checks["card"] = R.selfcheck_entry(
+                                "drift",
+                                baseline=str(nm),
+                                reason="schema_drift",
+                                notes=["card 200 root is null, not object"],
+                            )
+                        products: list[Any] = []
+                    else:
+                        products, products_error = _card_products_checked(data)
+                        if products_error:
+                            checks["card"] = R.selfcheck_entry(
+                                "drift",
+                                baseline=str(nm),
+                                reason="schema_drift",
+                                notes=[f"card 200 products container error: {products_error}"],
+                            )
+                    if not isinstance(data, dict) or ("card" in checks and checks["card"].get("state") == "drift"):
+                        pass
+                    elif not products:
+                        # A SINGLE-SKU baseline returning 0 products is indistinguishable
+                        # from deletion/OOS at this endpoint — baseline rot, NOT drift
+                        # (audit 2026-06-01 FALSE_POSITIVE: don't cry wolf on a gone SKU).
+                        checks["card"] = R.selfcheck_entry(
+                            "inconclusive",
+                            baseline=str(nm),
+                            reason="baseline_gone",
+                            notes=[
+                                "no products on 200 body (baseline SKU deleted/OOS, "
+                                "or schema drift — cannot distinguish on one SKU)"
+                            ],
                         )
                     else:
-                        missing = [
-                            k
-                            for k in ("id", "name", "sizes", "reviewRating", "feedbacks", "totalQuantity")
-                            if k not in p
-                        ]
-                        cur, _orig = _extract_price_rub(p)
-                        qty = R.coerce_int(p.get("totalQuantity"))
-                        if missing:
+                        p = products[0]
+                        if not isinstance(p, dict):
                             checks["card"] = R.selfcheck_entry(
                                 "drift",
                                 baseline=str(nm),
-                                missing_fields=missing,
-                                notes=[f"card missing critical fields: {missing}"],
-                            )
-                        elif qty is None:
-                            checks["card"] = R.selfcheck_entry(
-                                "drift",
-                                baseline=str(nm),
-                                reason="quantity_shape_drift",
-                                notes=["card totalQuantity is present but not parseable as an integer"],
-                            )
-                        elif cur is None and qty and qty > 0:
-                            checks["card"] = R.selfcheck_entry(
-                                "drift",
-                                baseline=str(nm),
-                                reason="price_shape_drift",
-                                notes=["in-stock baseline has positive totalQuantity but no parseable price"],
-                            )
-                        elif cur is None:
-                            # price None is legit if the baseline SKU went OOS — rot, not drift.
-                            checks["card"] = R.selfcheck_entry(
-                                "inconclusive",
-                                baseline=str(nm),
-                                reason="baseline_gone",
-                                notes=["price None (baseline SKU may be out of stock)"],
+                                reason="schema_drift",
+                                notes=[f"card product entry is {type(p).__name__}, not object"],
                             )
                         else:
-                            checks["card"] = R.selfcheck_entry("healthy", baseline=str(nm), price=cur)
-    except (TimeoutError, Exception) as exc:
-        checks["card"] = R.selfcheck_entry(
-            "inconclusive",
-            baseline=str(nm),
-            reason="timeout" if isinstance(exc, asyncio.TimeoutError) else "transport_down",
-            notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
-        )
+                            missing = [
+                                k
+                                for k in ("id", "name", "sizes", "reviewRating", "feedbacks", "totalQuantity")
+                                if k not in p
+                            ]
+                            cur, _orig = _extract_price_rub(p)
+                            qty = R.coerce_int(p.get("totalQuantity"))
+                            if missing:
+                                checks["card"] = R.selfcheck_entry(
+                                    "drift",
+                                    baseline=str(nm),
+                                    missing_fields=missing,
+                                    notes=[f"card missing critical fields: {missing}"],
+                                )
+                            elif qty is None:
+                                checks["card"] = R.selfcheck_entry(
+                                    "drift",
+                                    baseline=str(nm),
+                                    reason="quantity_shape_drift",
+                                    notes=["card totalQuantity is present but not parseable as an integer"],
+                                )
+                            elif cur is None and qty and qty > 0:
+                                checks["card"] = R.selfcheck_entry(
+                                    "drift",
+                                    baseline=str(nm),
+                                    reason="price_shape_drift",
+                                    notes=["in-stock baseline has positive totalQuantity but no parseable price"],
+                                )
+                            elif cur is None:
+                                # price None is legit if the baseline SKU went OOS — rot, not drift.
+                                checks["card"] = R.selfcheck_entry(
+                                    "inconclusive",
+                                    baseline=str(nm),
+                                    reason="baseline_gone",
+                                    notes=["price None (baseline SKU may be out of stock)"],
+                                )
+                            else:
+                                checks["card"] = R.selfcheck_entry("healthy", baseline=str(nm), price=cur)
+        except (TimeoutError, Exception) as exc:
+            checks["card"] = R.selfcheck_entry(
+                "inconclusive",
+                baseline=str(nm),
+                reason="timeout" if isinstance(exc, asyncio.TimeoutError) else "transport_down",
+                notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
+            )
 
     # --- reviews (feedbacks pool by imt_id) ---
     await _polite_wait()
@@ -2797,114 +2926,120 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
             notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
         )
 
-    # --- search_v9 (the PRIMARY path wb_search prefers) ---
+    if use_dom:
+        checks["search_goods"]["notes"].append("wb_search does not use this path while WB_TRANSPORT=dom")
+
+    # --- search_v9 (the configured wb_search path: API or rendered grid) ---
     #
-    # Probed separately from search_goods, because they fail differently and only
+    # In API mode, probed separately from search_goods, because they fail differently and only
     # this one is on the path a caller actually takes. When v9 was refused, search
     # fell through to the legacy id list and answered with unrelated products and
     # prices attached — and this canary stayed green, because its other probe reads
     # search-goods and never touched v9. A refused primary path has to be visible.
-    v9_params = httpx.QueryParams(
-        {
-            "appType": "1",
-            "curr": "rub",
-            "dest": WB_DEFAULT_DEST,
-            "locale": "ru",
-            "query": sq,
-            "resultset": "catalog",
-            "page": "1",
-            "spp": "30",
-        }
-    )
-    v9_url = f"https://search.wb.ru/exactmatch/ru/common/v9/search?{v9_params}"
-    await _polite_wait()
-    try:
-        async with asyncio.timeout(45):
-            async with _wb_client() as client:
-                status_code, text, err = await _fresh_get_text(client, v9_url)
-            if err or status_code == 429:
-                checks["search_v9"] = R.selfcheck_entry(
-                    "inconclusive",
-                    baseline=sq,
-                    reason="rate_limited" if status_code == 429 else "transport_down",
-                    notes=[f"http {status_code} err={err} — primary search path (v9) unavailable"],
-                )
-            elif status_code != 200:
-                checks["search_v9"] = R.selfcheck_entry(
-                    "inconclusive",
-                    baseline=sq,
-                    reason="transport_down",
-                    notes=[f"http {status_code} — primary search path refused"],
-                )
-            else:
-                try:
-                    payload = json.loads(text or "")
-                except json.JSONDecodeError as exc:
+    if use_dom:
+        checks["search_v9"] = await _wb_dom_selfcheck("search")
+    else:
+        v9_params = httpx.QueryParams(
+            {
+                "appType": "1",
+                "curr": "rub",
+                "dest": WB_DEFAULT_DEST,
+                "locale": "ru",
+                "query": sq,
+                "resultset": "catalog",
+                "page": "1",
+                "spp": "30",
+            }
+        )
+        v9_url = f"https://search.wb.ru/exactmatch/ru/common/v9/search?{v9_params}"
+        await _polite_wait()
+        try:
+            async with asyncio.timeout(45):
+                async with _wb_client() as client:
+                    status_code, text, err = await _fresh_get_text(client, v9_url)
+                if err or status_code == 429:
                     checks["search_v9"] = R.selfcheck_entry(
-                        "drift",
+                        "inconclusive",
                         baseline=sq,
-                        reason="parse_error",
-                        notes=[f"v9 returned HTTP 200 but invalid JSON: {exc}"],
+                        reason="rate_limited" if status_code == 429 else "transport_down",
+                        notes=[f"http {status_code} err={err} — primary search path (v9) unavailable"],
                     )
-                    payload = None
-                if payload is not None:
-                    v9_products: Any = None
-                    if isinstance(payload, dict):
-                        v9_products = payload.get("products")
-                        if not isinstance(v9_products, list):
-                            nested = payload.get("data")
-                            if isinstance(nested, dict) and isinstance(nested.get("products"), list):
-                                v9_products = nested["products"]
-                    if not isinstance(payload, dict):
+                elif status_code != 200:
+                    checks["search_v9"] = R.selfcheck_entry(
+                        "inconclusive",
+                        baseline=sq,
+                        reason="transport_down",
+                        notes=[f"http {status_code} — primary search path refused"],
+                    )
+                else:
+                    try:
+                        payload = json.loads(text or "")
+                    except json.JSONDecodeError as exc:
                         checks["search_v9"] = R.selfcheck_entry(
                             "drift",
                             baseline=sq,
-                            reason="schema_drift",
-                            notes=[f"v9 returned {type(payload).__name__}, not object"],
+                            reason="parse_error",
+                            notes=[f"v9 returned HTTP 200 but invalid JSON: {exc}"],
                         )
-                    elif not isinstance(v9_products, list):
-                        checks["search_v9"] = R.selfcheck_entry(
-                            "drift",
-                            baseline=sq,
-                            reason="schema_drift",
-                            notes=["v9 200 body has no products list (wb_search would fall back to stale ids)"],
-                        )
-                    elif not v9_products:
-                        checks["search_v9"] = R.selfcheck_entry(
-                            "drift",
-                            baseline=sq,
-                            reason="empty_products",
-                            notes=["v9 answered 200 with no products for an evergreen query"],
-                        )
-                    else:
-                        identified = [
-                            item
-                            for item in v9_products
-                            if isinstance(item, dict)
-                            and (
-                                (isinstance(item.get("id"), int) and not isinstance(item.get("id"), bool))
-                                or (isinstance(item.get("nmId"), int) and not isinstance(item.get("nmId"), bool))
-                            )
-                        ]
-                        priced = [item for item in identified if item.get("salePriceU") or item.get("priceU")]
-                        if not identified:
+                        payload = None
+                    if payload is not None:
+                        v9_products: Any = None
+                        if isinstance(payload, dict):
+                            v9_products = payload.get("products")
+                            if not isinstance(v9_products, list):
+                                nested = payload.get("data")
+                                if isinstance(nested, dict) and isinstance(nested.get("products"), list):
+                                    v9_products = nested["products"]
+                        if not isinstance(payload, dict):
                             checks["search_v9"] = R.selfcheck_entry(
                                 "drift",
                                 baseline=sq,
-                                raw_len=len(v9_products),
-                                notes=["v9 products carry no numeric id (id-shape drift)"],
+                                reason="schema_drift",
+                                notes=[f"v9 returned {type(payload).__name__}, not object"],
+                            )
+                        elif not isinstance(v9_products, list):
+                            checks["search_v9"] = R.selfcheck_entry(
+                                "drift",
+                                baseline=sq,
+                                reason="schema_drift",
+                                notes=["v9 200 body has no products list (wb_search would fall back to stale ids)"],
+                            )
+                        elif not v9_products:
+                            checks["search_v9"] = R.selfcheck_entry(
+                                "drift",
+                                baseline=sq,
+                                reason="empty_products",
+                                notes=["v9 answered 200 with no products for an evergreen query"],
                             )
                         else:
-                            checks["search_v9"] = R.selfcheck_entry(
-                                "healthy", baseline=sq, recovered_ids=len(identified), priced=len(priced)
-                            )
-    except (TimeoutError, Exception) as exc:
-        checks["search_v9"] = R.selfcheck_entry(
-            "inconclusive",
-            baseline=sq,
-            reason="timeout" if isinstance(exc, asyncio.TimeoutError) else "transport_down",
-            notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
-        )
+                            identified = [
+                                item
+                                for item in v9_products
+                                if isinstance(item, dict)
+                                and (
+                                    (isinstance(item.get("id"), int) and not isinstance(item.get("id"), bool))
+                                    or (isinstance(item.get("nmId"), int) and not isinstance(item.get("nmId"), bool))
+                                )
+                            ]
+                            priced = [item for item in identified if item.get("salePriceU") or item.get("priceU")]
+                            if not identified:
+                                checks["search_v9"] = R.selfcheck_entry(
+                                    "drift",
+                                    baseline=sq,
+                                    raw_len=len(v9_products),
+                                    notes=["v9 products carry no numeric id (id-shape drift)"],
+                                )
+                            else:
+                                checks["search_v9"] = R.selfcheck_entry(
+                                    "healthy", baseline=sq, recovered_ids=len(identified), priced=len(priced)
+                                )
+        except (TimeoutError, Exception) as exc:
+            checks["search_v9"] = R.selfcheck_entry(
+                "inconclusive",
+                baseline=sq,
+                reason="timeout" if isinstance(exc, asyncio.TimeoutError) else "transport_down",
+                notes=[f"{type(exc).__name__}: {str(exc)[:120]}"],
+            )
 
     # --- root_basket (wb_root_info imt_id resolution) ---
     await _polite_wait()
@@ -3007,6 +3142,8 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
     log_event("wb_selfcheck.done", status=result.get("status"), checks=len(checks))
     return WbSelfCheckResponse.model_validate(result)
 
+
+# END_BLOCK_SELFCHECK
 
 # Advertised output schemas are the dominant constant cost of an MCP mount:
 # replace the full Pydantic tree with top-level field names (~64 % fewer

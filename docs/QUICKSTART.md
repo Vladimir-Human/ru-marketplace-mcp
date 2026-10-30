@@ -62,9 +62,13 @@ queries do not need it. `install cursor`, `install claude-code`, and
 uv run marketplace-mcp doctor wildberries yandex_market
 ```
 
-These checks use anonymous HTTP. A blocked endpoint can still require a different
-network. Doctor's Chrome status is separate: a missing Chrome does not prevent
-anonymous HTTP checks from working.
+With the default `WB_TRANSPORT=api`, these checks use anonymous HTTP. A blocked
+endpoint can still require a different network. Doctor's Chrome status is separate:
+a missing Chrome does not prevent anonymous HTTP checks from working. If you set
+`WB_TRANSPORT=dom`, WB's `card` and `search_v9` checks instead open two pages in
+the operator's Chrome (baseline card and search grid); a captcha is `inconclusive`
+and is never solved or retried. WB's other probes still use HTTP; see
+[the rendered-page notes](ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
 | Result | Meaning | Next step |
 | --- | --- | --- |

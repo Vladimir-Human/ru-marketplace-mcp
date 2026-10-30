@@ -81,7 +81,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2318 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2354 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -285,8 +285,11 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 обращений к API. В выдаче поиска `price_rub` — цена по WB Кошельку
 (`price_kind: wallet`); карточка отдаёт обычную цену, цену по Кошельку и
 зачёркнутую раздельно, а также магазин, склад, срок доставки, возврат, гарантию,
-значок «Оригинал» и строку «Все N предложений от X ₽». Подробности —
-[ANTI_BOT.md](docs/ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
+значок «Оригинал» и строку «Все N предложений от X ₽». В этом режиме
+`marketplace-mcp doctor` тоже открывает две страницы в вашем Chrome — базовую
+карточку и поисковую сетку — для проверок `card` и `search_v9`. Капча даёт
+`inconclusive` без решения и повторов; отзывы, basket и legacy-проба остаются HTTP.
+Подробности — [ANTI_BOT.md](docs/ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
 ### Яндекс Маркет — `yandex_*`
 
@@ -488,8 +491,11 @@ compare_prices("кроссовки мужские")
 выбрасывали, и строка Taobao приходила с пустой ценой без намёка, что цена вообще
 есть. Теперь юань виден, но в рублёвом ранжировании по-прежнему не участвует: в
 `warnings` появляется `foreign_currency: …` с числом исключённых предложений и
-причиной. Конвертировать здесь значило бы зашить курс, который молча устареет, —
-пересчёт за вами.
+причиной. В `source_outcomes[].detail` Taobao считает цены из `price_native`:
+например, `20 results, 20 priced in CNY (not ranked)`. Несколько валют с ценами
+перечисляются по алфавиту через `/`; без цен — `N results, 0 priced (not ranked)`.
+Для рублёвых источников остаётся `N results, M priced`. Конвертировать здесь
+значило бы зашить курс, который молча устареет, — пересчёт за вами.
 
 ### MPStats — `mpstats_*`
 
@@ -601,7 +607,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2318 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2354 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -667,7 +673,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2318 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2354 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -755,7 +761,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2318 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2354 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. Each server is a console
@@ -824,7 +830,10 @@ pages in your Chrome over CDP, like DNS and Citilink, with no API calls. On sear
 tiles `price_rub` is the WB Wallet price (`price_kind: wallet`); the card reports
 the regular, Wallet and struck prices separately, plus the store, warehouse,
 delivery date, return policy, warranty, the «Оригинал» badge and «Все N
-предложений от X ₽». Details in
+предложений от X ₽». In this mode `marketplace-mcp doctor` also opens two pages
+in your Chrome — the baseline card and search grid — for `card` and `search_v9`.
+A captcha is `inconclusive`, never solved or retried; reviews, basket and the legacy
+probe still use HTTP. Details in
 [ANTI_BOT.md](docs/ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
 ### Yandex Market — `yandex_*`
@@ -1016,8 +1025,12 @@ the price in that currency as the marketplace quotes it. For Russian sources it 
 null. That yuan price used to be fetched and silently thrown away, so a Taobao row
 showed a blank price with no sign a real one existed. Now the yuan is reported but
 still never ranked against roubles: a `foreign_currency: …` warning lists how many
-offers were excluded and why. Converting here would bake in an exchange rate that goes
-stale silently, so the caller converts if they want to.
+offers were excluded and why. Taobao's `source_outcomes[].detail` counts
+`price_native`, for example `20 results, 20 priced in CNY (not ranked)`. Multiple
+priced currencies are sorted and joined with `/`; no native prices gives
+`N results, 0 priced (not ranked)`. Rouble sources keep `N results, M priced`.
+Converting here would bake in an exchange rate that goes stale silently, so the
+caller converts if they want to.
 
 ### MPStats — `mpstats_*`
 
@@ -1140,7 +1153,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2318 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2354 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1202,7 +1215,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2318 offline
+are confidently wrong, so the project is arranged around verification: 2354 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

@@ -954,6 +954,64 @@ async def test_taobao_adapter_never_ranks_yuan_as_rubles(monkeypatch):
     assert not server._ranks_in_rubles(got[0])
 
 
+async def test_foreign_source_detail_counts_native_prices_without_changing_ranking(monkeypatch):
+    """R-COMPARE-FOREIGN-DETAIL: 20 CNY prices are visible, never ranked as RUB."""
+
+    async def taobao(query, limit):
+        return [offer("taobao", None, product_id=str(i), currency="cny", price_native=10 + i) for i in range(20)]
+
+    async def wb(query, limit):
+        return [offer("wildberries", 500, product_id="wb1"), offer("wildberries", 300, product_id="wb2")]
+
+    stub_sources(monkeypatch, {"taobao": taobao, "wildberries": wb})
+    result = await server.compare_prices("тест", per_source_limit=20, sources=["taobao", "wildberries"])
+    outcomes = {outcome.source: outcome for outcome in result.source_outcomes}
+    assert outcomes["taobao"].detail == "20 results, 20 priced in CNY (not ranked)"
+    assert outcomes["wildberries"].detail == "2 results, 2 priced"
+    assert result.cheapest.source == "wildberries" and result.cheapest.price_rub == 300
+    assert result.price_spread_rub == 200
+    assert [item.price_rub for item in result.offers[:2]] == [300, 500]
+    assert len(result.offers[2:]) == 20
+    assert all(item.source == "taobao" and item.price_rub is None for item in result.offers[2:])
+    assert [item.price_native for item in result.offers[2:]] == list(range(10, 30))
+
+
+@pytest.mark.parametrize(
+    ("prices", "expected"),
+    [
+        ([], "0 results, 0 priced (not ranked)"),
+        ([("cny", None), ("usd", None)], "2 results, 0 priced (not ranked)"),
+        ([("usd", 10), ("cny", 20), ("cny", 30), ("eur", None)], "4 results, 3 priced in CNY/USD (not ranked)"),
+    ],
+)
+async def test_foreign_source_detail_handles_missing_and_mixed_native_prices(monkeypatch, prices, expected):
+    """R-COMPARE-FOREIGN-DETAIL: count present native prices and sort their codes."""
+
+    async def taobao(query, limit):
+        return [
+            offer("taobao", None, product_id=str(i), currency=currency, price_native=price)
+            for i, (currency, price) in enumerate(prices)
+        ]
+
+    stub_sources(monkeypatch, {"taobao": taobao})
+    result = await server.compare_prices("тест", sources=["taobao"])
+    assert result.source_outcomes[0].detail == expected
+    assert result.cheapest is None and result.price_spread_rub is None
+    assert result.total_offers == len(prices)
+
+
+async def test_rouble_source_detail_still_counts_only_rouble_prices(monkeypatch):
+    """R-COMPARE-FOREIGN-DETAIL: missing RUB prices do not change the old detail."""
+
+    async def wb(query, limit):
+        return [offer("wildberries", 500), offer("wildberries", None, price_native=200, currency="usd")]
+
+    stub_sources(monkeypatch, {"wildberries": wb})
+    result = await server.compare_prices("тест", sources=["wildberries"])
+    assert result.source_outcomes[0].detail == "2 results, 1 priced"
+    assert result.cheapest.price_rub == 500 and result.price_spread_rub is None
+
+
 async def test_a_yuan_offer_never_becomes_cheapest(monkeypatch):
     """End-to-end: a cheap yuan number must not outrank a dearer rouble one.
 
