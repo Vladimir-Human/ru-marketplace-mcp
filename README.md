@@ -67,7 +67,7 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
-**Проверка 2.5.3:** 13 октября с одного адреса selfcheck прошли Ozon, Яндекс Маркет, Детский мир, Авито (поиск, карточка, продавец), Taobao, Ситилинк, AliExpress и Циан; Wildberries отвечает через `WB_TRANSPORT=dom`. Lamoda, DNS и Мегамаркет честно отвечают «заблокировано», пока человек не пройдёт их проверку в Chrome: куки живут минуты (12 октября после проверки они работали). Дрейфа не найдено, визуальная приёмка не выполнена. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.3.md).
+**Проверка 2.5.4:** 30 октября с одного адреса selfcheck прошли Яндекс Маркет, Детский мир, Taobao, Ситилинк и AliExpress; у Ozon прошли поиск, карточка и отзывы с сортировкой; Wildberries отвечает через `WB_TRANSPORT=dom` (HTTP API карточки и поиска — 403). Авито и DNS не ответили, Циан, Lamoda и Мегамаркет в этот раз не проверялись. Глазами сверены Wildberries, Taobao, Ситилинк и Детский мир — совпало; Яндекс Маркет — частично; Ozon и AliExpress не сверялись. Дрейфа не найдено. [Статус источников](docs/releases/RELEASE_NOTES_v2.5.4.md).
 
 ## Быстрый старт
 
@@ -703,7 +703,7 @@ hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
 
-**2.5.3 verification:** on 13 October, from one address, Ozon, Yandex Market, Detsky Mir, Avito (search, card, seller), Taobao, Citilink, AliExpress and Cian passed selfcheck; Wildberries answers through `WB_TRANSPORT=dom`. Lamoda, DNS and Megamarket report blocked until a human clears their browser check, whose cookies last minutes (on 12 October they worked right after it). No drift; no visual acceptance. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.3.md).
+**2.5.4 verification:** on 30 October, from one address, Yandex Market, Detsky Mir, Taobao, Citilink and AliExpress passed selfcheck; Ozon passed search, card and sorted reviews; Wildberries answers through `WB_TRANSPORT=dom` (its HTTP card and search return 403). Avito and DNS did not answer; Cian, Lamoda and Megamarket were not checked this time. Wildberries, Taobao, Citilink and Detsky Mir matched the site by eye; Yandex Market partly; Ozon and AliExpress were not compared. No drift. See the [per-source release evidence](docs/releases/RELEASE_NOTES_v2.5.4.md).
 
 ## What you get
 
