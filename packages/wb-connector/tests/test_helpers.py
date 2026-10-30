@@ -615,6 +615,7 @@ def test_wb_search_v9_refusal_never_calls_legacy_path(monkeypatch, status_code):
         monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
         monkeypatch.setattr(server, "_search_via_search_goods", forbidden_fallback)
+        monkeypatch.setattr(server._settings, "dom_fallback", False)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_search("x")
         payload = _tool_error_payload(excinfo)
@@ -649,6 +650,7 @@ def test_wb_search_v9_html_wall_never_calls_legacy_path(monkeypatch):
         monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
         monkeypatch.setattr(server, "_search_via_search_goods", forbidden_fallback)
+        monkeypatch.setattr(server._settings, "dom_fallback", False)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_search("x")
         payload = _tool_error_payload(excinfo)
@@ -2447,6 +2449,7 @@ def test_a_refusal_streak_reaches_the_operator(monkeypatch):
         monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
         monkeypatch.setattr(server, "_pacer", pacer)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server._settings, "dom_fallback", False)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_card([5535522])
         payload = _tool_error_payload(excinfo)

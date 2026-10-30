@@ -3,7 +3,8 @@
 All tunable parameters are configurable via environment variables with a WB_
 prefix, e.g. WB_TIMEOUT, WB_WALL_TIMEOUT, WB_MIN_GAP, WB_DEFAULT_DEST,
 WB_MAX_BODY_BYTES, WB_NET_RETRIES, WB_NET_BACKOFF_S, WB_CACHE_TTL, WB_PROXY,
-WB_TRANSPORT, WB_DOM_WAIT_S, WB_DOM_MIN_GAP, WB_DOM_SETTLE_MS, WB_DOM_STORE_WAIT_S, WB_DOM_OFFERS_WAIT_S, WB_DOM_MAX_CARDS.
+WB_TRANSPORT, WB_DOM_FALLBACK, WB_DOM_WAIT_S, WB_DOM_MIN_GAP, WB_DOM_SETTLE_MS,
+WB_DOM_STORE_WAIT_S, WB_DOM_OFFERS_WAIT_S, WB_DOM_MAX_CARDS.
 
 WB public catalog APIs need no credentials, so this settings object holds only
 operational knobs — timeouts, rate-limit gap, retry budget, body-size cap, cache
@@ -82,6 +83,15 @@ class WBSettings(BaseSettings):
             "How wb_search / wb_card read WB. 'api' = public JSON hosts (card.wb.ru, search.wb.ru). "
             "'dom' = render search and product pages in the operator's scraping-profile Chrome over CDP "
             "and read the text (for installations where the API hosts answer 403)."
+        ),
+    )
+    dom_fallback: bool = Field(
+        default=True,
+        description=(
+            "In 'api' mode, read wb_search / wb_card through the scraping Chrome when WB's API "
+            "refuses this address (HTTP 401/403/498 or the edge's HTML wall). Only the refusal "
+            "falls back: 429, network errors, parser drift and bad requests keep their own errors. "
+            "Set to 0 to restore the API-only behaviour."
         ),
     )
     dom_wait_s: float = Field(

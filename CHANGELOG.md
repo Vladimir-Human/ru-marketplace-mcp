@@ -11,6 +11,16 @@
 
 ### Added
 
+- `wb_card` и `wb_search` в режиме `api` сами перечитывают запрос через
+  отрисованную страницу в scraping-Chrome, когда API WB отказывает адресу:
+  HTTP 401/403/498 или HTML-стена на месте JSON. Ответ получает предупреждение
+  `dom_fallback` в `meta.warnings`; 429, сетевые ошибки, дрейф парсера и кривые
+  запросы по-прежнему возвращают свою ошибку. Фолбэк один: один запрос к API и
+  не больше одной попытки через DOM; если DOM тоже упал, ошибка DOM сохраняет
+  свой тип и называет предшествующий отказ API. Включён по умолчанию,
+  `WB_DOM_FALLBACK=0` возвращает прежнее поведение. `doctor` при включённом
+  фолбэке говорит, что инструменты уже переключаются сами, и что
+  `WB_TRANSPORT=dom` заставляет doctor проверять и отрисованный путь.
 - `marketplace-mcp install <client> --write` пишет конфиг клиента сам. По умолчанию
   в блок входит одна запись `marketplace` — объединённый сервер; `--per-source`
   оставляет старый блок по источникам. Путь к `uv` и к консольной команде
@@ -63,6 +73,15 @@
   которую пишет `install --write`. Правильный путь — перелочить uv не старше
   0.13.6 (`uvx --from uv==0.13.6 uv lock`).
 
+- In `api` mode, `wb_card` and `wb_search` now re-read the same request through the
+  rendered page in the scraping Chrome when WB's API refuses the address: HTTP
+  401/403/498 or an HTML wall where JSON belongs. The response carries a
+  `dom_fallback` warning in `meta.warnings`; 429, network errors, parser drift and
+  bad requests keep their own errors. There is one API attempt and at most one DOM
+  attempt; if the DOM path fails too, its error type is preserved and its message
+  names the API refusal. On by default; `WB_DOM_FALLBACK=0` restores the previous
+  behaviour. With the fallback on, `doctor` says the tools switch by themselves and
+  that `WB_TRANSPORT=dom` makes doctor check the rendered path too.
 - `marketplace-mcp install <client> --write` writes the client config itself. The
   default block is one `marketplace` entry running the unified server; `--per-source`
   keeps the old per-source block. `uv` and the console script are resolved to

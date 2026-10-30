@@ -646,6 +646,232 @@ def test_card_dom_caps_navigations(monkeypatch: pytest.MonkeyPatch) -> None:
     assert any("read the first 2" in w for w in card.meta.warnings)
 
 
+def test_dom_fallback_is_on_by_default() -> None:
+    assert type(server._settings).model_fields["dom_fallback"].default is True
+
+
+@pytest.mark.parametrize(
+    ("status_code", "text", "expected"),
+    [
+        (401, "", "HTTP 401"),
+        (403, "", "HTTP 403"),
+        (498, "", "HTTP 498"),
+        (200, "<!doctype html><html>Angie</html>", "HTML wall, HTTP 200"),
+        (429, "<!doctype html><html>too many</html>", None),
+        (500, "", None),
+        (200, "{}", None),
+    ],
+)
+def test_dom_fallback_reason_only_covers_refusals(
+    monkeypatch: pytest.MonkeyPatch, status_code: int, text: str, expected: str | None
+) -> None:
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+    assert server._dom_fallback_reason(status_code, text) == expected
+
+
+def test_card_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+    api_calls: list[str] = []
+    render_calls: list[str] = []
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        api_calls.append(url)
+        return 403, "", None
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        render_calls.append(url)
+        return CARD_PAYLOAD
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", fake_render)
+
+    card = _run(server.wb_card(nm_ids=[1345073040]))
+
+    assert len(api_calls) == 1 and "card.wb.ru" in api_calls[0]
+    assert len(render_calls) == 1
+    assert card.count == 1 and card.items[0].nm_id == 1345073040
+    assert card.items[0].transport == "dom"
+    assert (
+        "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome" in card.meta.warnings
+    )
+
+
+def test_card_api_edge_wall_falls_back_to_dom(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+    wall = "<!doctype html><html><body>Angie: access denied</body></html>"
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 200, wall, None
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        return CARD_PAYLOAD
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", fake_render)
+
+    card = _run(server.wb_card(nm_ids=[1345073040]))
+
+    assert card.count == 1
+    assert any("(HTML wall, HTTP 200)" in warning for warning in card.meta.warnings)
+
+
+def test_card_rate_limit_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 429, "", None
+
+    async def forbidden_render(url: str, js: str, want: str) -> dict[str, Any]:
+        raise AssertionError("a 429 must not reach the DOM path")
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", forbidden_render)
+
+    with pytest.raises(ToolError) as exc:
+        _run(server.wb_card(nm_ids=[1345073040]))
+    assert json.loads(str(exc.value))["error"] == "rate_limited"
+
+
+def test_card_network_failure_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 0, None, "timeout: no response"
+
+    async def forbidden_render(url: str, js: str, want: str) -> dict[str, Any]:
+        raise AssertionError("a network failure must not reach the DOM path")
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", forbidden_render)
+
+    with pytest.raises(ToolError) as exc:
+        _run(server.wb_card(nm_ids=[1345073040]))
+    payload = json.loads(str(exc.value))
+    assert payload["error"] == "transport_down"
+    assert "timeout" in payload["message"]
+
+
+def test_card_api_refusal_with_fallback_off_keeps_the_api_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", False)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 403, "", None
+
+    async def forbidden_render(url: str, js: str, want: str) -> dict[str, Any]:
+        raise AssertionError("WB_DOM_FALLBACK=0 must not reach the DOM path")
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", forbidden_render)
+
+    with pytest.raises(ToolError) as exc:
+        _run(server.wb_card(nm_ids=[1345073040]))
+    payload = json.loads(str(exc.value))
+    assert payload["error"] == "transport_down"
+    assert payload["status_code"] == 403
+    assert "wb_card HTTP 403" in payload["message"]
+
+
+def test_dom_failure_after_an_api_refusal_names_the_refusal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 403, "", None
+
+    async def failing_render(url: str, js: str, want: str) -> dict[str, Any]:
+        raise ToolError(json.dumps({"error": "parser_drift", "message": "DOM extractor drifted", "retryable": False}))
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", failing_render)
+
+    with pytest.raises(ToolError) as exc:
+        _run(server.wb_card(nm_ids=[1345073040]))
+    payload = json.loads(str(exc.value))
+    assert payload["error"] == "parser_drift"
+    assert "DOM extractor drifted" in payload["message"]
+    assert "WB API refused this address (HTTP 403) first" in payload["message"]
+
+
+def test_search_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+    api_calls: list[str] = []
+    render_calls: list[str] = []
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        api_calls.append(url)
+        return 403, "", None
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        render_calls.append(url)
+        return SEARCH_PAYLOAD
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", fake_render)
+
+    search = _run(server.wb_search(query="UPD2018"))
+
+    assert len(api_calls) == 1 and "v9/search" in api_calls[0]
+    assert len(render_calls) == 1
+    assert search.count == 4
+    assert any("(HTTP 403)" in warning for warning in search.meta.warnings)
+
+
+def test_search_rate_limit_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 429, "", None
+
+    async def forbidden_render(url: str, js: str, want: str) -> dict[str, Any]:
+        raise AssertionError("a 429 must not reach the DOM path")
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", forbidden_render)
+
+    with pytest.raises(ToolError) as exc:
+        _run(server.wb_search(query="UPD2018"))
+    assert json.loads(str(exc.value))["error"] == "rate_limited"
+
+
 def test_api_transport_is_the_default() -> None:
     assert type(server._settings).model_fields["transport"].default == "api"
 
