@@ -11,6 +11,14 @@
 
 ### Fixed
 
+- Browser navigation: a 403 main document is no longer a block on sight. Ozon
+  answers the first request with 403 and a JS check that reloads the page by
+  itself, so `ozon_search` failed several times a week without any captcha.
+  Now the page gets up to 10 s for that reload; only a 403 that survives it
+  raises `NavBlocked`. The Playwright path waits for the new document to land,
+  so the host check sees its URL and a redirect resolves to its final status.
+  The raw-CDP path counts only main-frame documents: a 200 iframe on a block
+  page no longer turns the block into data.
 - Browser handoff: the idle bound no longer switches off when the event-loop
   clock is young (under ~60 s since boot). `last_used` used `0.0` as "never
   used", but loop time counts from boot, so a real timestamp can be zero or

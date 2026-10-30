@@ -512,6 +512,9 @@ async def get_context() -> AsyncIterator[BrowserContext]:
 # goto() for these instead of raising, so we must refuse to hand a block page or
 # login wall to a parser as though it were data.
 _NAV_FAIL_STATUSES = frozenset({401, 403, 407, 429, 500, 502, 503, 504})
+# Ozon answers the first request with 403 and a JS check that reloads the page
+# by itself; only a 403 that survives this window is a block.
+_ANTIBOT_RECHECK_S = 10.0
 _TAB_OP_TIMEOUT_S = 25.0
 
 
@@ -703,6 +706,8 @@ class _RawCdpPage:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + _RAW_NAV_TIMEOUT_S
         nav_error: object = None
+        main_frame: object = None
+        rechecking = False
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
@@ -712,19 +717,31 @@ class _RawCdpPage:
             except TimeoutError:
                 break
             msg = json.loads(raw)
-            if msg.get("id") == msg_id and "error" in msg:
-                nav_error = msg["error"]
+            if msg.get("id") == msg_id:
+                if "error" in msg:
+                    nav_error = msg["error"]
+                main_frame = main_frame or (msg.get("result") or {}).get("frameId")
             method = msg.get("method", "")
             params = msg.get("params", {})
             if method == "Network.responseReceived" and params.get("type") == "Document":
+                # iframes report Document responses too. Only the main frame's
+                # decides the verdict and the URL: a 200 iframe on a 403 block page
+                # must not turn the block into data. The first document is the
+                # main frame's, since an iframe needs a parent document to exist.
+                frame_id = params.get("frameId")
+                main_frame = main_frame or frame_id
                 response = params.get("response", {})
                 status = response.get("status")
-                if isinstance(status, int):
+                if isinstance(status, int) and (frame_id is None or frame_id == main_frame):
                     statuses.append(status)
                     self._url = response.get("url") or self._url
             elif method == "Page.frameNavigated":
                 self._note_event(msg)
             elif method == "Page.loadEventFired":
+                if statuses and statuses[-1] == 403 and not rechecking:
+                    rechecking = True
+                    deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
+                    continue
                 break
         if nav_error is not None:
             raise RuntimeError(f"CDP Page.navigate: {nav_error}")
@@ -1054,6 +1071,21 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
         try:
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
             status = resp.status if resp is not None else None
+            if status == 403:
+                # Wait for the main frame's next navigation to land, not just for a
+                # response: page.url must be the new document's before the host
+                # check, and a redirect must resolve to its final status. None (a
+                # History API change) proves nothing, so the 403 stands.
+                try:
+                    async with page.expect_navigation(
+                        wait_until="domcontentloaded", timeout=_ANTIBOT_RECHECK_S * 1000
+                    ) as navigation:
+                        pass
+                    reloaded = await navigation.value
+                    if reloaded is not None:
+                        status = reloaded.status
+                except _PlaywrightTimeoutError:
+                    pass
             if status in _NAV_FAIL_STATUSES:
                 final = ""
                 try:
