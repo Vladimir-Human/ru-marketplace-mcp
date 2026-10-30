@@ -16,7 +16,7 @@
 # from under a reproducible install.
 
 # ---- Stage 1: build the environment -----------------------------------------
-FROM ghcr.io/astral-sh/uv:0.11.32-python3.12-trixie-slim@sha256:519357e414a4240af8b3ac657466c20f9d6041b5a3ce999d96fa9d576ef7fd29 AS builder
+FROM ghcr.io/astral-sh/uv:0.13.6-python3.12-trixie-slim@sha256:bf889bda77474aa50c351caf1538b855ef2b7a30add45f26ca50dcb6ade06402 AS builder
 
 # - bytecode compile for faster cold starts (production images start often).
 # - copy mode, not hardlink: the cache mount and the image are different
