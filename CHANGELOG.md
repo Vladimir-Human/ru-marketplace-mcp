@@ -265,6 +265,11 @@
 
 ### Fixed
 
+- Фолбэк Wildberries на страницу: если после отказа API упал сам браузерный
+  драйвер (Playwright бросает свою ошибку, а не ошибку инструмента), ответ
+  теперь тоже говорит, что сначала API отказал адресу. Раньше такая ошибка
+  уходила общим `transport_down` без этой причины, и было непонятно, при чём
+  тут Chrome. Найдено живым прогоном 30 октября.
 - `wb_selfcheck` учитывает `WB_TRANSPORT=dom`: проверки `card` и `search_v9`
   читают отрисованные страницы теми же парсерами, что инструменты, вместо
   неиспользуемых API-хостов. Капча остаётся `inconclusive` без решения и повторов;
@@ -276,6 +281,11 @@
   (`--cov-fail-under=80`). В тексте теперь стоит то значение, которое
   проверяется.
 
+- Wildberries' fallback to the rendered page: when the browser driver itself
+  fails after an API refusal (Playwright raises its own error, not a tool
+  error), the answer now also says the API refused this address first. Before,
+  such a failure surfaced as a bare `transport_down` that never explained why
+  Chrome was involved. Found in the 30 October live run.
 - `wb_selfcheck` respects `WB_TRANSPORT=dom`: `card` and `search_v9` check
   rendered pages with the tools' parsers rather than unused API hosts. Captchas
   remain `inconclusive` without solving or retries; transport failures and parser
