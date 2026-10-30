@@ -368,8 +368,17 @@ def _dom_fallback_warning(reason: str) -> str:
     return f"dom_fallback: WB API refused this address ({reason}); read through the scraping Chrome"
 
 
-def _raise_dom_failure_after_refusal(exc: ToolError, reason: str) -> NoReturn:
-    """Re-raise the DOM path's own error, naming the API refusal that preceded it."""
+def _raise_dom_failure_after_refusal(exc: Exception, reason: str) -> NoReturn:
+    """Re-raise the DOM path's own error, naming the API refusal that preceded it.
+
+    A browser or driver failure (Playwright raises its own errors, not
+    ToolError) becomes the same transport_down the tool's outer handler would
+    report, so the operator still learns why Chrome was involved at all.
+    """
+    if not isinstance(exc, ToolError):
+        driver_error = TransportDownError(_redact(str(exc)), provider="wb").to_dict()
+        driver_error["message"] += f" (WB API refused this address ({reason}) first)"
+        raise ToolError(json.dumps(driver_error, ensure_ascii=False)) from exc
     try:
         payload = json.loads(str(exc))
     except json.JSONDecodeError:
@@ -961,7 +970,7 @@ async def wb_card(
                 log_event("wb_card.dom_fallback", reason=fallback_reason)
                 try:
                     return await _wb_card_dom(nm_ids, dest, ctx, fallback_reason=fallback_reason)
-                except ToolError as exc:
+                except Exception as exc:
                     _raise_dom_failure_after_refusal(exc, fallback_reason)
             if text and "<html" in text[:200].lower():
                 log_event("wb_card.blocked", reason="cloudflare_html")
@@ -1691,7 +1700,7 @@ async def wb_search(
                 log_event("wb_search.dom_fallback", reason=fallback_reason)
                 try:
                     return await _wb_search_dom(query, dest, page, ctx, fallback_reason=fallback_reason)
-                except ToolError as exc:
+                except Exception as exc:
                     _raise_dom_failure_after_refusal(exc, fallback_reason)
             if status_code in (401, 403) or (status_code != 429 and _is_edge_wall(text)):
                 # A refusal must not become a stale legacy answer (#101).

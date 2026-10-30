@@ -821,6 +821,37 @@ def test_dom_failure_after_an_api_refusal_names_the_refusal(monkeypatch: pytest.
     assert "WB API refused this address (HTTP 403) first" in payload["message"]
 
 
+@pytest.mark.parametrize("tool", ["wb_card", "wb_search"])
+def test_a_driver_failure_after_an_api_refusal_still_names_the_refusal(
+    tool: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Seen live on 2026-10-30: Playwright's own EPERM error bypassed the refusal note."""
+    monkeypatch.setattr(server._settings, "transport", "api")
+    monkeypatch.setattr(server._settings, "dom_fallback", True)
+
+    async def fake_safe_get_text(client: Any, url: str) -> tuple[int, str | None, str | None]:
+        return 403, "", None
+
+    async def driver_failure(url: str, js: str, want: str) -> dict[str, Any]:
+        raise RuntimeError("BrowserType.connect_over_cdp: EPERM: operation not permitted, mkdtemp")
+
+    async def no_wait() -> None:
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(D, "render", driver_failure)
+
+    call = server.wb_card(nm_ids=[1345073040]) if tool == "wb_card" else server.wb_search(query="iphone 15")
+    with pytest.raises(ToolError) as exc:
+        _run(call)
+    payload = json.loads(str(exc.value))
+    assert payload["error"] == "transport_down"
+    assert payload["retryable"] is True
+    assert "connect_over_cdp: EPERM" in payload["message"]
+    assert payload["message"].endswith("(WB API refused this address (HTTP 403) first)")
+
+
 def test_search_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
