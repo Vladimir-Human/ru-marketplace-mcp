@@ -7,6 +7,31 @@
 Русский текст первый, английский — ниже в каждом разделе. Аудитория проекта
 русскоязычная, и переводить для неё собственные заметки о релизе странно.
 
+## [Unreleased]
+
+### Changed
+
+- FastMCP 4 (4.1.4, MCP Python SDK v2) replaces the 3.x line in every
+  package; pydantic's floor rises to 2.12 with it. The servers now speak both
+  protocol eras: the handshake era (`initialize`, 2025-11-25 and older) and the
+  sessionless 2026-07-28 era (`server/discover`). The tool contract is
+  unchanged: the 20 card/search tools that return a `_meta` block still
+  advertise and return `_meta` (FastMCP 4 would have renamed it to `meta`), and
+  `compare_verify_offer` still nests the card's block as `meta`.
+- Browser handoff on the sessionless era: such a connection has no session, and
+  FastMCP gives every request a new `session_id`, so a retry could never find
+  its retained tab, which then stayed open until it expired. A stdio server now
+  keeps the tab for its one client (the process) instead; over HTTP nothing
+  names the caller between requests, so the challenge is reported without
+  retaining the tab. Handshake-era clients keep the per-session behaviour.
+- `compare_browser_snapshot` reads the client's declared capabilities on both
+  eras (the vision hint was lost on 2026-07-28 connections, which send no
+  `initialize` params).
+- The stdio smoke test (`scripts/e2e_stdio_check.py`) probes every server in
+  both eras: 32 sessions instead of 16. New offline tests start real stdio and
+  loopback HTTP servers to pin the client scope and the bearer-token check in
+  both eras.
+
 ## [2.5.4] - 2026-10-30
 
 ### Fixed

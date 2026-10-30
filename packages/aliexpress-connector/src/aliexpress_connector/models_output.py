@@ -22,7 +22,7 @@ class AliSearchItemOut(BaseModel):
 
 
 class AliSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")
@@ -33,7 +33,7 @@ class AliSearchResponse(BaseModel):
 
 
 class AliCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     item_id: str | None = Field(default=None, description="AliExpress item id (12-digit).")

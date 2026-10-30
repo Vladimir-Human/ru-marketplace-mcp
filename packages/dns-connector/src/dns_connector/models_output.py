@@ -19,7 +19,7 @@ class DnsSearchItemOut(BaseModel):
 
 
 class DnsSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")
@@ -30,7 +30,7 @@ class DnsSearchResponse(BaseModel):
 
 
 class DnsCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     product_id: str | None = Field(default=None, description="DNS product id/slug tail.")

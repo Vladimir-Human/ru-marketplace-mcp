@@ -929,7 +929,7 @@ def _build_search_url(query: str, page: int, location_id: str, category_id: str 
 @mcp.tool(
     name="avito_search",
     annotations=ToolAnnotations(
-        title="Avito Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Avito Search", read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True
     ),
 )
 async def avito_search(
@@ -1009,7 +1009,7 @@ async def avito_search(
 @mcp.tool(
     name="avito_card",
     annotations=ToolAnnotations(
-        title="Avito Item Card", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Avito Item Card", read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True
     ),
 )
 async def avito_card(
@@ -1100,7 +1100,11 @@ async def avito_card(
 @mcp.tool(
     name="avito_seller",
     annotations=ToolAnnotations(
-        title="Avito Seller Profile", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Avito Seller Profile",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def avito_seller(

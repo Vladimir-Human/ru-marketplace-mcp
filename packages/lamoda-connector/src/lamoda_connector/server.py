@@ -67,7 +67,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
-from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
+from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport import build_client
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
@@ -442,7 +442,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
     """Tier-2: render the search page in the operator's Chrome, extract tiles."""
     cache_key = f"search:{query}"
     url = f"{SITE_BASE}/catalogsearch/result/?q={urllib.parse.quote(query)}"
-    scope = current_mcp_session_id(ctx)
+    scope = current_client_scope(ctx)
     pending = has_pending_handoff(scope=scope, operation="lamoda_search", url=url)
     cached = None if pending else _cache.get(cache_key)
     if cached is not None:
@@ -496,7 +496,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
 @mcp.tool(
     name="lamoda_search",
     annotations=ToolAnnotations(
-        title="Lamoda Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Lamoda Search", read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True
     ),
 )
 async def lamoda_search(
@@ -556,7 +556,11 @@ async def lamoda_search(
 @mcp.tool(
     name="lamoda_card",
     annotations=ToolAnnotations(
-        title="Lamoda Product Card", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Lamoda Product Card",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def lamoda_card(

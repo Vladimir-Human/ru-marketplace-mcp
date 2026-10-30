@@ -650,7 +650,11 @@ def _parse_items(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int | N
 @mcp.tool(
     name="megamarket_search",
     annotations=ToolAnnotations(
-        title="Megamarket Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Megamarket Search",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def megamarket_search(
@@ -760,10 +764,10 @@ async def megamarket_search(
     name="megamarket_card",
     annotations=ToolAnnotations(
         title="Megamarket Product Card",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def megamarket_card(

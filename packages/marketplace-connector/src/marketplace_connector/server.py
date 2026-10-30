@@ -207,10 +207,10 @@ _mount_all()
     name="marketplace_sources",
     annotations=ToolAnnotations(
         title="Which Marketplaces Are Loaded",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def marketplace_sources() -> MarketplaceSourcesResponse:

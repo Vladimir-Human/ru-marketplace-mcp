@@ -26,7 +26,7 @@ class OzonSellerOut(BaseModel):
 
 
 class OzonCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     price: float | None = Field(default=None, description="Regular price in rubles.")
@@ -63,7 +63,7 @@ class OzonReviewItemOut(BaseModel):
 
 
 class OzonReviewsResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     url: str = Field(default="", description="Canonical Ozon reviews URL.")
@@ -108,7 +108,7 @@ class OzonSearchItemOut(BaseModel):
 
 
 class OzonSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")

@@ -327,10 +327,10 @@ def _product_node(payload: Any) -> dict | None:
     name="detmir_card",
     annotations=ToolAnnotations(
         title="Detsky Mir Product Card",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def detmir_card(
@@ -429,10 +429,10 @@ async def detmir_card(
     name="detmir_category",
     annotations=ToolAnnotations(
         title="Detsky Mir Category Listing",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def detmir_category(
@@ -547,10 +547,10 @@ async def detmir_category(
     name="detmir_categories",
     annotations=ToolAnnotations(
         title="Detsky Mir Catalog Categories",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def detmir_categories(

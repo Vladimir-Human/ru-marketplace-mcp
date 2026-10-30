@@ -65,7 +65,7 @@ from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, NotFound
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
-from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
+from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
 from pydantic import Field
 
@@ -903,10 +903,10 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
     name="compare_prices",
     annotations=ToolAnnotations(
         title="Compare Prices Across Russian Marketplaces",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def compare_prices(
@@ -1169,7 +1169,9 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
             "aliexpress": "item_id_or_url",
         }[name]
         result = await tool(**{argument: product_id_or_url})
-    payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    # by_alias=False keeps the nested card's metadata under "meta", as it has
+    # always been here, now that card models serialize "_meta" by alias.
+    payload = result.model_dump(mode="json", by_alias=False) if hasattr(result, "model_dump") else result
     return payload, requested_numeric_id
 
 
@@ -1177,10 +1179,10 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
     name="compare_verify_offer",
     annotations=ToolAnnotations(
         title="Verify Compared Offer",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def compare_verify_offer(
@@ -1303,10 +1305,10 @@ async def compare_verify_offer(
     name="compare_sources",
     annotations=ToolAnnotations(
         title="List Available Marketplaces",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
@@ -1380,8 +1382,12 @@ def _client_capabilities(ctx: Context | None) -> dict[str, Any]:
     if ctx is None:
         return {}
     try:
-        params = getattr(getattr(ctx, "session", None), "client_params", None)
-        capabilities = getattr(params, "capabilities", None)
+        session = getattr(ctx, "session", None)
+        # A 2026-07-28 request declares capabilities without initialize params,
+        # so read the session's own capabilities first.
+        capabilities = getattr(session, "client_capabilities", None)
+        if capabilities is None:
+            capabilities = getattr(getattr(session, "client_params", None), "capabilities", None)
     except Exception:  # pragma: no cover - defensive: transport-specific session objects
         return {}
     if capabilities is None:
@@ -1401,10 +1407,10 @@ def _client_capabilities(ctx: Context | None) -> dict[str, Any]:
     name="compare_browser_snapshot",
     annotations=ToolAnnotations(
         title="View a Retained Marketplace Page",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
     ),
 )
 async def compare_browser_snapshot(
@@ -1456,7 +1462,7 @@ async def compare_browser_snapshot(
             from mcp_core.transport.browser_handoff import snapshot_handoff
         except ImportError:
             raise_tool_error(NotFoundError("No retained browser page is available in this session"))
-        snapshot = await snapshot_handoff(scope=current_mcp_session_id(ctx), handoff_id=handoff_id)
+        snapshot = await snapshot_handoff(scope=current_client_scope(ctx), handoff_id=handoff_id)
         image_data = snapshot.pop("image_data")
         delivery = resolve_image_delivery(
             policy=os.environ.get("COMPARE_SNAPSHOT_IMAGES", "auto"),
@@ -1468,7 +1474,7 @@ async def compare_browser_snapshot(
             TextContent(type="text", text=json.dumps(snapshot, ensure_ascii=False))
         ]
         if delivery.deliver:
-            content.append(ImageContent(type="image", data=image_data, mimeType=snapshot["mime_type"]))
+            content.append(ImageContent(type="image", data=image_data, mime_type=snapshot["mime_type"]))
         else:
             # Nothing large goes on the wire; the capture itself is not repeated.
             snapshot.pop("mime_type", None)

@@ -44,11 +44,16 @@ yourself via env; it is never stored by the project either.)
 Set `CHROME_CHALLENGE_HANDOFF_S=120` in the MCP server's environment to retain
 DOM-detected Lamoda search and Taobao search/card challenge tabs for up to two
 minutes. Default `0` disables retention; the hard maximum is 300 seconds, including
-initial browser attachment/navigation. A headed Chrome and an active MCP session
-are required. This mode does not solve CAPTCHA or log into accounts.
+initial browser attachment/navigation. A headed Chrome and a client the server can
+recognise between calls are required: an MCP session on handshake-era connections
+(protocol 2025-11-25 and older), or, on sessionless 2026-07-28 connections, the
+stdio server process itself, since one stdio process serves one client. A
+sessionless HTTP connection names no client between requests, so there the
+challenge is reported without retaining the tab. This mode does not solve CAPTCHA
+or log into accounts.
 
 An error with `handoff_expires_at` confirms a retained tab. Complete the interaction
-in that tab, then repeat the same operation and arguments in the same MCP session.
+in that tab, then repeat the same operation and arguments from the same client.
 The connector reads that exact page without navigating again; a successful read
 closes it. For comparison, repeat the original query with only the affected source.
 Pending handoffs take precedence over successful-result caches, so another
@@ -62,8 +67,8 @@ connector calls from hiding it while the handoff is active. Foreground activatio
 is best-effort, especially for remote browsers. Expiry, errors, cancellation and
 graceful shutdown close owned tabs; a hard process kill cannot guarantee expiry
 in an external Chrome. Without `handoff_expires_at`, use the ordinary retry flow:
-HTTP errors rejected before DOM extraction, headless runs and calls without an
-MCP session do not retain a tab. No cookies, screenshots or browser profile copies
+HTTP errors rejected before DOM extraction, headless runs, CLI calls and
+sessionless HTTP calls do not retain a tab. No cookies, screenshots or browser profile copies
 are written by the handoff runtime. A retained error also carries an opaque
 `handoff_id`; a vision-capable MCP client may pass it to
 `compare_browser_snapshot(handoff_id)` to receive the current viewport as an

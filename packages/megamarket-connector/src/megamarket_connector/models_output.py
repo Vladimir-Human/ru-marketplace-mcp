@@ -25,7 +25,7 @@ class MegamarketSearchItemOut(BaseModel):
 
 
 class MegamarketSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")
@@ -37,7 +37,7 @@ class MegamarketSearchResponse(BaseModel):
 
 
 class MegamarketCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     item_id: str | None = Field(default=None, description="Megamarket goods id.")

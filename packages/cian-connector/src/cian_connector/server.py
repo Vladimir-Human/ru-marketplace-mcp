@@ -716,10 +716,10 @@ def _validate_region(region: str | None) -> str:
     name="cian_search",
     annotations=ToolAnnotations(
         title="Cian Real-Estate Search",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def cian_search(
@@ -873,10 +873,10 @@ async def cian_search(
     name="cian_card",
     annotations=ToolAnnotations(
         title="Cian Offer Card",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def cian_card(

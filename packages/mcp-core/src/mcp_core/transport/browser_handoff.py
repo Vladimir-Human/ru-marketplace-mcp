@@ -4,7 +4,7 @@ No browser storage or extracted content is persisted. A lease keeps its original
 context manager alive; resuming never searches for tabs or navigates again.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Retain and resume exact session-owned browser challenge pages.
+# PURPOSE: Retain and resume exact client-owned browser challenge pages.
 # SCOPE: Bounded process-local leases, immutable lifetime, idle expiry and snapshots.
 # DEPENDS: mcp_core.errors,transport.chrome_cdp; stdlib asyncio,hashlib,json,time.
 # LINKS: M-BROWSER-HANDOFF; M-CHROME-CDP; M-ERRORS; M-RUNTIME.
@@ -23,7 +23,7 @@ context manager alive; resuming never searches for tabs or navigates again.
 # _stop: Shield owned cleanup from repeated cancellation.
 # close_handoffs: Release all owned tabs during graceful shutdown.
 # handoff_diagnostics: Inspect registry budgets without browser operations.
-# snapshot_handoff: Capture only the caller session's live retained page.
+# snapshot_handoff: Capture only the calling client's live retained page.
 # read_with_handoff: Read once or resume the exact retained operation.
 # END_MODULE_MAP
 
@@ -415,7 +415,7 @@ def handoff_diagnostics() -> dict[str, Any]:
 
 
 async def snapshot_handoff(*, scope: str | None, handoff_id: str) -> dict[str, Any]:
-    """Capture a retained page in this session; never open or navigate a tab."""
+    """Capture a retained page owned by this client; never open or navigate a tab."""
     if not handoff_id.isascii():
         raise NotFoundError("Browser handoff is unavailable")
     loop = asyncio.get_running_loop()
@@ -468,9 +468,9 @@ async def read_with_handoff(
     allowed_hosts: Collection[str] | None = None,
     note_out: dict[str, Any] | None = None,
 ) -> Result:
-    """Read once, or resume the exact same session's owned challenge tab.
+    """Read once, or resume the exact same client's owned challenge tab.
 
-    Retention requires explicit positive CHROME_CHALLENGE_HANDOFF_S, a session
+    Retention requires explicit positive CHROME_CHALLENGE_HANDOFF_S, a client
     scope and a headed browser. Expiry includes initial attach/navigation and is
     never extended by retries. The returned timestamp only describes retention;
     foreground activation is best-effort on the connected browser's machine.

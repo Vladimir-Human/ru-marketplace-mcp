@@ -77,7 +77,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
-from mcp_core.runtime import browser_handoff_lifespan, current_mcp_session_id
+from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
@@ -458,7 +458,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         data.pop("_handoff_id", None)
         return data
 
-    scope = current_mcp_session_id(ctx)
+    scope = current_client_scope(ctx)
     async with _cdp_lock:
         await _polite_wait()
         if scope is None:
@@ -616,7 +616,7 @@ def _page_challenge_kind(data: dict[str, Any]) -> str | None:
 @mcp.tool(
     name="taobao_search",
     annotations=ToolAnnotations(
-        title="Taobao Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Taobao Search", read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True
     ),
 )
 async def taobao_search(
@@ -646,7 +646,7 @@ async def taobao_search(
     try:
         params = urllib.parse.urlencode({"q": query.strip(), "page": str(page)})
         url = f"{SEARCH_BASE}?{params}"
-        pending = has_pending_handoff(scope=current_mcp_session_id(ctx), operation="taobao_search", url=url)
+        pending = has_pending_handoff(scope=current_client_scope(ctx), operation="taobao_search", url=url)
         cached = None if pending else _cache.get(url)
         if cached is not None:
             payload, tier = cached, "cache"
@@ -710,7 +710,11 @@ async def taobao_search(
 @mcp.tool(
     name="taobao_card",
     annotations=ToolAnnotations(
-        title="Taobao Item Card", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="Taobao Item Card",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def taobao_card(
@@ -746,7 +750,7 @@ async def taobao_card(
                 )
             )
         url = f"{ITEM_BASE}?id={item_id}"
-        pending = has_pending_handoff(scope=current_mcp_session_id(ctx), operation="taobao_card", url=url)
+        pending = has_pending_handoff(scope=current_client_scope(ctx), operation="taobao_card", url=url)
         cached = None if pending else _cache.get(url)
         if cached is not None:
             payload, tier = cached, "cache"
