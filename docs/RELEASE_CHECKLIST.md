@@ -82,10 +82,10 @@ npm ci --no-audit --no-fund
 
 ## 2. Консистентность версий
 
-Одна версия живёт в восьмидесяти четырёх местах: семнадцать `pyproject.toml`,
+Одна версия живёт в восьмидесяти пяти местах: семнадцать `pyproject.toml`,
 шестнадцать `__version__`, пятнадцать `SERVER_VERSION`, пятнадцать пинов
 `mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier, `dsh/package.json` и
-восемнадцать тегов образа в `docker-compose.yml` и `docs/DEPLOYMENT.md`. Вручную такое не
+девятнадцать тегов образа в `docker-compose.yml`, `docs/DEPLOYMENT.md` и `dsh/README.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
 
@@ -104,8 +104,18 @@ JSON-RPC — это единственное место, где число пр�
 Семь источников отказывают датацентровым адресам, поэтому CI их не проверяет.
 Это единственное место, где они проверяются вообще.
 
+Живые запросы идут только через `scripts/live_check.py` или `pytest -m live`:
+оба ставят бюджет владельца — не больше 40 запросов за прогон, не больше 8 на
+площадку и пауза не меньше 3 секунд между запросами к одной площадке. Журнал
+общий, `.live-budget.json` в корне репозитория; `python scripts/live_check.py
+ledger` показывает, сколько уже израсходовано. Запрос сверх лимита
+останавливает прогон до отправки, а не после. Новый прогон начинается после
+`python scripts/live_check.py reset`: журнал прошлого прогона не удаляется, а
+переименовывается в `.live-budget-<время>.json`.
+
 ```powershell
 pwsh scripts\start_chrome_cdp.ps1     # Chrome с CDP на 127.0.0.1:9222
+python scripts\live_check.py selfcheck dns
 ```
 
 Автоматических тестов для этого яруса нет: маркер `cdp` объявлен в
@@ -189,11 +199,16 @@ git push -u origin release/vX.Y.Z
 gh pr create --base main --head release/vX.Y.Z --body-file RELEASE_NOTES_vX.Y.Z.md
 ```
 
-Мерж только с зелёным CI. Затем:
+Мерж только с зелёным CI. Затем — на коммите релиза, до тега — прогнать
+workflow `Image check`: он собирает оба образа и проводит stdio-образ через
+настоящую MCP-сессию. Без него сломанный Dockerfile или потерянный пакет
+всплывут только после пуша тега, когда образ уже опубликован.
 
 ```powershell
 gh pr merge --squash --delete-branch
 git checkout main ; git pull --ff-only origin main
+gh workflow run image-check.yml --ref main
+gh run watch
 git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
@@ -254,17 +269,23 @@ install, image build or CI is red.
    revision the images build from. Use `--durations=10` to investigate slow
    tests; total runtime alone does not prove network access.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   eighty-four declarations (seventeen `pyproject.toml`, sixteen `__version__`,
-   fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, eighteen image tags,
+   eighty-five declarations (seventeen `pyproject.toml`, sixteen `__version__`,
+   fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, nineteen image tags,
    `server.json`, its OCI image identifier, and `dsh/package.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
    actually say.
 3. **Live checks from the operator's machine** — seven sources refuse datacenter
-   addresses, so this is the only place they are exercised at all. Run each
-   `*_selfcheck`: `success` means the transport answered, `drift_detected` means
-   the page arrived and the parser did not understand it (the only case that
-   calls for a selector fix), `inconclusive` means IP, captcha or session got in
-   the way and the source stays unverified.
+   addresses, so this is the only place they are exercised at all. Live requests
+   go only through `scripts/live_check.py` or `pytest -m live`: both install the
+   owner's budget of at most 40 requests per run, at most 8 per marketplace and
+   at least 3 s between requests to one marketplace. The ledger is shared in
+   `.live-budget.json` at the repository root; `python scripts/live_check.py
+   ledger` reports what one run has spent. A request over a cap stops the run
+   before it is sent. `python scripts/live_check.py reset` starts a new run; the
+   old ledger is kept as `.live-budget-<time>.json`, not deleted. Run each `*_selfcheck`: `success` means the transport
+   answered, `drift_detected` means the page arrived and the parser did not
+   understand it (the only case that calls for a selector fix), `inconclusive`
+   means IP, captcha or session got in the way and the source stays unverified.
 4. **Compare by eye** — a passing selfcheck is not proof the number is right.
    DNS once went green while every title and price came back empty. Take two or
    three products per source and read the site next to the tool: the price an
@@ -275,7 +296,11 @@ install, image build or CI is red.
 6. **Write `docs/releases/RELEASE_NOTES_<tag>.md`** and say plainly which sources were
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
-7. **Branch, PR, green CI, squash merge, tag.** The tag push builds and attaches
-   32 artifacts (16 wheels and 16 sdists).
+7. **Branch, PR, green CI, squash merge, tag.** On the release commit, before
+   tagging, run the `Image check` workflow: it builds both images and drives the
+   stdio image through a real MCP session. Without it a broken Dockerfile or a
+   missing package surfaces only after the tag push, once the image is already
+   published. The tag push builds and attaches 32 artifacts (16 wheels and 16
+   sdists).
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page.

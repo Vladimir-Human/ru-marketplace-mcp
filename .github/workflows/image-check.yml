@@ -1,0 +1,70 @@
+name: Image check
+
+# Build both container images on the pull request and run the stdio image
+# through a real MCP session. Docker Desktop does not start on the maintainer's
+# machine, and without this job the image is first run after it is pushed at
+# tag time: a broken Dockerfile or a missing package would be discovered too
+# late to fix cheaply. The release checklist runs this workflow on the release
+# commit before the tag.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Dockerfile
+      - Dockerfile.stdio
+      - .dockerignore
+      - uv.lock
+      - pyproject.toml
+      - packages/*/pyproject.toml
+      - .github/workflows/image-check.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  # Same event-aware shape as ci.yml: a newer pull-request run supersedes the
+  # older one, and a manual run is never cancelled by a pull request.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build and probe the images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read the release version
+        id: version
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the stdio image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile.stdio
+          load: true
+          push: false
+          tags: ru-marketplace-mcp-image-check:${{ steps.version.outputs.value }}
+
+      # The acceptance gate for the exact artifact the registry will advertise:
+      # initialize / tools/list / tools/call over a real `docker run --rm -i`.
+      - name: Real MCP session over docker stdio
+        env:
+          MCP_DOCKER_IMAGE: ru-marketplace-mcp-image-check:${{ steps.version.outputs.value }}
+          MCP_EXPECTED_VERSION: ${{ steps.version.outputs.value }}
+        run: python3 scripts/e2e_stdio_check_docker.py
+
+      - name: Build the HTTP image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile
+          load: false
+          push: false
+          tags: ru-marketplace-mcp-image-check:${{ steps.version.outputs.value }}-http

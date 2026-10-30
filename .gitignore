@@ -51,6 +51,9 @@ Thumbs.db
 scratch/
 *.log
 
+# Live-run request ledger (scripts/live_check.py and pytest -m live share it).
+.live-budget*.json
+
 # Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
 *.zip
 

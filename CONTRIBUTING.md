@@ -42,6 +42,11 @@ uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
 `revision = 3`, а образы собираются на uv 0.13.6 — такой лок-файл не тот, из
 которого собираются образы. `scripts/check_lock_revision.py` ловит это в CI.
 
+Версию релиза поднимает `uv run python scripts/bump_version.py NEW`: он меняет
+все объявления из общей таблицы `scripts/version_sites.py` — ровно те, которые
+потом проверяет `check_versions.py`, — и сразу запускает эту проверку.
+`--dry-run` печатает `файл:строка старое -> новое` и ничего не пишет.
+
 CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13.
 
 **Кросс-платформенный прогон mypy обязателен, если трогаешь платформозависимый
@@ -171,6 +176,11 @@ Relocking `uv.lock` needs uv 0.13.6 or newer:
 into the lockfile, while the images build with uv 0.13.6 — so the committed
 lockfile would not be the one the images are built from.
 `scripts/check_lock_revision.py` catches that in CI.
+
+Bump a release version with `uv run python scripts/bump_version.py NEW`. It
+rewrites every declaration from the one table in `scripts/version_sites.py` —
+exactly the set `check_versions.py` checks — and then runs that check.
+`--dry-run` prints `file:line old -> new` and writes nothing.
 
 CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,
 types and the no-print and version checks run once, on Ubuntu — mypy covers the other

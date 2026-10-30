@@ -1,0 +1,22 @@
+# One line-ending policy for every checkout.
+#
+# Windows CI used to check out with core.autocrlf, turning scripts into CRLF and
+# breaking a test that expected LF. With `text=auto eol=lf` a checkout matches
+# the index on every OS: text is normalized to LF in the repository and checked
+# out as LF, and Git's own binary detection keeps binary files untouched.
+* text=auto eol=lf
+
+# Binary artifacts that a future contribution may add. Normalizing these would
+# corrupt them; none of them are tracked today, so this changes no existing file.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
