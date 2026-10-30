@@ -15,10 +15,12 @@ defects the modeled grid could not show:
 3. The legacy line scan for shop/sales/location splits on newlines, and the
    rendered tile text carries none, so all three came back null or glued.
 
-Note: tiles that link to detail.tmall.com instead of item.taobao.com stay out
-of scope by design (the connector speaks item.taobao.com); the fixture holds
-three extractable tiles. The DOM half needs Node with jsdom and skips without
-it.
+Note: this 2026-08-07 capture happens to hold no Tmall tiles, so it still
+yields the same three extractable tiles. Tmall listings are NOT out of scope
+any more — they are ordinary products (owner decision, 2026-10-30) and are
+covered by the newer mixed capture
+(``fixtures/search_grid_iphone15_live.html``). The DOM half needs Node with
+jsdom and skips without it.
 """
 
 from __future__ import annotations

@@ -26,6 +26,9 @@ SEARCH_EXTRACTED = {
     "anchors_total": 133,
     "login_anchors": 2,
     "body_snippet": "亲，请登录 免费注册 手机-淘宝搜索 Apple iPhone 16 Pro Max 全网通",
+    # The extractor always transports the loading marker; a healthy page that
+    # finished rendering reports it as false.
+    "grid_loading": False,
     "items": [
         {
             "item_id": "123456789012",
@@ -672,6 +675,7 @@ async def test_selfcheck_runs_the_shape_canary_past_hidden_challenge_text(monkey
             "anchors_total": 133,
             "login_anchors": 2,
             "body_snippet": "亲，请登录 免费注册 人机验证 captcha baxia Apple iPhone 16 Pro Max 全网通",
+            "grid_loading": False,
             "items": [
                 {
                     "item_id": "123456789012",
@@ -707,6 +711,7 @@ async def test_selfcheck_cries_shape_drift_when_the_price_family_vanishes(monkey
             "anchors_total": 133,
             "login_anchors": 0,
             "body_snippet": "手机-淘宝搜索 Apple iPhone 16 Pro Max 全网通",
+            "grid_loading": False,
             "items": [
                 {
                     "item_id": "123456789012",

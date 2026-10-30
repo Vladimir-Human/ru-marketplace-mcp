@@ -246,6 +246,53 @@ async def test_a_timeout_is_reported_as_a_timeout(monkeypatch):
     assert outcomes["yandex_market"].requires_user_action is False
 
 
+# START_BLOCK_TAOBAO_LOADING_TIMEOUT
+async def test_taobao_loading_timeout_keeps_citilink_results(monkeypatch):
+    """R-TAOBAO-GRID-LOADING, R-ERRORS: the real Taobao tool's loading error maps to retryable timeout."""
+    from mcp_core.cache import TTLCache
+    from taobao_connector import server as taobao_server
+
+    calls = []
+    monkeypatch.setattr(taobao_server, "_cache", TTLCache(ttl_s=300))
+    monkeypatch.setenv("MARKETPLACE_SOURCES", "taobao,citilink,compare")
+
+    async def render(url, extract_js, wait_ms, ctx):
+        calls.append("taobao")
+        return {
+            "title": "iphone 15_淘宝搜索",
+            "items": [],
+            "anchors_total": 0,
+            "login_anchors": 0,
+            "body_snippet": "加载中...",
+            "grid_loading": True,
+        }
+
+    async def taobao(query, limit):
+        await taobao_server.taobao_search(query)
+        return []
+
+    async def citilink(query, limit):
+        calls.append("citilink")
+        return [offer("citilink", 500.0)]
+
+    monkeypatch.setattr(taobao_server, "_cdp_render", render)
+    stub_sources(monkeypatch, {"taobao": taobao, "citilink": citilink})
+    result = await server.compare_prices("iphone 15", sources=["taobao", "citilink"])
+    outcome = next(it for it in result.source_outcomes if it.source == "taobao")
+    assert outcome.status == "timeout"
+    assert outcome.error_code == "timeout"
+    assert outcome.retryable is True
+    assert outcome.requires_user_action is False
+    assert result.complete is False
+    assert result.sources_ok == ["citilink"]
+    assert result.total_offers == 1
+    assert result.cheapest.source == "citilink"
+    assert calls.count("taobao") == calls.count("citilink") == 1
+
+
+# END_BLOCK_TAOBAO_LOADING_TIMEOUT
+
+
 @pytest.mark.parametrize("wire_error", [False, True])
 async def test_challenge_keeps_partial_results_and_recovers_only_failed_source(monkeypatch, wire_error):
     calls = []

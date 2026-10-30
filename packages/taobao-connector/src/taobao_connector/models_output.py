@@ -26,7 +26,10 @@ class TaobaoSearchItemOut(BaseModel):
     sales: str | None = Field(
         default=None, description="Sales label as displayed (e.g. '2000+人付款'); kept verbatim, counts vary by panel."
     )
-    url: str | None = Field(default=None, description="Canonical item URL on item.taobao.com.")
+    url: str | None = Field(
+        default=None,
+        description="Canonical item URL, keeping the listing's own host: item.taobao.com for Taobao, detail.tmall.com for Tmall.",
+    )
 
 
 class TaobaoSearchResponse(BaseModel):

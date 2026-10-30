@@ -24,6 +24,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH_GOLDEN = [
     "anchors_total:int",
     "body_snippet:str",
+    "grid_loading:bool",
     "items[].item_id:str",
     "items[].location:null",
     "items[].price_texts.attached:empty_array",
@@ -44,6 +45,9 @@ SEARCH_GOLDEN = [
 # structural wall markers (anchors_total, login_anchors, body_snippet) that
 # catch the EMPTY-title wall variant — they are part of the golden so losing
 # them is loud, exactly like losing a price path.
+# Measured again 2026-10-30 (loading grid): the extractor transports the
+# structural loading marker (grid_loading), so a grid that is still rendering
+# is not read as an empty catalog. It is in the golden for the same reason.
 
 CARD_GOLDEN = [
     "anchors_total:int",
@@ -118,6 +122,7 @@ def test_missing_required_families_sees_a_lost_price_family() -> None:
     drifted = [
         "anchors_total:int",
         "body_snippet:str",
+        "grid_loading:bool",
         "items[].item_id:str",
         "items[].title:str",
         "items[].url:str",

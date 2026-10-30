@@ -20,6 +20,7 @@ through the tool and selfcheck paths. All offline — no CDP, no network.
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,34 @@ def _patch_render(monkeypatch, payload):
         return payload
 
     monkeypatch.setattr(server, "_cdp_render", fake_render)
+
+
+class _FakePage:
+    """One owned page that answers every evaluation with the same payload."""
+
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+        self.reads = 0
+        self.opens = 0
+        self.closes = 0
+
+    async def evaluate(self, expression: str) -> str:
+        self.reads += 1
+        return json.dumps(self.payload, ensure_ascii=False)
+
+
+def _patch_page(monkeypatch, page):
+    """Replace the owned-page factory, keeping the real _cdp_render in place."""
+
+    @asynccontextmanager
+    async def open_mock(url, wait_ms):
+        page.opens += 1
+        try:
+            yield page
+        finally:
+            page.closes += 1
+
+    monkeypatch.setattr(server, "open_page", open_mock)
 
 
 def _tool_error_payload(excinfo) -> dict:
@@ -119,6 +148,23 @@ async def test_selfcheck_over_the_live_wall_is_inconclusive_never_drift(monkeypa
     assert search.state == "inconclusive"
     assert search.reason == "login_wall", "a wall must never read as parse_smoke_failed drift"
     assert any("login wall" in note for note in search.notes)
+
+
+async def test_the_live_wall_is_never_waited_on(monkeypatch) -> None:
+    """The captured wall also says «加载中...». A wall must not be treated as
+    an unfinished grid: the extra poll would only burn the deadline before the
+    same challenge answer. One read, one challenge, no wait."""
+    payload = _wall_payload()
+    assert payload["grid_loading"] is True, "this wall carries the loading marker too"
+    page = _FakePage(payload)
+    _patch_page(monkeypatch, page)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_search("手机")
+
+    assert _tool_error_payload(excinfo)["error"] == "challenge_required"
+    assert page.reads == 1, "a wall must not be polled"
+    assert page.opens == page.closes == 1
 
 
 # ------------------------------------------------------------- capture hygiene ----

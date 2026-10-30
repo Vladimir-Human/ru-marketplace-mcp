@@ -42,6 +42,18 @@
   <rule id="R-CROSS-PLATFORM" source="CONTRIBUTING.md; packages/mcp-core/src/mcp_core/process.py; .github/workflows/ci.yml">
     Support Windows, Linux and macOS. Keep platform-specific process termination behind patchable seams, obtain POSIX-only functions through guarded getattr access and allowlist child environments. CI declares Python 3.12/3.13 on all three OSes and host/win32/darwin type checks; current execution outcomes are not verified by this documentation change.
   </rule>
+  <requirement id="R-TAOBAO-QUERY" source="Owner brief-taobao.md, 2026-10-30, issue 1">
+    Encode spaces in every Taobao search URL as %20, not +, including selfchecks. The same canonical URL remains the search cache and browser-handoff key; literal plus signs remain escaped query data.
+  </requirement>
+  <requirement id="R-TAOBAO-TMALL-SEARCH" source="Owner brief-taobao.md, 2026-10-30, issue 2 and owner decision dated 2026-10-30">
+    Include ordinary detail.tmall.com/item.htm listings in Taobao search with their real HTTPS host, id, title, CNY price and shop, preserving item.taobao.com tiles. Deliberately exclude click.simba.taobao.com ad-click trackers because visiting them bills advertisers. Prove extraction offline against a trimmed real 2026-10-30 capture with at least two Taobao tiles, two Tmall tiles and one ad tile, source-derived ground truth and a SHA-256 provenance pin.
+  </requirement>
+  <requirement id="R-TAOBAO-TMALL-CARD" source="Owner brief-taobao.md, 2026-10-30, issue 2">
+    Refuse a detail.tmall.com card URL, or a Taobao card navigation rejected for redirecting there, with a clear non-retryable bad_request or not_found error. Say Tmall listings are not readable by taobao_card and search already carries title, price, shop and URL. Do not widen the CDP host policy or mine unrelated hosts for item ids.
+  </requirement>
+  <requirement id="R-TAOBAO-GRID-LOADING" source="Owner brief-taobao.md, 2026-10-30, issue 3">
+    Transport a structural boolean grid_loading from rendered text containing 加载中, excluding scripts/styles. For an empty grid with no login-wall or anti-bot markers, re-evaluate in the same owned page about every 1.5 seconds for at most about 10 extra seconds. Persistent loading is a retryable timeout, including the compare source outcome, not parser_drift. Login/CAPTCHA walls never wait and remain challenge_required; a non-loading empty grid remains parser_drift. Selfchecks must not call an unfinished grid parser drift. The marker is part of the search shape reference and a required key family, so losing it is loud.
+  </requirement>
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
   </rule>
