@@ -67,8 +67,8 @@ connector calls from hiding it while the handoff is active. Foreground activatio
 is best-effort, especially for remote browsers. Expiry, errors, cancellation and
 graceful shutdown close owned tabs; a hard process kill cannot guarantee expiry
 in an external Chrome. Without `handoff_expires_at`, use the ordinary retry flow:
-HTTP errors rejected before DOM extraction, headless runs and calls without an
-MCP session do not retain a tab. No cookies, screenshots or browser profile copies
+HTTP errors rejected before DOM extraction, headless runs, CLI calls and
+sessionless HTTP calls do not retain a tab. No cookies, screenshots or browser profile copies
 are written by the handoff runtime. A retained error also carries an opaque
 `handoff_id`; a vision-capable MCP client may pass it to
 `compare_browser_snapshot(handoff_id)` to receive the current viewport as an

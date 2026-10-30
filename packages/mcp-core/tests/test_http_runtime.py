@@ -17,10 +17,11 @@ import sys
 import textwrap
 import time
 
+import httpx2
 import pytest
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
-from fastmcp.exceptions import McpError
+from fastmcp.exceptions import McpError, ToolError
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 TOKEN = "loopback-test-token"
@@ -92,6 +93,33 @@ def _client(url: str, mode: str, token: str | None) -> Client:
 async def test_bearer_token_refuses_every_era_without_the_token(http_url, mode, token):
     with pytest.raises(McpError, match="HTTP bearer authentication required"):
         async with _client(http_url, mode, token) as client:
+            await client.call_tool("scope", {})
+
+
+@pytest.mark.parametrize("mode", ["legacy", "auto"])
+async def test_bearer_token_is_checked_on_every_request_not_only_at_connect(http_url, mode):
+    """An authenticated connection whose later requests lose the token is refused.
+
+    Guards against a middleware that only checks initialize/discover: here the
+    connection opens with the token, then the same client sends a call without it.
+    """
+    drop_token = False
+
+    async def strip_authorization(request: httpx2.Request) -> None:
+        if drop_token:
+            request.headers.pop("Authorization", None)
+
+    def factory(**kwargs) -> httpx2.AsyncClient:
+        return httpx2.AsyncClient(event_hooks={"request": [strip_authorization]}, **kwargs)
+
+    transport = StreamableHttpTransport(
+        http_url, headers={"Authorization": f"Bearer {TOKEN}"}, httpx_client_factory=factory
+    )
+    async with Client(transport, mode=mode, timeout=30) as client:
+        assert (await client.call_tool("scope", {})).structured_content is not None
+        drop_token = True
+        # A refused tools/call comes back as a tool error, raised before the tool runs.
+        with pytest.raises((ToolError, McpError), match="HTTP bearer authentication required"):
             await client.call_tool("scope", {})
 
 

@@ -118,7 +118,8 @@ to Taobao or Megamarket if using those sources, then run a targeted check:
 uv run marketplace-mcp doctor ozon aliexpress cian
 ```
 
-Keep the same MCP session when using browser challenge handoff. Configuration,
+Repeat the call from the same client (the same MCP session, or the same stdio
+server process) when using browser challenge handoff. Configuration,
 supported challenge types, and limits are documented in
 [optional challenge handoff](CDP_SETUP.md#optional-challenge-handoff).
 
