@@ -68,7 +68,7 @@ MPStats стоит особняком: это единственный **пла�
 поднялись, а какие отвалились и почему), так что в нём 40 инструментов: 39
 смонтированных плюс этот.
 
-**Проверка 2.6.0:** живая проверка и сверка с сайтами пока не выполнены; для этой версии ни один источник не подтверждён. [Статус и план проверки](docs/releases/RELEASE_NOTES_v2.6.0.md). Результаты [прогона v2.5.4](docs/releases/RELEASE_NOTES_v2.5.4.md) остаются историческими данными, а не подтверждением работы v2.6.0.
+**Проверка 2.7.0:** 30 октября с одного адреса Wildberries при отказе API (HTTP 403) сам прочитал поиск через Chrome: 40 товаров, у всех цена. Код остальных источников с v2.6.0 не менялся; их проверял [прогон v2.6.0](docs/releases/RELEASE_NOTES_v2.6.0.md#статус-живой-проверки) того же дня (12 из 13 источников, MPStats без токена). [Подробности v2.7.0](docs/releases/RELEASE_NOTES_v2.7.0.md#статус-живой-проверки).
 
 ## Быстрый старт
 
@@ -772,7 +772,7 @@ hard anti-bot are read through your own Chrome. One optional exception: MPStats
 takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
 it every other server is unaffected.
 
-**2.6.0 verification:** live checks and comparison against the sites are still pending; no source is verified for this version. See the [status and verification plan](docs/releases/RELEASE_NOTES_v2.6.0.md). The [v2.5.4 run](docs/releases/RELEASE_NOTES_v2.5.4.md) remains historical evidence, not verification of v2.6.0.
+**2.7.0 verification:** on 30 October, from one address, Wildberries fell back to its rendered search page after the API refused (HTTP 403) and returned 40 results, all priced. The other sources' code is unchanged since v2.6.0; they were checked in the [v2.6.0 run](docs/releases/RELEASE_NOTES_v2.6.0.md) the same day (12 of 13 sources; MPStats has no token). [v2.7.0 details](docs/releases/RELEASE_NOTES_v2.7.0.md).
 
 ## What you get
 

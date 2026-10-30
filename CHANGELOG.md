@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-30
+
+Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
+
+Install and first run: `install --write` with profiles and a `setup` wizard, Chrome and site checks from the CLI, a Wildberries fallback to the rendered page when the API refuses, a generated tool reference, and PyPI preparation (publishing off).
+
 ### Added
 
 - Подготовлен один дополнительный PyPI-бандл `ru-marketplace-mcp`: скрипт
