@@ -28,7 +28,9 @@
   eras (the vision hint was lost on 2026-07-28 connections, which send no
   `initialize` params).
 - The stdio smoke test (`scripts/e2e_stdio_check.py`) probes every server in
-  both eras: 32 sessions instead of 16.
+  both eras: 32 sessions instead of 16. New offline tests start real stdio and
+  loopback HTTP servers to pin the client scope and the bearer-token check in
+  both eras.
 
 ## [2.5.4] - 2026-10-30
 
