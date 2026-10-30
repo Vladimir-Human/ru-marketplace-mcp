@@ -18,8 +18,8 @@ uv sync --frozen --all-packages
 Node and jsdom are needed for contributor DOM tests only. You can use the MCP
 servers without running the test suite or installing Node.
 
-The next step is to wire a client, and the CLI can do that for you:
-`marketplace-mcp install claude --write` (see step 2).
+The next step is to wire a client, and the guided setup does it for you (see
+step 2).
 
 ## 2. Choose one server for your task
 
@@ -29,18 +29,35 @@ The next step is to wire a client, and the CLI can do that for you:
 | Inspect a shortlist with optional reviews | `decision-mcp` | Comparison tools plus `decision_inspect` |
 | Search a specific marketplace, read reviews, or use Cian | `marketplace-mcp` | All installed connectors |
 
-Let the CLI write the client configuration:
+Start with the guided setup:
+
+```console
+uv run marketplace-mcp setup
+```
+
+It detects Claude Desktop, Cursor and Claude Code, writes the config with the
+compare profile by default, starts the scraping Chrome, runs doctor's live
+checks and offers `unblock` for a source the site walls off. `--dry-run` prints
+the steps and files without writing, starting or requesting anything;
+`--profile decision` or `--profile full` chooses another tool set.
+
+To write one named client's config instead:
 
 ```console
 uv run marketplace-mcp install claude --write
 ```
 
-It adds one `marketplace` entry running the unified server to the client's own
-config file, fills in the absolute path to `uv` and to your checkout, keeps
-other servers and settings as they are, and saves the old file as
-`<file>.bak-<timestamp>`. Restart the client afterwards. `--dry-run` shows what
-would be written and writes nothing; `--per-source` writes one entry per source
-instead of the unified one.
+It adds one `marketplace` entry to the client's own config file, fills in the
+absolute path to `uv` and to your checkout, keeps other servers and settings as
+they are, and saves the old file as `<file>.bak-<timestamp>`. Restart the client
+afterwards. The default `--profile compare` writes `compare-mcp`: 4
+price-comparison tools, about 0.9k tokens per request. `--profile decision`
+adds shortlist card inspection (5 tools), and `--profile full` writes
+`marketplace-mcp` with every per-source tool (about 13.6k tokens). The entry
+name stays `marketplace`, and a config that already has it keeps its profile
+unless you pass `--profile`. `--dry-run` shows what would be written and writes
+nothing; `--per-source` writes one entry per source instead and cannot be
+combined with `--profile`.
 
 If you prefer to paste the configuration yourself, start with one entry in your
 client's MCP configuration. Replace the absolute
@@ -70,9 +87,9 @@ uv run marketplace-mcp install claude --per-source
 
 The command prints the per-source block for manual insertion. Copy only the
 sources you want; without `--per-source` it prints the single `marketplace`
-entry described above. MPStats is optional and needs a paid token; ordinary
-marketplace queries do not need it. `install cursor`, `install claude-code`, and
-`install dsh` are also supported.
+entry for the selected profile described above. MPStats is optional and needs a
+paid token; ordinary marketplace queries do not need it. `install cursor`,
+`install claude-code`, and `install dsh` are also supported.
 
 ## 3. Check two sources before adding a browser
 

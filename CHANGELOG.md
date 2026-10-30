@@ -88,6 +88,25 @@
   старым uv на PATH запустить сервер через запись `uv run --directory ...`,
   которую пишет `install --write`. Правильный путь — перелочить uv не старше
   0.13.6 (`uvx --from uv==0.13.6 uv lock`).
+- `marketplace-mcp install --profile compare|decision|full` выбирает, какой сервер
+  запускает одна запись `marketplace`: `compare-mcp` (профиль по умолчанию для
+  новых установок, 4 инструмента сравнения, около 0,9 тыс. токенов на запрос),
+  `decision-mcp` (5 инструментов) или `marketplace-mcp` (все инструменты
+  источников, около 13,6 тыс. токенов). Имя записи не меняется. `--per-source`
+  по-прежнему пишет блок по источникам и с `--profile` не сочетается. Если в
+  конфиге уже есть другая запись, отказ без `--force` теперь называет и текущий
+  профиль, и запрошенный; вывод команды называет профиль и подсказывает
+  `--profile full`. Без `--profile` повторный `install --write` и `setup`
+  сохраняют профиль, который уже записан в конфиге: `compare` по умолчанию
+  только для новых установок.
+- `marketplace-mcp setup` ведёт от нуля до первого ответа теми же командами:
+  находит Claude Desktop, Cursor и Claude Code (или берёт `--client`), пишет
+  конфиг с профилем `compare` по умолчанию, запускает scraping-Chrome, прогоняет
+  проверки `doctor` с их таблицей и предлагает `unblock` для закрытых браузером
+  источников. `--dry-run` печатает шаги и файлы и ничего не пишет, не запускает
+  и не запрашивает; `--no-browser` и `--no-doctor` пропускают эти шаги. Код 0 —
+  конфиг записан хотя бы одному клиенту, 1 — не нашлось ни клиента, ни записи,
+  2 — неверные аргументы.
 
 - In `api` mode, `wb_card` and `wb_search` now re-read the same request through the
   rendered page in the scraping Chrome when WB's API refuses the address: HTTP
@@ -164,6 +183,24 @@
   operator whose PATH carries an older uv from starting the server through the
   `uv run --directory ...` entry that `install --write` writes. The fix is to
   relock with uv 0.13.6 or newer (`uvx --from uv==0.13.6 uv lock`).
+- `marketplace-mcp install --profile compare|decision|full` picks which server the
+  one `marketplace` entry runs: `compare-mcp` (the default for new installs: 4
+  price-comparison tools, about 0.9k tokens per request), `decision-mcp` (5 tools)
+  or `marketplace-mcp` (every per-source tool, about 13.6k tokens). The entry name
+  does not change. `--per-source` still writes the per-source block and cannot be
+  combined with `--profile`. Without `--force`, a conflicting existing entry now
+  names both the configured and the asked profile; the command output names the
+  profile and points at `--profile full`. Without `--profile`, a repeated
+  `install --write` and `setup` keep the profile the config already runs: compare
+  is the default for new installs only.
+- `marketplace-mcp setup` walks from zero to the first answer through the existing
+  verbs: it detects Claude Desktop, Cursor and Claude Code (or takes `--client`),
+  writes the config with the compare profile by default, starts the scraping
+  Chrome, runs doctor's checks and table, and offers `unblock` for a source the
+  site walls off. `--dry-run` prints the steps and files and writes, starts and
+  requests nothing; `--no-browser` and `--no-doctor` skip those steps. Exit 0
+  when at least one client's config was written, 1 when no client and no config
+  were found, 2 on bad arguments.
 
 ### Fixed
 

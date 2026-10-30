@@ -28,15 +28,17 @@ def offline_cdp_probe(monkeypatch):
     monkeypatch.setattr(chrome_cdp, "probe_session", fake_probe)
 
 
-def test_install_defaults_to_one_unified_marketplace_entry(capsys):
-    """One entry, one server: a client pays for one tool list, not fourteen."""
+def test_install_defaults_to_the_compare_profile(capsys):
+    """One entry, one cheap server: a client pays for the tool list every request."""
     rc = cli.cmd_install(["claude"])
 
     assert rc == 0
     out = capsys.readouterr().out
     assert '"marketplace"' in out
     assert '"wildberries"' not in out
-    assert "marketplace-mcp" in out
+    assert '"compare-mcp"' in out
+    assert "Profile: compare" in out
+    assert "--profile full for every per-source tool" in out
     # The optional paid source still needs its token, whoever wires it in.
     assert "optional paid analytics" in out
     assert "MPSTATS_MP_AUTH" in out
@@ -395,7 +397,7 @@ def test_install_write_creates_a_new_config_file(claude_config):
     document = json.loads(claude_config.read_text(encoding="utf-8"))
     entry = document["mcpServers"]["marketplace"]
     assert entry["command"]
-    assert entry["args"][-1] == "marketplace-mcp"
+    assert entry["args"][-1] == "compare-mcp"
 
 
 def test_install_write_keeps_other_servers_and_settings(claude_config):
@@ -527,7 +529,69 @@ def test_install_claude_code_write_prints_a_claude_mcp_add_line(capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "claude mcp add marketplace" in out
+    assert "compare-mcp" in out
+
+
+def test_install_claude_code_full_profile_prints_the_unified_script(capsys):
+    rc = cli.cmd_install(["claude-code", "--write", "--profile", "full"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "claude mcp add marketplace" in out
     assert "marketplace-mcp" in out
+
+
+@pytest.mark.parametrize(
+    ("profile", "script"), [("compare", "compare-mcp"), ("decision", "decision-mcp"), ("full", "marketplace-mcp")]
+)
+def test_install_profile_selects_the_entry_script(profile, script, claude_config):
+    rc = cli.cmd_install(["claude", "--write", "--profile", profile])
+
+    assert rc == 0
+    document = json.loads(claude_config.read_text(encoding="utf-8"))
+    assert document["mcpServers"]["marketplace"]["args"][-1] == script
+
+
+def test_install_unknown_profile_exits_two(capsys):
+    assert cli.cmd_install(["claude", "--profile", "tiny"]) == 2
+
+    err = capsys.readouterr().err
+    assert "unknown profile 'tiny'" in err
+    assert "compare, decision, full" in err
+
+
+def test_install_profile_requires_a_value(capsys):
+    assert cli.cmd_install(["claude", "--profile"]) == 2
+    assert "--profile requires" in capsys.readouterr().err
+
+
+def test_install_refuses_per_source_with_a_profile(capsys):
+    assert cli.cmd_install(["claude", "--per-source", "--profile", "full"]) == 2
+    assert "--per-source" in capsys.readouterr().err
+
+
+def test_install_conflict_names_the_configured_and_asked_profiles(claude_config, capsys):
+    full_entry, _ = cli._unified_entry("marketplace-mcp")
+    claude_config.write_text(json.dumps({"mcpServers": {"marketplace": full_entry}}), encoding="utf-8")
+    before = claude_config.read_bytes()
+
+    rc = cli.cmd_install(["claude", "--write", "--profile", "compare"])
+
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "profile full (marketplace-mcp)" in err
+    assert "asked for profile compare (compare-mcp)" in err
+    assert claude_config.read_bytes() == before
+
+
+def test_unified_entry_takes_the_profile_script(monkeypatch):
+    monkeypatch.setattr(cli, "_workspace_root", lambda: pathlib.Path("/checkout"))
+    monkeypatch.setattr(cli.shutil, "which", lambda script: f"/usr/bin/{script}")
+
+    entry, note = cli._unified_entry("compare-mcp")
+
+    assert entry["args"] == ["run", "--directory", str(pathlib.Path("/checkout")), "compare-mcp"]
+    assert str(pathlib.Path("/checkout")) in note
 
 
 def test_install_dsh_refuses_write(capsys):
@@ -627,6 +691,8 @@ def test_help_prints_a_short_usage_screen(capsys):
     out = capsys.readouterr().out
     assert "install" in out
     assert "doctor" in out
+    assert "marketplace-mcp setup" in out
+    assert "--profile" in out
     assert "marketplace-mcp install claude --write" in out
     assert "docs/QUICKSTART.md" in out
     assert len(out.splitlines()) <= 25
@@ -1156,3 +1222,18 @@ def test_main_routes_the_unblock_verb(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "https://www.ozon.ru/" in out
     assert "Dry run" in out
+
+
+def test_install_write_keeps_the_configured_profile_without_a_profile_flag(claude_config, capsys):
+    """Re-running install on an existing full entry keeps it instead of failing on a conflict."""
+    full_entry, _ = cli._unified_entry("marketplace-mcp")
+    claude_config.write_text(json.dumps({"mcpServers": {"marketplace": full_entry}}), encoding="utf-8")
+    before = claude_config.read_bytes()
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "already runs profile full; keeping it" in captured.err
+    assert "nothing to write" in captured.out
+    assert claude_config.read_bytes() == before

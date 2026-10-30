@@ -81,7 +81,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2476 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2510 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -104,22 +104,17 @@ print(asyncio.run(wb_selfcheck()).status)   # ждём success
 Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Проще всего подключить **одну запись** — объединённый сервер монтирует все
-источники разом, а имена инструментов (`wb_search`, `avito_seller`, …) не
-меняются:
+Самый короткий путь — `marketplace-mcp setup`: команда находит Claude Desktop,
+Cursor и Claude Code, пишет им конфиг (по умолчанию профиль `compare`),
+запускает scraping-Chrome, прогоняет `doctor` и предлагает `unblock` для
+источника, закрытого браузером. `--dry-run` только печатает шаги и файлы.
 
-```jsonc
-{
-  "mcpServers": {
-    "marketplace": {
-      "command": "uv",
-      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "marketplace-mcp"],
-    },
-  },
-}
+```console
+marketplace-mcp setup
 ```
 
-Проще всего поручить запись самому CLI:
+Если клиент нетипичный или нужен один конкретный, тот же конфиг пишет
+`install --write`:
 
 ```console
 marketplace-mcp install claude --write
@@ -134,7 +129,28 @@ checkout подставятся абсолютными (у десктопног�
 старый файл сохранится как `claude_desktop_config.json.bak-<метка>`. Остаётся
 перезапустить клиент. `--dry-run` показывает, что именно будет записано, и
 ничего не пишет; `--per-source` возвращает старую раскладку — по записи на
-источник.
+источник — и с `--profile` не сочетается.
+
+По умолчанию запись запускает `compare-mcp` — профиль `compare`: 4 инструмента
+сравнения цен, около 0,9 тыс. токенов в каждом запросе. `--profile decision`
+добавляет осмотр карточки из шортлиста (5 инструментов), `--profile full` берёт
+`marketplace-mcp` со всеми инструментами источников, около 13,6 тыс. токенов.
+Меняется только консольная команда записи, имя `marketplace` остаётся прежним.
+Подробнее о выборе режима — [dsh/README.md](dsh/README.md) и
+`docs/QUICKSTART.md`.
+
+Если конфиг удобнее править руками, начните с одной записи:
+
+```jsonc
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "uv",
+      "args": ["run", "--directory", "C:/путь/к/ru-marketplace-mcp", "compare-mcp"],
+    },
+  },
+}
+```
 
 Если нужны отдельные серверы, `marketplace-mcp install claude --per-source`
 напечатает готовый блок для вставки. Путь к вашему checkout там уже подставлен:
@@ -643,7 +659,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2476 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2510 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -709,7 +725,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2476 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2510 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -797,34 +813,62 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2476 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2510 offline tests, no network needed
 ```
 
-Client configuration mirrors the Russian section above. The shortest way to wire a
-client is to let the CLI write the file:
+Client configuration mirrors the Russian section above. The shortest path is the
+guided setup:
+
+```console
+marketplace-mcp setup
+```
+
+It detects Claude Desktop, Cursor and Claude Code, writes the config with the
+compare profile by default, starts the scraping Chrome, runs doctor's checks and
+offers `unblock` for a walled source. `--dry-run` prints the steps and files
+without writing, starting or requesting anything.
+
+To write one named client's config instead, let the CLI write the file:
 
 ```console
 marketplace-mcp install claude --write
 ```
 
-It adds one `marketplace` entry running the unified server to the client's own
-config (Claude Desktop: `%APPDATA%\Claude\claude_desktop_config.json` on Windows,
+It adds one `marketplace` entry to the client's own config (Claude Desktop:
+`%APPDATA%\Claude\claude_desktop_config.json` on Windows,
 `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
 `~/.config/Claude/claude_desktop_config.json` on Linux; Cursor: `~/.cursor/mcp.json`).
-`uv` and your checkout path are filled in as absolute paths, other servers and
-settings in the file stay untouched, and the old file is kept as
-`<file>.bak-<timestamp>`. Restart the client afterwards; `--dry-run` shows the
-result without writing, and `--per-source` writes one entry per source instead.
-Each server is also a console
-script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`) launched
-through `uv run --directory /path/to/repo <script>`. The optional `mpstats-mcp`
-runs the same way with `MPSTATS_MP_AUTH` in the entry's `env` (paid MPStats
-account; without it the tools return `auth_missing`). `marketplace-mcp install
-[claude|claude-code|cursor|dsh]` prints the unified `marketplace` entry with your
-checkout's real path filled in — no placeholder to hand-edit — or the console-script
-path on PATH when installed as a wheel; `--per-source` prints the old block with one
-entry per source; an unknown client name is rejected. The `dsh` target prints a
-`cordis.patch.yml` row instead of `mcpServers` JSON — see [dsh/README.md](dsh/README.md).
+By default that entry runs `compare-mcp` — the `compare` profile: 4 price-comparison
+tools, about 0.9k tokens per request. `--profile decision` adds shortlist card
+inspection (5 tools); `--profile full` runs `marketplace-mcp` with every per-source
+tool, about 13.6k tokens. The entry name stays `marketplace`. `uv` and your checkout
+path are filled in as absolute paths, other servers and settings in the file stay
+untouched, and the old file is kept as `<file>.bak-<timestamp>`. Restart the client
+afterwards; `--dry-run` shows the result without writing, and `--per-source` writes
+one entry per source instead (it cannot be combined with `--profile`). Each server is
+also a console script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`,
+`cian-mcp`, `compare-mcp`) launched through `uv run --directory /path/to/repo <script>`.
+The optional `mpstats-mcp` runs the same way with `MPSTATS_MP_AUTH` in the entry's
+`env` (paid MPStats account; without it the tools return `auth_missing`).
+`marketplace-mcp install [claude|claude-code|cursor|dsh]` prints the selected profile's
+`marketplace` entry with your checkout's real path filled in — no placeholder to
+hand-edit — or the console-script path on PATH when installed as a wheel; an unknown
+client name or profile is rejected. The `dsh` target prints a `cordis.patch.yml` row
+instead of `mcpServers` JSON — see [dsh/README.md](dsh/README.md).
+
+If you prefer to paste the config yourself, start with this one entry (replace the
+path with your clone from above):
+
+```json
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--directory", "C:/projects/ru-marketplace-mcp", "compare-mcp"]
+    }
+  }
+}
+```
 
 The browser tier has more verbs: `marketplace-mcp browser start` (launch the
 scraping Chrome; on-screen by default, `--hidden` for off-screen),
@@ -1222,7 +1266,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2476 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2510 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1284,7 +1328,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2476 offline
+are confidently wrong, so the project is arranged around verification: 2510 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
