@@ -52,7 +52,7 @@
 - Ruff, форматирование, mypy, версия 2.6.0 в 84 местах, защита stdout, привязки фикстур (31), счётчик тестов (2318 в 7 местах).
 - 32/32 настоящих stdio MCP-сессий на v2.6.0: каждый сервер в обоих протоколах.
 - Lock-файл и `uv sync --frozen` проверены uv 0.13.6, той же версией, что в сборочном образе.
-- Образы Docker: <!-- OPERATOR: image check -->
+- Образы Docker: `Dockerfile.stdio` и `Dockerfile` собраны из релизного коммита на GitHub Actions (ubuntu-latest) без публикации. В обоих 16 пакетов версии 2.6.0 и FastMCP 4.1.4; настоящая MCP-сессия через `docker run -i`: v2.6.0, 40 инструментов, 14 источников.
 
 Поставка содержит 16 wheels и 16 sdists; на PyPI пакеты не публикуются.
 
@@ -66,4 +66,4 @@ Dependabot already watches digest-pinned Docker base images (#134, shipped in v2
 
 Live, 30 October, one address, the operator's Chrome over CDP, on commit 99b7212, which matches the release except for version strings. About 45 live requests were made against the project's limit of 40; the recheck after the captchas and the last two Taobao requests had the owner's consent. Ozon (all four checks), Yandex Market, Detsky Mir, Taobao, Citilink, AliExpress and Cian passed selfcheck. Avito, Megamarket, Lamoda and DNS were first stopped by anti-bot checks; after the operator passed the captchas in the same Chrome, all four passed. Wildberries' API hosts refused this address (`transport_down`), while `WB_TRANSPORT=dom` returned 40 priced search results and a card at 37,885 ₽. MPStats was not checked (no token). Taobao after #141: the query went out as `q=iphone%2015`; 37 results, all priced in yuan, 7 of them Tmall with price and shop; `taobao_card` refused a Tmall URL with `bad_request` before navigating; `compare_prices` with Citilink was complete, with the yuan offers kept out of the ruble ranking. A loading grid did not occur live and is covered offline. Decision: go.
 
-Offline: 2317 passed, 1 skipped; ruff, mypy, 84 version declarations, 31 fixture pins, test count 2318; 32/32 real stdio sessions on v2.6.0; lock and frozen sync checked with uv 0.13.6. Docker images: <!-- OPERATOR: image check -->
+Offline: 2317 passed, 1 skipped; ruff, mypy, 84 version declarations, 31 fixture pins, test count 2318; 32/32 real stdio sessions on v2.6.0; lock and frozen sync checked with uv 0.13.6. Docker images: `Dockerfile.stdio` and `Dockerfile` built from the release commit on GitHub Actions (ubuntu-latest) without pushing; both hold 16 packages at 2.6.0 with FastMCP 4.1.4, and a real MCP session over `docker run -i` reported v2.6.0, 40 tools, 14 sources.
