@@ -706,6 +706,7 @@ class _RawCdpPage:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + _RAW_NAV_TIMEOUT_S
         nav_error: object = None
+        main_frame: object = None
         rechecking = False
         while True:
             remaining = deadline - loop.time()
@@ -716,14 +717,22 @@ class _RawCdpPage:
             except TimeoutError:
                 break
             msg = json.loads(raw)
-            if msg.get("id") == msg_id and "error" in msg:
-                nav_error = msg["error"]
+            if msg.get("id") == msg_id:
+                if "error" in msg:
+                    nav_error = msg["error"]
+                main_frame = main_frame or (msg.get("result") or {}).get("frameId")
             method = msg.get("method", "")
             params = msg.get("params", {})
             if method == "Network.responseReceived" and params.get("type") == "Document":
+                # iframes report Document responses too. Only the main frame's
+                # decides the verdict and the URL: a 200 iframe on a 403 block page
+                # must not turn the block into data. The first document is the
+                # main frame's, since an iframe needs a parent document to exist.
+                frame_id = params.get("frameId")
+                main_frame = main_frame or frame_id
                 response = params.get("response", {})
                 status = response.get("status")
-                if isinstance(status, int):
+                if isinstance(status, int) and (frame_id is None or frame_id == main_frame):
                     statuses.append(status)
                     self._url = response.get("url") or self._url
             elif method == "Page.frameNavigated":
@@ -1063,13 +1072,18 @@ async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
             status = resp.status if resp is not None else None
             if status == 403:
+                # Wait for the main frame's next navigation to land, not just for a
+                # response: page.url must be the new document's before the host
+                # check, and a redirect must resolve to its final status. None (a
+                # History API change) proves nothing, so the 403 stands.
                 try:
-                    resp = await page.wait_for_event(
-                        "response",
-                        predicate=lambda r: r.request.is_navigation_request() and r.frame == page.main_frame,
-                        timeout=_ANTIBOT_RECHECK_S * 1000,
-                    )
-                    status = resp.status
+                    async with page.expect_navigation(
+                        wait_until="domcontentloaded", timeout=_ANTIBOT_RECHECK_S * 1000
+                    ) as navigation:
+                        pass
+                    reloaded = await navigation.value
+                    if reloaded is not None:
+                        status = reloaded.status
                 except _PlaywrightTimeoutError:
                     pass
             if status in _NAV_FAIL_STATUSES:
