@@ -1,6 +1,6 @@
 ---
 name: compare-prices
-description: Use this skill when the operator asks where something is cheapest across marketplaces. Fans out to ten searchable sources — Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink and AliExpress (Detsky Mir is excluded — no text search; Taobao is ranked in yuan, never against rubles). Trigger on "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip single-marketplace questions — use the per-marketplace skills.
+description: Use this skill when the operator asks where something is cheapest across marketplaces. Fans out to ten searchable sources — Wildberries, Ozon, Yandex Market, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink and AliExpress (Detsky Mir is excluded — no text search; Taobao prices are reported in yuan, not ranked). Trigger on "где дешевле", "сравни цены", "сколько стоит X на маркетплейсах", "найди самую низкую цену", or English equivalents. Skip single-marketplace questions — use the per-marketplace skills.
 ---
 
 # Cross-Marketplace Price Comparison
@@ -79,7 +79,11 @@ default `rub`) and the price in that currency as the marketplace shows it. For r
 sources `price_native` equals `price_rub`; for Taobao it holds the yuan price while
 `price_rub` is `null`. Only `rub` offers rank, so a foreign-currency row rides along
 with its real price visible but out of the ranking — the `foreign_currency` warning
-counts them. Read `price_native` if you want to convert.
+counts them. In `source_outcomes[].detail`, Taobao counts native prices, for example
+`20 results, 20 priced in CNY (not ranked)`, not zero prices just because `price_rub`
+is null. Multiple priced currencies are sorted and joined with `/`; no native
+prices gives `N results, 0 priced (not ranked)`. Rouble-source detail keeps
+`N results, M priced`. Read `price_native` if you want to convert.
 
 ## Workflow
 

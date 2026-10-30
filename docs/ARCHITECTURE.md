@@ -198,7 +198,11 @@ Every connector exposes `*_selfcheck`:
   nothing about the parsers.
 
 A two-state check would report a geo block as failure and send the reader looking
-for a parsing bug that does not exist.
+for a parsing bug that does not exist. With `WB_TRANSPORT=dom`, WB's `card` and
+`search_v9` probes use the tools' rendered-page parsers, opening the baseline card
+and search grid in the operator's Chrome instead of probing unused API hosts.
+A captcha stays inconclusive and is never solved or retried. The other WB probes
+keep HTTP; `search_goods` notes that DOM search does not use the legacy path.
 
 ### Untrusted output
 
@@ -216,7 +220,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-2318 offline tests, no network required. Three flavours:
+2354 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

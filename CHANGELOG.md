@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `wb_selfcheck` учитывает `WB_TRANSPORT=dom`: проверки `card` и `search_v9`
+  читают отрисованные страницы теми же парсерами, что инструменты, вместо
+  неиспользуемых API-хостов. Капча остаётся `inconclusive` без решения и повторов;
+  ошибки транспорта и дрейф парсера различаются по коду. Остальные пробы сохранены.
+- `compare_prices` считает цены Taobao в `source_outcomes[].detail` по
+  `price_native`, а не по пустому `price_rub`: например, `20 results, 20 priced
+  in CNY (not ranked)`. Рублёвые строки и ранжирование не изменились.
+
+- `wb_selfcheck` respects `WB_TRANSPORT=dom`: `card` and `search_v9` check
+  rendered pages with the tools' parsers rather than unused API hosts. Captchas
+  remain `inconclusive` without solving or retries; transport failures and parser
+  drift are distinguished by error code. The other probes are preserved.
+- `compare_prices` counts Taobao's native prices in `source_outcomes[].detail`
+  instead of reporting zero rouble prices: for example, `20 results, 20 priced
+  in CNY (not ranked)`. Rouble-source detail and ranking are unchanged.
+
 ## [2.6.0] - 2026-10-30
 
 FastMCP 4 без смены публичного контракта инструментов; три исправления Taobao из замечаний к v2.5.4; Dependabot следит и за npm lock-файлом.

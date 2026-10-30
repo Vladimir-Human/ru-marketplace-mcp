@@ -39,9 +39,12 @@ from a residential IP without proxies.
   only public statement of a spec. **Keyed by imt_id like `wb_reviews`**: pass an
   nmId and you get an empty pool with no error, so resolve through `wb_root_info`.
 
-**Not an MCP tool:** `wb_selfcheck()` is a tri-state drift canary across every
-endpoint family. It is CLI-only — `marketplace-mcp doctor` runs every
-connector's canary at once.
+**Not an MCP tool:** `wb_selfcheck()` is a tri-state drift canary. It is CLI-only —
+`marketplace-mcp doctor` runs every connector's canary at once. With
+`WB_TRANSPORT=dom`, `card` and `search_v9` use the tools' rendered-page parsers,
+opening two pages in the operator's Chrome: the baseline card and search grid.
+A captcha is `inconclusive` and is never solved or retried. Reviews/root basket
+stay HTTP; `search_goods` keeps its verdict and notes that DOM search does not use it.
 
 ## Workflow patterns
 

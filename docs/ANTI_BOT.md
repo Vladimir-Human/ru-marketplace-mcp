@@ -164,6 +164,19 @@ carries it reliably. Page-wide `del` / `[class*=wallet]` / `[class*=seller]`
 matches also hit the «Смотрите также» carousel, so a DOM hint counts only when it
 names one of the offer's own figures. Other WB tools keep their HTTP paths.
 
+With `WB_TRANSPORT=dom`, `marketplace-mcp doctor` also checks the rendered paths:
+its `card` and `search_v9` checks open two pages in the operator's Chrome (the
+baseline card and the evergreen-query search grid) and use the same parsers as
+`wb_card` / `wb_search`, instead of requesting `card.wb.ru` / `search.wb.ru`.
+Each DOM subcheck calls the renderer once. A captcha is `inconclusive` with
+reason `blocked`; it is never solved or retried. A browser check that does not
+clear, unavailable CDP or a page timeout is `inconclusive` / `transport_down`;
+missing parser anchors are `drift` / `schema_drift`. The subcheck's own
+wall-clock timeout is `inconclusive` / `timeout`. An unavailable baseline card
+or WB's own empty-result notice is `inconclusive` / `baseline_gone`.
+`reviews` and `root_basket` still probe HTTP; `search_goods` keeps its probe and
+verdict, with a note that `wb_search` does not use that path in DOM mode.
+
 Two more endpoints were verified live for v1.1.0, each with a silent-failure mode
 worth knowing:
 
