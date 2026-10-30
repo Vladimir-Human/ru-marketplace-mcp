@@ -83,3 +83,30 @@ def test_the_ledger_summary_follows_the_doctor_round(
 
     out = capsys.readouterr().out
     assert out.strip().splitlines()[-1].startswith("total 0/40")
+
+
+def test_the_ledger_summary_names_the_requests_the_budget_refused(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A doctor row that read transport_down because of the cap must be explainable from the summary."""
+    monkeypatch.setenv("LIVE_BUDGET_LEDGER", str(tmp_path / ".live-budget.json"))
+    monkeypatch.setenv("LIVE_BUDGET_PER_SOURCE", "1")
+
+    def fake_main(argv: list[str]) -> int:
+        budget = live_budget.installed_budget()
+        assert budget is not None
+        budget.reserve("chrome-load", "https://www.ozon.ru/")
+        for _ in range(2):
+            with pytest.raises(live_budget.BudgetExhausted):
+                budget.reserve("in-page fetch", "https://www.ozon.ru/api/x")
+        return 2
+
+    monkeypatch.setattr("marketplace_connector.cli.main", fake_main)
+
+    assert live_check.main(["doctor", "ozon"]) == 2
+
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert lines[-2] == "total 1/40; ozon 1/1"
+    assert lines[-1].startswith("refused before sending (over a cap): ozon 2;")

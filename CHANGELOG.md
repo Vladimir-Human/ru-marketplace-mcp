@@ -331,6 +331,11 @@
   блокировкой, поэтому два параллельных прогона больше не теряют записи. Чек-лист
   релиза запускает doctor как `python scripts/live_check.py doctor`, под тем же
   бюджетом.
+- Бюджет живых запросов говорит, когда он сам не пустил запрос: строка
+  `[refused]` в stderr и итог `refused before sending` после команды. Раньше
+  отказ выглядел в doctor как `transport_down`, будто площадка заблокировала
+  адрес. Чек-лист релиза объясняет, как проверить отзывы Ozon, которым не
+  хватает лимита в 8 запросов.
 
 - Wildberries' fallback to the rendered page: when the browser driver itself
   fails after an API refusal (Playwright raises its own error, not a tool
@@ -382,6 +387,11 @@
   opened through `window.open` and the `unblock` tabs. A lock file guards the
   ledger, so two parallel runs no longer lose bookings. The release checklist
   runs doctor as `python scripts/live_check.py doctor`, under the same budget.
+- The live request budget says when it refused a request itself: a `[refused]`
+  line on stderr and a closing `refused before sending` summary. The refusal
+  used to show in doctor as `transport_down`, as if the marketplace had blocked
+  the address. The release checklist explains how to check Ozon reviews, which
+  do not fit the cap of 8 requests.
 
 ### Security
 
