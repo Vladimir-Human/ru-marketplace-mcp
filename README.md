@@ -76,12 +76,13 @@ MPStats стоит особняком: это единственный **пла�
 
 Для установки клиента, выбора источников и проверки первого предложения —
 [пошаговый старт](docs/QUICKSTART.md). Node нужен только для тестов разработчика.
+Подготовка PyPI-бандла для владельца: [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer); публикация пока выключена.
 
 ```bash
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2510 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2526 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -608,8 +609,8 @@ compare_prices("кроссовки мужские")
 формат ссылки `/product/<24-hex>/` — тот самый шаблон, который чинили как баг.
 
 Скиллы едут в Docker-образ (`/app/skills/`), но **в колёсах их нет**: `skills/`
-лежит в корне репозитория. Ставите с PyPI — возьмите навыки
-из репозитория отдельно.
+лежит в корне репозитория. При установке release-wheel возьмите навыки
+из репозитория отдельно; будущий PyPI-бандл тоже не включает их.
 
 ## Настройка
 
@@ -659,7 +660,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2510 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2526 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -725,7 +726,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2510 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2526 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -808,12 +809,13 @@ HTTP transport is opt-in for remote deployment — see
 ## Quickstart
 
 Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
+Maintainer PyPI bundle preparation: [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer); publishing is off.
 
 ```bash
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2510 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2526 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest path is the
@@ -1204,7 +1206,8 @@ already removed.
 
 Skills are copied into the Docker image (`/app/skills/`), but they are **not in
 the wheels**: `skills/` lives at the repository root rather than inside the
-packages. Installing from PyPI means fetching the skills from the repo separately.
+packages. Release-wheel installs need the skills fetched from the repo separately;
+the future PyPI bundle will not include them either.
 
 ## Configuration
 
@@ -1266,7 +1269,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2510 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2526 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1328,7 +1331,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2510 offline
+are confidently wrong, so the project is arranged around verification: 2526 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

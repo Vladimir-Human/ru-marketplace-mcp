@@ -103,7 +103,70 @@ metadata includes `aliexpress-connector` in `compare-connector[all]`; Cian and
 MPStats are unified-server sources, not comparison sources, and are intentionally
 not part of that extra.
 
-### HTTP (opt-in)
+## PyPI (maintainer)
+
+The additional bundle is one distribution, `ru-marketplace-mcp`; it contains all
+workspace import packages and console scripts, including the `ru-marketplace-mcp`
+alias of `marketplace-mcp`. The workspace, its per-package GitHub Release wheels
+and sdists, and the Docker builds remain separate and unchanged. Do not publish
+`mcp-core` or the generic connector names to PyPI.
+
+Publishing is **off until the owner enables it**. Nothing in this checkout
+registers a publisher or uploads a package. One-time owner setup:
+
+1. On **pypi.org**, open **Account → Publishing → Add a new pending publisher**.
+   Enter these exact values:
+
+   | Field | Value |
+   |---|---|
+   | PyPI project name | `ru-marketplace-mcp` |
+   | Owner | `Vladimir-Human` |
+   | Repository | `ru-marketplace-mcp` |
+   | Workflow | `pypi-publish.yml` |
+   | Environment | `pypi` |
+
+2. In the GitHub repository, open **Settings → Environments → New environment**
+   and create `pypi` (add release approval rules if desired).
+3. Open **Settings → Secrets and variables → Actions → Variables** and add the
+   repository variable `PYPI_PUBLISH` with value `true`, only after registration
+   is complete. There is **no API token** to create or store.
+
+Until step 3, the whole publish job is skipped. Removing the variable or setting
+it to anything other than `true` disables publishing again. A `v*` tag triggers
+`.github/workflows/pypi-publish.yml`; a manual dispatch must select a `v*` tag,
+not a branch. Before upload, the job reads the built wheel's `METADATA` and checks
+that its version equals that tag. Trusted publishing uses the `pypi` environment
+and an OIDC identity with `id-token: write` and `contents: read` only.
+
+For a local preview/build from a synced development checkout:
+
+```console
+uv run python scripts/build_pypi_bundle.py --print-pyproject
+uv run python scripts/build_pypi_bundle.py --out dist/pypi
+```
+
+The builder derives the root release metadata, all member third-party
+requirements (including optional transport dependencies), and scripts directly
+from manifests. Workspace dependencies are removed; conflicting third-party
+specifiers or script names fail with their sources, rather than being reconciled
+silently. Existing transport declarations use the higher minimums already
+required by members. The temporary project includes every `py.typed`, the README
+and license; the sdist contains its own sources and can be rebuilt without the
+checkout. `dist/pypi/` is ignored. CI's additional **PyPI bundle installs** job
+installs the wheel with plain pip into a fresh non-workspace venv and runs both
+CLI help commands and the offline stdio probe against installed console scripts.
+
+A client configured from an eventual uv tool install must not keep a path into
+uv's deletable cache. When `UV` is set and the running prefix lies inside
+`UV_CACHE_DIR` (or `uv cache dir`), `install` and `setup` write the absolute uv
+binary plus `tool run --from ru-marketplace-mcp==<installed-version> <script>`.
+That pin is reproducible. To move to a newer release, run that release's
+`marketplace-mcp install <client> --write --force`; the CLI note shows the
+version-selection command. `<client>` is `claude`, `cursor` or `claude-code`.
+This is preparation for the owner's first PyPI release, not a claim that the
+package is already available there.
+
+## HTTP (opt-in)
 
 Set these once in the shell that starts the server or Docker. The token command
 generates a secret locally without printing it. Configure the same values in

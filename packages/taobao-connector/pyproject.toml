@@ -14,7 +14,7 @@ dependencies = [
     "fastmcp>=4.1.4,<5",
     "pydantic>=2.12",
     "pydantic-settings>=2.2",
-    "playwright>=1.40",
+    "playwright>=1.47",
 ]
 
 [project.scripts]

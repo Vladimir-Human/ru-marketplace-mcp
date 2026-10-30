@@ -66,6 +66,8 @@ marketplace-connector = { workspace = true }
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    # Bundle artifact tests build offline without touching a user's uv cache.
+    "hatchling>=1.33.0",
     "ruff>=0.16.1",
     "mypy>=1.13",
     "truststore>=0.10.4",

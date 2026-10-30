@@ -41,7 +41,11 @@ as one namespaced toolset and carries the operator CLI (`install`/`doctor`).
 **Why a workspace rather than one package:** the connectors have genuinely
 different dependency needs (Ozon alone needs `curl_cffi` + Playwright), and users
 install subsets. A single package would force the heaviest dependency set on
-everyone.
+everyone. The additional `ru-marketplace-mcp` PyPI bundle deliberately includes
+all imports for a single full installation; it does not replace the workspace or
+its subset wheels. Its metadata is derived from member manifests, not maintained
+as a second package list. Publishing is owner-gated; see
+[DEPLOYMENT.md — PyPI](DEPLOYMENT.md#pypi-maintainer).
 
 ## The shared runtime
 
@@ -220,7 +224,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-2510 offline tests, no network required. Three flavours:
+2526 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

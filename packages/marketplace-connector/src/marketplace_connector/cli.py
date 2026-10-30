@@ -39,11 +39,11 @@ The verbs cover the moments an operator actually needs help with:
 # PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
 # SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
 # DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
-# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-SETUP.
+# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
-# _unified_entry: The one "marketplace" entry that runs the selected profile's server, plus the note for the operator.
+# _uv_cached_entry / _unified_entry: The selected profile entry: checkout uv, a pinned uv tool release, or installed script.
 # _config_path: Where a client's mcpServers file lives on this platform.
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
 # next_step: One fixed next-step string for a source that is not ok.
@@ -62,6 +62,7 @@ import json
 import os
 import pathlib
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -71,6 +72,7 @@ from typing import Any
 from mcp_core.logging import log_event
 from mcp_core.source_selection import canonical
 
+from marketplace_connector import __version__
 from marketplace_connector.capabilities import CAPABILITIES, browser_backed
 from marketplace_connector.unblock import UNBLOCK_PAGES
 
@@ -294,6 +296,64 @@ def _config_block() -> tuple[dict[str, Any], str]:
     return block, note
 
 
+# START_BLOCK_CLIENT_ENTRY
+
+
+def _uv_cached_entry(script: str) -> tuple[dict[str, Any], str] | None:
+    """Use a durable pinned tool command only for an environment inside uv's cache."""
+    uv_env = os.environ.get("UV")
+    if not uv_env:
+        return None
+    uv_path = pathlib.Path(uv_env).expanduser()
+    if not uv_path.is_absolute():
+        resolved = shutil.which(uv_env)
+        if resolved is None:
+            return None
+        uv_path = pathlib.Path(resolved)
+    # Not resolve(): a Homebrew or pipx uv is a symlink to a versioned file that
+    # the next upgrade deletes. When uv on PATH is the same file, keep that
+    # stable spelling in the saved config.
+    on_path = shutil.which("uv")
+    if on_path is not None:
+        try:
+            if os.path.samefile(on_path, uv_path):
+                uv_path = pathlib.Path(on_path)
+        except OSError:
+            pass
+    uv_path = uv_path.absolute()
+    cache = os.environ.get("UV_CACHE_DIR")
+    if not cache:
+        try:
+            found = subprocess.run(
+                [str(uv_path), "cache", "dir"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        cache = found.stdout.strip()
+    if not cache:
+        return None
+    try:
+        inside_cache = pathlib.Path(sys.prefix).resolve().is_relative_to(pathlib.Path(cache).expanduser().resolve())
+    except (OSError, ValueError):
+        return None
+    if not inside_cache:
+        return None
+    release = f"ru-marketplace-mcp=={__version__}"
+    entry = {"command": str(uv_path), "args": ["tool", "run", "--from", release, script]}
+    note = (
+        f"# This entry runs the pinned release {release} through uv, not a temporary cache script.\n"
+        "# To move to a newer release, run "
+        "`uv tool run --from ru-marketplace-mcp==<new-version> "
+        "marketplace-mcp install <client> --write --force`."
+    )
+    return entry, note
+
+
 def _unified_entry(script: str = UNIFIED_SCRIPT) -> tuple[dict[str, Any], str]:
     """The one entry that runs the selected profile's server, plus the note.
 
@@ -301,7 +361,9 @@ def _unified_entry(script: str = UNIFIED_SCRIPT) -> tuple[dict[str, Any], str]:
     <script>``, and ``uv`` is resolved to an absolute path: a desktop client
     often does not inherit the terminal's PATH, and a bare ``uv`` is then a
     server that silently never starts. From a wheel install there is no
-    checkout, so the console script on PATH is the command.
+    checkout. Inside uv's cache it runs the pinned package release through uv,
+    rather than saving a console-script path that uv may later delete; an
+    ordinary install keeps the console script on PATH.
 
     The note is returned, not printed: the caller shows it to the operator
     once per command run, on stderr. A warning printed from inside a helper
@@ -318,11 +380,18 @@ def _unified_entry(script: str = UNIFIED_SCRIPT) -> tuple[dict[str, Any], str]:
             )
         return {"command": uv or "uv", "args": ["run", "--directory", str(root), script]}, note
 
+    cached_entry = _uv_cached_entry(script)
+    if cached_entry is not None:
+        return cached_entry
+
     resolved = shutil.which(script)
     note = "# Installed as a package: the command is the console script on PATH."
     if resolved is None:
         note += f"\n# Not found on PATH, left unresolved: {script}"
     return {"command": resolved or script, "args": []}, note
+
+
+# END_BLOCK_CLIENT_ENTRY
 
 
 def _profile_note(profile: str) -> str:
