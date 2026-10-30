@@ -18,12 +18,17 @@
 #     explicit -AllowMainProfile. Log into marketplaces only in it, and banking or
 #     email stay outside the blast radius. To place it yourself:
 #       .\start_chrome_cdp.ps1 -Profile "$env:LOCALAPPDATA\Chrome-Scraping"
+#
+# The window starts on-screen so a human can log in. Pass -Hidden for the old
+# off-screen launch (the connector's own autostart still uses that). -Visible is
+# still accepted for older commands; it changes nothing, visible is the default.
 
 param(
     [int]$Port = 9222,
     [Parameter(Mandatory=$false)][string]$Profile,
     [switch]$AllowMainProfile,
-    [switch]$Visible
+    [switch]$Visible,  # accepted for compatibility: the window is visible by default
+    [switch]$Hidden
 )
 
 if (-not $Profile) {
@@ -117,19 +122,20 @@ $chromeArgs = @(
     "--no-first-run",
     "--no-default-browser-check"
 )
-if (-not $Visible) {
+if ($Hidden) {
     $chromeArgs += @(
         "--window-position=-32000,-32000",
         "--window-size=1280,720",
-        "--start-minimized",
-        "about:blank"
+        "--start-minimized"
     )
 }
+# Anchor a tab so Chrome survives a connector closing its last page.
+$chromeArgs += "about:blank"
 $startParams = @{
     FilePath = $chrome
     ArgumentList = $chromeArgs
 }
-if (-not $Visible) {
+if ($Hidden) {
     $startParams.WindowStyle = "Hidden"
 }
 Start-Process @startParams
@@ -139,6 +145,6 @@ if (Get-CdpVersion) {
 } else {
     Write-Warning "Chrome started but CDP endpoint not responding yet. Wait a few seconds."
 }
-if (-not $Visible) {
+if ($Hidden) {
     Write-Host "The window is off-screen. To log in or pass a site check: marketplace-mcp browser show"
 }

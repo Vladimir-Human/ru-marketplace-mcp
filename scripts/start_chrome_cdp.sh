@@ -20,6 +20,7 @@
 #   ./scripts/start_chrome_cdp.sh --port 9333
 #   ./scripts/start_chrome_cdp.sh --profile ~/my-scraping-profile
 #   ./scripts/start_chrome_cdp.sh --headless      # no display (detectable!)
+#   ./scripts/start_chrome_cdp.sh --hidden        # on macOS hide the app after launch
 #
 # Windows users: run scripts/start_chrome_cdp.ps1 instead.
 
@@ -27,6 +28,7 @@ set -euo pipefail
 
 PORT="${CHROME_CDP_PORT:-9222}"
 HEADLESS=0
+HIDDEN=0
 
 case "$(uname -s)" in
     Darwin) DEFAULT_PROFILE="$HOME/Library/Application Support/Chrome-Scraping" ;;
@@ -39,7 +41,8 @@ while [[ $# -gt 0 ]]; do
         --port)     PORT="$2"; shift 2 ;;
         --profile)  PROFILE="$2"; shift 2 ;;
         --headless) HEADLESS=1; shift ;;
-        -h|--help)  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --hidden)   HIDDEN=1; shift ;;
+        -h|--help)  sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -131,13 +134,13 @@ for _ in $(seq 1 30); do
     if curl -sf -m 1 "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1; then
         echo
         echo "CDP is up. Verify with: curl -s http://127.0.0.1:$PORT/json/version"
-        # macOS: tuck the freshly opened window away (⌘H) so it does not sit on
-        # top of whatever you were doing. Connectors keep it hidden afterwards
-        # (CHROME_STEALTH=1, the default). Skip when the user opted out.
-        if [[ "$(uname -s)" == "Darwin" && "${CHROME_STEALTH:-1}" != "0" ]]; then
+        # macOS: only tuck the fresh window away (⌘H) when --hidden was asked
+        # for. The default launch is on-screen so a human can log in; the
+        # connector's own autostart still hides its window.
+        if [[ "$(uname -s)" == "Darwin" && "$HIDDEN" == "1" ]]; then
             sleep 1
             osascript -e "tell application \"System Events\" to set visible of (first process whose unix id is $CHROME_PID) to false" >/dev/null 2>&1 || true
-            echo "Window hidden (⌘H). Unhide it from the Dock when you need to log in; CHROME_STEALTH=0 disables this."
+            echo "Window hidden (⌘H) because of --hidden. Unhide it from the Dock when you need to log in."
         fi
         exit 0
     fi

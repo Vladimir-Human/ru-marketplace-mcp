@@ -141,12 +141,22 @@ sources, then run a targeted check:
 uv run marketplace-mcp doctor ozon aliexpress cian
 ```
 
-On Windows the scraping window starts off-screen, so you cannot log in or pass a
-site's check until it is on-screen:
+On Windows the connector's autostart parks the scraping window off-screen, so
+you cannot log in or pass a site's check until it is on-screen. You can start a
+visible Chrome yourself or move the existing window:
 
 ```console
+uv run marketplace-mcp browser start    # launch the scraping Chrome on-screen (--hidden: off-screen)
 uv run marketplace-mcp browser status   # is the endpoint reachable, where is the window
 uv run marketplace-mcp browser show     # bring the window on-screen and activate its first tab
+```
+
+When `doctor` reports a wall, let `unblock` open the right page and wait while
+you pass the check or log in:
+
+```console
+uv run marketplace-mcp unblock ozon
+uv run marketplace-mcp unblock --dry-run ozon   # print the page, open nothing
 ```
 
 Repeat the call from the same client (the same MCP session, or the same stdio

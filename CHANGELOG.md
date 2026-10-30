@@ -58,14 +58,30 @@
   окно, которое лежит позади других), переносит его на экран
   (80, 40; текущий размер сохраняется, если окно не меньше 800x600, иначе
   1280x900) и активирует первую вкладку. Обе команды отправляют только
-  браузерные CDP-команды и не ходят ни в один сайт. Совет doctor's для
-  источника, закрытого браузером, теперь называет `marketplace-mcp browser show`.
+  браузерные CDP-команды и не ходят ни в один сайт. Совет doctor'а для
+  источника, закрытого браузером, теперь называет `marketplace-mcp unblock
+  <source>`.
+- `marketplace-mcp browser start [--hidden]` запускает scraping-Chrome сам:
+  по умолчанию окно видно (без off-screen аргументов и без скрытия), `--hidden`
+  сохраняет прежнее поведение автозапуска коннектора. Если CDP уже отвечает,
+  команда ничего не запускает и подсказывает `browser show`; на удалённом
+  `CHROME_CDP_HOST` отказывает, а если порт не поднялся — называет профиль,
+  который может держать другой Chrome без remote debugging.
+- `marketplace-mcp unblock [sources...] [--wait SECONDS] [--dry-run]`: для
+  каждого браузерного источника из `doctor` открывает в новой вкладке страницу,
+  где человек проходит проверку или входит (карта `UNBLOCK_PAGES`), поднимает
+  окно на этой вкладке и ждёт Enter в терминале или `--wait` секунд (по
+  умолчанию 180), затем перепроверяет только эти источники и печатает те же
+  строки и следующие шаги, что `doctor`. `--dry-run` только печатает страницы.
+  Ничего не решается и не обходится автоматически: страницу проходит человек.
 - `scripts/start_chrome_cdp.ps1` и `.sh` больше не требуют закрыть обычный
   Chrome: если CDP-эндпоинт уже отвечает на порту, лаунчер сообщает об этом и
   выходит с кодом 0; если тот же профиль (`--user-data-dir`) уже занят другим
   Chrome — отказ с кодом 2; иначе Chrome запускается, даже когда другие окна
-  Chrome открыты. Без `-Visible` лаунчер заканчивает подсказкой
-  `marketplace-mcp browser show`.
+  Chrome открыты. Ручной запуск теперь видимый по умолчанию; `-Hidden` в
+  PowerShell и `--hidden` в shell возвращают окно за экран, `-Visible` по-прежнему
+  принимается и ничего не меняет. Скрытый запуск заканчивает подсказкой
+  `marketplace-mcp browser show`; автозапуск коннектора остаётся за экраном.
 - `scripts/check_lock_revision.py` — новый гейт: лок-файл, перезаписанный старым
   uv (revision 3 вместо 5), больше не проходит молча. Это не
   `required-version` в `pyproject.toml`: тот флаг запретил бы оператору со
@@ -119,13 +135,29 @@
   the current size is kept when the window is at least 800x600, otherwise
   1280x900) and activates the first tab. Both send browser-level CDP commands
   only and request nothing from any website. The doctor's advice for a source
-  blocked by the browser now names `marketplace-mcp browser show`.
+  blocked by the browser now names `marketplace-mcp unblock <source>`.
+- `marketplace-mcp browser start [--hidden]` launches the scraping Chrome
+  itself: the window is visible by default (no off-screen arguments, nothing
+  hidden), while `--hidden` keeps the connector autostart's off-screen
+  behaviour. If CDP already answers it starts nothing and points at
+  `browser show`; a remote `CHROME_CDP_HOST` is refused, and a port that never
+  binds names the profile another Chrome may hold without remote debugging.
+- `marketplace-mcp unblock [sources...] [--wait SECONDS] [--dry-run]`: for each
+  browser-backed source from `doctor`, opens the page where a human passes the
+  check or logs in (the `UNBLOCK_PAGES` map) in a new tab, raises the window on
+  that tab and waits for Enter on a terminal or `--wait` seconds (180 by
+  default), then re-checks only those sources and prints doctor's rows and next
+  steps. `--dry-run` only prints the pages. Nothing is solved or bypassed
+  automatically: the human passes the page.
 - `scripts/start_chrome_cdp.ps1` and `.sh` no longer demand closing the
   everyday Chrome: when the CDP endpoint already answers on the port, the
   launcher says so and exits 0; when another Chrome holds the same profile
   (`--user-data-dir`), it refuses with exit 2; otherwise Chrome starts even
-  while other Chrome windows are open. Started without `-Visible`, it ends with
-  a pointer to `marketplace-mcp browser show`.
+  while other Chrome windows are open. The manual launch is now visible by
+  default; `-Hidden` in PowerShell and `--hidden` in the shell park the window
+  off-screen, and `-Visible` is still accepted and changes nothing. A hidden
+  launch ends with a pointer to `marketplace-mcp browser show`; the connector's
+  autostart stays off-screen.
 - `scripts/check_lock_revision.py` — a new gate: a lockfile rewritten by an
   older uv (revision 3 instead of 5) no longer passes silently. This is not a
   `required-version` floor in `pyproject.toml`: that flag would stop an

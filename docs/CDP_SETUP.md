@@ -108,17 +108,23 @@ holding *this* profile, which would refuse to start a second time. If a CDP
 endpoint already answers on the port, the launcher says so and exits without
 starting anything.
 
-### 2. The window starts off-screen on Windows
+### 2. The window and the two ways to reach it
 
-The scraping window is parked off-screen on purpose, so it never takes focus or
-drags the desktop to another Space. The price is that you cannot see it — and
-logging in or passing a site's check needs a human. Two verbs answer that:
+The launcher scripts start the manual Chrome **on-screen** so you can log in.
+`-Hidden` (PowerShell) or `--hidden` (shell) parks it off-screen instead, and
+`-Visible` is still accepted as a no-op. The connector's own autostart is
+different: on Windows it deliberately parks the window off-screen so it never
+takes focus. That is the window you cannot see, and logging in or passing a
+site's check needs a human. These verbs answer that:
 
 ```console
+marketplace-mcp browser start    # launch the scraping Chrome on-screen (--hidden: off-screen)
 marketplace-mcp browser status   # is the endpoint reachable, which Chrome, how many tabs, where is the window
 marketplace-mcp browser show     # un-minimize the window, move it on-screen, activate its first tab
 ```
 
+`browser start` exits 0 when CDP answers at the end (also when it was already
+running; it then points at `browser show`), and 1 with the reason otherwise.
 `browser status` exits 0 when the endpoint answers and 1 when it does not, and
 then prints how to start the scraping Chrome. `browser show` sends browser-level
 CDP commands only: it opens no page and requests nothing from any website.
@@ -127,8 +133,13 @@ CDP commands only: it opens no page and requests nothing from any website.
 
 In the window that opens, sign into whichever CDP sources you use — `ozon.ru`,
 `avito.ru`, `taobao.com`, `megamarket.ru`, `lamoda.ru`, `dns-shop.ru`,
-`citilink.ru`, `aliexpress.ru`. One profile serves them all. **Do not** sign into banking, email, or
+`citilink.ru`, `aliexpress.ru`, `cian.ru`. One profile serves them all. **Do not** sign into banking, email, or
 work accounts here. Keeping it single-purpose is what bounds the risk.
+
+When `doctor` reports a wall, `marketplace-mcp unblock <source>` opens that
+source's page in a new tab and waits while you pass the check or log in; it then
+re-runs only that source's selfcheck. It opens pages and re-checks — it never
+solves or automates a site's check.
 
 ### 4. Verify
 

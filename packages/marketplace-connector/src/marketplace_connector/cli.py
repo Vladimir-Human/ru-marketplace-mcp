@@ -16,17 +16,23 @@ Three verbs cover the three moments an operator actually needs help with:
 
 ``marketplace-mcp browser status`` / ``marketplace-mcp browser show``
     Look at the operator's scraping Chrome and bring its window back. On
-    Windows it starts off-screen by design, so a human cannot log in or pass a
-    site's check without moving the window first.
+    Windows the connector's autostart parks it off-screen by design, so a
+    human cannot log in or pass a site's check without moving the window
+    first. ``browser start`` launches it on-screen for exactly that.
+
+``marketplace-mcp unblock [source ...]``
+    Open the page a human needs for each browser-walled source, wait for the
+    check or login, then re-run those selfchecks. It opens pages and reports;
+    it never solves or automates a site's check.
 
 ``marketplace-mcp --help``
     A short usage screen: the verbs, one example each, and where to read more.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect the scraping Chrome.
-# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), browser (status, show), help.
-# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs); local capabilities (static source table).
-# LINKS: M-MARKETPLACE.
+# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, and open unblock pages.
+# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
+# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs); local capabilities (static source table); local unblock map.
+# LINKS: M-MARKETPLACE; M-UNBLOCK.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
@@ -34,7 +40,9 @@ Three verbs cover the three moments an operator actually needs help with:
 # _config_path: Where a client's mcpServers file lives on this platform.
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
 # next_step: One fixed next-step string for a source that is not ok.
-# cmd_browser: browser status and browser show — the operator's view of the scraping Chrome.
+# _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor and unblock.
+# cmd_browser: browser status, browser show and browser start.
+# cmd_unblock: Open the pages a human passes, then re-check those sources.
 # cmd_install / cmd_doctor / main: The verbs.
 # END_MODULE_MAP
 
@@ -48,6 +56,7 @@ import pathlib
 import shutil
 import sys
 import tempfile
+import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -55,6 +64,7 @@ from mcp_core.logging import log_event
 from mcp_core.source_selection import canonical
 
 from marketplace_connector.capabilities import CAPABILITIES, browser_backed
+from marketplace_connector.unblock import UNBLOCK_PAGES
 
 # Clients whose config format this block is known to fit. A typo like
 # "cursour" should say so rather than silently printing a Claude block.
@@ -117,13 +127,16 @@ Usage:
   marketplace-mcp doctor [source]  run every connector's selfcheck and report health
   marketplace-mcp browser status   check the scraping Chrome and where its window is
   marketplace-mcp browser show     bring the scraping Chrome window on-screen
+  marketplace-mcp browser start    launch the scraping Chrome on-screen (--hidden: off-screen)
+  marketplace-mcp unblock [source] open the page a human passes, wait, then re-check
   marketplace-mcp help             show this text
 
 Examples:
   marketplace-mcp
   marketplace-mcp install claude --write
   marketplace-mcp doctor wildberries
-  marketplace-mcp browser status
+  marketplace-mcp browser start
+  marketplace-mcp unblock ozon --dry-run
   marketplace-mcp help
 
 Read more: docs/QUICKSTART.md"""
@@ -136,14 +149,13 @@ NEXT_STEP_CDP_DOWN = (
     "`scripts/start_chrome_cdp.sh`, or let the connector start it on its first browser call."
 )
 NEXT_STEP_BROWSER_WALL = (
-    "Open the scraping Chrome window, pass the site's check or log in by hand, then rerun: "
-    "`marketplace-mcp doctor {source}`. On Windows the window starts off-screen; "
-    "`marketplace-mcp browser show` brings it on-screen."
+    "Run `marketplace-mcp unblock {source}`: it opens the page in the scraping Chrome, "
+    "you pass the check or log in, and it re-checks."
 )
 # The one instruction that starts the operator's Chrome. Fixed text: the
 # operator gets one command, not a menu of ways to start a browser.
 START_CHROME_HINT = (
-    "Start the scraping Chrome: `scripts/start_chrome_cdp.ps1 -Visible` (Windows) or "
+    "Start the scraping Chrome: `scripts/start_chrome_cdp.ps1` (Windows) or "
     "`scripts/start_chrome_cdp.sh` (macOS/Linux)."
 )
 NEXT_STEP_WB_TRANSPORT = (
@@ -192,6 +204,18 @@ DIAGNOSE_DRIFT_SOURCES = frozenset({"citilink", "dns", "lamoda", "taobao", "mega
 # (Megamarket). A rate limit is NOT here — waiting IS the fix for it, and
 # waiting is not something the browser can do for the operator.
 WALL_REASONS = frozenset({"blocked", "login_wall", "not_authenticated", "challenge_required"})
+
+# Sources whose wall is a login rather than a bot check: the operator's action
+# there is "log in", and the page in UNBLOCK_PAGES is the login or home page.
+_LOGIN_UNBLOCK_SOURCES = frozenset({"taobao", "megamarket"})
+
+# Seconds ``unblock`` waits for the human when stdin is not a terminal.
+UNBLOCK_WAIT_DEFAULT_S = 180.0
+
+
+def _browser_source_names() -> list[str]:
+    """Doctor sources whose connector can use the operator's Chrome."""
+    return [name for name, _, _ in _SELFCHECKS if browser_backed(CAPABILITIES.get(name))]
 
 
 def _workspace_root() -> pathlib.Path | None:
@@ -782,6 +806,83 @@ def _probe_cdp() -> tuple[bool | None, str]:
         return None, f"Chrome CDP: probe failed ({type(exc).__name__})."
 
 
+def _print_health_rows(
+    results: list[tuple[str, str, str, dict[str, Any]]],
+    steps: Mapping[str, str | None],
+) -> tuple[int, int, int]:
+    """Print the doctor rows and summary; return (healthy, blocked, drifted).
+
+    Shared with ``unblock``'s re-check so the two commands cannot drift apart
+    in what an operator reads.
+    """
+    healthy = blocked = drifted = 0
+    for name, status, detail, _ in results:
+        marker = {"success": "ok ", "drift_detected": "DRF", "inconclusive": "blk"}.get(status, "err")
+        if status == "success":
+            healthy += 1
+        elif status == "drift_detected":
+            drifted += 1
+        else:
+            blocked += 1
+        print(f"  {marker} {name:<14} {status:<15} {detail}")
+        step = steps.get(name)
+        if step:
+            print(f"      next: {step}")
+    print(f"\n  {healthy} healthy, {blocked} blocked/inconclusive, {drifted} drifted.")
+    return healthy, blocked, drifted
+
+
+def _run_selfchecks(only: set[str] | None) -> list[tuple[str, str, str, dict[str, Any]]]:
+    """Run the selfchecks in table order: all of them, or only the named ones."""
+    return [
+        asyncio.run(_run_one_selfcheck(name, module_path, tool_name))
+        for name, module_path, tool_name in _SELFCHECKS
+        if only is None or name in only
+    ]
+
+
+def _health_steps(results: list[tuple[str, str, str, dict[str, Any]]]) -> tuple[dict[str, str | None], str]:
+    """One next step per checked source, plus the CDP line printed under the table.
+
+    CDP reachability decides two different next steps ("start the browser"
+    vs "the browser was refused"), so it is probed before the table is
+    printed rather than after it.
+    """
+    cdp_reachable, cdp_note = _probe_cdp()
+    wb_transport = os.environ.get("WB_TRANSPORT", "api")
+    wb_dom_fallback = os.environ.get("WB_DOM_FALLBACK", "1")
+    steps = {
+        name: next_step(
+            name,
+            status,
+            checks,
+            cdp_reachable=cdp_reachable,
+            wb_transport=wb_transport,
+            wb_dom_fallback=wb_dom_fallback,
+        )
+        for name, status, _, checks in results
+    }
+    return steps, cdp_note
+
+
+def _health_exit_code(blocked: int, drifted: int) -> int:
+    """The doctor exit code for a checked set of sources.
+
+    Exit codes are what a cron job or CI step actually reads, so they have to
+    separate the three outcomes an operator responds to differently:
+      0 — everything that could be checked is healthy.
+      1 — a parser drifted. Someone has to go look; this is the alarm.
+      2 — nothing drifted but a source could not be judged (blocked, no CDP,
+          wrong country). Not an alarm, not a clean bill of health either.
+    Collapsing 2 into 0 is how "all good" starts meaning "we checked nothing".
+    """
+    if drifted:
+        return 1
+    if blocked:
+        return 2
+    return 0
+
+
 def cmd_doctor(argv: list[str]) -> int:
     """Run every selfcheck and print a per-source health table.
 
@@ -817,45 +918,11 @@ def cmd_doctor(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 2
-    results = []
-    for name, module_path, tool_name in _SELFCHECKS:
-        if only and name not in only:
-            continue
-        results.append(asyncio.run(_run_one_selfcheck(name, module_path, tool_name)))
-
-    # CDP reachability decides two different next steps ("start the browser"
-    # vs "the browser was refused"), so it is probed before the table is
-    # printed rather than after it.
-    cdp_reachable, cdp_note = _probe_cdp()
-    wb_transport = os.environ.get("WB_TRANSPORT", "api")
-    wb_dom_fallback = os.environ.get("WB_DOM_FALLBACK", "1")
-    steps = {
-        name: next_step(
-            name,
-            status,
-            checks,
-            cdp_reachable=cdp_reachable,
-            wb_transport=wb_transport,
-            wb_dom_fallback=wb_dom_fallback,
-        )
-        for name, status, _, checks in results
-    }
+    results = _run_selfchecks(only)
+    steps, cdp_note = _health_steps(results)
 
     print("Marketplace connector health (selfcheck):")
-    healthy = blocked = drifted = 0
-    for name, status, detail, _ in results:
-        marker = {"success": "ok ", "drift_detected": "DRF", "inconclusive": "blk"}.get(status, "err")
-        if status == "success":
-            healthy += 1
-        elif status == "drift_detected":
-            drifted += 1
-        else:
-            blocked += 1
-        print(f"  {marker} {name:<14} {status:<15} {detail}")
-        step = steps.get(name)
-        if step:
-            print(f"      next: {step}")
-    print(f"\n  {healthy} healthy, {blocked} blocked/inconclusive, {drifted} drifted.")
+    healthy, blocked, drifted = _print_health_rows(results, steps)
     print("  Every blocked row carries its own next step; 'inconclusive' means the source")
     print("  could not be judged — the parser was never proven broken.")
 
@@ -885,39 +952,43 @@ def cmd_doctor(argv: list[str]) -> int:
             print(f"\n  could not write status file {target}: {exc}", file=sys.stderr)
             return 3
 
-    # Exit codes are what a cron job or CI step actually reads, so they have to
-    # separate the three outcomes an operator responds to differently:
-    #   0 — everything that could be checked is healthy.
-    #   1 — a parser drifted. Someone has to go look; this is the alarm.
-    #   2 — nothing drifted but a source could not be judged (blocked, no CDP,
-    #       wrong country). Not an alarm, not a clean bill of health either.
-    # Collapsing 2 into 0 is how "all good" starts meaning "we checked nothing".
-    if drifted:
-        return 1
-    if blocked:
-        return 2
-    return 0
+    return _health_exit_code(blocked, drifted)
 
 
 def cmd_browser(argv: list[str]) -> int:
-    """``browser status`` and ``browser show`` — the operator's view of the Chrome.
+    """``browser status`` / ``show`` / ``start`` — the operator's view of the Chrome.
 
     ``status`` says whether the CDP endpoint answers, which Chrome it is and
     where its window is; ``show`` brings that window back on-screen so a human
-    can log in or pass a site's check. Neither sends a request to any website.
+    can log in or pass a site's check; ``start`` launches a Chrome that is
+    visible by default (``--hidden`` for the connector's off-screen behaviour).
+    None of them sends a request to any website.
     """
     if not argv:
-        print("browser needs a verb: status or show", file=sys.stderr)
+        print("browser needs a verb: status, show or start", file=sys.stderr)
         return 2
     verb = argv[0]
-    if len(argv) > 1:
+    rest = argv[1:]
+    if verb == "start":
+        hidden = False
+        for arg in rest:
+            if arg == "--hidden":
+                hidden = True
+            elif arg.startswith("-"):
+                print(f"unknown browser start option {arg!r}", file=sys.stderr)
+                return 2
+            else:
+                print(f"browser start takes no arguments besides --hidden, got {arg!r}", file=sys.stderr)
+                return 2
+        return _browser_start(hidden)
+    if rest:
         print(f"browser {verb} takes no arguments", file=sys.stderr)
         return 2
     if verb == "status":
         return _browser_status()
     if verb == "show":
         return _browser_show()
-    print(f"unknown browser verb {verb!r}; expected status or show", file=sys.stderr)
+    print(f"unknown browser verb {verb!r}; expected status, show or start", file=sys.stderr)
     return 2
 
 
@@ -959,6 +1030,152 @@ def _browser_show() -> int:
     return 0
 
 
+def _browser_start(hidden: bool) -> int:
+    """Launch the scraping Chrome for the operator; visible unless ``hidden``."""
+    from mcp_core.transport.chrome_cdp import start_browser
+
+    result = asyncio.run(start_browser(visible=not hidden))
+    if not result.get("ok"):
+        print(f"could not start the scraping Chrome: {result.get('reason', 'unknown reason')}", file=sys.stderr)
+        return 1
+    endpoint = f"{result.get('host', '?')}:{result.get('port', '?')}"
+    if result.get("already_running"):
+        print(f"Chrome with CDP is already running on {endpoint} - nothing to start.")
+        print("To bring its window on-screen: marketplace-mcp browser show")
+        return 0
+    print(f"Started Chrome with CDP on {endpoint}.")
+    print(f"Profile: {result.get('profile')}")
+    if hidden:
+        print("The window is off-screen. To log in or pass a site check: marketplace-mcp browser show")
+    return 0
+
+
+def _blocked_sources(results: list[tuple[str, str, str, dict[str, Any]]]) -> list[str]:
+    """Names whose checks carry a wall reason, in the selfcheck table order."""
+    blocked: list[str] = []
+    for name, _status, _detail, checks in results:
+        reasons = {str(_attr(entry, "reason", "") or "") for entry in checks.values()}
+        if reasons & WALL_REASONS:
+            blocked.append(name)
+    return blocked
+
+
+def cmd_unblock(argv: list[str]) -> int:
+    """Open the right page per browser-walled source, wait, then re-check it.
+
+    This command never solves or automates a site's check: it opens a page in
+    the operator's scraping Chrome, waits while the human passes the check or
+    logs in, and runs the same selfchecks ``doctor`` runs for those sources.
+    """
+    named: list[str] = []
+    wait_s = UNBLOCK_WAIT_DEFAULT_S
+    dry_run = False
+    it = iter(argv)
+    for arg in it:
+        if arg == "--dry-run":
+            dry_run = True
+        elif arg == "--wait":
+            raw = next(it, None)
+            if raw is None:
+                print("--wait requires seconds", file=sys.stderr)
+                return 2
+            try:
+                wait_s = float(raw)
+            except ValueError:
+                print(f"--wait needs a number of seconds, got {raw!r}", file=sys.stderr)
+                return 2
+            if wait_s < 0:
+                print("--wait cannot be negative", file=sys.stderr)
+                return 2
+        elif arg.startswith("-"):
+            print(f"unknown unblock option {arg!r}", file=sys.stderr)
+            return 2
+        else:
+            named.append(canonical(arg))
+
+    known = {name for name, _, _ in _SELFCHECKS}
+    unknown = set(named) - known
+    if unknown:
+        print(
+            f"unknown source(s): {', '.join(sorted(unknown))}; expected one of {', '.join(sorted(known))}",
+            file=sys.stderr,
+        )
+        return 2
+
+    browser_sources = _browser_source_names()
+    not_browser = [name for name in named if name not in browser_sources]
+    if not_browser:
+        source = not_browser[0]
+        print(
+            f"{source} is not a browser source; see `marketplace-mcp doctor {source}`",
+            file=sys.stderr,
+        )
+        return 2
+
+    if named:
+        sources = list(dict.fromkeys(named))
+    elif dry_run:
+        print(
+            "unblock --dry-run needs source names: without them it would run live selfchecks to find a wall",
+            file=sys.stderr,
+        )
+        return 2
+    else:
+        sources = _blocked_sources(_run_selfchecks(set(browser_sources)))
+        if not sources:
+            print("No browser source reports a wall right now; nothing to unblock.")
+            return 0
+
+    pages = [(name, UNBLOCK_PAGES[name]) for name in sources]
+    print(f"Opens {len(pages)} page(s), one per source; the re-check makes the same requests as doctor.")
+    if dry_run:
+        for name, url in pages:
+            print(f"  {name:<14} {url}")
+        print("Dry run: nothing was opened and no selfcheck was run.")
+        return 0
+
+    from mcp_core.transport.chrome_cdp import open_tabs, show_browser_window, start_browser
+
+    started = asyncio.run(start_browser(visible=True))
+    if not started.get("ok"):
+        print(f"could not start the scraping Chrome: {started.get('reason', 'unknown reason')}", file=sys.stderr)
+        return 1
+
+    opened = asyncio.run(open_tabs([url for _name, url in pages]))
+    if not opened.get("ok"):
+        print(f"could not open the unblock pages: {opened.get('reason')}", file=sys.stderr)
+        return 1
+
+    shown = asyncio.run(show_browser_window(target_id=opened["target_ids"][0]))
+    if not shown.get("ok"):
+        print(
+            f"could not show the scraping Chrome window: {shown.get('reason', 'unknown reason')}",
+            file=sys.stderr,
+        )
+        return 1
+
+    for name, url in pages:
+        action = "log in by hand" if name in _LOGIN_UNBLOCK_SOURCES else "pass the site's check by hand, if it asks"
+        print(f"  {name:<14} {url}")
+        print(f"      {action}; this command does not touch the check.")
+
+    if sys.stdin.isatty():
+        try:
+            input("Press Enter once you have passed the checks or logged in... ")
+        except EOFError:
+            pass
+    else:
+        print(f"Waiting {wait_s:g}s for you to pass the checks or log in.")
+        time.sleep(wait_s)
+
+    results = _run_selfchecks(set(sources))
+    steps, cdp_note = _health_steps(results)
+    print("\nRe-check after the manual step:")
+    _, blocked, drifted = _print_health_rows(results, steps)
+    print(f"\n  {cdp_note}")
+    return _health_exit_code(blocked, drifted)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] in ("-h", "--help", "help"):
@@ -977,7 +1194,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_doctor(rest)
     if command == "browser":
         return cmd_browser(rest)
-    print(f"unknown command {command!r}; expected install, doctor or browser", file=sys.stderr)
+    if command == "unblock":
+        return cmd_unblock(rest)
+    print(f"unknown command {command!r}; expected install, doctor, browser or unblock", file=sys.stderr)
     print(USAGE, file=sys.stderr)
     log_event("marketplace.cli.unknown", command=command)
     return 2
