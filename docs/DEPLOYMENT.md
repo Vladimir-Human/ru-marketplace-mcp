@@ -154,9 +154,10 @@ only that virtualenv and the source into a plain `python:3.12-slim-trixie`
 runtime — uv does not ship in the runtime image. It runs as a **non-root** user,
 because a network-reachable scraper has no business being root in its container.
 
-Image tags are pinned: the builder is `ghcr.io/astral-sh/uv:0.11.32-python3.12-trixie-slim`
-(the uv version this repo's `uv.lock` was produced with) and the runtime is
-`python:3.12-slim-trixie`. Both were confirmed to exist in their registries.
+Image tags are pinned, each with its digest: the builder is a
+`ghcr.io/astral-sh/uv:<version>-python3.12-trixie-slim` image and the runtime is
+`python:3.12-slim-trixie`. Dependabot moves the uv tag and both digests weekly;
+the runtime stays on Python 3.12 until that is changed on purpose.
 
 ### Build
 
