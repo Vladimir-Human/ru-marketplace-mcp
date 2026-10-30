@@ -45,6 +45,7 @@
   </entry>
   <entry id="V-M-RUNTIME" module="M-RUNTIME" file="packages/mcp-core/src/mcp_core/runtime.py">
     <test file="packages/mcp-core/tests/test_runtime.py" title="test_run_server_stdio_calls_run_with_stdio_only" checks="Fake FastMCP launch dispatch; companion transport parsing/defaults/host/path/port errors, shutdown exit codes, exposure warnings and missing non-loopback token/tenant refusals; no socket serving" />
+    <test file="packages/mcp-core/tests/test_client_scope.py" title="test_stdio_sessionless_client_is_scoped_to_the_process" checks="Real stdio child process: a 2026-07-28 client gets a new session_id per request but one stable STDIO_CLIENT_SCOPE; companions: handshake stdio client scoped to its stable session id, distinct in-memory handshake clients get distinct scopes, sessionless HTTP/in-memory calls and calls outside a request get None" />
     <test file="packages/mcp-core/tests/test_compose_runtime.py" title="test_compose_service_passes_http_startup_auth_gate" checks="Compose credentials are required substitutions; fake launch attaches token/tenant middleware and ports bind 127.0.0.1; no compose deployment" />
   </entry>
   <entry id="V-M-SOURCE-SELECTION" module="M-SOURCE-SELECTION" file="packages/mcp-core/src/mcp_core/source_selection.py">
@@ -267,7 +268,7 @@
     <test file="packages/compare-connector/tests/test_identity.py" checks="GTIN checksum/zero-padding, typed manufacturer/brand identifiers, variant conflicts and incomplete-evidence abstention" />
     <test file="packages/compare-connector/tests/test_search_offer_integrity.py" checks="Native fixture stock ambiguity/absence retained through ranking; eligible winner and distinct Yandex SKU dedupe" />
     <test file="packages/compare-connector/tests/test_source_warnings.py" checks="Per-request native warning preservation, bounded/redacted/deduplicated text and coupon warning without false failure" />
-    <test file="packages/compare-connector/tests/test_browser_handoff.py" checks="Fake browser/MCP lease/session retention, isolation, shutdown and snapshot ownership/delivery; not real Chrome" />
+    <test file="packages/compare-connector/tests/test_browser_handoff.py" checks="Fake browser/MCP lease retention and resume for a handshake-era client and a sessionless stdio client, handshake session isolation, shutdown and snapshot ownership/delivery; sessionless HTTP/in-memory calls report the challenge and close the tab instead of retaining it; not real Chrome" />
     <test file="packages/compare-connector/tests/test_vision_policy.py" checks="Auto/always/never policy, explicit client refusal, capability hints, unknown capability and metadata-only requests" />
     <test file="packages/compare-connector/tests/test_decision_server.py" checks="Decision profile includes compare tools and decision_inspect; source rejection, canonical Detmir URL and invalid WB input; initial inventory assertion is a subset" />
   </entry>
@@ -296,7 +297,7 @@
   <entry id="V-DF-OPS" flows="DF-RELEASE,DF-SCHEMA,DF-DOCTOR,DF-FIXTURES">
     <test file="scripts/test_ci_concurrency.py" checks="Event-aware concurrency groups; schedule cannot cancel or be cancelled; live job remains schedule/dispatch only" />
     <test file="scripts/test_distribution_contract.py" checks="Standalone wheelhouse/docs/extras/entrypoint parity with comparison source dependencies" />
-    <test file="scripts/test_e2e_stdio_check.py" checks="Mocked protocol version and full/valid mounted-source introspection rejection/acceptance" />
+    <test file="scripts/test_e2e_stdio_check.py" checks="Mocked running-version check in both protocol eras (the probe opens the era it reports), unidentified-server rejection and full/valid mounted-source introspection rejection/acceptance" />
     <test file="scripts/test_ops_gates.py" checks="Deterministic routing fixtures, token-regression gate, machine-readable sorted wire snapshot and model matrix" />
     <test file="scripts/test_stdio_probe.py" checks="Fake subprocess silence/deadlines, noisy/interleaved/malformed/error protocol, tree cleanup and mocked Docker failure/version/cleanup paths" />
     <test file="scripts/test_test_count_gate.py" checks="Mock collection failures cannot pass; selected test-count output parsing" />
@@ -306,7 +307,7 @@
     <gap id="G-CORE-FACADES" modules="M-CORE,M-TRANSPORT">No core assertions pin complete facade exports/version or prove imports remain usable without optional browser packages.</gap>
     <gap id="G-CORE-SIMPLE" modules="M-MODELS,M-LOGGING">No direct core base-envelope, stderr JSON or stdout-purity assertions found. Runtime caplog checks are indirect logging coverage, not wire capture; source-selection assertions are mapped from marketplace-connector tests separately.</gap>
     <gap id="G-CORE-ERROR-HTTP" modules="M-ERRORS,M-HTTP">Core assertions do not comprehensively pin all error codes, ToolError JSON mapping, timeout options/cache or HTTP status classification; Retry-After HTTP-date paths are not asserted in test_http.py.</gap>
-    <gap id="G-CORE-RUNTIME" modules="M-RUNTIME">Inspected core runtime tests use fake FastMCP launch. Actual request-level bearer/tenant middleware rejection, session resolution and loaded/unloaded handoff lifespan cleanup are not directly asserted here; no real stdio/HTTP serving or TLS test.</gap>
+    <gap id="G-CORE-RUNTIME" modules="M-RUNTIME">Inspected core runtime tests use fake FastMCP launch. Actual request-level bearer/tenant middleware rejection and loaded/unloaded handoff lifespan cleanup are not directly asserted here. Client-scope resolution runs over real stdio (test_client_scope.py); sessionless HTTP is covered only by patching the reported transport, with no real HTTP serving or TLS test.</gap>
     <gap id="G-CORE-CACHE-PACING" modules="M-CACHE,M-PACING">No inspected cache test stores None or exercises factory exception/cancellation recovery. Timing uses injected clocks; real event-loop/source pacing efficacy and refusal recovery are not established.</gap>
     <gap id="G-CORE-PARSE" modules="M-RESILIENCE,M-DOM,M-DOMTEST">Property tests sample specified strategies, not every possible payload. Core tests do not directly cover all deep_first/offer-validation/meta/widget paths. DOM helper assertions mostly inspect generated strings or Python tile mapping; jsdom UTF-8 tests can skip and do not prove live browser layout behavior.</gap>
     <gap id="G-CORE-PROCESS-REDACT" modules="M-PROCESS,M-REDACT">Tree termination is mocked rather than a real Windows/POSIX process-tree proof. Redaction recognizes known credential shapes, not arbitrary PII/secrets; whitespace-split proxy credentials remain unsupported by source comments.</gap>

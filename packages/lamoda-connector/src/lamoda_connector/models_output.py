@@ -20,7 +20,7 @@ class LamodaSearchItemOut(BaseModel):
 
 
 class LamodaSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")
@@ -36,7 +36,7 @@ class LamodaSizeOut(BaseModel):
 
 
 class LamodaCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     sku: str | None = Field(default=None, description="Lamoda SKU.")

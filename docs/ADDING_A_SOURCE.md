@@ -71,7 +71,7 @@ import as `Any` and reports phantom errors elsewhere in the tree.
 name = "<name>-connector"
 version = "1.0.0"
 requires-python = ">=3.12"
-dependencies = ["mcp-core", "fastmcp>=3.4.0", "httpx>=0.27", "pydantic>=2.6", "pydantic-settings>=2.2"]
+dependencies = ["mcp-core", "fastmcp>=4.1.4,<5", "httpx>=0.27", "pydantic>=2.12", "pydantic-settings>=2.2"]
 
 [project.scripts]
 <name>-mcp = "<name>_connector.__main__:main"

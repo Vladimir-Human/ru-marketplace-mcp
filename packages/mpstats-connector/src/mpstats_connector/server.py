@@ -534,10 +534,10 @@ def _validate_skus(skus: list[int], label: str) -> None:
     name="mpstats_item",
     annotations=ToolAnnotations(
         title="MPStats Item Analytics",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def mpstats_item(
@@ -652,10 +652,10 @@ async def mpstats_item(
     name="mpstats_warehouses",
     annotations=ToolAnnotations(
         title="MPStats Warehouse Stock",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def mpstats_warehouses(

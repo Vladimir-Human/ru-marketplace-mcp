@@ -24,10 +24,10 @@ mcp.mount(compare.mcp)
     name="decision_inspect",
     annotations=ToolAnnotations(
         title="Inspect a Shortlisted Marketplace Card",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def decision_inspect(

@@ -20,12 +20,13 @@ Two rules this module exists to enforce, both protocol- or security-critical:
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Resolve and launch stdio or authenticated HTTP-family MCP servers.
-# SCOPE: Environment parsing, launch diagnostics and graceful handoff cleanup.
-# DEPENDS: FastMCP; mcp_core.logging; loaded browser_handoff at shutdown; stdlib.
+# SCOPE: Environment parsing, launch diagnostics, per-era client scope and graceful handoff cleanup.
+# DEPENDS: FastMCP; mcp_types protocol versions; mcp_core.logging; loaded browser_handoff at shutdown; stdlib.
 # LINKS: M-RUNTIME; M-LOGGING; M-BROWSER-HANDOFF.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# current_mcp_session_id: Resolve tool-call session identity or None for CLI probes.
+# STDIO_CLIENT_SCOPE: Stand in for the one stdio client on sessionless connections.
+# current_client_scope: Resolve the calling client per protocol era, or None.
 # browser_handoff_lifespan: Close already-loaded handoffs on server shutdown.
 # TransportConfig: Hold transport and loopback/default endpoint configuration.
 # BearerAuthMiddleware: Compare bearer token and optional static tenant identity.
@@ -51,6 +52,7 @@ from typing import TYPE_CHECKING, Literal
 
 from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
+from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 from mcp_core.logging import log_event
 
@@ -58,12 +60,32 @@ if TYPE_CHECKING:
     from fastmcp import Context, FastMCP
 
 
-def current_mcp_session_id(ctx: Context | None = None) -> str | None:
-    """Resolve direct and mounted tool calls; CLI probes have no MCP session."""
+# One stdio process serves exactly one client, the one holding its pipes, so on
+# a sessionless connection the process stands in for that client's session.
+STDIO_CLIENT_SCOPE = "stdio-process"
+
+
+def current_client_scope(ctx: Context | None = None) -> str | None:
+    """Identify the client a tool call belongs to, or None when nothing does.
+
+    FastMCP 4 serves two protocol eras. A handshake-era connection (2025-11-25
+    and older) has a session whose id stays the same across calls. A 2026-07-28
+    connection has no session: FastMCP mints a new ``session_id`` per request,
+    so it cannot tie a retry to the call that opened a challenge tab. There a
+    stdio server uses the process scope; HTTP and in-memory servers get None,
+    because nothing names the caller from one request to the next. CLI probes
+    run outside any request and also get None.
+    """
     try:
-        return (ctx or get_context()).session_id
+        context = ctx or get_context()
+        request = context.request_context
+        if request is None:
+            return None
+        if request.protocol_version not in MODERN_PROTOCOL_VERSIONS:
+            return context.session_id
     except RuntimeError:
         return None
+    return STDIO_CLIENT_SCOPE if context.transport == "stdio" else None
 
 
 @asynccontextmanager
@@ -77,7 +99,7 @@ async def browser_handoff_lifespan(server: FastMCP) -> AsyncIterator[dict]:
             await handoff.close_handoffs()
 
 
-# The transport strings FastMCP 3.x accepts for these servers. "stdio" is the
+# The transport strings FastMCP 4.x accepts for these servers. "stdio" is the
 # default and the only one existing client configs rely on. "http" is the
 # modern streamable-HTTP transport; "streamable-http" is its explicit alias and
 # "sse" is the older Server-Sent-Events transport, both kept so operators who

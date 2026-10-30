@@ -393,7 +393,7 @@ def _is_qrator_wall(data: dict[str, Any]) -> bool:
 @mcp.tool(
     name="dns_search",
     annotations=ToolAnnotations(
-        title="DNS-Shop Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="DNS-Shop Search", read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True
     ),
 )
 async def dns_search(
@@ -465,7 +465,11 @@ async def dns_search(
 @mcp.tool(
     name="dns_card",
     annotations=ToolAnnotations(
-        title="DNS-Shop Product Card", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+        title="DNS-Shop Product Card",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def dns_card(

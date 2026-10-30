@@ -29,7 +29,7 @@ class AvitoSearchItemOut(BaseModel):
 
 
 class AvitoSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     query: str = Field(default="", description="Search query text.")
@@ -52,7 +52,7 @@ class AvitoSellerOut(BaseModel):
 
 
 class AvitoCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     item_id: int | None = Field(default=None, description="Avito item id.")
@@ -70,7 +70,7 @@ class AvitoCardResponse(BaseModel):
 
 
 class AvitoSellerResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     seller: AvitoSellerOut | None = Field(default=None, description="Seller info.")

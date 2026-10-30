@@ -96,7 +96,7 @@ class CianSearchItemOut(BaseModel):
 
 
 class CianSearchResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     deal: str = Field(default="", description="Deal type the search ran with: sale or rent.")
@@ -137,7 +137,7 @@ class CianPhotoOut(BaseModel):
 
 
 class CianCardResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
     offer_id: int | None = Field(default=None, description="Cian offer id.")
