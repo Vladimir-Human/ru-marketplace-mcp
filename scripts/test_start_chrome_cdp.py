@@ -72,7 +72,6 @@ def test_the_powershell_launcher_stays_readable_by_windows_powershell_5_1():
 
 def test_the_shell_launcher_applies_the_same_three_steps():
     text = _read(SH)
-
     # 1. The CDP endpoint already answers.
     assert "/json/version" in text
     assert "already running on port" in text
@@ -82,3 +81,21 @@ def test_the_shell_launcher_applies_the_same_three_steps():
     assert "exit 2" in text
     # 3. Chrome starts even when other Chrome windows are open.
     assert "Close all Chrome windows" not in text
+
+
+def test_the_manual_launchers_are_visible_by_default():
+    """The owner decision: a human launch is on-screen; hidden is opt-in."""
+    ps1 = _read(PS1)
+    assert "[switch]$Hidden" in ps1
+    # -Visible is still accepted, but it no longer drives the off-screen branch.
+    assert "[switch]$Visible" in ps1
+    assert "if (-not $Visible)" not in ps1
+    assert ps1.count("if ($Hidden)") >= 2
+    assert "--window-position=-32000,-32000" in ps1
+
+    sh = _read(SH)
+    assert "--hidden)" in sh
+    assert "HIDDEN=1" in sh
+    # macOS hides the app only when --hidden was asked for.
+    assert '"$HIDDEN" == "1"' in sh
+    assert "CHROME_STEALTH" not in sh.split("nohup")[-1]

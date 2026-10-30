@@ -670,10 +670,8 @@ def test_next_step_for_a_login_wall():
     )
 
     assert step == cli.NEXT_STEP_BROWSER_WALL.format(source="taobao")
-    assert "marketplace-mcp doctor taobao" in step
-    # The window starts off-screen on Windows: the advice names the verb that
-    # brings it back, not a flag of a launcher script.
-    assert "marketplace-mcp browser show" in step
+    assert "marketplace-mcp unblock taobao" in step
+    assert "pass the check or log in" in step
     assert "-Visible" not in step
 
 
@@ -1038,6 +1036,8 @@ def test_the_usage_screen_names_the_browser_verbs(capsys):
     out = capsys.readouterr().out
     assert "marketplace-mcp browser status" in out
     assert "marketplace-mcp browser show" in out
+    assert "marketplace-mcp browser start" in out
+    assert "marketplace-mcp unblock" in out
     assert len(out.splitlines()) <= 25
 
 
@@ -1051,3 +1051,108 @@ def test_main_routes_the_browser_verb(monkeypatch, capsys):
 
     assert cli.main(["browser", "status"]) == 0
     assert "Chrome/151.0.0.0" in capsys.readouterr().out
+
+
+def test_browser_start_reports_a_visible_launch(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    seen: list[bool] = []
+
+    async def fake_start(*, visible: bool = True):
+        seen.append(visible)
+        return {
+            "ok": True,
+            "started": True,
+            "already_running": False,
+            "host": "127.0.0.1",
+            "port": 9222,
+            "profile": "C:/profile",
+        }
+
+    monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
+
+    assert cli.cmd_browser(["start"]) == 0
+
+    out = capsys.readouterr().out
+    assert seen == [True]
+    assert "Started Chrome with CDP on 127.0.0.1:9222" in out
+    assert "C:/profile" in out
+
+
+def test_browser_start_hidden_asks_for_the_off_screen_launch(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    seen: list[bool] = []
+
+    async def fake_start(*, visible: bool = True):
+        seen.append(visible)
+        return {
+            "ok": True,
+            "started": True,
+            "already_running": False,
+            "host": "127.0.0.1",
+            "port": 9222,
+            "profile": "C:/profile",
+        }
+
+    monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
+
+    assert cli.cmd_browser(["start", "--hidden"]) == 0
+
+    out = capsys.readouterr().out
+    assert seen == [False]
+    assert "off-screen" in out
+    assert "marketplace-mcp browser show" in out
+
+
+def test_browser_start_already_running_points_at_browser_show(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_start(*, visible: bool = True):
+        return {
+            "ok": True,
+            "started": False,
+            "already_running": True,
+            "host": "127.0.0.1",
+            "port": 9222,
+            "profile": "C:/profile",
+        }
+
+    monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
+
+    assert cli.cmd_browser(["start"]) == 0
+
+    out = capsys.readouterr().out
+    assert "already running" in out
+    assert "marketplace-mcp browser show" in out
+
+
+def test_browser_start_exits_one_with_the_reason(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_start(*, visible: bool = True):
+        return {"ok": False, "started": False, "already_running": False, "reason": "Chrome/Chromium not found"}
+
+    monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
+
+    assert cli.cmd_browser(["start"]) == 1
+
+    err = capsys.readouterr().err
+    assert "could not start" in err
+    assert "Chrome/Chromium not found" in err
+
+
+def test_browser_start_rejects_unknown_arguments(capsys):
+    assert cli.cmd_browser(["start", "--frobnicate"]) == 2
+    assert "unknown browser start option" in capsys.readouterr().err
+
+    assert cli.cmd_browser(["start", "extra"]) == 2
+    assert "takes no arguments besides --hidden" in capsys.readouterr().err
+
+
+def test_main_routes_the_unblock_verb(monkeypatch, capsys):
+    assert cli.main(["unblock", "ozon", "--dry-run"]) == 0
+
+    out = capsys.readouterr().out
+    assert "https://www.ozon.ru/" in out
+    assert "Dry run" in out
