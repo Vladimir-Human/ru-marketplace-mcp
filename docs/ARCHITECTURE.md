@@ -224,7 +224,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-2528 offline tests, no network required. Three flavours:
+2570 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

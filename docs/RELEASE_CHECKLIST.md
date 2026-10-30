@@ -17,12 +17,15 @@
 
 - офлайн-гейт зелёный, покрытие выше порога 80;
 - `e2e_stdio_check.py` даёт 16/16, у всех серверов версия релиза;
-- `doctor` вернул `0`, либо `2` с понятным объяснением по каждому
-  непроверенному источнику;
+- `python scripts/live_check.py doctor` вернул `0`, либо `2` с понятным
+  объяснением по каждому непроверенному источнику;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
   наличию;
 - юани Taobao не выиграли рублёвое ранжирование;
 - CI зелёный.
+
+Отказ по бюджету doctor показывает как ошибку этого источника, и за предел
+лимита запрос не уходит.
 
 **Conditional go** — то же самое, но часть источников осталась непроверенной или
 дрейфует. Тогда релиз возможен, если такие источники **явно помечены** в README
@@ -33,7 +36,7 @@
 **No-go** — достаточно одного пункта:
 
 - цена, валюта, наличие или продавец не совпали с сайтом;
-- `doctor` вернул `1`;
+- `python scripts/live_check.py doctor` вернул `1`;
 - сравнение назвало полным результат, из которого источник молча выпал;
 - юаневая цена попала в рублёвое ранжирование;
 - чистая установка, сборка образа или CI красные.
@@ -83,10 +86,11 @@ npm ci --no-audit --no-fund
 
 ## 2. Консистентность версий
 
-Одна версия живёт в восьмидесяти пяти местах: семнадцать `pyproject.toml`,
+Одна версия живёт в восьмидесяти восьми местах: семнадцать `pyproject.toml`,
 шестнадцать `__version__`, пятнадцать `SERVER_VERSION`, пятнадцать пинов
-`mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier, `dsh/package.json` и
-девятнадцать тегов образа в `docker-compose.yml`, `docs/DEPLOYMENT.md` и `dsh/README.md`. Вручную такое не
+`mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier, `dsh/package.json`,
+девятнадцать тегов образа в `docker-compose.yml`, `docs/DEPLOYMENT.md` и `dsh/README.md` и три пина
+релиза в `docs/DEPLOYMENT.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
 
@@ -263,10 +267,14 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 80% coverage
-floor; `e2e_stdio_check.py` reports 16/16 at the release version; `doctor`
-returns `0`, or `2` with a clear account of every unverified source; every
-source that answered was compared by eye on price and availability; Taobao's
-yuan did not win a rouble ranking; CI is green.
+floor; `e2e_stdio_check.py` reports 16/16 at the release version;
+`python scripts/live_check.py doctor` returns `0`, or `2` with a clear account
+of every unverified source; every source that answered was compared by eye on
+price and availability; Taobao's yuan did not win a rouble ranking; CI is
+green.
+
+A request refused by the budget is reported by doctor as that source's error,
+and nothing is sent past the cap.
 
 **Conditional go** — the same, but some sources stayed unverified or drifted.
 The release may ship if those are **explicitly labelled** in the README and the
@@ -274,9 +282,9 @@ release notes and removed from anything claiming they work. An unverified source
 presented as a working one is the failure mode this project exists to avoid.
 
 **No-go** — any one of: price, currency, availability or seller disagreed with
-the site; `doctor` returned `1`; a comparison called a result complete while a
-source had silently dropped out; a yuan price entered a rouble ranking; a clean
-install, image build or CI is red.
+the site; `python scripts/live_check.py doctor` returned `1`; a comparison
+called a result complete while a source had silently dropped out; a yuan price
+entered a rouble ranking; a clean install, image build or CI is red.
 
 ## The steps
 
@@ -290,9 +298,10 @@ install, image build or CI is red.
    revision the images build from. Use `--durations=10` to investigate slow
    tests; total runtime alone does not prove network access.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   eighty-five declarations (seventeen `pyproject.toml`, sixteen `__version__`,
+   eighty-eight declarations (seventeen `pyproject.toml`, sixteen `__version__`,
    fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, nineteen image tags,
-   `server.json`, its OCI image identifier, and `dsh/package.json`) against the root `pyproject.toml`;
+   three deployment-guide release pins, `server.json`, its OCI image identifier,
+   and `dsh/package.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
    actually say.
 3. **Live checks from the operator's machine** — seven sources refuse datacenter

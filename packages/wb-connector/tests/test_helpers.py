@@ -2304,6 +2304,8 @@ def test_impersonated_refusal_stays_a_transport_error(monkeypatch):
 
         monkeypatch.setattr(server, "get_text_budgeted", fake_budgeted)
         monkeypatch.setattr(server, "_polite_wait", no_wait)
+        # The API verdict itself is under test, not the page fallback.
+        monkeypatch.setattr(server._settings, "dom_fallback", False)
         with pytest.raises(ToolError) as excinfo:
             await server.wb_card([5535522])
         payload = _tool_error_payload(excinfo)

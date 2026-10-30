@@ -44,7 +44,10 @@ def test_the_powershell_launcher_refuses_only_the_same_profile():
     text = _read(PS1)
 
     assert "Get-CimInstance Win32_Process" in text
-    assert "--user-data-dir=$Profile" in text
+    # Anchored, optionally quoted (audit S2-F6): a sibling profile is not this one.
+    assert "$profilePattern = '--user-data-dir=\"?' + [regex]::Escape($Profile) + '(\"|\\s|$)'" in text
+    assert "-match $profilePattern" in text
+    assert "IndexOf($Profile" not in text
     assert "Another Chrome is already using the profile" in text
     assert "exit 2" in text
 
@@ -76,7 +79,7 @@ def test_the_shell_launcher_applies_the_same_three_steps():
     assert "/json/version" in text
     assert "already running on port" in text
     # 2. The same profile is locked by another Chrome.
-    assert 'pgrep -f -- "--user-data-dir=$PROFILE"' in text
+    assert 'pgrep -f -- "--user-data-dir=${PROFILE}( |\\$)"' in text
     assert "another Chrome is already using the profile" in text
     assert "exit 2" in text
     # 3. Chrome starts even when other Chrome windows are open.
@@ -99,3 +102,32 @@ def test_the_manual_launchers_are_visible_by_default():
     # macOS hides the app only when --hidden was asked for.
     assert '"$HIDDEN" == "1"' in sh
     assert "CHROME_STEALTH" not in sh.split("nohup")[-1]
+
+
+def test_the_powershell_launcher_quotes_the_profile_path():
+    """(audit S2-F1) Start-Process joins arguments with bare spaces: "User Data" split in two."""
+    text = _read(PS1)
+
+    assert '"--user-data-dir=`"$Profile`""' in text
+    assert "$Profile.TrimEnd('\\')" in text
+
+
+def test_the_powershell_launcher_fails_when_cdp_never_binds():
+    """(audit S2-F5) Like the shell launcher: wait about 12 s, then exit 1."""
+    text = _read(PS1)
+    tail = text.split("Start-Process @startParams", 1)[1]
+
+    assert "for ($i = 0; $i -lt 30; $i++)" in tail
+    assert "exit 1" in tail.split('Write-Host "CDP ready')[0]
+    assert "Wait a few seconds" not in text
+
+
+def test_the_shell_launcher_asks_the_endpoint_before_saying_already_running():
+    """(audit S2-F2) Any listener on the port is not Chrome: probe /json/version first."""
+    text = _read(SH)
+    probe = text.index('curl -sf -m 1 "http://127.0.0.1:$PORT/json/version"')
+    already = text.index("already running on port")
+    listener = text.index('ss -ltn "sport = :$PORT"')
+
+    assert probe < already < listener
+    assert "does not answer as a CDP endpoint" in text

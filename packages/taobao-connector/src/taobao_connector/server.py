@@ -57,6 +57,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _search_item_from_tile: Normalize rendered Taobao/Tmall tiles without currency conversion.
 # _cdp_render: Serialize paced browser reads, bound empty-grid polling and support challenge recovery.
 # _login_wall_markers: Detect title-less login walls from structural signals.
+# _grid_still_loading: An empty search page still rendering its grid, never a page offering login routes.
 # _anti_bot_challenge: Read challenge evidence; ignore hidden card widget text.
 # _page_challenge_kind: Classify handoffs from challenge evidence, not card fields.
 # taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid.
@@ -521,7 +522,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         return (
             extract_js == _SEARCH_EXTRACT_JS
             and data.get("items") == []
-            and data.get("grid_loading") is True
+            and _grid_still_loading(data)
             and not _login_wall_markers(data)
             and not _anti_bot_challenge(data)
         )
@@ -665,6 +666,18 @@ def _login_wall(data: dict[str, Any]) -> bool:
     return bool(_login_wall_markers(data))
 
 
+def _grid_still_loading(data: dict[str, Any]) -> bool:
+    """True for a search page whose grid is still rendering, not for a wall.
+
+    «加载中» is page text, and the captured login wall says it too; only the
+    link-count gate of _login_wall_markers tells that wall apart. A page that
+    offers login/register routes is a logged-out page whatever its link count,
+    so it never earns the wait or the retryable timeout (pre-release audit,
+    2026-10-30); with zero items it stays parser_drift, as before v2.6.0.
+    """
+    return data.get("grid_loading") is True and not R.coerce_int(data.get("login_anchors"))
+
+
 # The word test for an anti-bot challenge page: the same wording the extractor
 # JS used to match over document.body.textContent INCLUDING hidden script and
 # widget text, baking title='__BLOCKED__' into the payload. Live probe
@@ -792,7 +805,7 @@ async def taobao_search(
             )
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
         if not items_raw:
-            if payload.get("grid_loading") is True:
+            if _grid_still_loading(payload):
                 # The grid was still rendering when the read deadline passed:
                 # nothing drifted, the page simply had no products yet. A
                 # retryable timeout, not parser_drift (owner brief 2026-10-30).
@@ -1096,7 +1109,7 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                 # grid still rendering? Then nothing drifted and the canary has
                 # nothing to say — inconclusive(timeout), the same verdict the
                 # render deadline produces (owner brief 2026-10-30).
-                if payload.get("grid_loading") is True:
+                if _grid_still_loading(payload):
                     checks["search"] = R.selfcheck_entry(
                         "inconclusive",
                         baseline=baseline,

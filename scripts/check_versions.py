@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail if the version number disagrees with itself across the repository.
 
-One release carries one version, but it is written down in eighty-five places:
+One release carries one version, but it is written down in eighty-eight places:
 every package's ``pyproject.toml`` and ``__init__.py``, every server's
 ``SERVER_VERSION``, the MCP registry manifest, the compose file, the
 deployment guide and the DSH README. Bumping a release by hand means editing all of them, and the

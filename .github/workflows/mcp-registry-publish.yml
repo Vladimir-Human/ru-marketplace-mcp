@@ -6,6 +6,12 @@ on:
       - "v*"
   workflow_dispatch:
 
+# One run per tag: a tag push and a manual dispatch for the same ref queue
+# instead of publishing side by side (pre-release audit, 2026-10-30).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
@@ -17,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Version from tag
         id: version
@@ -61,9 +69,16 @@ jobs:
           MCP_EXPECTED_VERSION: ${{ steps.version.outputs.value }}
         run: python3 scripts/e2e_stdio_check_docker.py
 
+      # The binary runs with packages: write and id-token: write, so it is
+      # checked against the v1.8.1 digest (GitHub's asset digest and the
+      # release's registry_1.8.1_checksums.txt agree) before it is unpacked.
       - name: Install mcp-publisher
+        env:
+          PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
         run: |
-          curl -fL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          curl -fsSLo mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
           ./mcp-publisher --help
 
       - name: Authenticate to MCP Registry

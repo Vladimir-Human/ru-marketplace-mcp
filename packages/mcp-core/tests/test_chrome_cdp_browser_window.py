@@ -205,6 +205,60 @@ async def test_show_moves_the_window_on_screen_and_activates_the_first_tab(monke
     assert result["ok"] is True
 
 
+async def test_show_uses_the_target_it_is_given(monkeypatch):
+    """`unblock` shows the tab it just opened, not the first one (audit S4-F3).
+
+    `marketplace-mcp unblock` passes the target id of the tab it opened, so a
+    window that always showed the first page would raise the operator's Chrome
+    on the wrong tab - the one thing the command exists to prevent.
+    """
+    fake_http(monkeypatch)
+    socket = fake_websocket(
+        monkeypatch,
+        {
+            "Browser.getWindowForTarget": {
+                "windowId": 7,
+                "bounds": {"left": 80, "top": 40, "width": 1280, "height": 720},
+            }
+        },
+    )
+
+    result = await chrome_cdp.show_browser_window(target_id="page-2")
+
+    assert result["ok"] is True
+    assert result["target_id"] == "page-2"
+    get_window = [params for method, params in socket.sent if method == "Browser.getWindowForTarget"]
+    activate = [params for method, params in socket.sent if method == "Target.activateTarget"]
+    assert get_window == [{"targetId": "page-2"}]
+    assert activate == [{"targetId": "page-2"}]
+
+
+async def test_the_browser_websocket_is_dialed_on_the_host_that_answers(monkeypatch):
+    """The endpoint's own loopback address must not be dialled (audit S4-F5).
+
+    Chrome advertises `ws://127.0.0.1:9222/...` even when it was reached
+    through `CHROME_CDP_HOST`, so the URL is rewritten to the host we know
+    answers. With a non-default host a broken rewrite sends every
+    browser-level command to the wrong machine.
+    """
+    monkeypatch.setattr(chrome_cdp, "CDP_HOST", "host.docker.internal")
+    monkeypatch.setattr(chrome_cdp, "CDP_PORT", 9333)
+    fake_http(monkeypatch)
+    socket = fake_websocket(
+        monkeypatch,
+        {
+            "Browser.getWindowForTarget": {
+                "windowId": 7,
+                "bounds": {"left": 80, "top": 40, "width": 1280, "height": 720},
+            }
+        },
+    )
+
+    await chrome_cdp.browser_status()
+
+    assert socket.url == f"ws://{chrome_cdp.CDP_HOST}:{chrome_cdp.CDP_PORT}/devtools/browser/fake"
+
+
 async def test_show_never_navigates_anywhere(monkeypatch):
     """The verb exists to show a window; it must not touch a website."""
     fake_http(monkeypatch)
@@ -220,6 +274,9 @@ async def test_show_never_navigates_anywhere(monkeypatch):
 
     await chrome_cdp.show_browser_window()
 
+    # The socket must have been used at all: an empty command list would make
+    # the subset check below pass for the wrong reason.
+    assert socket.sent
     assert "Page.navigate" not in [method for method, _ in socket.sent]
 
 

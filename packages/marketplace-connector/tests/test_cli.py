@@ -7,7 +7,9 @@ that logic is testable without touching a network.
 from __future__ import annotations
 
 import ast
+import datetime
 import json
+import os
 import pathlib
 import re
 import sys
@@ -444,14 +446,160 @@ def test_install_write_leaves_a_backup_of_the_old_file(claude_config):
     assert backups[0].read_text(encoding="utf-8") == old
 
 
-def test_install_write_refuses_malformed_json(claude_config):
-    broken = b"{ this is not json"
+@pytest.mark.parametrize(
+    ("broken", "message"),
+    [
+        (b"{ this is not json", "is not valid JSON"),
+        (b"[]", "is not a JSON object"),
+        (b'["marketplace"]', "is not a JSON object"),
+        (b'{"mcpServers": []}', "non-object 'mcpServers'"),
+        (b'{"mcpServers": "marketplace"}', "non-object 'mcpServers'"),
+        (b'{"mcpServers": {"marketplace": {"command": NaN}}}', "is not valid JSON"),
+    ],
+)
+def test_install_write_refuses_malformed_json(claude_config, broken, message, capsys):
+    """A config the tool cannot understand is never rewritten (audit S4-F19).
+
+    Invalid JSON is only one way to write a file the tool cannot merge into:
+    a root that is not an object, an ``mcpServers`` that is not an object, or
+    a ``NaN`` (which is not JSON at all) each have their own guard.
+    """
     claude_config.write_bytes(broken)
 
     rc = cli.cmd_install(["claude", "--write"])
 
     assert rc == 2
+    assert message in capsys.readouterr().err
     assert claude_config.read_bytes() == broken
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+
+
+def test_install_write_reads_a_config_saved_with_a_utf8_bom(claude_config):
+    """A BOM is valid JSON for the operator; some editors add one (audit S1-F3)."""
+    claude_config.write_bytes(
+        b"\xef\xbb\xbf" + json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}}).encode("utf-8")
+    )
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    document = json.loads(claude_config.read_text(encoding="utf-8-sig"))
+    assert document["mcpServers"]["other"] == {"command": "x", "args": []}
+    assert document["mcpServers"]["marketplace"]
+    # The write stays plain UTF-8: a BOM in the client's own file breaks it.
+    assert not claude_config.read_bytes().startswith(b"\xef\xbb\xbf")
+
+
+def test_install_write_refuses_a_config_that_is_not_utf8(claude_config, capsys):
+    """UTF-16 is an encoding problem, not a JSON problem (audit S1-F3).
+
+    The old message ("not valid JSON") sends the operator to delete a config
+    that is perfectly valid JSON in another encoding.
+    """
+    original = json.dumps({"mcpServers": {}}).encode("utf-16")
+    claude_config.write_bytes(original)
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "is not UTF-8 text; save it as UTF-8 and re-run" in err
+    assert "not valid JSON" not in err
+    assert claude_config.read_bytes() == original
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+
+
+def test_install_write_never_overwrites_an_earlier_backup(claude_config, monkeypatch):
+    """Two writes in the same second must not land on one backup name (audit S1-F4).
+
+    The stamp has one-second resolution, so the second write used to overwrite
+    the only copy of the original config.
+    """
+    frozen = SimpleNamespace(
+        datetime=SimpleNamespace(now=lambda tz=None: datetime.datetime(2026, 10, 30, 12, 0, 0)),
+        UTC=datetime.UTC,
+    )
+    monkeypatch.setattr(cli, "datetime", frozen)
+    original = json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}})
+    claude_config.write_text(original, encoding="utf-8")
+
+    assert cli.cmd_install(["claude", "--write"]) == 0
+    assert cli.cmd_install(["claude", "--write", "--force", "--profile", "full"]) == 0
+
+    backups = sorted(claude_config.parent.glob("claude_desktop_config.json.bak-*"))
+    assert len(backups) == 2
+    # The first backup still holds the original file.
+    assert backups[0].read_text(encoding="utf-8") == original
+
+
+def test_install_write_keeps_a_symlinked_config_a_symlink(claude_config, tmp_path):
+    """A symlinked config must stay a symlink (audit S1-F2).
+
+    Replacing the link with a regular file detaches the client from the
+    operator's real file (a dotfiles repo, a synced folder): the next sync
+    silently restores the old config and the server disappears.
+    """
+    target = tmp_path / "dotfiles" / "claude_desktop_config.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}}), encoding="utf-8")
+    try:
+        os.symlink(target, claude_config)
+    except OSError as exc:
+        pytest.skip(f"this machine cannot create symlinks ({exc}); Windows needs developer mode or admin rights")
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    assert claude_config.is_symlink()
+    document = json.loads(target.read_text(encoding="utf-8"))
+    assert document["mcpServers"]["marketplace"]
+    assert document["mcpServers"]["other"] == {"command": "x", "args": []}
+    # The backup sits next to the real file, not next to the link.
+    assert len(list(target.parent.glob("*.bak-*"))) == 1
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+
+
+def test_install_write_writes_through_a_symlinked_config(claude_config, tmp_path, monkeypatch, capsys):
+    """The same case without a real symlink (audit S1-F2).
+
+    Windows without developer mode cannot create one, so the link is
+    simulated at the filesystem API: the write must land in the file the
+    link points at and leave the link alone.
+    """
+    target = tmp_path / "dotfiles" / "claude_desktop_config.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
+    original = target.read_bytes()
+    claude_config.write_bytes(original)
+    real_is_symlink = pathlib.Path.is_symlink
+    real_resolve = pathlib.Path.resolve
+
+    def fake_is_symlink(self):
+        return self == claude_config or real_is_symlink(self)
+
+    def fake_resolve(self, *args, **kwargs):
+        if self == claude_config:
+            return target
+        return real_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "is_symlink", fake_is_symlink)
+    monkeypatch.setattr(pathlib.Path, "resolve", fake_resolve)
+
+    rc = cli.cmd_install(["claude", "--write"])
+
+    assert rc == 0
+    # The merged config landed in the file the link points at.
+    assert json.loads(target.read_text(encoding="utf-8"))["mcpServers"]["marketplace"]
+    # The link itself was not replaced by a regular file.
+    assert json.loads(claude_config.read_text(encoding="utf-8"))["mcpServers"] == {}
+    assert claude_config.read_bytes() == original
+    backups = list(target.parent.glob("*.bak-*"))
+    assert len(backups) == 1
+    assert backups[0].read_bytes() == original
+    assert list(claude_config.parent.glob("*.bak-*")) == []
+    out = capsys.readouterr().out
+    assert f"wrote {target}" in out
+    assert f"backup: {backups[0]}" in out
 
 
 def test_install_write_refuses_a_conflicting_entry(claude_config):
@@ -509,8 +657,17 @@ def test_install_dry_run_writes_nothing(claude_config, capsys):
     assert str(claude_config) in out
 
 
-def test_install_dry_run_shows_the_merged_json_of_an_existing_file(claude_config, capsys):
-    claude_config.write_text(json.dumps({"mcpServers": {"other": {"command": "x", "args": []}}}), encoding="utf-8")
+def test_install_dry_run_names_but_never_prints_the_rest_of_the_file(claude_config, capsys):
+    """Other servers' env blocks may hold keys: a dry run names what it keeps, never its content."""
+    claude_config.write_text(
+        json.dumps(
+            {
+                "mcpServers": {"other": {"command": "x", "args": [], "env": {"API_KEY": "FAKE-SECRET-1"}}},
+                "theme": {"accent": "FAKE-SETTING-2"},
+            }
+        ),
+        encoding="utf-8",
+    )
     before = claude_config.read_bytes()
 
     rc = cli.cmd_install(["claude", "--write", "--dry-run"])
@@ -519,8 +676,26 @@ def test_install_dry_run_shows_the_merged_json_of_an_existing_file(claude_config
     assert claude_config.read_bytes() == before
     out = capsys.readouterr().out
     assert '"marketplace"' in out
-    assert '"other"' in out
+    assert "FAKE-SECRET-1" not in out
+    assert "FAKE-SETTING-2" not in out
+    assert "kept unchanged: other" in out
+    assert "other settings kept: theme" in out
+    assert "replaces:" not in out
     assert str(claude_config) in out
+
+
+def test_install_dry_run_with_force_names_the_entry_it_replaces(claude_config, capsys):
+    claude_config.write_text(
+        json.dumps({"mcpServers": {"marketplace": {"command": "old", "env": {"K": "FAKE-OLD-3"}}}}),
+        encoding="utf-8",
+    )
+
+    rc = cli.cmd_install(["claude", "--write", "--dry-run", "--force"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "replaces: marketplace" in out
+    assert "FAKE-OLD-3" not in out
 
 
 def test_install_claude_code_write_prints_a_claude_mcp_add_line(capsys):
@@ -530,6 +705,26 @@ def test_install_claude_code_write_prints_a_claude_mcp_add_line(capsys):
     out = capsys.readouterr().out
     assert "claude mcp add marketplace" in out
     assert "compare-mcp" in out
+
+
+@pytest.mark.parametrize("options", [[], ["--profile", "decision"], ["--profile", "full"], ["--per-source"]])
+def test_install_claude_code_paste_block_names_the_project_config(options, capsys):
+    """R-CLI-INSTALL: user add lines precede the project-only JSON (audit S1-F1)."""
+    assert cli.cmd_install(["claude-code", "--write", *options]) == 0
+    write_lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("claude mcp add ")]
+    assert write_lines
+
+    assert cli.cmd_install(["claude-code", *options]) == 0
+
+    out = capsys.readouterr().out
+    header = "# Or add this to a project's .mcp.json (mcpServers):"
+    before, separator, after = out.partition(header)
+    assert separator == header
+    assert [line for line in before.splitlines() if line.startswith("claude mcp add ")] == write_lines
+    assert "# Add to your mcpServers block (claude-code)." not in out
+    entries, _ = json.JSONDecoder().raw_decode(after.lstrip())
+    assert set(entries) == {line.split()[3] for line in write_lines}
+    assert all(entry["command"] for entry in entries.values())
 
 
 def test_install_claude_code_full_profile_prints_the_unified_script(capsys):
@@ -1159,6 +1354,7 @@ def test_browser_start_hidden_asks_for_the_off_screen_launch(monkeypatch, capsys
             "host": "127.0.0.1",
             "port": 9222,
             "profile": "C:/profile",
+            "off_screen": True,
         }
 
     monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
@@ -1167,8 +1363,24 @@ def test_browser_start_hidden_asks_for_the_off_screen_launch(monkeypatch, capsys
 
     out = capsys.readouterr().out
     assert seen == [False]
-    assert "off-screen" in out
+    assert "The window is off-screen" in out
     assert "marketplace-mcp browser show" in out
+
+
+def test_browser_start_hidden_that_parked_nothing_says_so(monkeypatch, capsys):
+    """Outside Windows (or with CHROME_STEALTH off) --hidden parks nothing (audit A4)."""
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_start(*, visible: bool = True):
+        return {"ok": True, "started": True, "host": "127.0.0.1", "port": 9222, "off_screen": False}
+
+    monkeypatch.setattr(chrome_cdp, "start_browser", fake_start)
+
+    assert cli.cmd_browser(["start", "--hidden"]) == 0
+
+    out = capsys.readouterr().out
+    assert "The window is off-screen" not in out
+    assert "only on Windows with CHROME_STEALTH on" in out
 
 
 def test_browser_start_already_running_points_at_browser_show(monkeypatch, capsys):

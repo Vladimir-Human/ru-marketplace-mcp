@@ -9,17 +9,23 @@ repository root, so several commands run one budget instead of forty each.
 Usage:
     python scripts/live_check.py selfcheck <source>
     python scripts/live_check.py call <module> <tool> '<json kwargs>'
+    python scripts/live_check.py doctor [source ...]
     python scripts/live_check.py ledger
     python scripts/live_check.py reset      # archive the ledger and start a new run
 
+`doctor` runs the marketplace CLI's own doctor round - every selfcheck, live -
+under the same budget as the other commands, so the release checklist's doctor
+round cannot pass the caps.
+
 START_MODULE_CONTRACT
 PURPOSE: Run one marketplace selfcheck or tool call under the shared live budget.
-SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, result and ledger output.
-DEPENDS: scripts/live_budget.py; marketplace_connector.cli._SELFCHECKS; connector modules loaded by name.
+SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, doctor round, result and ledger output.
+DEPENDS: scripts/live_budget.py; marketplace_connector.cli._SELFCHECKS and its doctor command; connector modules loaded by name.
 LINKS: M-LIVE-CHECK, R-LIVE-BUDGET.
 START_MODULE_MAP
   _dump                JSON-shaped result for a model, structured content or plain value
   _reset               archive the ledger under a timestamped name to start a new run
+  _doctor              run the CLI's doctor round under the budget and report the ledger
   _run                 dispatch one live command with the budget installed
   main                 CLI wrapper with exit codes
 END_MODULE_MAP
@@ -75,12 +81,28 @@ def _reset(budget: live_budget.Budget) -> int:
     return 0
 
 
+async def _doctor(argv: list[str], budget: live_budget.Budget) -> int:
+    """Run the marketplace CLI's doctor round under the budget.
+
+    The CLI runs its own event loop for the selfchecks, so it is called from
+    a worker thread instead of from inside this one. Its exit code is the
+    doctor's own; the ledger summary follows it.
+    """
+    from marketplace_connector.cli import main as doctor_main
+
+    code = await asyncio.to_thread(doctor_main, ["doctor", *argv])
+    _ledger_report(budget)
+    return code
+
+
 async def _run(argv: list[str], budget: live_budget.Budget) -> int:
     mode = argv[0]
     if mode == "ledger":
         return _ledger_report(budget)
     if mode == "reset":
         return _reset(budget)
+    if mode == "doctor":
+        return await _doctor(argv[1:], budget)
     if mode == "selfcheck":
         if len(argv) != 2:
             print("usage: live_check.py selfcheck <source>", file=sys.stderr)
