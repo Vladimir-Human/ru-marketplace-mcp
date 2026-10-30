@@ -44,7 +44,9 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
 # _CdpConnectTimeout: Preserve raw fallback while reporting a transport-down attach timeout.
 # get_browser: Attach Playwright, diagnose timeout tab counts and bound detach without shutdown.
+# _cdp_http_json: Fetch and parse one CDP HTTP endpoint.
 # _page_target_count: Count HTTP page targets or report an unavailable list.
+# _page_targets: The page targets of a /json/list answer, in Chrome's order.
 # get_context: Yield the attached browser's existing default context.
 # NavBlocked: Carry rejected main-document status and final URL.
 # probe_session: Return CDP reachability and raw-fallback diagnostics.
@@ -52,6 +54,9 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # capture_owned_viewport: Capture bounded JPEG pixels without DOM reads or disk writes.
 # current_page_url: Refresh raw main-frame URL without extracting document content.
 # reveal_owned_page: Best-effort foreground activation of only the owned target.
+# _move_window_on_screen: Un-minimize a window and park it on-screen (shared with browser show).
+# browser_status: Report CDP reachability, Chrome version, page count and window state.
+# show_browser_window: Move the scraping Chrome window on-screen and activate its first page target.
 # _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
 # _new_tab: Claim a created target ID and close it if cancellation prevents handback.
 # _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
@@ -64,6 +69,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import http.client
 import json
 import math
 import os
@@ -73,7 +79,7 @@ import socket
 import subprocess
 import sys
 import time
-from collections.abc import AsyncIterator, Collection
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from typing import Any, Protocol
@@ -589,18 +595,40 @@ _RAW_MAX_FRAME_BYTES = max(
 )
 
 
-def _page_target_count(*, path: str, timeout_s: float) -> int | None:
-    """Count HTTP-discovered page targets, distinguishing failure from zero tabs."""
+# What a CDP HTTP read can raise: no answer (OSError, including URLError and
+# timeouts), a broken HTTP exchange (HTTPException, e.g. IncompleteRead) or a
+# body that is not JSON (ValueError).
+_CDP_HTTP_ERRORS = (OSError, http.client.HTTPException, ValueError)
+
+
+def _cdp_http_json(path: str, *, timeout_s: float = 5.0) -> Any:
+    """GET one CDP HTTP endpoint and parse its JSON body.
+
+    Raises one of ``_CDP_HTTP_ERRORS``; the caller decides what an unreachable
+    endpoint means.
+    """
     import urllib.request
 
+    with urllib.request.urlopen(f"{CDP_URL}{path}", timeout=timeout_s) as resp:
+        return json.loads(resp.read())
+
+
+def _page_target_count(*, path: str, timeout_s: float) -> int | None:
+    """Count HTTP-discovered page targets, distinguishing failure from zero tabs."""
     try:
-        with urllib.request.urlopen(f"{CDP_URL}{path}", timeout=timeout_s) as resp:
-            targets = json.loads(resp.read())
-        if not isinstance(targets, list):
-            return None
-        return sum(1 for t in targets if isinstance(t, dict) and t.get("type") == "page")
-    except Exception:
+        targets = _cdp_http_json(path, timeout_s=timeout_s)
+    except _CDP_HTTP_ERRORS:
         return None
+    if not isinstance(targets, list):
+        return None
+    return len(_page_targets(targets))
+
+
+def _page_targets(targets: Any) -> list[dict[str, Any]]:
+    """The page targets of a ``/json/list`` answer, in the order Chrome lists them."""
+    if not isinstance(targets, list):
+        return []
+    return [target for target in targets if isinstance(target, dict) and target.get("type") == "page"]
 
 
 def _raw_page_count() -> int:
@@ -610,12 +638,11 @@ def _raw_page_count() -> int:
 
 def _browser_ws_url() -> str | None:
     """The browser websocket URL, rewritten to the host we actually dial."""
-    import urllib.request
-
     try:
-        with urllib.request.urlopen(f"{CDP_URL}/json/version", timeout=3) as resp:
-            data = json.loads(resp.read())
-    except Exception:
+        data = _cdp_http_json("/json/version", timeout_s=3)
+    except _CDP_HTTP_ERRORS:
+        return None
+    if not isinstance(data, dict):
         return None
     ws = data.get("webSocketDebuggerUrl")
     if not isinstance(ws, str) or not ws.startswith("ws"):
@@ -882,6 +909,66 @@ async def current_page_url(page: PageLike) -> str:
     return page.url
 
 
+# The Windows stealth launcher parks the window far off-screen (left/top
+# -32000). A window at or beyond this offset is parked, not merely behind
+# another window, and no human can reach it.
+_OFFSCREEN_LIMIT = -10000
+
+# Where `browser show` puts the window, and how small a window may stay: a
+# window too small to work in is resized to a usable one instead.
+_SHOW_LEFT = 80
+_SHOW_TOP = 40
+_SHOW_MIN_WIDTH = 800
+_SHOW_MIN_HEIGHT = 600
+_SHOW_FALLBACK_WIDTH = 1280
+_SHOW_FALLBACK_HEIGHT = 900
+
+
+def _is_off_screen(bounds: Mapping[str, Any]) -> bool:
+    """True when the window sits at the off-screen position the launcher uses."""
+    left = bounds.get("left")
+    top = bounds.get("top")
+    if not isinstance(left, (int, float)) or isinstance(left, bool):
+        left = 0
+    if not isinstance(top, (int, float)) or isinstance(top, bool):
+        top = 0
+    return left <= _OFFSCREEN_LIMIT or top <= _OFFSCREEN_LIMIT
+
+
+def _window_state(bounds: Mapping[str, Any]) -> str:
+    """Name the window state an operator can act on: visible, off-screen, minimized."""
+    if bounds.get("windowState") == "minimized":
+        return "minimized"
+    if _is_off_screen(bounds):
+        return "off-screen"
+    return "visible"
+
+
+async def _move_window_on_screen(
+    send: Callable[[str, dict[str, Any] | None], Awaitable[Any]],
+    window_id: int,
+    bounds: Mapping[str, Any],
+    on_screen: Mapping[str, int],
+    *,
+    force: bool = False,
+) -> bool:
+    """Bring a browser window back where a human can see it.
+
+    The window is un-minimized first: a minimized window reports no usable
+    bounds and cannot be moved. Then it is parked at ``on_screen`` when it sits
+    off-screen — the position the Windows stealth launcher uses.
+    ``force`` moves a window that is already on screen as well, which is what
+    an explicit "show this window" asks for.
+
+    Returns True when the window was moved.
+    """
+    await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "normal"}})
+    if force or _is_off_screen(bounds):
+        await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": dict(on_screen)})
+        return True
+    return False
+
+
 async def reveal_owned_page(page: PageLike) -> bool:
     """Best-effort reveal of the owned target's window, never all profile windows."""
     session: Any = None
@@ -898,10 +985,7 @@ async def reveal_owned_page(page: PageLike) -> bool:
                 return False
             info = await send("Browser.getWindowForTarget", {"targetId": target_id})
             window_id = info["windowId"]
-            await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "normal"}})
-            bounds = info.get("bounds", {})
-            if bounds.get("left", 0) < -10000 or bounds.get("top", 0) < -10000:
-                await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"left": 80, "top": 80}})
+            await _move_window_on_screen(send, window_id, info.get("bounds", {}), {"left": 80, "top": 80})
             if isinstance(page, Page):
                 await page.bring_to_front()
             else:
@@ -915,6 +999,172 @@ async def reveal_owned_page(page: PageLike) -> bool:
                 await asyncio.wait_for(session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
             except Exception:
                 pass
+
+
+@asynccontextmanager
+async def _browser_cdp_channel() -> AsyncIterator[_RawCdpPage]:
+    """A browser-level CDP channel: commands that need no owned page.
+
+    The same raw-CDP machinery the tab fallback uses, pointed at the browser's
+    own websocket. No target is created, no tab is opened and no page is
+    navigated: only browser-level commands are sent over it.
+    """
+    if _websockets is None:
+        raise RuntimeError("the browser-level CDP commands need the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+    async with _websockets.connect(
+        browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+    ) as bws:
+        yield _RawCdpPage(bws, "")
+
+
+async def browser_status() -> dict[str, Any]:
+    """Report what the operator's scraping Chrome looks like right now.
+
+    Answers the questions an operator asks about a window they cannot see: is
+    the CDP endpoint reachable, which Chrome answers there, how many page
+    targets it holds, and whether the window is visible, parked off-screen or
+    minimized. Never raises: an unreachable endpoint is the answer, not an
+    exception.
+    """
+    report: dict[str, Any] = {
+        "reachable": False,
+        "host": CDP_HOST,
+        "port": CDP_PORT,
+        "version": None,
+        "page_targets": 0,
+        "window": "unknown",
+        "reason": None,
+    }
+    try:
+        version_info = _cdp_http_json("/json/version", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        report["reason"] = f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})"
+        return report
+    report["reachable"] = True
+    if isinstance(version_info, dict):
+        report["version"] = version_info.get("Browser")
+
+    try:
+        targets = _cdp_http_json("/json/list", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        # The endpoint answered, so the browser is up; only the tab list is
+        # missing, and that must not hide the version we already have.
+        report["page_targets"] = None
+        report["reason"] = f"the target list could not be read ({type(exc).__name__})"
+        return report
+    pages = _page_targets(targets)
+    report["page_targets"] = len(pages)
+    if not pages:
+        report["window"] = "no page target"
+        return report
+
+    try:
+        async with _browser_cdp_channel() as channel:
+            info = await channel._send("Browser.getWindowForTarget", {"targetId": pages[0].get("id")})
+    except Exception as exc:
+        # The facts above stand; only the window state is missing, and the
+        # reason says so instead of pretending the window is fine.
+        report["window"] = "unknown"
+        report["reason"] = f"the window state could not be read ({type(exc).__name__}: {str(exc)[:80]})"
+        return report
+    bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
+    report["window"] = _window_state(bounds)
+    report["bounds"] = bounds
+    return report
+
+
+def _show_bounds(bounds: Mapping[str, Any]) -> dict[str, int]:
+    """The on-screen bounds for ``browser show``.
+
+    A window that is already big enough keeps its size; a smaller one is
+    resized to a size a human can log in with.
+    """
+    width = bounds.get("width")
+    height = bounds.get("height")
+    if (
+        isinstance(width, int)
+        and not isinstance(width, bool)
+        and isinstance(height, int)
+        and not isinstance(height, bool)
+        and width >= _SHOW_MIN_WIDTH
+        and height >= _SHOW_MIN_HEIGHT
+    ):
+        return {"left": _SHOW_LEFT, "top": _SHOW_TOP, "width": width, "height": height}
+    return {
+        "left": _SHOW_LEFT,
+        "top": _SHOW_TOP,
+        "width": _SHOW_FALLBACK_WIDTH,
+        "height": _SHOW_FALLBACK_HEIGHT,
+    }
+
+
+async def show_browser_window() -> dict[str, Any]:
+    """Bring the scraping Chrome window on-screen and activate its first page target.
+
+    The window is un-minimized, moved on-screen (keeping its size when it is
+    big enough to work in) and its target activated, so the operator can log
+    in or pass a site's check by hand. No page is opened and no website is
+    requested: only browser-level CDP commands are sent.
+    """
+    try:
+        _cdp_http_json("/json/version", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        return {
+            "ok": False,
+            "reachable": False,
+            "reason": f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})",
+        }
+    try:
+        targets = _cdp_http_json("/json/list", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        return {
+            "ok": False,
+            "reachable": True,
+            "reason": f"the target list could not be read ({type(exc).__name__})",
+        }
+    pages = _page_targets(targets)
+    if not pages:
+        return {
+            "ok": False,
+            "reachable": True,
+            "reason": "the scraping Chrome has no page target to show",
+        }
+
+    target_id = pages[0].get("id")
+    try:
+        async with _browser_cdp_channel() as channel:
+            info = await channel._send("Browser.getWindowForTarget", {"targetId": target_id})
+            window_id = info["windowId"]
+            bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
+            on_screen = _show_bounds(bounds)
+            # Windows does not let a background process raise a window that is
+            # already open behind others: moving and activating it leaves it
+            # hidden. Restoring a minimized window does bring it up (seen live
+            # on 2026-10-30), so an open window is minimized first.
+            if bounds.get("windowState") != "minimized":
+                await channel._send(
+                    "Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "minimized"}}
+                )
+            await _move_window_on_screen(channel._send, window_id, bounds, on_screen, force=True)
+            await channel._send("Target.activateTarget", {"targetId": target_id})
+    except Exception as exc:
+        # The browser answered but the window could not be moved: say why
+        # instead of failing with a traceback in front of the operator.
+        return {
+            "ok": False,
+            "reachable": True,
+            "reason": f"the window could not be moved ({type(exc).__name__}: {str(exc)[:80]})",
+        }
+    return {
+        "ok": True,
+        "reachable": True,
+        "target_id": target_id,
+        "window_id": window_id,
+        "bounds": on_screen,
+    }
 
 
 @asynccontextmanager

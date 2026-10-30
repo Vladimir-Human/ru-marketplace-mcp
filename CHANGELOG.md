@@ -38,6 +38,30 @@
   про решатели капч, stealth-инструменты, пулы прокси и повторные попытки. Если
   упал сам selfcheck (`error`), это не стена сайта: шаг предлагает открыть issue с
   его выводом.
+- `marketplace-mcp browser status` и `marketplace-mcp browser show`: окно
+  scraping-Chrome на Windows стартует за экраном, поэтому человек не может ни
+  войти руками, ни пройти проверку сайта. `status` отвечает, достижим ли
+  CDP-эндпоинт, какая версия Chrome там отвечает, сколько открыто page-таргетов
+  и в каком состоянии окно (видно, за экраном, свёрнуто); при недостижимом
+  эндпоинте — код возврата 1 и подсказка, как запустить scraping Chrome.
+  `show` сворачивает и снова разворачивает окно (только так Windows поднимает
+  окно, которое лежит позади других), переносит его на экран
+  (80, 40; текущий размер сохраняется, если окно не меньше 800x600, иначе
+  1280x900) и активирует первую вкладку. Обе команды отправляют только
+  браузерные CDP-команды и не ходят ни в один сайт. Совет doctor's для
+  источника, закрытого браузером, теперь называет `marketplace-mcp browser show`.
+- `scripts/start_chrome_cdp.ps1` и `.sh` больше не требуют закрыть обычный
+  Chrome: если CDP-эндпоинт уже отвечает на порту, лаунчер сообщает об этом и
+  выходит с кодом 0; если тот же профиль (`--user-data-dir`) уже занят другим
+  Chrome — отказ с кодом 2; иначе Chrome запускается, даже когда другие окна
+  Chrome открыты. Без `-Visible` лаунчер заканчивает подсказкой
+  `marketplace-mcp browser show`.
+- `scripts/check_lock_revision.py` — новый гейт: лок-файл, перезаписанный старым
+  uv (revision 3 вместо 5), больше не проходит молча. Это не
+  `required-version` в `pyproject.toml`: тот флаг запретил бы оператору со
+  старым uv на PATH запустить сервер через запись `uv run --directory ...`,
+  которую пишет `install --write`. Правильный путь — перелочить uv не старше
+  0.13.6 (`uvx --from uv==0.13.6 uv lock`).
 
 - `marketplace-mcp install <client> --write` writes the client config itself. The
   default block is one `marketplace` entry running the unified server; `--per-source`
@@ -65,6 +89,30 @@
   always one instruction — never a captcha solver, stealth tooling, a proxy pool or
   a retry loop. A selfcheck that failed itself (`error`) is not a site wall: its
   step asks for an issue with the output above.
+- `marketplace-mcp browser status` and `marketplace-mcp browser show`: the
+  scraping Chrome's window starts off-screen on Windows, so a human can neither
+  log in nor pass a site's check. `status` says whether the CDP endpoint is
+  reachable, which Chrome answers, how many page targets it holds and whether
+  the window is visible, off-screen or minimized; when the endpoint does not
+  answer it exits 1 and prints how to start the scraping Chrome. `show`
+  minimizes and restores the window (only a restore makes Windows raise a
+  window that sits behind others), moves it on-screen (80, 40;
+  the current size is kept when the window is at least 800x600, otherwise
+  1280x900) and activates the first tab. Both send browser-level CDP commands
+  only and request nothing from any website. The doctor's advice for a source
+  blocked by the browser now names `marketplace-mcp browser show`.
+- `scripts/start_chrome_cdp.ps1` and `.sh` no longer demand closing the
+  everyday Chrome: when the CDP endpoint already answers on the port, the
+  launcher says so and exits 0; when another Chrome holds the same profile
+  (`--user-data-dir`), it refuses with exit 2; otherwise Chrome starts even
+  while other Chrome windows are open. Started without `-Visible`, it ends with
+  a pointer to `marketplace-mcp browser show`.
+- `scripts/check_lock_revision.py` — a new gate: a lockfile rewritten by an
+  older uv (revision 3 instead of 5) no longer passes silently. This is not a
+  `required-version` floor in `pyproject.toml`: that flag would stop an
+  operator whose PATH carries an older uv from starting the server through the
+  `uv run --directory ...` entry that `install --write` writes. The fix is to
+  relock with uv 0.13.6 or newer (`uvx --from uv==0.13.6 uv lock`).
 
 ### Fixed
 
@@ -75,6 +123,9 @@
 - `compare_prices` считает цены Taobao в `source_outcomes[].detail` по
   `price_native`, а не по пустому `price_rub`: например, `20 results, 20 priced
   in CNY (not ranked)`. Рублёвые строки и ранжирование не изменились.
+- Чек-лист релиза называл порог покрытия 70 %, а гейт требует 80 %
+  (`--cov-fail-under=80`). В тексте теперь стоит то значение, которое
+  проверяется.
 
 - `wb_selfcheck` respects `WB_TRANSPORT=dom`: `card` and `search_v9` check
   rendered pages with the tools' parsers rather than unused API hosts. Captchas
@@ -83,6 +134,8 @@
 - `compare_prices` counts Taobao's native prices in `source_outcomes[].detail`
   instead of reporting zero rouble prices: for example, `20 results, 20 priced
   in CNY (not ranked)`. Rouble-source detail and ranking are unchanged.
+- The release checklist named the coverage floor as 70 % while the gate enforces
+  80 % (`--cov-fail-under=80`). The text now states the value that is checked.
 
 ## [2.6.0] - 2026-10-30
 

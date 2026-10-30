@@ -133,11 +133,20 @@ ruble prices.
 
 ## 5. Add browser-backed sources when needed
 
-Follow [Chrome setup](CDP_SETUP.md) to start the dedicated CDP browser. Sign in
-to Taobao or Megamarket if using those sources, then run a targeted check:
+Follow [Chrome setup](CDP_SETUP.md) to start the dedicated CDP browser. Your
+everyday Chrome can stay open. Sign in to Taobao or Megamarket if using those
+sources, then run a targeted check:
 
 ```console
 uv run marketplace-mcp doctor ozon aliexpress cian
+```
+
+On Windows the scraping window starts off-screen, so you cannot log in or pass a
+site's check until it is on-screen:
+
+```console
+uv run marketplace-mcp browser status   # is the endpoint reachable, where is the window
+uv run marketplace-mcp browser show     # bring the window on-screen and activate its first tab
 ```
 
 Repeat the call from the same client (the same MCP session, or the same stdio

@@ -671,6 +671,10 @@ def test_next_step_for_a_login_wall():
 
     assert step == cli.NEXT_STEP_BROWSER_WALL.format(source="taobao")
     assert "marketplace-mcp doctor taobao" in step
+    # The window starts off-screen on Windows: the advice names the verb that
+    # brings it back, not a flag of a launcher script.
+    assert "marketplace-mcp browser show" in step
+    assert "-Visible" not in step
 
 
 def test_next_step_for_megamarket_not_authenticated():
@@ -856,3 +860,151 @@ def test_doctor_status_file_carries_the_next_step(monkeypatch, capsys, tmp_path)
     assert rc == 2
     report = json.loads(target.read_text(encoding="utf-8"))
     assert report["sources"]["yandex_market"]["next_step"] == cli.NEXT_STEP_RATE_LIMITED.format(source="yandex_market")
+
+
+# -------------------------------------------------------------- browser verbs ----
+
+
+def _fake_status(**overrides):
+    report = {
+        "reachable": True,
+        "host": "127.0.0.1",
+        "port": 9222,
+        "version": "Chrome/151.0.0.0",
+        "page_targets": 2,
+        "window": "off-screen",
+        "reason": None,
+    }
+    report.update(overrides)
+    return report
+
+
+def test_browser_status_reports_the_window_state(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_status():
+        return _fake_status()
+
+    monkeypatch.setattr(chrome_cdp, "browser_status", fake_status)
+
+    assert cli.cmd_browser(["status"]) == 0
+
+    out = capsys.readouterr().out
+    assert "Chrome/151.0.0.0" in out
+    assert "Page targets: 2" in out
+    assert "Window: off-screen" in out
+    assert "Note:" not in out
+
+
+def test_browser_status_says_why_the_window_state_is_unknown(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_status():
+        return _fake_status(window="unknown", reason="the window state could not be read (RuntimeError: x)")
+
+    monkeypatch.setattr(chrome_cdp, "browser_status", fake_status)
+
+    assert cli.cmd_browser(["status"]) == 0
+
+    out = capsys.readouterr().out
+    assert "Window: unknown" in out
+    assert "Note: the window state could not be read" in out
+
+
+def test_browser_status_exits_one_with_the_start_hint_when_chrome_is_absent(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_status():
+        return _fake_status(reachable=False, reason="nothing answers on 127.0.0.1:9222")
+
+    monkeypatch.setattr(chrome_cdp, "browser_status", fake_status)
+
+    assert cli.cmd_browser(["status"]) == 1
+
+    out = capsys.readouterr().out
+    assert "not reachable" in out
+    assert cli.START_CHROME_HINT in out
+
+
+def test_browser_show_says_what_it_did(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_show():
+        return {
+            "ok": True,
+            "reachable": True,
+            "target_id": "page-1",
+            "window_id": 7,
+            "bounds": {"left": 80, "top": 40, "width": 1280, "height": 720},
+        }
+
+    monkeypatch.setattr(chrome_cdp, "show_browser_window", fake_show)
+
+    assert cli.cmd_browser(["show"]) == 0
+
+    out = capsys.readouterr().out
+    assert "80,40" in out
+    assert "1280x720" in out
+
+
+def test_browser_show_exits_one_with_the_start_hint_when_chrome_is_absent(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_show():
+        return {"ok": False, "reachable": False, "reason": "nothing answers on 127.0.0.1:9222"}
+
+    monkeypatch.setattr(chrome_cdp, "show_browser_window", fake_show)
+
+    assert cli.cmd_browser(["show"]) == 1
+
+    err = capsys.readouterr().err
+    assert "could not show" in err
+    assert cli.START_CHROME_HINT in err
+
+
+def test_browser_show_reports_a_window_it_could_not_move(monkeypatch, capsys):
+    """The browser answers, so "start Chrome" would be the wrong advice here."""
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_show():
+        return {"ok": False, "reachable": True, "reason": "the window could not be moved (RuntimeError: refused)"}
+
+    monkeypatch.setattr(chrome_cdp, "show_browser_window", fake_show)
+
+    assert cli.cmd_browser(["show"]) == 1
+
+    err = capsys.readouterr().err
+    assert "could not show" in err
+    assert cli.START_CHROME_HINT not in err
+
+
+def test_browser_rejects_an_unknown_verb_and_extra_arguments(capsys):
+    assert cli.cmd_browser(["frobnicate"]) == 2
+    assert "unknown browser verb" in capsys.readouterr().err
+
+    assert cli.cmd_browser([]) == 2
+    assert "browser needs a verb" in capsys.readouterr().err
+
+    assert cli.cmd_browser(["status", "--force"]) == 2
+    assert "takes no arguments" in capsys.readouterr().err
+
+
+def test_the_usage_screen_names_the_browser_verbs(capsys):
+    assert cli.main(["--help"]) == 0
+
+    out = capsys.readouterr().out
+    assert "marketplace-mcp browser status" in out
+    assert "marketplace-mcp browser show" in out
+    assert len(out.splitlines()) <= 25
+
+
+def test_main_routes_the_browser_verb(monkeypatch, capsys):
+    from mcp_core.transport import chrome_cdp
+
+    async def fake_status():
+        return _fake_status()
+
+    monkeypatch.setattr(chrome_cdp, "browser_status", fake_status)
+
+    assert cli.main(["browser", "status"]) == 0
+    assert "Chrome/151.0.0.0" in capsys.readouterr().out

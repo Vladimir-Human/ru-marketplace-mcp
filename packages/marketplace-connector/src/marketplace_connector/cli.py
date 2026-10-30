@@ -14,13 +14,18 @@ Three verbs cover the three moments an operator actually needs help with:
     shows as inconclusive with the reason and one fixed next step, a drifted
     parser shows as drift.
 
+``marketplace-mcp browser status`` / ``marketplace-mcp browser show``
+    Look at the operator's scraping Chrome and bring its window back. On
+    Windows it starts off-screen by design, so a human cannot log in or pass a
+    site's check without moving the window first.
+
 ``marketplace-mcp --help``
     A short usage screen: the verbs, one example each, and where to read more.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step.
-# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), help.
-# DEPENDS: mcp_core.logging; mcp_core.source_selection; local capabilities (static source table).
+# PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect the scraping Chrome.
+# SCOPE: install (claude, claude-code, cursor, dsh), doctor (selfchecks + optional status file), browser (status, show), help.
+# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs); local capabilities (static source table).
 # LINKS: M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -29,6 +34,7 @@ Three verbs cover the three moments an operator actually needs help with:
 # _config_path: Where a client's mcpServers file lives on this platform.
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
 # next_step: One fixed next-step string for a source that is not ok.
+# cmd_browser: browser status and browser show — the operator's view of the scraping Chrome.
 # cmd_install / cmd_doctor / main: The verbs.
 # END_MODULE_MAP
 
@@ -109,12 +115,15 @@ Usage:
   marketplace-mcp                  start the unified MCP server (stdio)
   marketplace-mcp install <client> write the client config (claude, claude-code, cursor, dsh)
   marketplace-mcp doctor [source]  run every connector's selfcheck and report health
+  marketplace-mcp browser status   check the scraping Chrome and where its window is
+  marketplace-mcp browser show     bring the scraping Chrome window on-screen
   marketplace-mcp help             show this text
 
 Examples:
   marketplace-mcp
   marketplace-mcp install claude --write
   marketplace-mcp doctor wildberries
+  marketplace-mcp browser status
   marketplace-mcp help
 
 Read more: docs/QUICKSTART.md"""
@@ -129,7 +138,13 @@ NEXT_STEP_CDP_DOWN = (
 NEXT_STEP_BROWSER_WALL = (
     "Open the scraping Chrome window, pass the site's check or log in by hand, then rerun: "
     "`marketplace-mcp doctor {source}`. On Windows the window starts off-screen; "
-    "`scripts/start_chrome_cdp.ps1 -Visible` shows it."
+    "`marketplace-mcp browser show` brings it on-screen."
+)
+# The one instruction that starts the operator's Chrome. Fixed text: the
+# operator gets one command, not a menu of ways to start a browser.
+START_CHROME_HINT = (
+    "Start the scraping Chrome: `scripts/start_chrome_cdp.ps1 -Visible` (Windows) or "
+    "`scripts/start_chrome_cdp.sh` (macOS/Linux)."
 )
 NEXT_STEP_WB_TRANSPORT = (
     "WB's API refuses this address; set `WB_TRANSPORT=dom` to read WB pages through the scraping Chrome."
@@ -866,6 +881,66 @@ def cmd_doctor(argv: list[str]) -> int:
     return 0
 
 
+def cmd_browser(argv: list[str]) -> int:
+    """``browser status`` and ``browser show`` — the operator's view of the Chrome.
+
+    ``status`` says whether the CDP endpoint answers, which Chrome it is and
+    where its window is; ``show`` brings that window back on-screen so a human
+    can log in or pass a site's check. Neither sends a request to any website.
+    """
+    if not argv:
+        print("browser needs a verb: status or show", file=sys.stderr)
+        return 2
+    verb = argv[0]
+    if len(argv) > 1:
+        print(f"browser {verb} takes no arguments", file=sys.stderr)
+        return 2
+    if verb == "status":
+        return _browser_status()
+    if verb == "show":
+        return _browser_show()
+    print(f"unknown browser verb {verb!r}; expected status or show", file=sys.stderr)
+    return 2
+
+
+def _browser_status() -> int:
+    """Print what the operator's scraping Chrome looks like right now."""
+    from mcp_core.transport.chrome_cdp import browser_status
+
+    report = asyncio.run(browser_status())
+    endpoint = f"{report.get('host', '?')}:{report.get('port', '?')}"
+    if not report.get("reachable"):
+        print(f"CDP endpoint: not reachable on {endpoint}")
+        print(START_CHROME_HINT)
+        return 1
+    pages = report.get("page_targets")
+    print(f"CDP endpoint: reachable on {endpoint}")
+    print(f"Chrome: {report.get('version') or 'unknown'}")
+    print(f"Page targets: {pages if pages is not None else 'unknown'}")
+    print(f"Window: {report.get('window', 'unknown')}")
+    if report.get("reason"):
+        print(f"Note: {report['reason']}")
+    return 0
+
+
+def _browser_show() -> int:
+    """Bring the scraping Chrome window on-screen and say what was done."""
+    from mcp_core.transport.chrome_cdp import show_browser_window
+
+    result = asyncio.run(show_browser_window())
+    if not result.get("ok"):
+        print(f"could not show the scraping Chrome window: {result.get('reason', 'unknown reason')}", file=sys.stderr)
+        if not result.get("reachable"):
+            print(START_CHROME_HINT, file=sys.stderr)
+        return 1
+    bounds = result.get("bounds", {})
+    print(
+        f"Chrome window is on-screen at {bounds.get('left')},{bounds.get('top')} "
+        f"({bounds.get('width')}x{bounds.get('height')}) and its first tab is active."
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] in ("-h", "--help", "help"):
@@ -882,7 +957,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_install(rest)
     if command == "doctor":
         return cmd_doctor(rest)
-    print(f"unknown command {command!r}; expected install or doctor", file=sys.stderr)
+    if command == "browser":
+        return cmd_browser(rest)
+    print(f"unknown command {command!r}; expected install, doctor or browser", file=sys.stderr)
     print(USAGE, file=sys.stderr)
     log_event("marketplace.cli.unknown", command=command)
     return 2
