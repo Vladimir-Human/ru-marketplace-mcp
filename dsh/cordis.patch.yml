@@ -1,10 +1,9 @@
 # The 15 skills are always available and cost only their catalog rows.
 # All MCP rows stay disabled until RU_MARKETPLACE_MCP_DIR is set. Once
-# enabled they are paid on EVERY request; wire-measured figures (post output-
-# schema compaction, scripts/mcp_wire.py):
-#   compare-mcp      ~1.8k tokens
-#   decision-mcp     ~2.1k tokens (comparison plus shortlist card inspector)
-#   marketplace-mcp  ~16.3k tokens
+# enabled they are paid on EVERY request. The per-mode estimate (compare-mcp
+# smallest, decision-mcp next with the shortlist card inspector, marketplace-mcp
+# by far the largest) is generated into docs/TOOLS.md and dsh/README.md by
+# scripts/gen_tools_doc.py.
 - insert:
     - id: ru-marketplace-skills
       name: '@deepseek-ai/dsh-skill-filesystem'
@@ -16,7 +15,7 @@
           - !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('ru-marketplace-mcp-dsh/package.json'), '..', 'skills')"
 
     # Recommended and cheap: price comparison across WB, Detsky Mir and Yandex.
-    # 4 tools, ~1.8k wire tokens per request while mounted.
+    # 4 tools, the smallest tool list while mounted (see docs/TOOLS.md).
     - id: ru-marketplace-compare
       name: '@deepseek-ai/dsh-mcp-client'
       disabled: !!js "!process.env.RU_MARKETPLACE_MCP_DIR || !!process.env.RU_MARKETPLACE_MCP_FULL || !!process.env.RU_MARKETPLACE_MCP_DECISION"
@@ -49,8 +48,8 @@
           - decision-mcp
         failOnStartupError: false
 
-    # Deliberate full-mount choice: 40 model-facing tools, ~16.3k wire tokens
-    # per request. Operator-only *_selfcheck tools are no longer published over
+    # Deliberate full-mount choice: 40 model-facing tools, the largest tool
+    # list per request (see docs/TOOLS.md). Operator-only *_selfcheck tools are no longer published over
     # MCP; `marketplace-mcp doctor` still runs them from the CLI.
     - id: ru-marketplace-full
       name: '@deepseek-ai/dsh-mcp-client'

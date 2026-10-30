@@ -30,6 +30,7 @@ uv run mypy --platform win32
 uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
 uv run python scripts/check_test_count.py
+uv run python scripts/gen_tools_doc.py --check
 uv run python scripts/check_provenance.py
 uv run python scripts/check_versions.py
 uv run python scripts/check_lock_revision.py
@@ -164,6 +165,7 @@ uv run mypy --platform win32
 uv run pytest -q -m "not live and not cdp"
 uv run python scripts/check_no_print.py
 uv run python scripts/check_test_count.py
+uv run python scripts/gen_tools_doc.py --check
 uv run python scripts/check_provenance.py
 uv run python scripts/check_versions.py
 uv run python scripts/check_lock_revision.py
