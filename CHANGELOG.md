@@ -107,6 +107,12 @@
   и не запрашивает; `--no-browser` и `--no-doctor` пропускают эти шаги. Код 0 —
   конфиг записан хотя бы одному клиенту, 1 — не нашлось ни клиента, ни записи,
   2 — неверные аргументы.
+- `scripts/bump_version.py` поднимает версию во всех 85 объявлениях из общей
+  таблицы `scripts/version_sites.py`, которую использует и `check_versions.py`;
+  `--dry-run` только печатает план. `.gitattributes` держит LF в checkout,
+  workflow `Image check` собирает оба образа и прогоняет stdio-образ через
+  MCP до тега, а живые запросы ограничены бюджетом 40/8/3 с через
+  `scripts/live_budget.py` и `scripts/live_check.py`.
 
 - In `api` mode, `wb_card` and `wb_search` now re-read the same request through the
   rendered page in the scraping Chrome when WB's API refuses the address: HTTP
@@ -201,6 +207,12 @@
   requests nothing; `--no-browser` and `--no-doctor` skip those steps. Exit 0
   when at least one client's config was written, 1 when no client and no config
   were found, 2 on bad arguments.
+- `scripts/bump_version.py` bumps all 85 declarations from the one site table in
+  `scripts/version_sites.py` that `check_versions.py` also uses; `--dry-run`
+  only prints the plan. `.gitattributes` keeps checkouts on LF, the `Image
+  check` workflow builds both images and drives the stdio image through MCP
+  before the tag, and live requests are capped at 40 total / 8 per marketplace
+  / 3 s between requests by `scripts/live_budget.py` and `scripts/live_check.py`.
 
 ### Fixed
 
