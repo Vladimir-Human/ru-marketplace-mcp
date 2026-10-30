@@ -237,6 +237,7 @@ class Budget:
         self._sleep_sync = sleep_sync
         self._sleep_async = sleep_async
         self._lock = threading.Lock()
+        self.refused: list[str] = []
 
     @classmethod
     def from_env(cls, ledger_path: Path | None = None) -> Budget:
@@ -262,32 +263,40 @@ class Budget:
         if is_loopback(host):
             return 0.0
         group = source_group(host or "")
+        refusal = ""
+        now = at = 0.0
+        number = count = 0
         with self._lock, _ledger_lock(self.ledger.path):
             entries = self.ledger.load()
             mine = [entry for entry in entries if entry.get("group") == group]
             if len(entries) >= self.total:
-                raise BudgetExhausted(
-                    f"live budget exhausted: {len(entries)}/{self.total} total (a new run starts after `python scripts/live_check.py reset`)"
+                refusal = f"live budget exhausted: {len(entries)}/{self.total} total (a new run starts after `python scripts/live_check.py reset`)"
+            elif len(mine) >= self.per_source:
+                refusal = f"live budget exhausted for {group}: {len(mine)}/{self.per_source} requests (a new run starts after `python scripts/live_check.py reset`)"
+            else:
+                now = self._clock()
+                last = max((float(entry.get("t", 0.0)) for entry in mine), default=0.0)
+                at = max(now, last + self.gap_s)
+                entries.append(
+                    {
+                        "t": at,
+                        "utc": dt.datetime.fromtimestamp(at, dt.UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                        "group": group,
+                        "kind": kind,
+                        "url": url[:160],
+                    }
                 )
-            if len(mine) >= self.per_source:
-                raise BudgetExhausted(
-                    f"live budget exhausted for {group}: {len(mine)}/{self.per_source} requests (a new run starts after `python scripts/live_check.py reset`)"
-                )
-            now = self._clock()
-            last = max((float(entry.get("t", 0.0)) for entry in mine), default=0.0)
-            at = max(now, last + self.gap_s)
-            entries.append(
-                {
-                    "t": at,
-                    "utc": dt.datetime.fromtimestamp(at, dt.UTC).strftime("%Y-%m-%d %H:%M:%S"),
-                    "group": group,
-                    "kind": kind,
-                    "url": url[:160],
-                }
-            )
-            self.ledger.save(entries)
-            number = len(entries)
-            count = len(mine) + 1
+                self.ledger.save(entries)
+                number = len(entries)
+                count = len(mine) + 1
+        if refusal:
+            # A connector maps the refusal to its own transport error, so a
+            # selfcheck row reads transport_down; this line and the ledger
+            # summary are where the operator sees that the budget said no.
+            self.refused.append(group)
+            print(f"[refused] {group} {kind} {url[:160]}: {refusal}", file=sys.stderr)
+            sys.stderr.flush()
+            raise BudgetExhausted(refusal)
         print(f"[req {number}/{self.total}] {group} {count}/{self.per_source} {kind} {url[:160]}", file=sys.stderr)
         sys.stderr.flush()
         return at - now
