@@ -697,8 +697,25 @@ def test_next_step_for_wb_api_refusal():
         wb_transport="api",
     )
 
+    assert step == cli.NEXT_STEP_WB_DOM_FALLBACK
+    assert "fall back" in step
+    assert "WB_TRANSPORT=dom" in step
+    assert "doctor" in step
+
+
+def test_next_step_for_wb_api_refusal_with_fallback_off():
+    step = cli.next_step(
+        "wildberries",
+        "inconclusive",
+        {"card": {"state": "inconclusive", "reason": "transport_down"}},
+        cdp_reachable=True,
+        wb_transport="api",
+        wb_dom_fallback="0",
+    )
+
     assert step == cli.NEXT_STEP_WB_TRANSPORT
     assert "WB_TRANSPORT=dom" in step
+    assert "fall back" not in step
 
 
 def test_next_step_in_wb_dom_mode_is_not_the_dom_advice():
@@ -809,6 +826,7 @@ def test_a_healthy_source_has_no_next_step():
         cli.NEXT_STEP_CDP_DOWN,
         cli.NEXT_STEP_BROWSER_WALL,
         cli.NEXT_STEP_WB_TRANSPORT,
+        cli.NEXT_STEP_WB_DOM_FALLBACK,
         cli.NEXT_STEP_MPSTATS_AUTH,
         cli.NEXT_STEP_DRIFT,
         cli.NEXT_STEP_DRIFT_ISSUE,
@@ -841,6 +859,31 @@ def test_doctor_prints_the_next_step_under_the_row(monkeypatch, capsys):
     assert cli.NEXT_STEP_CDP_DOWN in out
     assert out.index("avito") < out.index(cli.NEXT_STEP_CDP_DOWN)
     assert rc == 2
+
+
+@pytest.mark.parametrize(
+    ("fallback", "expected"),
+    [("1", cli.NEXT_STEP_WB_DOM_FALLBACK), ("0", cli.NEXT_STEP_WB_TRANSPORT)],
+)
+def test_doctor_reads_the_wb_dom_fallback_setting(monkeypatch, capsys, fallback, expected):
+    async def fake_selfcheck(name, module_path, tool_name):
+        return (
+            name,
+            "inconclusive",
+            "card:inconclusive (transport_down)",
+            {"card": {"state": "inconclusive", "reason": "transport_down"}},
+        )
+
+    monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
+    monkeypatch.setattr(cli, "_probe_cdp", lambda: (True, ""))
+    monkeypatch.delenv("WB_TRANSPORT", raising=False)
+    monkeypatch.setenv("WB_DOM_FALLBACK", fallback)
+
+    assert cli.cmd_doctor(["wildberries"]) == 2
+    out = capsys.readouterr().out
+    assert expected in out
+    other = cli.NEXT_STEP_WB_TRANSPORT if expected == cli.NEXT_STEP_WB_DOM_FALLBACK else cli.NEXT_STEP_WB_DOM_FALLBACK
+    assert other not in out
 
 
 def test_doctor_status_file_carries_the_next_step(monkeypatch, capsys, tmp_path):

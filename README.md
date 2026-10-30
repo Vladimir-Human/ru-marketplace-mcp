@@ -81,7 +81,7 @@ MPStats стоит особняком: это единственный **пла�
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2427 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2447 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -305,10 +305,13 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 пустого списка.
 
 Если с вашего адреса API WB отвечает 403 (так бывает: отказ зависит и от адреса,
-и от клиента), включите `WB_TRANSPORT=dom`. Тогда `wb_search` и `wb_card` читают
-отрисованные страницы WB в вашем Chrome через CDP, как DNS и Ситилинк, без
-обращений к API. В выдаче поиска `price_rub` — цена по WB Кошельку
-(`price_kind: wallet`); карточка отдаёт обычную цену, цену по Кошельку и
+и от клиента), `wb_search` и `wb_card` сами перечитывают тот же запрос через
+отрисованную страницу WB в вашем Chrome через CDP и добавляют в `meta.warnings`
+предупреждение `dom_fallback`. Это включено по умолчанию; `WB_DOM_FALLBACK=0`
+возвращает прежнее поведение, а `WB_TRANSPORT=dom` по-прежнему читает только
+отрисованные страницы, без обращений к API. В выдаче поиска `price_rub` — цена
+по WB Кошельку (`price_kind: wallet`); карточка отдаёт обычную цену, цену по
+Кошельку и
 зачёркнутую раздельно, а также магазин, склад, срок доставки, возврат, гарантию,
 значок «Оригинал» и строку «Все N предложений от X ₽». В этом режиме
 `marketplace-mcp doctor` тоже открывает две страницы в вашем Chrome — базовую
@@ -635,7 +638,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2427 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2447 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -701,7 +704,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2427 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2447 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -789,7 +792,7 @@ Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2427 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2447 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest way to wire a
@@ -875,8 +878,10 @@ comparable. Several of WB's largest sections carry the shard `blackhole` and hav
 feed at all; the tool says so instead of returning an empty list.
 
 If WB's API answers 403 from your address (the refusal depends on both address and
-client), set `WB_TRANSPORT=dom`: `wb_search` and `wb_card` then read WB's rendered
-pages in your Chrome over CDP, like DNS and Citilink, with no API calls. On search
+client), `wb_search` and `wb_card` re-read the same request through WB's rendered
+page in your Chrome over CDP and add a `dom_fallback` warning to `meta.warnings`.
+This is on by default; `WB_DOM_FALLBACK=0` restores the previous behaviour, while
+`WB_TRANSPORT=dom` still reads only rendered pages, with no API calls. On search
 tiles `price_rub` is the WB Wallet price (`price_kind: wallet`); the card reports
 the regular, Wallet and struck prices separately, plus the store, warehouse,
 delivery date, return policy, warranty, the «Оригинал» badge and «Все N
@@ -1206,7 +1211,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2427 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2447 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1268,7 +1273,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2427 offline
+are confidently wrong, so the project is arranged around verification: 2447 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

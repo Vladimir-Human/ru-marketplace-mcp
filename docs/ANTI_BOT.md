@@ -164,6 +164,18 @@ carries it reliably. Page-wide `del` / `[class*=wallet]` / `[class*=seller]`
 matches also hit the «Смотрите также» carousel, so a DOM hint counts only when it
 names one of the offer's own figures. Other WB tools keep their HTTP paths.
 
+In the default `api` mode, `wb_search` and `wb_card` also take that rendered path
+themselves when the API refuses the address: HTTP 401, 403 or 498, or the edge's
+HTML wall page. The response then carries
+`dom_fallback: WB API refused this address (<reason>); read through the scraping
+Chrome` in `meta.warnings`. Only a refusal falls back: 429 (wait it out), network
+errors and timeouts, parser drift and bad requests keep their existing errors. The
+tool makes one API attempt and at most one DOM attempt; if the DOM path fails too,
+its error type is kept and its message names the API refusal. `WB_DOM_FALLBACK=0`
+restores the API-only behaviour. With the fallback on, `marketplace-mcp doctor`
+says the tools switch by themselves and that `WB_TRANSPORT=dom` makes doctor check
+the rendered path too.
+
 With `WB_TRANSPORT=dom`, `marketplace-mcp doctor` also checks the rendered paths:
 its `card` and `search_v9` checks open two pages in the operator's Chrome (the
 baseline card and the evergreen-query search grid) and use the same parsers as

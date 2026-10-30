@@ -149,6 +149,10 @@ START_CHROME_HINT = (
 NEXT_STEP_WB_TRANSPORT = (
     "WB's API refuses this address; set `WB_TRANSPORT=dom` to read WB pages through the scraping Chrome."
 )
+NEXT_STEP_WB_DOM_FALLBACK = (
+    "WB's API refuses this address; `wb_card` and `wb_search` fall back to the scraping Chrome "
+    "automatically. Set `WB_TRANSPORT=dom` to make doctor check that path too."
+)
 NEXT_STEP_MPSTATS_AUTH = "Set `MPSTATS_MP_AUTH` in the MCP server's environment (your MPStats token)."
 NEXT_STEP_DRIFT = (
     "Parser drift: run `uv run python scripts/diagnose_drift.py {source}` and open an issue with its output."
@@ -702,13 +706,15 @@ def next_step(
     *,
     cdp_reachable: bool | None = None,
     wb_transport: str = "api",
+    wb_dom_fallback: str = "1",
 ) -> str | None:
     """One fixed next step for a source that is not ok; None when it is ok.
 
     Pure on purpose: the same selfcheck result always yields the same advice,
     so the mapping can be tested offline and cannot change with the run. The
     inputs are the source's own verdict (status plus per-check reasons), the
-    static capability table, the CDP probe result and the WB transport mode.
+    static capability table, the CDP probe result and the WB transport and
+    DOM-fallback settings.
 
     The advice is always one of a fixed set of strings. It never suggests a
     captcha solver, stealth or fingerprint tooling, a proxy pool or a retry
@@ -737,7 +743,11 @@ def next_step(
     if "auth_missing" in reasons:
         return NEXT_STEP_MPSTATS_AUTH
     if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
-        return NEXT_STEP_WB_TRANSPORT
+        # With the fallback on, the tools already read WB through the DOM path;
+        # only an explicit opt-out needs the old "switch transport" instruction.
+        if wb_dom_fallback.strip().lower() in {"0", "false", "no", "off"}:
+            return NEXT_STEP_WB_TRANSPORT
+        return NEXT_STEP_WB_DOM_FALLBACK
     # A rate limit is the site's own answer about this address, so the
     # browser is not what failed: it comes before the CDP and wall cases,
     # and the fix is to wait.
@@ -818,8 +828,16 @@ def cmd_doctor(argv: list[str]) -> int:
     # printed rather than after it.
     cdp_reachable, cdp_note = _probe_cdp()
     wb_transport = os.environ.get("WB_TRANSPORT", "api")
+    wb_dom_fallback = os.environ.get("WB_DOM_FALLBACK", "1")
     steps = {
-        name: next_step(name, status, checks, cdp_reachable=cdp_reachable, wb_transport=wb_transport)
+        name: next_step(
+            name,
+            status,
+            checks,
+            cdp_reachable=cdp_reachable,
+            wb_transport=wb_transport,
+            wb_dom_fallback=wb_dom_fallback,
+        )
         for name, status, _, checks in results
     }
 

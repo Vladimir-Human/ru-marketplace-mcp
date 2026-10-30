@@ -25,12 +25,13 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
-# SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search and transport-aware selfchecks.
+# SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport.
-# LINKS: M-WB; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; packages/wb-connector/tests.
+# LINKS: M-WB; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
+# _dom_fallback_reason: Classify an API refusal worth one rendered-page read.
 # _extract_price_rub: Separate current and basic prices, converting kopecks to rubles.
 # _wb_card_dom: Adapt operator-browser cards into the public response model.
 # _wb_search_dom: Adapt operator-browser search with price semantics and region warnings.
@@ -56,7 +57,7 @@ import math
 import os
 import re
 import string
-from typing import Annotated, Any
+from typing import Annotated, Any, NoReturn
 from urllib.parse import urlsplit
 
 import httpx
@@ -339,6 +340,44 @@ def _is_edge_wall(text: str | None) -> bool:
     if not text:
         return False
     return "<html" in text[:200].lower()
+
+
+# WB's edge refuses a client outright with these statuses. 498 is WB's own
+# anti-bot code; 429 is deliberately absent because waiting, not a browser,
+# is the fix for a rate limit.
+_WB_API_REFUSAL_STATUSES = frozenset({401, 403, 498})
+
+
+def _dom_fallback_reason(status_code: int, text: str | None) -> str | None:
+    """The refusal worth one DOM read, or None when this is not a fallback case.
+
+    Only an outright refusal counts: a 401/403/498 or the edge's HTML wall page.
+    A 429, a network error, parser drift and a bad request keep their existing
+    error paths. ``WB_DOM_FALLBACK=0`` disables the fallback entirely.
+    """
+    if not _settings.dom_fallback:
+        return None
+    if status_code in _WB_API_REFUSAL_STATUSES:
+        return f"HTTP {status_code}"
+    if status_code != 429 and _is_edge_wall(text):
+        return f"HTML wall, HTTP {status_code}"
+    return None
+
+
+def _dom_fallback_warning(reason: str) -> str:
+    return f"dom_fallback: WB API refused this address ({reason}); read through the scraping Chrome"
+
+
+def _raise_dom_failure_after_refusal(exc: ToolError, reason: str) -> NoReturn:
+    """Re-raise the DOM path's own error, naming the API refusal that preceded it."""
+    try:
+        payload = json.loads(str(exc))
+    except json.JSONDecodeError:
+        raise exc from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("message"), str):
+        raise exc from None
+    payload["message"] += f" (WB API refused this address ({reason}) first)"
+    raise ToolError(json.dumps(payload, ensure_ascii=False)) from exc
 
 
 def _needs_impersonation(url: str) -> bool:
@@ -735,9 +774,17 @@ def _dom_dest_warning(dest: str) -> list[str]:
     return []
 
 
-async def _wb_card_dom(nm_ids: list[int], dest: str, ctx: Context | None) -> WbCardResponse:
+async def _wb_card_dom(
+    nm_ids: list[int],
+    dest: str,
+    ctx: Context | None,
+    *,
+    fallback_reason: str | None = None,
+) -> WbCardResponse:
     """wb_card over rendered product pages (WB_TRANSPORT=dom). One navigation per SKU."""
     warnings = _dom_dest_warning(dest)
+    if fallback_reason:
+        warnings.insert(0, _dom_fallback_warning(fallback_reason))
     wanted = list(dict.fromkeys(nm_ids))
     if len(wanted) > _settings.dom_max_cards:
         warnings.append(
@@ -768,7 +815,12 @@ async def _wb_card_dom(nm_ids: list[int], dest: str, ctx: Context | None) -> WbC
 
 
 async def _wb_search_dom(
-    query: str, dest: str, page: int, ctx: Context | None
+    query: str,
+    dest: str,
+    page: int,
+    ctx: Context | None,
+    *,
+    fallback_reason: str | None = None,
 ) -> WbSearchResponse | WbNoResultsResponse:
     """wb_search over the rendered search grid (WB_TRANSPORT=dom)."""
     url = dom_transport.search_url(query, page)
@@ -787,6 +839,8 @@ async def _wb_search_dom(
             )
         )
     warnings = _dom_dest_warning(dest) + warnings
+    if fallback_reason:
+        warnings.insert(0, _dom_fallback_warning(fallback_reason))
     if not items:
         log_event("wb_search.no_results", transport="dom", query=query[:100], page=page)
         return WbNoResultsResponse(
@@ -902,6 +956,13 @@ async def wb_card(
             if status_code == 429:
                 log_event("wb_card.rate_limited")
                 raise_tool_error(RateLimitedError("wb", retry_after_s=30.0))
+            fallback_reason = _dom_fallback_reason(status_code, text)
+            if fallback_reason is not None:
+                log_event("wb_card.dom_fallback", reason=fallback_reason)
+                try:
+                    return await _wb_card_dom(nm_ids, dest, ctx, fallback_reason=fallback_reason)
+                except ToolError as exc:
+                    _raise_dom_failure_after_refusal(exc, fallback_reason)
             if text and "<html" in text[:200].lower():
                 log_event("wb_card.blocked", reason="cloudflare_html")
                 raise_tool_error(
@@ -1625,6 +1686,13 @@ async def wb_search(
         try:
             async with _wb_client() as client:
                 status_code, text, err = await _safe_get_text(client, v9_url)
+            fallback_reason = _dom_fallback_reason(status_code, text)
+            if fallback_reason is not None:
+                log_event("wb_search.dom_fallback", reason=fallback_reason)
+                try:
+                    return await _wb_search_dom(query, dest, page, ctx, fallback_reason=fallback_reason)
+                except ToolError as exc:
+                    _raise_dom_failure_after_refusal(exc, fallback_reason)
             if status_code in (401, 403) or (status_code != 429 and _is_edge_wall(text)):
                 # A refusal must not become a stale legacy answer (#101).
                 log_event("wb_search.refused", endpoint="v9", status=status_code)
