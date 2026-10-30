@@ -1,7 +1,7 @@
 {
   "url": "https://s.taobao.com/search?q=iphone%2015&page=1",
   "captured_at": "2026-10-30",
-  "sha256": "9f973a3d9f017a81eb7cef72d61ef1148ad0c2d14f7cdb09e682af883bf66e77",
+  "sha256": "de06203cb9461ab3b8a0619dee23bb5db2af807874a7820230383586b7e40b16",
   "method": "Owner's Chrome over CDP via the project's open_page, 2026-10-30 at 08:25 UTC. Five tile wrappers sliced verbatim from the rendered raw capture: two item.taobao.com products, two detail.tmall.com products and one disjoint id-bearing click.simba.taobao.com ad. Only image src/data-src values and SVG bodies removed; tile structure, title nodes, split price parts, shops, sales and locations preserved. The outer document is a minimal offline wrapper. Ground truth read from the raw page before trimming; scripts are not executed and no resources are fetched. Ad trackers are retained only as offline negative evidence, never followed. The brief's link counts describe distinct URLs; the raw DOM repeats product anchors three times and contains two distinct ad URLs per ad tile.",
   "raw_capture": "taobao_search_iphone15.html (outside git, .git/claude-review)",
   "raw_sha256": "01c1c678bdd0986e0008ed537d61f11d87910a646e2fc86e8fd64c42924ce4f8",
