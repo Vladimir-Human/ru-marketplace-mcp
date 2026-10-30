@@ -132,9 +132,10 @@ checkout подставятся абсолютными (у десктопног�
 источник — и с `--profile` не сочетается.
 
 По умолчанию запись запускает `compare-mcp` — профиль `compare`: 4 инструмента
-сравнения цен, около 0,9 тыс. токенов в каждом запросе. `--profile decision`
-добавляет осмотр карточки из шортлиста (5 инструментов), `--profile full` берёт
-`marketplace-mcp` со всеми инструментами источников, около 13,6 тыс. токенов.
+сравнения цен, самый дешёвый в каждом запросе. `--profile decision` добавляет
+осмотр карточки из шортлиста (5 инструментов), `--profile full` берёт
+`marketplace-mcp` со всеми инструментами источников — в несколько раз дороже
+(замер по профилям — в [docs/TOOLS.md](docs/TOOLS.md)).
 Меняется только консольная команда записи, имя `marketplace` остаётся прежним.
 Подробнее о выборе режима — [dsh/README.md](dsh/README.md) и
 `docs/QUICKSTART.md`.
@@ -280,8 +281,13 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 
 Сразу после установки появляются 15 навыков и **ни одного** MCP-инструмента: обе
 строки MCP выключены, пока не задана переменная `RU_MARKETPLACE_MCP_DIR` с путём к
-клону. Так сделано потому, что смонтированный сервер платится в каждом запросе:
-рекомендуемый режим сравнения цен стоит ~0,9 тыс. токенов, полный набор — ~13,6 тыс.
+клону.
+<!-- tools-cost:start -->
+Так сделано потому, что смонтированный сервер платится в каждом запросе:
+рекомендуемый режим сравнения цен стоит ≈2.2k токенов, режим с инспекцией
+карточки — ≈2.4k, полный набор — ≈17.5k (оценка по `tools/list`;
+подробности в [docs/TOOLS.md](docs/TOOLS.md)).
+<!-- tools-cost:end -->
 Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
 
 </details>
@@ -291,6 +297,9 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 `inconclusive`.
 
 ## Инструменты
+
+Сгенерированный справочник по инструментам с параметрами и ценой контекста:
+[docs/TOOLS.md](docs/TOOLS.md).
 
 Канарейки `*_selfcheck` в этом перечне не значатся намеренно: они не публикуются
 по MCP, потому что диагностика оператора стоила бы модели ~7,5 тыс. токенов в
@@ -839,9 +848,10 @@ It adds one `marketplace` entry to the client's own config (Claude Desktop:
 `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
 `~/.config/Claude/claude_desktop_config.json` on Linux; Cursor: `~/.cursor/mcp.json`).
 By default that entry runs `compare-mcp` — the `compare` profile: 4 price-comparison
-tools, about 0.9k tokens per request. `--profile decision` adds shortlist card
+tools, the cheapest per request. `--profile decision` adds shortlist card
 inspection (5 tools); `--profile full` runs `marketplace-mcp` with every per-source
-tool, about 13.6k tokens. The entry name stays `marketplace`. `uv` and your checkout
+tool, several times the cost (measured per profile in [docs/TOOLS.md](docs/TOOLS.md)).
+The entry name stays `marketplace`. `uv` and your checkout
 path are filled in as absolute paths, other servers and settings in the file stay
 untouched, and the old file is kept as `<file>.bak-<timestamp>`. Restart the client
 afterwards; `--dry-run` shows the result without writing, and `--per-source` writes
@@ -889,15 +899,22 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
 That gives you 15 skills immediately and **no** MCP tools: both MCP rows stay
-disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone. A mounted server is paid
-on every request — ~0.9k tokens for the recommended price-comparison mode, ~13.6k for
-the full set — so opting in is left to you. [dsh/README.md](dsh/README.md) covers
-enabling it and the full mode.
+disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
+<!-- tools-cost:start -->
+A mounted server is paid on every request — ≈2.2k tokens for the
+recommended price-comparison profile, ≈2.4k for the decision profile and
+≈17.5k for the full set (estimated from `tools/list`; details in
+[docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
+<!-- tools-cost:end -->
+[dsh/README.md](dsh/README.md) covers enabling it and the full mode.
 
 After connecting, run `marketplace-mcp doctor`. It runs every connector's canary and
 reports `success`, `drift_detected`, or `inconclusive` for each.
 
 ## The tools
+
+Generated per-tool reference with parameters and context cost:
+[docs/TOOLS.md](docs/TOOLS.md).
 
 The `*_selfcheck` canaries are deliberately absent from these tables: they are not
 published over MCP, because operator diagnostics would cost the model ~7.5k tokens

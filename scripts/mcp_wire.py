@@ -42,11 +42,20 @@ def fetch_tools(root: Path, script: str, timeout: float = 180.0) -> tuple[list[d
         return None, time.monotonic() - started
 
 
+def tool_tokens(tool: dict) -> int:
+    """The estimate for one advertised tool: its compact JSON, as the wire carries it."""
+    return estimate_tokens(json.dumps(tool, ensure_ascii=False, separators=(",", ":")))
+
+
+def wire_tokens(tools: list[dict]) -> int:
+    """The estimate for a whole tools/list: the sum over its tools."""
+    return sum(tool_tokens(tool) for tool in tools)
+
+
 def _snapshot(script: str, tools: list[dict], elapsed: float) -> dict[str, object]:
     rows = []
     for tool in tools:
-        blob = json.dumps(tool, ensure_ascii=False, separators=(",", ":"))
-        rows.append({"name": tool.get("name", ""), "tokens": estimate_tokens(blob)})
+        rows.append({"name": tool.get("name", ""), "tokens": tool_tokens(tool)})
     rows.sort(key=lambda row: str(row["name"]))
     total = sum(int(row["tokens"]) for row in rows)
     schema_hash = hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()

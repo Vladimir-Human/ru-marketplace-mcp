@@ -87,8 +87,9 @@ DSH_ENV_DECISION = "RU_MARKETPLACE_MCP_DECISION"
 
 # The default entry: one server, one name. A profile selects which server the
 # `marketplace` entry runs, because a client pays for the mounted tool schemas
-# on every request: compare is 4 tools (~0.9k tokens), decision 5, full ~40
-# tools (~13.6k). New installs start with the cheap, recommended compare mode.
+# on every request: compare is 4 tools, decision 5, full about 40 (measured
+# per profile in docs/TOOLS.md, which CI keeps current; no number is copied
+# here). New installs start with the cheap, recommended compare mode.
 UNIFIED_ENTRY = "marketplace"
 UNIFIED_SCRIPT = "marketplace-mcp"
 PROFILE_SCRIPTS: dict[str, str] = {
@@ -98,9 +99,9 @@ PROFILE_SCRIPTS: dict[str, str] = {
 }
 DEFAULT_PROFILE = "compare"
 PROFILE_DETAILS: dict[str, str] = {
-    "compare": "4 comparison tools, about 0.9k tokens per request",
+    "compare": "4 comparison tools, the cheapest per request",
     "decision": "comparison plus shortlist card inspection, 5 tools",
-    "full": "every per-source tool, about 40 tools and 13.6k tokens per request",
+    "full": "every per-source tool, about 40 tools, several times the cost per request",
 }
 
 # Clients `setup` can wire. dsh has its own bundle format and is not one of them.

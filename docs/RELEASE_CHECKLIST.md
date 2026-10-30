@@ -57,6 +57,7 @@ uv run mypy --platform darwin
 uv run python scripts/check_no_print.py
 uv run python scripts/check_versions.py
 uv run python scripts/check_test_count.py
+uv run python scripts/gen_tools_doc.py --check
 uv run python scripts/check_lock_revision.py
 uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=80
 uv run python scripts/e2e_stdio_check.py
