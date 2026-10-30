@@ -16,9 +16,15 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 80;
-- `e2e_stdio_check.py` даёт 16/16, у всех серверов версия релиза;
+- `e2e_stdio_check.py` даёт 32/32 (16 серверов в обоих протоколах), у всех
+  серверов версия релиза;
 - `python scripts/live_check.py doctor` вернул `0`, либо `2` с понятным
-  объяснением по каждому непроверенному источнику;
+  объяснением по каждому непроверенному источнику. Строка `refused before
+  sending` в конце значит, что бюджет не пустил запросы этих площадок: их
+  `transport_down` ничего не говорит о сайте. Ozon, когда его API отказывает
+  curl, тратит до 12 запросов на полную самопроверку при лимите 8 — отзывы
+  проверьте в следующем прогоне одним вызовом: `live_check.py reset`, затем
+  `live_check.py call ozon_connector.server ozon_reviews '{"sku_or_path": "<sku>"}'`;
 - по каждому источнику, который ответил, сверка глазами сошлась по цене и
   наличию;
 - юани Taobao не выиграли рублёвое ранжирование;
@@ -267,9 +273,15 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 80% coverage
-floor; `e2e_stdio_check.py` reports 16/16 at the release version;
-`python scripts/live_check.py doctor` returns `0`, or `2` with a clear account
-of every unverified source; every source that answered was compared by eye on
+floor; `e2e_stdio_check.py` reports 32/32 (16 servers in both protocols) at
+the release version; `python scripts/live_check.py doctor` returns `0`, or `2`
+with a clear account of every unverified source (a closing `refused before
+sending` line means the budget stopped those marketplaces' requests, so their
+`transport_down` says nothing about the site; Ozon needs up to 12 requests for
+a full selfcheck when its API refuses curl, against a cap of 8, so check its
+reviews in the next run with one call: `live_check.py reset`, then
+`live_check.py call ozon_connector.server ozon_reviews '{"sku_or_path": "<sku>"}'`);
+every source that answered was compared by eye on
 price and availability; Taobao's yuan did not win a rouble ranking; CI is
 green.
 

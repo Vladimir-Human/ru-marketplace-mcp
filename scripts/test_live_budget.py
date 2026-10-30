@@ -124,6 +124,29 @@ def test_the_per_source_cap_raises_before_sending(tmp_path: Path, clock: FakeClo
     assert len(live_budget.Ledger(tmp_path / "live-budget.json").load()) == 1
 
 
+def test_a_refused_request_is_said_out_loud_and_counted(
+    tmp_path: Path, clock: FakeClock, fake_http: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A refusal the connector turns into transport_down must still be visible (live run 2026-10-30).
+
+    Ozon's selfcheck needs up to 12 loads when its API refuses curl; the cap of 8
+    refused the reviews checks and the doctor row read transport_down, as if Ozon
+    had blocked the address. Before this, a refusal printed nothing.
+    """
+    budget = _budget(tmp_path, clock, per_source=1)
+    live_budget.install(budget)
+    client = httpx.Client()
+
+    client.send(httpx.Request("GET", "https://www.ozon.ru/one"))
+    with pytest.raises(live_budget.BudgetExhausted):
+        client.send(httpx.Request("GET", "https://www.ozon.ru/two"))
+
+    assert budget.refused == ["ozon"]
+    last = capsys.readouterr().err.splitlines()[-1]
+    assert last.startswith("[refused] ozon httpx https://www.ozon.ru/two: live budget exhausted for ozon: 1/1")
+    assert len(live_budget.Ledger(tmp_path / "live-budget.json").load()) == 1
+
+
 def test_the_total_cap_raises_before_sending(tmp_path: Path, clock: FakeClock, fake_http: list[str]) -> None:
     live_budget.install(_budget(tmp_path, clock, total=1))
     client = httpx.Client()

@@ -64,6 +64,15 @@ def _ledger_report(budget: live_budget.Budget) -> int:
         counts[group] = counts.get(group, 0) + 1
     detail = ", ".join(f"{group} {count}/{budget.per_source}" for group, count in sorted(counts.items()))
     print(f"total {len(entries)}/{budget.total}" + (f"; {detail}" if detail else ""))
+    if budget.refused:
+        refused: dict[str, int] = {}
+        for group in budget.refused:
+            refused[group] = refused.get(group, 0) + 1
+        listed = ", ".join(f"{group} {count}" for group, count in sorted(refused.items()))
+        print(
+            f"refused before sending (over a cap): {listed}; the checks that needed them read "
+            "transport_down or inconclusive, which says nothing about the site"
+        )
     return 0
 
 
