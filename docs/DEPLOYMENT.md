@@ -85,8 +85,8 @@ the version to match the release you downloaded.
 
 ```console
 python -m venv .venv
-.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.6.0-py3-none-any.whl
-.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.6.0" "aliexpress-connector==2.6.0"
+.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.7.0-py3-none-any.whl
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.7.0" "aliexpress-connector==2.7.0"
 .venv/bin/compare-mcp
 ```
 
