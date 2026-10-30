@@ -125,7 +125,7 @@ published GHCR image instead of a local clone:
       - run
       - --rm
       - -i
-      - ghcr.io/vladimir-human/ru-marketplace-mcp:2.5.4
+      - ghcr.io/vladimir-human/ru-marketplace-mcp:2.6.0
     failOnStartupError: false
 ```
 

@@ -9,7 +9,33 @@
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-30
+
+FastMCP 4 без смены публичного контракта инструментов; три исправления Taobao из замечаний к v2.5.4; Dependabot следит и за npm lock-файлом.
+
+FastMCP 4 with the public tool contract unchanged; the three Taobao issues recorded in v2.5.4 are addressed; Dependabot also watches the npm lockfile.
+
 ### Changed
+
+- Все пакеты перешли с FastMCP 3.x на 4.1.4 (MCP Python SDK v2), минимальная
+  версия pydantic — 2.12 (#138). Поддерживаются прежнее рукопожатие
+  (`initialize`, протокол 2025-11-25 и старше) и новый протокол 2026-07-28
+  без сессий (`server/discover`). Имена инструментов, параметры и поля ответов
+  не изменились: `_meta` остаётся `_meta`, вложенный блок карточки в
+  `compare_verify_offer` — `meta`.
+- Сохранённая вкладка проверки в протоколе без сессий привязана к процессу
+  stdio-сервера: повтор от его единственного клиента продолжает ту же вкладку.
+  По HTTP без сессии вкладка не сохраняется, потому что запросы нельзя связать
+  с одним клиентом. У клиентов с рукопожатием сохраняется прежняя привязка к
+  MCP-сессии (#138).
+- `compare_browser_snapshot` читает объявленные клиентом возможности в обоих
+  протоколах, в том числе сигнал поддержки изображений (#138).
+- `scripts/e2e_stdio_check.py` проверяет оба протокола: ожидается 32 stdio-сессии
+  вместо 16. Добавлены офлайн-тесты настоящих stdio- и локальных HTTP-серверов
+  для привязки клиента и проверки bearer-токена (#138).
+- Dependabot уже следит за закреплёнными по digest базовыми образами Docker
+  (#134, включено в v2.5.4); теперь он проверяет и npm lock-файл для офлайн-тестов
+  DOM-экстракторов, еженедельно, с группировкой minor- и patch-обновлений (#140).
 
 - FastMCP 4 (4.1.4, MCP Python SDK v2) replaces the 3.x line in every
   package; pydantic's floor rises to 2.12 with it. The servers now speak both
@@ -31,8 +57,27 @@
   both eras: 32 sessions instead of 16. New offline tests start real stdio and
   loopback HTTP servers to pin the client scope and the bearer-token check in
   both eras.
+- Dependabot already watches the digest-pinned Docker base images (#134,
+  shipped in v2.5.4); it now also watches the dev-only npm lockfile for offline
+  DOM-extractor tests, weekly, with minor and patch updates grouped (#140).
 
 ### Fixed
+
+- Taobao кодирует пробел в поисковом запросе как `%20`, а не `+`: площадка
+  больше не ищет буквальное «iphone+15». Настоящий плюс остаётся `%2B`;
+  канонический URL один для поиска, кэша и сохранённой вкладки (#141).
+- Поиск Taobao возвращает обычные товары Tmall (`detail.tmall.com`) с их
+  настоящими URL, id, названием, ценой в юанях и магазином. Рекламные трекеры
+  `click.simba.taobao.com` намеренно исключены: переход оплачивает рекламодатель
+  и это не URL товара (#141).
+- `taobao_card` явно отказывает для Tmall: невосстановимый `bad_request`
+  объясняет, что карточки Tmall не поддерживаются, а основные данные уже есть
+  в поисковой выдаче. Политика разрешённых хостов не расширена (#141).
+- Сетка Taobao с маркером «加载中» перечитывается в той же вкладке около 10 с.
+  Если загрузка не закончилась, возвращается повторяемый `timeout`, в том числе
+  в `compare_prices`, а не `parser_drift`. Вход и капча по-прежнему сразу дают
+  `challenge_required`; пустая сетка без признака загрузки — `parser_drift`
+  (#141).
 
 - Taobao search: a space in the query is sent as `%20`, not `+`. Taobao read
   `q=iphone+15` as the literal text "iphone+15", while the page's own search
