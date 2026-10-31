@@ -111,8 +111,11 @@ alias of `marketplace-mcp`. The workspace, its per-package GitHub Release wheels
 and sdists, and the Docker builds remain separate and unchanged. Do not publish
 `mcp-core` or the generic connector names to PyPI.
 
-Publishing is **off until the owner enables it**. Nothing in this checkout
-registers a publisher or uploads a package. One-time owner setup:
+Publishing is **on** in this repository since 2026-10-31: the owner registered
+the publisher, limited the `pypi` environment to tags `v*` and set the variable,
+and v2.7.0 went out by a manual dispatch on its tag. Every new `v*` tag now
+publishes the bundle. Nothing in this checkout registers a publisher or uploads
+a package by itself. The one-time owner setup, kept for reference and for forks:
 
 1. On **pypi.org**, open **Account → Publishing → Add a new pending publisher**.
    Enter these exact values:
@@ -156,7 +159,7 @@ checkout. `dist/pypi/` is ignored. CI's additional **PyPI bundle installs** job
 installs the wheel with plain pip into a fresh non-workspace venv and runs both
 CLI help commands and the offline stdio probe against installed console scripts.
 
-A client configured from an eventual uv tool install must not keep a path into
+A client configured from a uv tool install (`uvx ru-marketplace-mcp setup`) must not keep a path into
 uv's deletable cache. When `UV` is set and the running prefix lies inside
 `UV_CACHE_DIR` (or `uv cache dir`), `install` and `setup` write the absolute uv
 binary plus `tool run --from ru-marketplace-mcp==<installed-version> <script>`.

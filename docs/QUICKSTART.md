@@ -15,6 +15,16 @@ cd ru-marketplace-mcp
 uv sync --frozen --all-packages
 ```
 
+Without a checkout, the `ru-marketplace-mcp` package on PyPI holds every server
+and the CLI, and one command installs it and runs the guided setup:
+
+```console
+uvx ru-marketplace-mcp setup
+```
+
+The client entry it writes pins the release that ran. In the commands below,
+replace `uv run marketplace-mcp` with `uvx ru-marketplace-mcp`.
+
 Node and jsdom are needed for contributor DOM tests only. You can use the MCP
 servers without running the test suite or installing Node.
 

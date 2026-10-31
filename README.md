@@ -74,9 +74,18 @@ MPStats стоит особняком: это единственный **пла�
 
 Нужны **Python 3.12+** и [uv](https://docs.astral.sh/uv/).
 
+Без checkout пакет ставится с PyPI и сам подключается к найденному клиенту
+(`--dry-run` покажет план и ничего не запишет):
+
+```bash
+uvx ru-marketplace-mcp setup
+```
+
 Для установки клиента, выбора источников и проверки первого предложения —
 [пошаговый старт](docs/QUICKSTART.md). Node нужен только для тестов разработчика.
-Подготовка PyPI-бандла для владельца: [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer); публикация пока выключена.
+Публикация на PyPI (для владельца): [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer).
+
+Из исходников, для разработки:
 
 ```bash
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
@@ -619,7 +628,7 @@ compare_prices("кроссовки мужские")
 
 Скиллы едут в Docker-образ (`/app/skills/`), но **в колёсах их нет**: `skills/`
 лежит в корне репозитория. При установке release-wheel возьмите навыки
-из репозитория отдельно; будущий PyPI-бандл тоже не включает их.
+из репозитория отдельно; пакета `ru-marketplace-mcp` с PyPI это тоже касается.
 
 ## Настройка
 
@@ -818,7 +827,17 @@ HTTP transport is opt-in for remote deployment — see
 ## Quickstart
 
 Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
-Maintainer PyPI bundle preparation: [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer); publishing is off.
+
+Without a checkout, install from PyPI and wire the detected client in one step
+(`--dry-run` shows the plan and writes nothing):
+
+```console
+uvx ru-marketplace-mcp setup
+```
+
+Publishing to PyPI (maintainer): [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer).
+
+From source, for development:
 
 ```bash
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
@@ -1224,7 +1243,7 @@ already removed.
 Skills are copied into the Docker image (`/app/skills/`), but they are **not in
 the wheels**: `skills/` lives at the repository root rather than inside the
 packages. Release-wheel installs need the skills fetched from the repo separately;
-the future PyPI bundle will not include them either.
+the `ru-marketplace-mcp` package on PyPI does not include them either.
 
 ## Configuration
 
