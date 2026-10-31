@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
+  вышла на PyPI ручным запуском на своём теге. README и `docs/QUICKSTART.md`
+  показывают установку без checkout (`uvx ru-marketplace-mcp setup`),
+  `docs/DEPLOYMENT.md` и чеклист релиза описывают публикацию как включённую, а
+  проверка после публикации смотрит страницу PyPI и
+  `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
+- Заметки к релизу v2.7.0 переписаны короче; подробности проверок остались в #152.
+
+- PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
+  went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
+  show the install without a checkout (`uvx ru-marketplace-mcp setup`);
+  `docs/DEPLOYMENT.md` and the release checklist describe publishing as on, and
+  the after-publication step checks the PyPI page and
+  `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
+- The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).

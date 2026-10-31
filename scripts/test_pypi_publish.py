@@ -1,4 +1,4 @@
-"""R-PYPI-PUBLISH: test the actual disabled workflow and its artifact/version guard."""
+"""R-PYPI-PUBLISH: test the actual owner-gated workflow, its artifact/version guard and the install docs."""
 # START_MODULE_CONTRACT
 # PURPOSE: Prove publishing stays owner-gated and rejects a bad release before the upload action.
 # SCOPE: Local workflow text and execution of its Python guard on temporary wheel/sdist data.
@@ -11,6 +11,8 @@
 # test_publish_is_owner_gated_and_uses_only_oidc: Gate, environment, permissions and pinned action.
 # test_publish_guard_checks_real_wheel_metadata_against_tag: Run actual guard on valid/conflicting artifacts.
 # test_bundle_ci_uses_plain_pip_and_installed_console_scripts / test_existing_ci_job_names_are_preserved: CI contract.
+# test_owner_registration_has_one_documented_source: One owner checklist, linked from README and the release checklist.
+# test_the_docs_offer_the_pypi_install_now_that_publishing_is_on: Install command shown, no doc calls publishing off.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -157,9 +159,22 @@ def test_owner_registration_has_one_documented_source():
     for name in ("README.md", "docs/RELEASE_CHECKLIST.md"):
         doc = (ROOT / name).read_text(encoding="utf-8")
         assert "DEPLOYMENT.md#pypi-maintainer" in doc
+
+
+def test_the_docs_offer_the_pypi_install_now_that_publishing_is_on():
+    # The owner enabled publishing on 2026-10-31 and v2.7.0 is on PyPI: both README
+    # quickstarts and QUICKSTART offer the one-command install, nothing calls it off.
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "pip install ru-marketplace-mcp" not in readme
-    assert "uvx ru-marketplace-mcp" not in readme
+    quickstart = (ROOT / "docs" / "QUICKSTART.md").read_text(encoding="utf-8")
+    deployment = (ROOT / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
+    checklist = (ROOT / "docs" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+    assert readme.count("uvx ru-marketplace-mcp setup") == 2
+    assert "uvx ru-marketplace-mcp setup" in quickstart
+    for stale in ("publishing is off", "публикация пока выключена", "future PyPI bundle", "будущий PyPI-бандл"):
+        assert stale not in readme
+    assert "off until the owner enables it" not in deployment
+    assert "Publishing is **on**" in deployment
+    assert checklist.count("uvx ru-marketplace-mcp@X.Y.Z setup --dry-run") == 2
 
 
 # END_BLOCK_CI_AND_DOCS

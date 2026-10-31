@@ -231,10 +231,11 @@ sdist) и прикладывает их к релизу.
 
 Одноразовая настройка pending publisher, окружения и переключателя описана в
 [DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer): это единственный
-список точных полей для владельца. До его выполнения job публикации пропускается;
-токен API не нужен. Публикуется только дополнительный бандл, а не 16 workspace-пакетов.
+список точных полей для владельца. Владелец выполнил её 2026-10-31, и теперь каждый
+тег `v*` публикует бандл; без настройки (например, в форке) job пропускается.
+Токен API не нужен. Публикуется только дополнительный бандл, а не 16 workspace-пакетов.
 
-Перед включённым выпуском проверьте:
+Перед выпуском проверьте:
 
 - `scripts/build_pypi_bundle.py --print-pyproject` показывает метаданные из
   манифестов; обычный запуск собирает один wheel и один sdist в `dist/pypi/`;
@@ -242,8 +243,7 @@ sdist) и прикладывает их к релизу.
   CLI help и stdio-проверку установленных консольных команд;
 - wheel `METADATA` содержит версию выбранного `v*` тега; ручной
   `workflow_dispatch` тоже запускайте на теге, не на ветке;
-- README не рекламирует публичную установку до первой успешной публикации;
-  конфиг из uv tool использует пин релиза, обновляемый через `install --write --force`.
+- конфиг из uv tool использует пин релиза, обновляемый через `install --write --force`.
 
 32 артефакта существующего GitHub Release workflow остаются как прежде.
 
@@ -260,6 +260,15 @@ uv run python scripts/e2e_stdio_check.py
 
 Проверить страницу релиза глазами: текст на месте, таблица проверенных
 источников отрисовалась, приложено 32 файла (16 wheel и 16 sdist).
+
+Проверить PyPI: на https://pypi.org/project/ru-marketplace-mcp/ видна версия X.Y.Z
+с одним wheel и одним sdist, а пакет запускается без checkout:
+
+```console
+uvx ru-marketplace-mcp@X.Y.Z setup --dry-run
+```
+
+Команда печатает запись с `ru-marketplace-mcp==X.Y.Z` и ничего не пишет.
 
 ---
 
@@ -345,16 +354,19 @@ entered a rouble ranking; a clean install, image build or CI is red.
    published. The tag push builds and attaches 32 artifacts (16 wheels and 16
    sdists).
 8. **Verify after publishing** — clone the tag fresh, sync, and run
-   `e2e_stdio_check.py`, then read the release page.
+   `e2e_stdio_check.py`, then read the release page. Check that
+   https://pypi.org/project/ru-marketplace-mcp/ lists X.Y.Z with one wheel and one
+   sdist, and that `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run` prints an entry
+   pinned to `ru-marketplace-mcp==X.Y.Z` and writes nothing.
 
 ## PyPI (maintainer, English)
 
 Follow the single owner-registration checklist in
-[DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer). Until the owner
-completes it, the publish job is skipped; no API token is used. Only the additional
+[DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer). The owner
+completed it on 2026-10-31, so every `v*` tag now publishes the bundle; without it
+(in a fork, say) the publish job is skipped. No API token is used. Only the additional
 bundle goes to PyPI, not the 16 workspace distribution names. Check the generated
 metadata and both local artifacts, the **PyPI bundle installs** CI job, and the
 wheel `METADATA` version against the selected `v*` tag (also for manual dispatch).
-Keep public-install advertising out of README until the first successful publish.
 The existing 32 GitHub Release artifacts and Docker builds stay unchanged;
 uv-tool client entries pin a release and refresh it with `install --write --force`.
