@@ -33,7 +33,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _graphql_via_cdp: POST the query inside the operator's Chrome with bounded transport.
 # _graphql_card: Try HTTPS then CDP; parse and cache GraphQL product details, sizes and stock.
 # _cdp_render_search: Read browser search and recover explicit challenge handoffs.
-# lamoda_search: Return rendered catalog tiles with nullable prices.
+# lamoda_search: Return rendered catalog tiles with nullable prices; warn when a required key family vanishes.
 # lamoda_card: Return GraphQL-backed SKU details and availability.
 # lamoda_selfcheck: Diagnose operator endpoint/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -82,7 +82,11 @@ from lamoda_connector.models_output import (
     MetaOut,
 )
 from lamoda_connector.settings import get_settings
-from lamoda_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
+from lamoda_connector.shape_reference import (
+    SEARCH_REQUIRED_FAMILIES,
+    SEARCH_SHAPE_REFERENCE,
+    missing_required_families,
+)
 
 _settings = get_settings()
 
@@ -542,6 +546,14 @@ async def lamoda_search(
         warnings: list[str] = []
         if all(it.price_rub is None for it in items):
             warnings.append("no_prices_on_page")
+        # The selfcheck's family registry now also guards the tool's own
+        # answer: a payload that lost a whole key family is drift the agent
+        # must see, not only a human running doctor. The four render-based
+        # connectors raise on zero items before this point, so the family
+        # check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="lamoda_search")
+        if drift:
+            warnings.append(drift)
         result = LamodaSearchResponse(query=query, tier_used="cdp", count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="lamoda_search")
         result.meta = MetaOut(**attached["_meta"])
