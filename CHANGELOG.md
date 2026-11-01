@@ -42,6 +42,27 @@
   otherwise `price_rub` stays `null` and the quoted amount remains in `price_native`.
   Warnings name the condition and excluded amount, and a WB Wallet amount also
   next to a regular price. A struck-through price is never substituted for the regular one.
+- Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
+  `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
+  профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не
+  молчаливый пропуск любого снимка. Обычная проверка по закоммиченному базлайну и
+  создание базлайна через `--update-baseline` работают как раньше. Ночной прогон
+  дополнительно запускает `marketplace-mcp doctor --status-file` (через
+  `scripts/live_check.py`, под общим бюджетом живых запросов) и падает только на
+  коде «парсер дрейфовал» (1); заблокированные источники (2) не будят никого.
+  Live-тесты самопроверки считают `drift_detected` провалом, а `inconclusive`
+  (блок, челлендж, сеть) — скипом, не провалом.
+
+- The MCP wire-cost gate fails closed: in gate mode (`--baseline` without
+  `--update-baseline`) a missing or unreadable baseline file and a checked
+  profile without a `wire_tokens` budget are clear failures, not a silent pass
+  of any snapshot. The normal regression check against the committed baseline
+  and baseline creation with `--update-baseline` keep working. The nightly job
+  additionally runs `marketplace-mcp doctor --status-file` (through
+  `scripts/live_check.py`, under the shared live-request budget) and fails only
+  on the parser-drift exit code (1); blocked sources (2) page no one. Live
+  selfcheck tests treat `drift_detected` as a failure and `inconclusive`
+  (block, challenge, network) as a skip, not a failure.
 - `coerce_price`, `coerce_int` и `coerce_rating` из `mcp_core.resilience` больше не
   выдумывают число из неоднозначного текста. Цены: две цены, склеенные пробелом
   («1 999 2 999», «1 999 2 999 ₽», «1,999,2,999»), дробь с тремя знаками

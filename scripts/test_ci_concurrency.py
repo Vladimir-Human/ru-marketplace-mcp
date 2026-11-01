@@ -200,6 +200,24 @@ def test_the_live_job_stays_schedule_and_dispatch_only() -> None:
     )
 
 
+def test_the_live_job_runs_the_doctor_drift_alarm() -> None:
+    """The nightly job must run the doctor status check and fail on its alarm.
+
+    The canary's live tests counted drift_detected as a pass, so real parser
+    drift never failed anything. Doctor separates the outcomes by exit code:
+    1 means a parser drifted — the alarm this job exists to raise — while 2
+    means sources could not be judged (blocked, no CDP, wrong country), the
+    expected nightly result from GitHub's datacenter runners that must not
+    fail the job. The doctor round runs through scripts/live_check.py so it
+    stays inside the shared live request budget.
+    """
+    step = _section("      - name: Doctor drift alarm")
+    assert "live_check.py doctor" in step, "the nightly job must run the doctor status check under the live budget"
+    assert "--status-file" in step, "the doctor round must leave its machine-readable status snapshot"
+    assert "0|2)" in step, "healthy and blocked/inconclusive outcomes must keep the job green"
+    assert re.search(r"^\s*1\).*exit 1", step, re.M), "the doctor alarm (parser drift, exit 1) must fail the job"
+
+
 def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> None:
     """A manual image build must not cancel a pull-request build (audit S4-F16).
 
