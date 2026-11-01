@@ -64,6 +64,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -131,6 +132,7 @@ mcp = FastMCP(
         "operator's own Chrome over CDP — ServicePipe blocks the mobile API by "
         "IP reputation, so there is no anonymous tier. Start with "
         "megamarket_search; megamarket_card takes a goods id or product URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -672,15 +674,9 @@ async def megamarket_search(
     "address_source:none" (no delivery address resolved); the default suggest
     path answers healthy with no address warning.
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0.
 
-    MegamarketSearchResponse: {status, query, tier_used, count, total_count,
-    items[], _meta}. price_rub is None when absent — never 0.
-
-    ## Error Format
-
-    ToolError: TransportDownError on ServicePipe refusals (with the fix inline);
-    ParserDriftError when a reached-200 body no longer parses.
+    Full field list and error codes: `guide://megamarket/megamarket_search`.
     """
     log_event("megamarket_search.start", query=query[:60])
     try:
@@ -778,16 +774,9 @@ async def megamarket_card(
 ) -> MegamarketCardResponse:
     """Fetch one Megamarket product card.
 
-    ## Return Format
+    price_rub and old_price_rub are None when the card states none — never 0.
 
-    MegamarketCardResponse: {status, item_id, title, price_rub, old_price_rub,
-    is_available, rating, rating_count, url, tier_used, _meta}.
-
-    ## Error Format
-
-    ToolError: BadRequestError on unparseable input; NotFoundError on a missing
-    goods id; TransportDownError on ServicePipe refusals; ParserDriftError on
-    envelope drift.
+    Full field list and error codes: `guide://megamarket/megamarket_card`.
     """
     log_event("megamarket_card.start", input=item_id_or_url[:80])
     try:
@@ -938,3 +927,8 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

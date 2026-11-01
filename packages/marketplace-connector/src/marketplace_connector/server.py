@@ -13,13 +13,20 @@ cannot answer without configuration (MPStats without ``MPSTATS_MP_AUTH``)
 stays out too. compare-prices rides along as its own namespace
 (``compare_prices``, ``compare_sources``).
 
+The reference half of every mounted tool description — its return-format field
+list and error mapping — is not repeated here: each tool's docstring names a
+``guide://<source>/<tool>`` resource, and one shared ``marketplace://errors``
+resource carries the error taxonomy. Mounted connectors registered that URI for
+their own standalone servers, so this one takes it over and the children's
+copies are hidden from this listing.
+
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Mount selected marketplace connectors behind one MCP server.
 # SCOPE: Preserve native tool names; skip failed/deselected/unconfigured sources; static capabilities.
-# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/source_selection; fourteen source servers.
-# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS.
+# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/resources/source_selection; fourteen source servers.
+# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS; M-RESOURCES.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketplaceSourcesResponse: Model mounted/skipped sources and cheap routing metadata.
@@ -27,6 +34,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _mount_unavailable_reason: A connector's own reason it cannot answer until configured.
 # marketplace_sources: Report mounts, skip reasons, capabilities and server version.
 # apply_compact_output_schemas: Compact advertised schemas after mounting.
+# mount_child: Mount a connector while keeping one owner of the shared error URI.
+# register_reference_resources: Publish the guides and the shared error reference.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -35,6 +44,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
+from mcp_core.resources import mount_child, register_reference_resources
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
@@ -75,6 +85,7 @@ mcp = FastMCP(
         "property for sale or rent), not goods. Sources whose optional "
         "dependencies are missing, or whose tools cannot answer until a "
         "credential is configured, are simply absent from the set."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
     version=SERVER_VERSION,
 )
@@ -120,6 +131,9 @@ def _mount_all() -> None:
     output in a client never sees our stderr, so a silently absent marketplace
     would otherwise look identical to one that returned nothing — see
     ``marketplace_sources``.
+
+    A mounted connector keeps its own per-tool guides, but not its copy of the
+    shared error reference: this server owns that URI and registers its own.
     """
     mounts = (
         ("wildberries", "wb_connector.server"),
@@ -152,7 +166,11 @@ def _mount_all() -> None:
                 _SKIPPED[name] = unavailable
                 log_event("marketplace.mount_skipped", source=name, error=unavailable[:120])
                 continue
-            mcp.mount(module.mcp)
+            # mount_child, not mount: every connector registers the shared
+            # `marketplace://errors` for its own standalone server, and this
+            # profile must serve that URI once, not once per mounted child
+            # (R-TOOL-RESOURCES).
+            mount_child(mcp, module.mcp)
             _MOUNTED.append(name)
         except Exception as exc:
             detail = f"{type(exc).__name__}: {exc}"
@@ -188,18 +206,7 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     nothing. Call this before concluding a marketplace has no results — if it
     is in ``skipped``, it was never queried at all.
 
-    ## Return Format
-
-    MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-    capabilities, server_version}. ``skipped`` maps source name to the reason
-    it is unavailable: an import error (usually a missing optional dependency),
-    a missing credential its tools need, or an explicit ``MARKETPLACE_SOURCES``
-    deselection.
-
-    ## Error Format
-
-    Never raises ToolError: pure introspection of the mounted connectors — a
-    failed import is recorded in ``skipped`` instead of being raised.
+    Full field list and error codes: `guide://marketplace/marketplace_sources`.
     """
     return MarketplaceSourcesResponse(
         mounted=sorted(_MOUNTED),
@@ -218,3 +225,8 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

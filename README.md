@@ -94,7 +94,7 @@ uvx ru-marketplace-mcp setup
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2634 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2661 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -297,8 +297,8 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 клону.
 <!-- tools-cost:start -->
 Так сделано потому, что смонтированный сервер платится в каждом запросе:
-рекомендуемый режим сравнения цен стоит ≈2.2k токенов, режим с инспекцией
-карточки — ≈2.5k, полный набор — ≈16.6k (оценка по `tools/list`;
+рекомендуемый режим сравнения цен стоит ≈1.7k токенов, режим с инспекцией
+карточки — ≈2.0k, полный набор — ≈12.8k (оценка по `tools/list`;
 подробности в [docs/TOOLS.md](docs/TOOLS.md)).
 <!-- tools-cost:end -->
 Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
@@ -688,7 +688,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2634 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2661 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -754,7 +754,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2634 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2661 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -856,7 +856,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2634 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2661 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest path is the
@@ -935,9 +935,9 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 That gives you 15 skills immediately and **no** MCP tools: both MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
-A mounted server is paid on every request — ≈2.2k tokens for the
-recommended price-comparison profile, ≈2.5k for the decision profile and
-≈16.6k for the full set (estimated from `tools/list`; details in
+A mounted server is paid on every request — ≈1.7k tokens for the
+recommended price-comparison profile, ≈2.0k for the decision profile and
+≈12.8k for the full set (estimated from `tools/list`; details in
 [docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
 <!-- tools-cost:end -->
 [dsh/README.md](dsh/README.md) covers enabling it and the full mode.
@@ -1325,7 +1325,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2634 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2661 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1387,7 +1387,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2634 offline
+are confidently wrong, so the project is arranged around verification: 2661 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

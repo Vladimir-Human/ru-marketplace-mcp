@@ -66,6 +66,26 @@ def test_every_tool_of_each_profile_appears_exactly_once(measurements: tuple[gen
         assert len(set(names)) == len(names)
 
 
+def test_each_profile_lists_the_resources_it_serves(measurements: tuple[gen.Measurement, ...]) -> None:
+    """The reference half moved to resources, so the docs name them.
+
+    Each tool description points at ``guide://<source>/<tool>``; a published
+    table that never mentions the guides would leave a reader hunting for field
+    lists that are no longer in the description.
+    """
+    docs = gen.render_docs(measurements)
+
+    for measurement in measurements:
+        section = gen.render_tool_section(measurement)
+        header = next(line for line in section if line.startswith("Resources ("))
+        assert header.startswith(f"Resources ({measurement.resource_count}):")
+        for uri in measurement.resources:
+            assert f"`{uri}`" in header
+    assert gen.render_resources(()) == "—"
+
+    assert "marketplace://errors" in docs
+
+
 def test_profile_table_uses_the_measured_payload_and_stated_token_rule(
     measurements: tuple[gen.Measurement, ...],
 ) -> None:
