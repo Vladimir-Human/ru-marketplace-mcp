@@ -58,7 +58,6 @@ from typing import Annotated, Any
 
 import httpx
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -121,7 +120,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware(max_retries=2, base_delay=1.0))
 
 _limiter = RateLimiter(min_gap_s=_settings.min_gap)
 _cache: TTLCache[Any] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
@@ -392,6 +390,9 @@ async def detmir_card(
     # request from cache.
     query = urllib.parse.urlencode({"filter": f"withregion:{region_used}"})
     url = f"{API_BASE}/v2/products/{product_id}?{query}"
+    # Sample the cache before the fetch: _fetch_json stores a fresh payload in
+    # _cache, so reading it afterwards would report a hit on a network-backed answer.
+    was_cached = _cache.get(url) is not None
     payload = await _fetch_json(url, "detmir_card", ctx)
 
     body_status = _body_error_status(payload)
@@ -421,7 +422,7 @@ async def detmir_card(
     return DetmirCardResponse(
         product=product,
         region=region_used,
-        meta=MetaOut(source="detmir_card", healthy=not warnings, warnings=warnings, cached=_cache.get(url) is not None),
+        meta=MetaOut(source="detmir_card", healthy=not warnings, warnings=warnings, cached=was_cached),
     )
 
 

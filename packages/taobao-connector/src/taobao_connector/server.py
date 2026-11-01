@@ -75,7 +75,6 @@ import urllib.parse
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -150,7 +149,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware())
 
 _cache: TTLCache = TTLCache(ttl_s=_settings.cache_ttl, max_entries=128)
 _pacer = Pacer(_min_gap)
@@ -780,7 +778,8 @@ async def taobao_search(
             log_event("taobao_search.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
+                    "Taobao requires user action in the Chrome scraping profile. Complete the "
+                    "login/CAPTCHA challenge there, then call this tool again after the user confirms it is done.",
                     provider="taobao",
                     challenge_type="login_or_captcha",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
@@ -790,7 +789,8 @@ async def taobao_search(
         if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
+                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then call this "
+                    "tool again after the user confirms it is done.",
                     provider="taobao",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
                     handoff_id=payload.get("_handoff_id"),
@@ -909,7 +909,8 @@ async def taobao_card(
             log_event("taobao_card.login_wall", markers=",".join(wall_markers))
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Taobao requires user action in the Chrome scraping profile. Complete the visible login/CAPTCHA challenge, then retry.",
+                    "Taobao requires user action in the Chrome scraping profile. Complete the "
+                    "login/CAPTCHA challenge there, then call this tool again after the user confirms it is done.",
                     provider="taobao",
                     challenge_type="login_or_captcha",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
@@ -919,7 +920,8 @@ async def taobao_card(
         if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then retry.",
+                    "Taobao requires CAPTCHA completion in the Chrome scraping profile, then call this "
+                    "tool again after the user confirms it is done.",
                     provider="taobao",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
                     handoff_id=payload.get("_handoff_id"),

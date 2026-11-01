@@ -62,7 +62,6 @@ from typing import Annotated, Any
 import httpx
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -107,7 +106,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware(max_retries=3, base_delay=1.0))
 
 # Verified live Jul 2026: the plugin endpoint answers from the chrome-extension
 # origin, but a cold replay with only the mp_auth cookie works, so we do not
