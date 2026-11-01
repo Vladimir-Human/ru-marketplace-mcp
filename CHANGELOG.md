@@ -26,6 +26,15 @@
   обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
   WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
   покрывает.
+- Открытый breaker хоста в бюджете CDP-навигации теперь доходит до агента как
+  временный отказ, а не как общий транспортный сбой: `open_page` переводит
+  `HostRefusingError` в существующий код `rate_limited` (`retryable=true` по
+  документации), несёт остаток паузы в поле `retry_after_s`, хост — в `provider`,
+  а сообщение говорит «paused for N s after M refusals». Раньше ни один коннектор
+  не ловил это исключение: широкие обработчики превращали его в `transport_down`
+  без паузы, а Avito проглатывал в `except Exception`, и агент повторял сразу
+  вместо ожидания. Отображение одно и общее — в `open_page`; широкие обработчики
+  на CDP-пути (Avito, Cian, Ozon) просто пропускают готовый `ToolError` дальше.
 
 - PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
   went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
@@ -41,6 +50,16 @@
   `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
   promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
   its own manual step because `marketplace-mcp unblock` does not cover it.
+- An open host breaker in the CDP navigation budget now reaches the agent as a
+  temporary refusal instead of a generic transport failure: `open_page` maps
+  `HostRefusingError` to the existing `rate_limited` code (`retryable=true` as
+  documented), carries the remaining pause in `retry_after_s`, the host in
+  `provider`, and says "paused for N s after M refusals" in the message. No
+  connector caught the exception before: broad handlers relabelled it
+  `transport_down` with no pause, and Avito swallowed it in an `except Exception`,
+  so the agent retried at once instead of waiting. The mapping is one shared
+  place — `open_page`; the broad handlers on the CDP path (Avito, Cian, Ozon)
+  just let the finished `ToolError` through.
 
 ### Security
 

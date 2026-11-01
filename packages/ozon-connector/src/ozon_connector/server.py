@@ -553,6 +553,10 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
         if exc.status:
             return exc.status, str(exc), "cdp_blocked"
         return 0, str(exc), "cdp_failed"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, str(exc), "cdp_failed"
 

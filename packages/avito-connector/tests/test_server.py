@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 from avito_connector import server
 from fastmcp.exceptions import ToolError
+from mcp_core.transport import chrome_cdp
+from mcp_core.transport.cdp_budget import NavigationBudget
 
 # ---------------------------------------------------------------- fixtures ----
 
@@ -120,6 +122,21 @@ def _patch_selfcheck_pages(monkeypatch, product_html):
     monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
 
 
+async def _open_breaker(host: str, *, cooldown_s: float = 47.0) -> NavigationBudget:
+    """Drive a real budget through its public API until its breaker opens.
+
+    A dedicated instance with a frozen clock: two 4xx refusals with a 2-refusal
+    threshold open the breaker, leaving ``cooldown_s`` seconds of pause and the
+    refusal count the mapped error must report.
+    """
+    budget = NavigationBudget(breaker_threshold=2, breaker_cooldown_s=cooldown_s, clock=lambda: 1000.0)
+    for _ in range(2):
+        slot = await budget.acquire(host)
+        slot.refused(403)
+        slot.release()
+    return budget
+
+
 # --------------------------------------------------------------- avito_search ----
 
 
@@ -184,6 +201,35 @@ async def test_search_maps_non_json_to_parser_drift(monkeypatch):
 
     with pytest.raises(ToolError):
         await server.avito_search("ноутбук")
+
+
+async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
+    with retry_after_s, through the real _fetch path (tier-1 refusal, then
+    CDP), not as a generic retryable transport failure. On the old code the
+    budget's HostRefusingError was swallowed by _fetch's except Exception and
+    the agent saw transport_down with no pause at all."""
+
+    async def no_wait():
+        return None
+
+    def refused_get(url, proxy=None):
+        return 403, "denied"
+
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(server, "_sync_curl_get", refused_get)
+    budget = await _open_breaker("www.avito.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_search("ноутбук")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.avito.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
 
 
 async def test_search_warns_on_empty_items_with_nonzero_total(monkeypatch):
@@ -447,6 +493,28 @@ async def test_card_maps_404_to_not_found(monkeypatch):
 
     with pytest.raises(ToolError):
         await server.avito_card("4612345678")
+
+
+async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: same contract through _fetch_item_page, whose broad
+    except Exception used to swallow the pause into a generic CDP failure."""
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    budget = await _open_breaker("www.avito.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card("4612345678")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.avito.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
 
 
 # --------------------------------------------------------------- avito_seller ----
