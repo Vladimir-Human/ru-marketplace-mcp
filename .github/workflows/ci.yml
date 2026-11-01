@@ -434,7 +434,7 @@ jobs:
               0)
                 echo "### Result: PASS — all live tests passed (endpoints reachable and healthy)." ;;
               1)
-                echo "### Result: BLOCKED or INCONCLUSIVE — live tests failed. From a datacenter runner this is most likely a blocked endpoint, but it cannot be told apart from real drift here. Rerun from a Russian-friendly IP to confirm before treating it as drift." ;;
+                echo "### Result: FAILED — a live test failed: parser drift, or a block the selfcheck did not recognise (a recognised block skips). This step cannot tell them apart; the Doctor drift alarm step below can." ;;
               5)
                 echo "### Result: HARD FAILURE — no live tests were collected. Expected 3 sources' worth; the marker or test layout is broken." ;;
               *)
@@ -458,6 +458,41 @@ jobs:
           case "$RC" in
             0|1) : ;;
             *) echo "Canary did not run cleanly (exit $RC); failing the job — see the step summary."; exit 1 ;;
+          esac
+
+      - name: Doctor drift alarm
+        # The canary above cannot tell drift from a block: a drifted selfcheck and
+        # an unrecognised block both end as pytest exit 1, which leaves the job
+        # green. `live_check.py doctor` runs the
+        # CLI's doctor round — every selfcheck, plus the machine-readable
+        # --status-file snapshot — under the same shared live budget the canary
+        # uses. Doctor exit codes: 0 all healthy, 1 a parser drifted (the alarm
+        # this job exists to raise), 2 nothing drifted but sources could not be
+        # judged (blocked, no CDP, wrong country — the expected nightly result
+        # from GitHub's datacenter IPs), 3 the budget or the status file failed.
+        # A blocked source must not page anyone, same rule as the canary; only
+        # the alarm and hard errors fail the job.
+        run: |
+          set +e
+          uv run python scripts/live_check.py doctor --status-file "$RUNNER_TEMP/doctor-status.json" 2>&1 | tee doctor.log
+          code=${PIPESTATUS[0]}
+          {
+            echo "## Doctor drift alarm"
+            echo ""
+            echo "Exit $code: 0 healthy, 1 drift (alarm), 2 blocked/inconclusive, 3 budget or status-file failure."
+            echo ""
+            echo "<details><summary>doctor output</summary>"
+            echo ""
+            echo '```'
+            cat doctor.log
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          case "$code" in
+            0|2) echo "doctor exit $code: not an alarm" ;;
+            1) echo "doctor reported parser drift; failing the job"; exit 1 ;;
+            *) echo "doctor did not run cleanly (exit $code); failing the job"; exit 1 ;;
           esac
 
   dsh-bundle:

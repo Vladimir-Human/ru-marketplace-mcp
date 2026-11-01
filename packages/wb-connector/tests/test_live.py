@@ -3,6 +3,8 @@
 These hit the real endpoint and are excluded from CI (``-m "not live"``): they
 need network and a Russian-friendly IP. Run them on purpose after a drift
 report, or from the nightly live job — never as part of the offline suite.
+A selfcheck must come back healthy: ``drift_detected`` fails the test, while
+``inconclusive`` (block, challenge or network) skips it.
 """
 
 from __future__ import annotations
@@ -17,7 +19,9 @@ async def test_wb_selfcheck_reaches_a_verdict():
 
     result = await wb_selfcheck()
 
-    assert result.status in ("success", "drift_detected", "inconclusive")
+    if result.status == "inconclusive":
+        pytest.skip("selfcheck inconclusive: the source could not be judged from here (block, challenge or network)")
+    assert result.status == "success", f"selfcheck verdict: {result.status}"
     assert result.checks, "selfcheck returned no sub-checks at all"
 
 
