@@ -36,7 +36,7 @@ it is a budget, and ``open_page`` is the only caller that spends it.
 # HostRefusingError: Report an open host breaker and remaining cooldown.
 # Slot: Settle one outcome and release its permit idempotently.
 # NavigationBudget: Manage global/per-host semaphores and refusal history.
-# NavigationBudget.acquire: Check the breaker and acquire navigation capacity.
+# NavigationBudget.acquire: Fast-fail an open breaker, take the host slot, then global, then re-check.
 # NavigationBudget.slot: Release a permit when its context exits.
 # NavigationBudget.snapshot: Report capacity and host breaker diagnostics.
 # navigation_budget: Lazily construct the shared budget from environment knobs.
@@ -219,18 +219,31 @@ class NavigationBudget:
     async def acquire(self, host: str) -> Slot:
         """Take one navigation permit for ``host``.
 
-        Order matters: the breaker is checked before waiting, so an open host
-        fails fast instead of queueing behind a wall.
+        Order matters twice. The breaker is checked before any waiting, so an
+        open host fails fast instead of queueing behind a wall. The host's slot
+        is taken before the global one, so a request queued for a busy host does
+        not hold global capacity that a request for a free host could use. After
+        both waits the breaker is checked again: a request that queued while the
+        breaker was still closed is refused exactly like a new one when its turn
+        comes, and the permits it just took are given back.
         """
         key = (host or "").lower().rstrip(".")
         self.check(key)
-        if self._global.locked():
-            self._waited += 1
-        await self._global.acquire()
+        host_sem = self._host_semaphore(key)
+        await host_sem.acquire()
+        global_held = False
         try:
-            await self._host_semaphore(key).acquire()
-        except BaseException:  # pragma: no cover - only on cancellation
-            self._global.release()
+            if self._global.locked():
+                self._waited += 1
+            await self._global.acquire()
+            global_held = True
+            self.check(key)
+        except BaseException:
+            # The breaker opened while this request queued, or the wait was
+            # cancelled: nothing may stay held for a permit not handed out.
+            if global_held:
+                self._global.release()
+            host_sem.release()
             raise
         self._in_flight += 1
         self._peak_in_flight = max(self._peak_in_flight, self._in_flight)
