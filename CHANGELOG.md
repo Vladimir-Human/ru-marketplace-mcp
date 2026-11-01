@@ -183,6 +183,33 @@
   are untouched. dns and citilink, which matched almost completely, share the
   mechanism and keep only their own site facts.
 
+- `scripts/mcp_wire.py` теперь меряет и то, что платит модель, а не только весь
+  `tools/list`: рядом с `wire_tokens` появилась величина `model_tokens` — оценка
+  компактного `{"name", "description", "input_schema"}`, который запрос к
+  провайдеру действительно несёт (у каждого инструмента и по профилю в
+  `work/performance/wire-baseline.json`), тогда как `outputSchema`, аннотации и
+  `_meta` остаются в клиенте. Поэтому рост описания за счёт сжатия схемы вывода
+  больше не проходит гейт: относительная проверка
+  `--max-token-regression-percent` считается по обеим величинам, каждая против
+  своего значения в baseline, и падение называет виновника
+  (`model_tokens_regression`). Baseline без `model_tokens` в режиме проверки
+  падает так же, как без `wire_tokens`, а в режиме замера читается по-прежнему
+  мягко. `--update-baseline` пишет обе величины сам, вручную файл править не
+  нужно.
+- `scripts/mcp_wire.py` now measures what the model pays too, not only the whole
+  `tools/list`: beside `wire_tokens` it records `model_tokens`, the estimate of
+  the compact `{"name", "description", "input_schema"}` a provider request
+  really carries (per tool and per profile in
+  `work/performance/wire-baseline.json`), while `outputSchema`, annotations and
+  `_meta` stay in the client. A description growing behind a shrinking output
+  schema therefore no longer passes the gate: the relative
+  `--max-token-regression-percent` check applies to both measures, each against
+  its own baseline value, and a failure names which one regressed
+  (`model_tokens_regression`). A baseline without `model_tokens` fails in check
+  mode exactly like one without `wire_tokens` and keeps the permissive reading
+  in a measurement run. `--update-baseline` writes both measures itself, so the
+  file needs no hand edit.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0

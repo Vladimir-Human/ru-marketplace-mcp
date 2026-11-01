@@ -38,6 +38,12 @@ uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
   --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
 
+Гейт следит за двумя величинами: `wire_tokens` — весь `tools/list`, как его
+несёт провод, — и `model_tokens`, то есть то, что запрос к провайдеру реально
+отдаёт модели (`name`, `description`, `input_schema`); `outputSchema` и
+аннотации остаются в клиенте, поэтому рост описания за счёт сжатия схемы
+вывода гейт больше не пропускает.
+
 Перелокить `uv.lock` нужно uv не старше 0.13.6:
 `uvx --from uv==0.13.6 uv lock`. Старый uv (0.11.x) пишет в лок-файл
 `revision = 3`, а образы собираются на uv 0.13.6 — такой лок-файл не тот, из
@@ -172,6 +178,12 @@ uv run python scripts/check_lock_revision.py
 uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
   --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 ```
+
+The gate watches two measures: `wire_tokens`, the whole `tools/list` as the wire
+carries it, and `model_tokens`, what a provider request actually sends the model
+(`name`, `description`, `input_schema`); `outputSchema` and annotations stay in
+the client, so a description growing behind a shrinking output schema no longer
+passes.
 
 Relocking `uv.lock` needs uv 0.13.6 or newer:
 `uvx --from uv==0.13.6 uv lock`. An older uv (0.11.x) writes `revision = 3`
