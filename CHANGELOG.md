@@ -35,6 +35,17 @@
   без паузы, а Avito проглатывал в `except Exception`, и агент повторял сразу
   вместо ожидания. Отображение одно и общее — в `open_page`; широкие обработчики
   на CDP-пути (Avito, Cian, Ozon) просто пропускают готовый `ToolError` дальше.
+- Пауза хоста больше не проглатывается деградирующими обработчиками Megamarket.
+  Адресная привязка, каталог-редирект и url/parse намеренно не фатальны для
+  обычных сбоев эндпоинтов (слабый поиск лучше никакого, и это закреплено
+  тестами), но временный отказ `rate_limited` с `retry_after_s` теперь проходит
+  сквозь них как есть. Раньше обработчик адресной привязки проглатывал паузу и
+  навсегда кэшировал вердикт «адрес не разрешён», из-за чего поиск и после паузы
+  шёл без адреса доставки. Ошибки без паузы (например, «не авторизован» из
+  профиля) сохраняют прежнее не фатальное поведение; путь карточки и раньше
+  доносил паузу без искажений и не менялся. Для уже существующих защит Cian и
+  Ozon добавлены отдельные офлайн-тесты (поиск и карточка), для Megamarket —
+  тесты поиска и карточки.
 
 - PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
   went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
@@ -60,6 +71,17 @@
   so the agent retried at once instead of waiting. The mapping is one shared
   place — `open_page`; the broad handlers on the CDP path (Avito, Cian, Ozon)
   just let the finished `ToolError` through.
+- Megamarket's degrade handlers no longer swallow the host pause. Address
+  resolution, the catalog redirect and url/parse are deliberately non-fatal for
+  ordinary endpoint failures (a weaker search beats none, and tests pin that),
+  but a `rate_limited` refusal with `retry_after_s` now passes through them
+  unchanged. Before, the address handler swallowed the pause and cached a
+  "no address" verdict for the process lifetime, so searches kept running
+  addressless even after the cooldown. Non-pause errors (say, "not
+  authenticated" from the profile endpoint) keep the existing non-fatal
+  degrade; the card path already carried the pause intact and is unchanged.
+  The existing Cian and Ozon guards gained dedicated offline tests (search and
+  card each), and Megamarket got search and card tests.
 
 ### Security
 
