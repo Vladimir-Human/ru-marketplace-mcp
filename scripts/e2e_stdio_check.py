@@ -25,30 +25,18 @@ from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp_core.sources import MOUNT_GATED_SOURCES, SOURCES
 
 # script name -> how many model-facing tools it must expose. Operator-only
 # *_selfcheck canaries are no longer MCP tools (they run via
-# `marketplace-mcp doctor`). The check pins MPSTATS_MP_AUTH empty, so the
-# unified server exposes 39 model-facing tools: without a token it does not
-# mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
-EXPECTED_TOOLS = {
-    "wb-mcp": 8,
-    "ozon-mcp": 3,
-    "detmir-mcp": 3,
-    "yandex-mcp": 2,
-    "compare-mcp": 4,
-    "decision-mcp": 5,  # compare tools + decision_inspect
-    "avito-mcp": 3,
-    "taobao-mcp": 2,
-    "megamarket-mcp": 2,
-    "lamoda-mcp": 2,
-    "dns-mcp": 2,
-    "citilink-mcp": 2,
-    "aliexpress-mcp": 2,
-    "cian-mcp": 2,
-    "mpstats-mcp": 2,
-    "marketplace-mcp": 39,  # 37 mounted + marketplace_sources + marketplace_health; mpstats is skipped without a token
-}
+# `marketplace-mcp doctor`), and the per-source counts are the source registry's
+# `tools` facts. The check pins MPSTATS_MP_AUTH empty, so the unified server
+# exposes the `marketplace` profile's 39 model-facing tools: without a token it
+# does not mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
+EXPECTED_TOOLS = {spec.console_script: spec.tools for spec in SOURCES}
+# decision-mcp is the compare connector's second console script — the middle
+# profile, not a source of its own: the four compare tools plus decision_inspect.
+EXPECTED_TOOLS["decision-mcp"] = 5
 
 TIMEOUT_S = 60.0
 # How the client opens the connection in each protocol era.
@@ -56,24 +44,23 @@ ERAS = ("handshake", "sessionless")
 EXPECTED_VERSION = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))[
     "project"
 ]["version"]
-# The unified server's default, token-less mount. A real client with a token
-# sees 41 tools and mpstats mounted; this check pins the token-less surface so
-# it stays deterministic on a machine that happens to have MPSTATS_MP_AUTH set.
-EXPECTED_MOUNTS = {
-    "wildberries",
-    "ozon",
-    "detmir",
-    "yandex",
-    "compare",
-    "avito",
-    "taobao",
-    "megamarket",
-    "lamoda",
-    "dns",
-    "citilink",
-    "aliexpress",
-    "cian",
-}
+
+
+def _expected_mounts() -> set[str]:
+    """The unified server's default, token-less mount.
+
+    A real client with a token sees one more mounted source (mpstats); this
+    check pins the token-less surface so it stays deterministic on a machine
+    that happens to have MPSTATS_MP_AUTH set.
+    """
+    mounts: set[str] = set()
+    for spec in SOURCES:
+        if spec.mount is not None and spec.name not in MOUNT_GATED_SOURCES:
+            mounts.add(spec.mount)
+    return mounts
+
+
+EXPECTED_MOUNTS = _expected_mounts()
 
 
 def validate_sources(payload: object) -> str | None:

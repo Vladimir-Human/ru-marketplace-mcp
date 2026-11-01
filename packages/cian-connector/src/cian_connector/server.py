@@ -28,8 +28,8 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
-# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings; shape_reference.
-# LINKS: M-CIAN; M-MARKETPLACE; packages/cian-connector/tests.
+# DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
+# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
@@ -60,6 +60,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import blocked_error, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -162,8 +163,12 @@ _cdp_lock = asyncio.Lock()
 
 
 async def _polite_wait() -> None:
-    """Space this source's requests out, and back off if it refused us."""
-    await _pacer.wait(min_gap=_min_gap)
+    """Space this source's requests out, and back off if it refused us.
+
+    Shared mechanism (mcp_core.kit.polite_wait); this module-level name stays
+    because the tools call it and the tests patch it.
+    """
+    await polite_wait(_pacer, _min_gap)
 
 
 # ------------------------------------------------------------ transport ----
@@ -336,17 +341,13 @@ async def _fetch_card(offer_id: int, ctx: Context | None) -> tuple[int, str, str
 
 
 def _blocked_error(tier: str, detail: str = "") -> TransportDownError:
+    """The refusal error, with the pacer's standing-block hint (mcp_core.kit)."""
     message = (
         f"Cian answered with its WAF block page via {tier}. "
         "Open cian.ru in the Chrome CDP profile, pass the check if one is shown, then retry; "
         "from a datacenter IP the block is expected until the browser session is warmed up."
     )
-    hint = _pacer.rotation_hint()
-    if hint:
-        message += f" {hint}"
-    if detail:
-        message += f" Detail: {detail[:160]}"
-    return TransportDownError(message, status_code=403)
+    return blocked_error(message, pacer=_pacer, detail=detail)
 
 
 def _raise_for_fetch_failure(status: int, body: str, tier: str, what: str) -> None:

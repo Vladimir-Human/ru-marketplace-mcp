@@ -231,71 +231,31 @@ jobs:
           # Operator-only *_selfcheck diagnostics are no longer registered as
           # MCP tools (they run via `marketplace-mcp doctor`), so every
           # connector count is one lower than the pre-dsh-packaging contract.
-          EXPECTED = {
-              "wb": 8,
-              "ozon": 3,
-              "detmir": 3,
-              "yandex": 2,
-              "compare": 4,
-              "avito": 3,
-              "taobao": 2,
-              "megamarket": 2,
-              "lamoda": 2,
-              "dns": 2,
-              "citilink": 2,
-              "aliexpress": 2,
-              "cian": 2,
-              "mpstats": 2,
-          }
+          # Both the server list and the expected counts come from the source
+          # registry (mcp_core.sources): the inline copies this replaces had
+          # already drifted — mpstats sat in EXPECTED but was never imported,
+          # and the loop still printed a clean "all servers registered their
+          # expected tools" while checking 11 of 12.
+          # mpstats is imported directly, like every other connector here: the
+          # mount gate that hides it from an unconfigured unified profile lives
+          # in marketplace_connector, not in the connector (R-MPSTATS-MOUNT-GATE).
+          from mcp_core.sources import SOURCES
+
+          servers = {}
+          expected = {}
+          for spec in SOURCES:
+              if spec.mount is None:
+                  continue
+              servers[spec.mount] = __import__(spec.module, fromlist=["mcp"]).mcp
+              expected[spec.mount] = spec.tools
 
           async def main() -> None:
-              from detmir_connector.server import mcp as detmir_mcp
-              from ozon_connector.server import mcp as ozon_mcp
-              from wb_connector.server import mcp as wb_mcp
-              from compare_connector.server import mcp as compare_mcp
-              from yandex_connector.server import mcp as yandex_mcp
-              from avito_connector.server import mcp as avito_mcp
-              from taobao_connector.server import mcp as taobao_mcp
-              from megamarket_connector.server import mcp as megamarket_mcp
-              from lamoda_connector.server import mcp as lamoda_mcp
-              from dns_connector.server import mcp as dns_mcp
-              from citilink_connector.server import mcp as citilink_mcp
-              from aliexpress_connector.server import mcp as aliexpress_mcp
-              from cian_connector.server import mcp as cian_mcp
-              from mpstats_connector.server import mcp as mpstats_mcp
-
-              servers = {
-                  "wb": wb_mcp,
-                  "ozon": ozon_mcp,
-                  "detmir": detmir_mcp,
-                  "yandex": yandex_mcp,
-                  "compare": compare_mcp,
-                  "avito": avito_mcp,
-                  "taobao": taobao_mcp,
-                  "megamarket": megamarket_mcp,
-                  "lamoda": lamoda_mcp,
-                  "dns": dns_mcp,
-                  "citilink": citilink_mcp,
-                  "aliexpress": aliexpress_mcp,
-                  "cian": cian_mcp,
-                  "mpstats": mpstats_mcp,
-              }
-              # Guard the guard: mpstats was listed in EXPECTED but never added to
-              # `servers`, so the loop skipped it and the step still printed "all
-              # servers registered their expected tools" while checking 11 of 12.
-              # A key mismatch is now the first failure, not a silent omission.
-              if set(servers) != set(EXPECTED):
-                  raise SystemExit(
-                      f"servers/EXPECTED disagree: only in servers {sorted(set(servers) - set(EXPECTED))}, "
-                      f"only in EXPECTED {sorted(set(EXPECTED) - set(servers))}"
-                  )
-
               failures = []
               for name, server in servers.items():
                   tools = sorted(t.name for t in await server.list_tools())
                   print(f"{name}: {len(tools)} tools -> {tools}")
-                  if len(tools) != EXPECTED[name]:
-                      failures.append(f"{name}: expected {EXPECTED[name]} tools, got {len(tools)}")
+                  if len(tools) != expected[name]:
+                      failures.append(f"{name}: expected {expected[name]} tools, got {len(tools)}")
               if failures:
                   raise SystemExit("\n".join(failures))
               print("all servers registered their expected tools")
@@ -304,22 +264,21 @@ jobs:
           PY
 
       - name: Console scripts are installed
+        # One entry point per shipped server, read from the source registry: a
+        # new source cannot be added without its console script being checked,
+        # and a renamed script cannot keep passing here.
         run: |
-          uv run which wb-mcp
-          uv run which ozon-mcp
-          uv run which detmir-mcp
-          uv run which yandex-mcp
-          uv run which compare-mcp
-          uv run which avito-mcp
-          uv run which taobao-mcp
-          uv run which megamarket-mcp
-          uv run which lamoda-mcp
-          uv run which dns-mcp
-          uv run which citilink-mcp
-          uv run which aliexpress-mcp
-          uv run which cian-mcp
-          uv run which mpstats-mcp
-          uv run which marketplace-mcp
+          uv run python - <<'PY'
+          import shutil
+
+          from mcp_core.sources import SOURCES
+
+          missing = [spec.console_script for spec in SOURCES if shutil.which(spec.console_script) is None]
+          for spec in SOURCES:
+              print(f"{spec.console_script}: {shutil.which(spec.console_script) or 'MISSING'}")
+          if missing:
+              raise SystemExit(f"console scripts not on PATH: {', '.join(missing)}")
+          PY
 
       - name: Real MCP session over stdio
         # The import check above proves the decorators ran. It does not prove

@@ -112,6 +112,14 @@
           "note": "CDP-only: reads run inside the operator's own Chrome (x5sec blocks anonymous access)."
         },
         {
+          "id": "cian",
+          "script": "cian-mcp",
+          "package": "cian-connector",
+          "subfolder": "packages/cian-connector",
+          "transport": "stdio",
+          "toolPrefix": "cian_"
+        },
+        {
           "id": "mpstats",
           "script": "mpstats-mcp",
           "package": "mpstats-connector",
