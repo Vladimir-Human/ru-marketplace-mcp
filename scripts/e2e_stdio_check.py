@@ -28,7 +28,9 @@ from mcp.client.stdio import stdio_client
 
 # script name -> how many model-facing tools it must expose. Operator-only
 # *_selfcheck canaries are no longer MCP tools (they run via
-# `marketplace-mcp doctor`). The unified server exposes 40 model-facing tools.
+# `marketplace-mcp doctor`). The check pins MPSTATS_MP_AUTH empty, so the
+# unified server exposes 38 model-facing tools: without a token it does not
+# mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
 EXPECTED_TOOLS = {
     "wb-mcp": 8,
     "ozon-mcp": 3,
@@ -45,7 +47,7 @@ EXPECTED_TOOLS = {
     "aliexpress-mcp": 2,
     "cian-mcp": 2,
     "mpstats-mcp": 2,
-    "marketplace-mcp": 40,  # 39 mounted + marketplace_sources
+    "marketplace-mcp": 38,  # 37 mounted + marketplace_sources; mpstats is skipped without a token
 }
 
 TIMEOUT_S = 60.0
@@ -54,6 +56,9 @@ ERAS = ("handshake", "sessionless")
 EXPECTED_VERSION = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))[
     "project"
 ]["version"]
+# The unified server's default, token-less mount. A real client with a token
+# sees 40 tools and mpstats mounted; this check pins the token-less surface so
+# it stays deterministic on a machine that happens to have MPSTATS_MP_AUTH set.
 EXPECTED_MOUNTS = {
     "wildberries",
     "ozon",
@@ -68,7 +73,6 @@ EXPECTED_MOUNTS = {
     "citilink",
     "aliexpress",
     "cian",
-    "mpstats",
 }
 
 
@@ -83,8 +87,14 @@ def validate_sources(payload: object) -> str | None:
         return f"expected mounted sources {sorted(EXPECTED_MOUNTS)}, got {mounted}"
     if payload.get("mounted_count") != len(EXPECTED_MOUNTS):
         return f"incorrect mounted_count: {payload.get('mounted_count')}"
-    if payload.get("skipped") != {} or payload.get("skipped_count") != 0:
-        return f"sources failed to mount or skipped status is incomplete: {payload.get('skipped')}"
+    skipped = payload.get("skipped")
+    if not isinstance(skipped, dict):
+        return f"marketplace_sources returned an invalid skipped map: {skipped!r}"
+    reason = skipped.get("mpstats")
+    if set(skipped) != {"mpstats"} or not isinstance(reason, str) or "MPSTATS_MP_AUTH" not in reason:
+        return f"expected only mpstats skipped for the missing token, got: {skipped}"
+    if payload.get("skipped_count") != 1:
+        return f"expected skipped_count 1 (mpstats), got {payload.get('skipped_count')}"
     if payload.get("server_version") != EXPECTED_VERSION:
         return f"marketplace_sources version must be {EXPECTED_VERSION}, got {payload.get('server_version')}"
     return None
@@ -95,7 +105,9 @@ async def probe(script: str, expected: int, era: str = "handshake") -> tuple[str
     if path is None:
         return script, False, "console script not on PATH"
 
-    params = StdioServerParameters(command=path, args=[])
+    # Pin the token-less default so the expected surface is the same on a
+    # machine that happens to export MPSTATS_MP_AUTH (R-MPSTATS-MOUNT-GATE).
+    params = StdioServerParameters(command=path, args=[], env={"MPSTATS_MP_AUTH": ""})
     try:
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             opened = session.initialize() if era == "handshake" else session.discover()

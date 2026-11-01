@@ -52,6 +52,12 @@
   обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
   WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
   покрывает.
+- Унифицированный сервер (`marketplace-mcp`) больше не монтирует инструменты
+  `mpstats_*`, когда в окружении нет непустого `MPSTATS_MP_AUTH`: каждый вызов
+  всё равно вернул бы `auth_missing`, а две схемы стоили около 971 токена
+  (≈6 % профиля) на каждом запросе. Источник попадает в `skipped` с причиной
+  «токен не задан», `doctor` по-прежнему показывает его выключенным, а
+  отдельный `mpstats-mcp` сохраняет прежнее поведение и отвечает `auth_missing`.
 
 - PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
   went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
@@ -67,6 +73,12 @@
   `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
   promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
   its own manual step because `marketplace-mcp unblock` does not cover it.
+- The unified server (`marketplace-mcp`) no longer mounts the `mpstats_*` tools
+  when no non-empty `MPSTATS_MP_AUTH` is set: every call would return
+  `auth_missing`, while the two schemas cost about 971 tokens (~6% of the
+  profile) on every request. The source is reported in `skipped` with a
+  missing-token reason, `doctor` still shows it as off, and the standalone
+  `mpstats-mcp` keeps its behaviour and answers `auth_missing`.
 
 ### Security
 

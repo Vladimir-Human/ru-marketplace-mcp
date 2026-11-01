@@ -20,7 +20,11 @@ import uuid
 
 from stdio_probe import StdioProbe
 
-EXPECTED_TOOLS = 40
+# The probe pins MPSTATS_MP_AUTH empty, so the token-less default surface is
+# 38 tools and 13 mounted sources: without a token the unified server does not
+# mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
+EXPECTED_TOOLS = 38
+EXPECTED_MOUNTS = 13
 TIMEOUT_S = 120.0
 
 
@@ -45,7 +49,7 @@ def probe(image: str, expected_version: str) -> int:
 
 def _probe(image: str, container: str, expected_version: str) -> int:
     deadline = time.monotonic() + TIMEOUT_S
-    with StdioProbe(["docker", "run", "--rm", "--name", container, "-i", image]) as session:
+    with StdioProbe(["docker", "run", "--rm", "--name", container, "-i", "-e", "MPSTATS_MP_AUTH=", image]) as session:
         initialized = session.initialize("docker-stdio-probe", deadline)
         server_info = initialized.get("serverInfo")
         version = server_info.get("version") if isinstance(server_info, dict) else None
@@ -70,8 +74,8 @@ def _probe(image: str, container: str, expected_version: str) -> int:
         if version != expected_version:
             raise RuntimeError(f"marketplace_sources server version: expected {expected_version}, got {version}")
         mounted = content.get("mounted_count") or 0
-        if mounted != 14:
-            raise RuntimeError(f"expected 14 mounted sources, got {mounted}")
+        if mounted != EXPECTED_MOUNTS:
+            raise RuntimeError(f"expected {EXPECTED_MOUNTS} mounted sources, got {mounted}")
         print(f"PASS: docker stdio MCP v{expected_version}, {len(tools)} tools, {mounted} sources mounted")
         return 0
 
