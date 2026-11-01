@@ -271,6 +271,50 @@
 
 ### Security
 
+- Секреты вычищаются на выходе самими функциями, а не только там, где автор
+  вызова вспомнил про `_redact`: `log_event` прогоняет через правила `redact.py`
+  имя события и все строки в полях, включая вложенные в списки и словари, а
+  `raise_tool_error` — сообщение и строковые поля ToolError. Явные вызовы
+  `_redact` остались и безвредны, потому что повторная чистка ничего не меняет;
+  нестроковые значения не трогаются. Новых правил нет: формы токена, куки и
+  учётных данных в URL те же.
+
+- Значения секретных переменных окружения вычищаются целиком: правила
+  `redact.py` теперь заменяют и точные текущие значения `MPSTATS_MP_AUTH` и
+  `MCP_HTTP_AUTH_TOKEN` (реестр имён — в mcp-core), даже когда значение не
+  похоже ни на одну известную форму. Значения читаются в момент чистки, а не
+  при импорте; пустые и короче 6 символов игнорируются, а из двух
+  пересекающихся значений сначала заменяется более длинное. Замена идемпотентна.
+  Прокси-переменные не тронуты: их учётные данные закрывает прежнее правило
+  для URL, а хост остаётся читаемым намеренно.
+
+- `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
+  полный URL принимается только с путём страницы объявления — `/<id>`,
+  `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
+  этот путь, без query и фрагмента. Путь вида `/<город>/<категория>/…` с
+  первым сегментом из служебных маршрутов Avito (`api`, `profile`, `account` и
+  т. п.) тоже отклоняется. Раньше путь из входного URL сохранялся
+  целиком, и путь с «хвостом» идентификатора после личного префикса (например,
+  `/profile/x_1234567890`) уходил в браузер оператора. Теперь любой другой
+  путь (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, путь
+  после идентификатора) отклоняется как `bad_request` до навигации.
+
+- Secrets are scrubbed on the way out by the functions themselves, not only where
+  a caller remembered `_redact`: `log_event` runs the `redact.py` rules over the
+  event name and every string in its fields, including strings nested in lists and
+  dicts, and `raise_tool_error` does the same for the message and string fields of
+  the ToolError. The explicit `_redact` calls stay and are harmless because a
+  second pass changes nothing; non-string values are left alone. No new rules:
+  the token, cookie and URL-credential shapes are unchanged.
+
+- Secret environment-variable values are scrubbed whole: the `redact.py` rules
+  now also replace the exact current values of `MPSTATS_MP_AUTH` and
+  `MCP_HTTP_AUTH_TOKEN` (the name registry lives in mcp-core), even when the
+  value matches no known shape. Values are read at redaction time, not import
+  time; empty and shorter-than-6 values are ignored, and of two overlapping
+  values the longer one is replaced first. The replacement is idempotent.
+  Proxy variables are untouched: their credentials are covered by the existing
+  URL rule and the host is deliberately kept readable.
 - `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
   полный URL принимается только с путём страницы объявления — `/<id>`,
   `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
