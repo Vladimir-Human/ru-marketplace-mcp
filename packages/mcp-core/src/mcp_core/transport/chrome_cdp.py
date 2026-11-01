@@ -35,7 +35,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -93,8 +93,8 @@ from urllib.parse import urlsplit, urlunsplit
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
-from mcp_core.errors import TransportDownError
-from mcp_core.transport.cdp_budget import navigation_budget
+from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
+from mcp_core.transport.cdp_budget import HostRefusingError, navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
 # fallback raises a clear error instead).
@@ -1591,7 +1591,7 @@ class NavigationPolicyError(RuntimeError):
 # START_CONTRACT: open_page
 # PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
 # INPUTS: HTTP(S) URL, settle delay and optional allowed-host set; default origin host.
-# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures.
+# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
 # SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
 # END_CONTRACT: open_page
 async def open_page(
@@ -1606,6 +1606,9 @@ async def open_page(
       * non-http(s) schemes are refused outright (scheme guard);
       * a block/auth/5xx main document raises ``NavBlocked`` rather than
         yielding a page that only looks like content;
+      * a host whose breaker is open raises ``rate_limited`` with the remaining
+        pause in ``retry_after_s`` (R-CDP-HOST-PAUSE), so an agent waits out the
+        cooldown instead of retrying at once;
       * tab creation, navigation and teardown are individually bounded, so a
         wedged CDP session cannot hang a tool call indefinitely;
       * when Playwright times out initializing existing tabs during attach,
@@ -1635,7 +1638,24 @@ async def open_page(
     host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
     budget = navigation_budget()
-    permit = await budget.acquire(initial_host or "")
+    try:
+        permit = await budget.acquire(initial_host or "")
+    except HostRefusingError as refusing:
+        # R-CDP-HOST-PAUSE: an open breaker is a timed refusal by the site, and
+        # the agent must act on the remaining pause, not on a generic retryable
+        # transport failure. The shared taxonomy answer is rate_limited with
+        # retry_after_s set to the remaining cooldown; raising it as a ToolError
+        # here is the one mapping every CDP connector shares, because their broad
+        # "except Exception" fetch guards pass ToolError through untouched.
+        raise_tool_error(
+            ConnectorError(
+                ErrorCode.RATE_LIMITED,
+                f"CDP navigation to {refusing.host} paused for {refusing.retry_after_s:g} s "
+                f"after {refusing.refusals} refusals",
+                provider=refusing.host,
+                retry_after_s=refusing.retry_after_s,
+            )
+        )
     stack = AsyncExitStack()
     page: PageLike
     try:

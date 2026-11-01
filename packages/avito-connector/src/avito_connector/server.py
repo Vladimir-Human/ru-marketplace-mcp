@@ -330,6 +330,10 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
         if exc.status:
             return exc.status, str(exc), "cdp_blocked"
         return 0, str(exc), "cdp_failed"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: open_page already mapped the pause to a rate_limited
+        # ToolError; swallowing it here would report a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, str(exc), "cdp_failed"
 
@@ -366,6 +370,10 @@ async def _fetch_item_page(url: str, ctx: Context | None) -> tuple[int, str, str
         return exc.status or 0, str(exc), "cdp"
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s", "cdp"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: the host-pause error from open_page must reach the
+        # tool boundary with its retry_after_s intact, not become a generic one.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp"
 
