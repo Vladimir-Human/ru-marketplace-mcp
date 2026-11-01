@@ -26,7 +26,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
-# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport.
+# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
 # LINKS: M-WB; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -40,7 +40,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # wb_root_info: Read root identity, variants and specifications from basket CDN.
 # wb_reviews: Read product review pools with sorting and pagination.
 # wb_questions: Read buyer questions from the questions endpoint.
-# wb_search: Search products with bounded result/page handling.
+# wb_search: Search products with bounded result/page handling,
+#            plus a runtime shape-drift warning when a required key family vanishes.
 # wb_seller: Read seller metadata from static seller endpoints.
 # wb_categories: Read and filter the category menu tree.
 # wb_category_products: Read paginated products for a catalog shard.
@@ -104,6 +105,7 @@ from wb_connector.models_output import (
     WbSellerResponse,
 )
 from wb_connector.settings import get_settings
+from wb_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 
 _settings = get_settings()
 
@@ -1800,6 +1802,15 @@ async def wb_search(
             item_dicts.append(_card_item_dict(p))
 
         warnings = _aggregate_offer_warnings(item_dicts)
+        # The selfcheck compares this payload against the captured family
+        # registry; the tool's own answer now carries the same drift signal,
+        # so an agent does not need a human running doctor to learn the shape
+        # moved. The normalized items emit every key unconditionally, so the
+        # guard runs on the RAW product objects the flattener binds through.
+        # Products are non-empty here: a no-results page returned above.
+        drift = R.shape_drift_warning({"products": products}, SEARCH_REQUIRED_FAMILIES, source="wb_search")
+        if drift:
+            warnings.append(drift)
         if fallback_used:
             warnings.append(
                 "fallback: v9 search was unavailable, results came from the legacy id path "
@@ -3115,9 +3126,27 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
                                     notes=["v9 products carry no numeric id (id-shape drift)"],
                                 )
                             else:
-                                checks["search_v9"] = R.selfcheck_entry(
-                                    "healthy", baseline=sq, recovered_ids=len(identified), priced=len(priced)
+                                # Identifiable products are not enough: the
+                                # search tool's own answer warns through the same
+                                # required-family registry, and the canary must
+                                # fail the same way when a whole parser-critical
+                                # family vanishes.
+                                drift = R.shape_drift_warning(
+                                    {"products": v9_products}, SEARCH_REQUIRED_FAMILIES, source="wb_search"
                                 )
+                                if drift:
+                                    checks["search_v9"] = R.selfcheck_entry(
+                                        "drift",
+                                        baseline=sq,
+                                        reason="shape_drift",
+                                        recovered_ids=len(identified),
+                                        priced=len(priced),
+                                        notes=[drift],
+                                    )
+                                else:
+                                    checks["search_v9"] = R.selfcheck_entry(
+                                        "healthy", baseline=sq, recovered_ids=len(identified), priced=len(priced)
+                                    )
         except (TimeoutError, Exception) as exc:
             checks["search_v9"] = R.selfcheck_entry(
                 "inconclusive",
