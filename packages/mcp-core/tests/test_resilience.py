@@ -28,6 +28,7 @@ from mcp_core.resilience import (
     price_from_texts,
     selfcheck_entry,
     selfcheck_result,
+    validate_offer,
     validate_review_block,
 )
 
@@ -62,6 +63,18 @@ def test_coerce_rating_survives_an_int_past_the_float_ceiling():
     degrades such values to None; coerce_rating must match — a poisoned cell
     strips the field to no-data, never aborts the tool."""
     assert coerce_rating(10**400) is None
+
+
+@pytest.mark.parametrize("value", ["4.5 из 10", "4,5 из 10"])
+def test_coerce_rating_rejects_a_non_five_denominator_in_words(value):
+    """A 10-point rating is not the 0..5 scale. The denominator guard knew only
+    '/', so '4.5 из 10' passed as 4.5 (audit 2026-11-01)."""
+    assert coerce_rating(value) is None
+
+
+def test_coerce_rating_keeps_a_five_denominator_written_in_words():
+    assert coerce_rating("4.5 из 5") == pytest.approx(4.5)
+    assert coerce_rating("4,5 из 5") == pytest.approx(4.5)
 
 
 # --------------------------------------------------------------------------- #
@@ -104,6 +117,51 @@ def test_a_leading_minus_means_a_discount_not_a_price(value):
 @pytest.mark.parametrize("value", [None, "", "   ", "цена по запросу", "нет в наличии", [], {}, True])
 def test_non_prices_are_none(value):
     assert coerce_price(value) is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1 999 2 999",  # two prices glued by the thousands-separator space
+        "1 999 2 999 ₽",  # same, with the currency glyph
+        "от 5 751 ₽/ мес.",  # a monthly instalment, not the price
+        "выгода 5 000 ₽",  # a saving
+        "скидка 30%",  # a discount
+        "3 983.999",  # a three-digit fraction is not a price display
+        "1,999,2,999",  # short non-final groups glue two numbers
+    ],
+)
+def test_ambiguous_or_non_price_blobs_are_none(value):
+    """The space is both the Russian thousands separator and the gap between two
+    numbers, so the old token regex read '1 999 2 999' as one number and the
+    "more than one number" guard never fired. A saving, a discount and a monthly
+    instalment sit beside the real price and are smaller, so a guess would win a
+    "cheapest" ranking. All of them are None (audit 2026-11-01)."""
+    assert coerce_price(value) is None
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("1 999 ₽", 1999.0),
+        ("1\u00a0999 ₽", 1999.0),  # no-break space
+        ("1\u2009999,50 ₽", 1999.50),  # thin space + decimal comma
+        ("1999.00", 1999.0),
+        ("от 1 999 ₽", 1999.0),  # a listing's "from" price is a real price
+    ],
+)
+def test_price_shapes_the_stricter_parse_must_keep(value, expected):
+    """The grouping/qualifier checks must not eat the ordinary display shapes."""
+    assert coerce_price(value) == pytest.approx(expected)
+
+
+def test_validate_offer_flags_an_ambiguous_price():
+    """The audit case: an in-stock offer whose price is '1 999 2 999' used to
+    report only the missing title. Once coerce_price refuses the blob, the
+    validator must surface it as an unparseable price, not stay silent."""
+    warnings = validate_offer({"in_stock": True, "price": "1 999 2 999"})
+    assert any("title" in warning for warning in warnings)
+    assert any("price" in warning for warning in warnings)
 
 
 # --------------------------------------------------------------------------- #
@@ -151,6 +209,20 @@ def test_counts_with_signs_or_ranges_are_ambiguous_and_none(value):
     fabricate a plausible-but-wrong count ('1 000–2 000' -> 10002000, '−5' -> 5),
     exactly the bug coerce_price rejects for prices — counters inherit it. The
     guard must cover the unicode minus/en-dash/em-dash, not only ASCII -/+."""
+    assert coerce_int(value) is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "12万",  # CJK magnitude suffix: 120000, not 12
+        "24 088₽",  # a price, not a count
+    ],
+)
+def test_counts_with_any_script_suffix_or_currency_are_none(value):
+    """The old letter guard knew only Latin and Cyrillic, so '12万' read as 12;
+    a currency glyph is not a letter at all, so '24 088₽' read as a count. Both
+    are a fabricated number where the honest answer is None (audit 2026-11-01)."""
     assert coerce_int(value) is None
 
 

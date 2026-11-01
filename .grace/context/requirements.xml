@@ -12,6 +12,9 @@
   <rule id="R-NO-FABRICATION" source="CONTRIBUTING.md:What this codebase cares about; packages/mcp-core/src/mcp_core/resilience.py">
     A missing or ambiguous value is None, never a fabricated zero. Use coerce_price and coerce_int rather than guessing. Do not turn an unavailable price into the cheapest offer; preserve price-kind and conditional-price distinctions. This rule does not prohibit genuine zero counts where the upstream contract establishes them.
   </rule>
+  <requirement id="R-COERCE-AMBIGUOUS" source="Owner task 2026-11-01: v2.7.0 audit reproduction of coerce_price; packages/mcp-core/src/mcp_core/resilience.py">
+    coerce_price, coerce_int and coerce_rating return None when the text is ambiguous or is not a price, count or rating, and validate_offer flags the field, instead of guessing. Prices: two numbers glued by the thousands-separator space ('1 999 2 999', '1 999 2 999 ₽', '1,999,2,999'), an inconsistent grouping or a three-digit fraction ('3 983.999'), a monthly instalment ('от 5 751 ₽/ мес.'), a saving ('выгода 5 000 ₽') and a discount ('скидка 30%') are None, while a listing's "от" price and ordinary grouped/decimal shapes stay real prices. Counts: any-script magnitude letter ('12万') or a currency glyph ('24 088₽') is None. Ratings: a non-5 denominator written as a word ('4.5 из 10') is None.
+  </requirement>
   <rule id="R-DRIFT" source="CONTRIBUTING.md; packages/mcp-core/src/mcp_core/errors.py; packages/mcp-core/src/mcp_core/resilience.py">
     When a reachable payload no longer matches the expected structure, report parser_drift. Distinguish format change from transport_down, rate limits, missing products, login walls and challenge_required. Selfchecks report success, drift_detected or inconclusive; a blocked probe does not verify parser health. Shape signatures retain paths and types, not payload values; adoption differs by connector.
   </rule>
@@ -122,6 +125,9 @@
   </requirement>
   <requirement id="R-AVITO-ITEM-PATH" source="Security task brief, 2026-11-01">
     avito_card opens pages in the operator's logged-in Chrome, so a full-URL input is accepted only when its path is an item-page shape — a bare /digits path, a /slug_digits path or a /city/category/slug_digits path — and the navigated URL is rebuilt from the validated pieces without query or fragment; a three-segment path whose first segment is an Avito personal or service route (api, profile, account, orders and the like) is refused, since an item-shaped tail under it is not an item page.
+  </requirement>
+  <requirement id="R-CDP-BUDGET-SCHEDULING" source="Owner task in this session, 2026-11-01 (two CDP budget scheduling defects)">
+    Fix two scheduling defects in the shared CDP navigation budget. A request that queued while its host was healthy and gets its slot after that host's breaker opened must be refused exactly as a new request is refused — HostRefusingError with the same host, refusal count and remaining cooldown — and the permits it just took must be given back. Waiting for a busy host's slot must not hold global capacity: a request takes its host's slot first and the global slot only once that host is free, so a request for a free host is not delayed behind a request waiting for a busy one. Everything else stays: the global and per-host limits, pacing, error type and message, the public API, and FIFO order within a host. No deadlocks, and every acquired slot is released exactly once on refusal, on any exception and on asyncio.CancelledError.
   </requirement>
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
