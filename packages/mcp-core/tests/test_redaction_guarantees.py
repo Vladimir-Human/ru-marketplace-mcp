@@ -23,6 +23,10 @@ from mcp_core.logging import log_event
 # redaction runs, not a new rule.
 _SECRET = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYWlkLXVzZXIifQ.sekretsignature12345"
 
+# A value with no recognizable shape at all: only redact.py's exact-value rule
+# for the secret env vars (MPSTATS_MP_AUTH, MCP_HTTP_AUTH_TOKEN) can catch it.
+_PLAIN_SECRET = "plain-paid-session-secret-7f3a"
+
 
 def test_log_event_redacts_a_raw_secret_field(caplog, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _SECRET)
@@ -78,6 +82,15 @@ def test_log_event_leaves_non_string_fields_untouched(caplog):
     assert payload["ratio"] == 0.5
 
 
+def test_log_event_redacts_a_non_token_shaped_env_secret(caplog, monkeypatch):
+    monkeypatch.setenv("MPSTATS_MP_AUTH", _PLAIN_SECRET)
+
+    with caplog.at_level(logging.INFO, logger="mcp_connector"):
+        log_event("mpstats.probe", detail=f"mp_auth value: {_PLAIN_SECRET}")
+
+    assert _PLAIN_SECRET not in caplog.text
+
+
 def test_raise_tool_error_redacts_the_raw_message(monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _SECRET)
 
@@ -95,6 +108,15 @@ def test_raise_tool_error_redacts_string_fields(monkeypatch):
         raise_tool_error(TransportDownError("upstream refused", provider=_SECRET))
 
     assert _SECRET not in str(excinfo.value)
+
+
+def test_raise_tool_error_redacts_a_non_token_shaped_env_secret(monkeypatch):
+    monkeypatch.setenv("MPSTATS_MP_AUTH", _PLAIN_SECRET)
+
+    with pytest.raises(ToolError) as excinfo:
+        raise_tool_error(TransportDownError(f"mp_auth rejected {_PLAIN_SECRET}", provider=_PLAIN_SECRET))
+
+    assert _PLAIN_SECRET not in str(excinfo.value)
 
 
 def test_raise_tool_error_leaves_non_string_fields_untouched():

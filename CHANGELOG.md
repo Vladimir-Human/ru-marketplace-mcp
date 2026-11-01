@@ -52,6 +52,15 @@
   нестроковые значения не трогаются. Новых правил нет: формы токена, куки и
   учётных данных в URL те же.
 
+- Значения секретных переменных окружения вычищаются целиком: правила
+  `redact.py` теперь заменяют и точные текущие значения `MPSTATS_MP_AUTH` и
+  `MCP_HTTP_AUTH_TOKEN` (реестр имён — в mcp-core), даже когда значение не
+  похоже ни на одну известную форму. Значения читаются в момент чистки, а не
+  при импорте; пустые и короче 6 символов игнорируются, а из двух
+  пересекающихся значений сначала заменяется более длинное. Замена идемпотентна.
+  Прокси-переменные не тронуты: их учётные данные закрывает прежнее правило
+  для URL, а хост остаётся читаемым намеренно.
+
 - `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
   полный URL принимается только с путём страницы объявления — `/<id>`,
   `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
@@ -70,6 +79,15 @@
   the ToolError. The explicit `_redact` calls stay and are harmless because a
   second pass changes nothing; non-string values are left alone. No new rules:
   the token, cookie and URL-credential shapes are unchanged.
+
+- Secret environment-variable values are scrubbed whole: the `redact.py` rules
+  now also replace the exact current values of `MPSTATS_MP_AUTH` and
+  `MCP_HTTP_AUTH_TOKEN` (the name registry lives in mcp-core), even when the
+  value matches no known shape. Values are read at redaction time, not import
+  time; empty and shorter-than-6 values are ignored, and of two overlapping
+  values the longer one is replaced first. The replacement is idempotent.
+  Proxy variables are untouched: their credentials are covered by the existing
+  URL rule and the host is deliberately kept readable.
 
 - `avito_card` opens pages in the operator's logged-in Chrome, so a full URL
   is accepted only with an item-page path — `/<id>`, `/<slug>_<id>` or
