@@ -77,6 +77,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -119,6 +120,7 @@ mcp = FastMCP(
         "own Chrome over CDP — x5sec blocks anonymous access. Start with "
         "aliexpress_search; aliexpress_card takes an item id or aliexpress.ru item URL. "
         "Review TEXTS are not exposed: only the rating and order counts are read."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -593,16 +595,9 @@ async def aliexpress_search(
 ) -> AliSearchResponse:
     """Search AliExpress, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0; zero tiles with no challenge is parser drift, not an empty catalog.
 
-    AliSearchResponse: {status, query, tier_used, count, items[], meta}.
-    price_rub is None when absent — never 0.
-
-    ## Error Format
-
-    ToolError: TransportDownError on x5sec challenges or CDP failures (with the
-    manual-check hint inline); ParserDriftError when a rendered page yields zero
-    product tiles.
+    Full field list and error codes: `guide://aliexpress/aliexpress_search`.
     """
     log_event("aliexpress_search.start", query=query[:60])
     try:
@@ -697,16 +692,9 @@ async def aliexpress_card(
     review tab, which x5sec challenges; this tool returns the rating and the
     order count instead.
 
-    ## Return Format
+    price_rub is None when the card states no price — never 0.
 
-    AliCardResponse: {status, item_id, title, price_rub, old_price_rub, rating,
-    orders_count, url, tier_used, meta}.
-
-    ## Error Format
-
-    ToolError: BadRequestError when no item id can be extracted;
-    TransportDownError on x5sec challenges or CDP failures; ParserDriftError
-    when a rendered card has neither title nor price.
+    Full field list and error codes: `guide://aliexpress/aliexpress_card`.
     """
     log_event("aliexpress_card.start", input=item_id_or_url[:80])
     try:
@@ -988,3 +976,8 @@ async def _aliexpress_selfcheck_impl(ctx: Context | None) -> AliSelfcheckRespons
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

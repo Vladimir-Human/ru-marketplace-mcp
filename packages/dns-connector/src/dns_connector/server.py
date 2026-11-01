@@ -62,6 +62,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -109,6 +110,7 @@ mcp = FastMCP(
         "runs in the operator's own Chrome over CDP — Qrator's proof-of-work "
         "blocks all anonymous access. Start with dns_search; dns_card takes a "
         "product id or dns-shop.ru product URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -402,16 +404,9 @@ async def dns_search(
 ) -> DnsSearchResponse:
     """Search DNS-Shop, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0.
 
-    DnsSearchResponse: {status, query, tier_used, count, items[], meta}.
-    price_rub is None when absent — never 0.
-
-    ## Error Format
-
-    ToolError: ChallengeRequiredError on a Qrator wall (never cached);
-    TransportDownError on CDP/navigation failures; ParserDriftError when
-    a rendered page yields zero product tiles without challenge evidence.
+    Full field list and error codes: `guide://dns/dns_search`.
     """
     log_event("dns_search.start", query=query[:60])
     try:
@@ -493,17 +488,9 @@ async def dns_card(
 ) -> DnsCardResponse:
     """Fetch one DNS-Shop product card.
 
-    ## Return Format
+    price_rub and old_price_rub are None when the card states none — never 0.
 
-    DnsCardResponse: {status, product_id, title, price_rub, old_price_rub,
-    is_available, url, tier_used, meta}.
-
-    ## Error Format
-
-    ToolError: BadRequestError when the URL carries no product id;
-    ChallengeRequiredError on a Qrator wall (never cached); TransportDownError
-    on CDP/navigation failures; ParserDriftError when a rendered card has neither
-    product title nor price and no challenge evidence.
+    Full field list and error codes: `guide://dns/dns_card`.
     """
     log_event("dns_card.start", input=product_url[:80])
     try:
@@ -682,3 +669,8 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

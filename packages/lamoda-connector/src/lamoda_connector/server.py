@@ -67,6 +67,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport import build_client
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
@@ -131,6 +132,7 @@ mcp = FastMCP(
         "CDP (discovery is behind a redirect loop); product cards come from the "
         "GraphQL endpoint: HTTPS first, then an in-page Chrome POST if blocked. Lamoda exposes no ratings. "
         "Start with lamoda_search; lamoda_card takes a SKU or product URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 mcp.add_middleware(RetryMiddleware())
@@ -509,16 +511,9 @@ async def lamoda_search(
 ) -> LamodaSearchResponse:
     """Search Lamoda, rendered in the operator's Chrome (discovery is blocked tier 1).
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0; Lamoda exposes no ratings.
 
-    LamodaSearchResponse: {status, query, tier_used, count, items[], meta}.
-    Items carry sku, title, brand, price_rub (None when absent — never 0), url.
-
-    ## Error Format
-
-    ToolError: challenge_required on a visible challenge (not cached);
-    TransportDownError on CDP/nav failures; ParserDriftError when a rendered
-    page yields zero SKUs without challenge evidence.
+    Full field list and error codes: `guide://lamoda/lamoda_search`.
     """
     log_event("lamoda_search.start", query=query[:60])
     try:
@@ -583,17 +578,7 @@ async def lamoda_card(
 ) -> LamodaCardResponse:
     """Fetch a GraphQL card over HTTPS, falling back to an in-page Chrome POST.
 
-    ## Return Format
-
-    LamodaCardResponse: {status, sku, title, brand, price_rub, old_price_rub,
-    is_available, sizes[], url, tier_used, meta}. Lamoda exposes no ratings.
-
-    ## Error Format
-
-    ToolError: BadRequestError when no SKU can be extracted; NotFoundError when
-    the SKU has no product; ChallengeRequiredError when the Chrome fallback lands on
-    Lamoda's anti-bot page (complete it, then retry); TransportDownError on HTTP failures; ParserDriftError
-    when the GraphQL envelope changed.
+    Full field list and error codes: `guide://lamoda/lamoda_card`.
     """
     log_event("lamoda_card.start", input=sku_or_url[:80])
     try:
@@ -752,3 +737,8 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

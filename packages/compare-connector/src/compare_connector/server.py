@@ -66,6 +66,7 @@ from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, NotFound
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
 from pydantic import Field
@@ -92,7 +93,14 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 # a slow source must not hold the whole comparison hostage.
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
 
-mcp = FastMCP(name="compare-connector", version=SERVER_VERSION, lifespan=browser_handoff_lifespan)
+mcp = FastMCP(
+    name="compare-connector",
+    version=SERVER_VERSION,
+    lifespan=browser_handoff_lifespan,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
+)
 
 _CARD_TOOL_NAMES = {
     "wildberries": "wb_card",
@@ -1013,19 +1021,7 @@ async def compare_prices(
     so an offer naming sizes and none of them the asked one is never
     `cheapest_comparable` — it stays in `offers` and may remain `cheapest`.
 
-    ## Return Format
-
-    CompareResponse: {query, sources_queried, sources_ok, complete,
-    total_offers, cheapest, price_spread_rub, offers, source_outcomes,
-    warnings, server_version}. offers is ranked by everyday price_rub —
-    cheapest first, offers without a rouble price after the ranked ones.
-    warnings carries validation/completeness warnings.
-
-    ## Error Format
-
-    On validation failure, raises ToolError with a JSON message describing the
-    error code and whether it is retryable. Individual source failures do NOT
-    raise — they are reported in `source_outcomes`.
+    Full field list and error codes: `guide://compare/compare_prices`.
     """
     text = (query or "").strip()
     if len(text) < 2:
@@ -1302,22 +1298,7 @@ async def compare_verify_offer(
     mount. The returned card is source-native and therefore keeps fields the
     comparison intentionally normalises away.
 
-    ## Return Format
-
-    JSON object: `{source, product_id_or_url, card}`. `card` is the native
-    source response, preserving price, availability, seller, and source-specific
-    fields when the marketplace exposes them. `identity_verification`, when
-    requested, carries the observed typed identifiers and a match verdict;
-    absent manufacturer evidence yields unknown, never a title-derived exact match.
-    For Yandex, pass the search row's `variant_id` as `expected_variant_id`:
-    a different or missing card SKU is rejected before computing a price delta.
-    Without it, only the current default card price is checked.
-
-    ## Error Format
-
-    Raises `BadRequestError` when the source is unknown, not installed, or the
-    identifier cannot be validated; native card errors are returned as tool
-    errors with their source-specific taxonomy.
+    Full field list and error codes: `guide://compare/compare_verify_offer`.
     """
     if expected_price_rub is not None and (
         isinstance(expected_price_rub, bool) or not math.isfinite(expected_price_rub) or expected_price_rub < 0
@@ -1400,17 +1381,7 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     connector isn't installed" from "the marketplace refused us", which need
     completely different fixes.
 
-    ## Return Format
-
-    Plain object: {installed, searchable, not_installed, deselected, notes,
-    source_timeout_s, server_version, server_started_at, process_id}. notes
-    explains per-source access quirks (CDP-only sources, currencies, missing
-    text search).
-
-    ## Error Format
-
-    Never raises ToolError: pure introspection of which connector packages
-    are installed — nothing here touches the network.
+    Full field list and error codes: `guide://compare/compare_sources`.
     """
     log_event("compare_sources.start")
     if ctx is not None:
@@ -1527,16 +1498,7 @@ async def compare_browser_snapshot(
     (auto/always/never), and an explicit client vision hint. An omitted image is
     reported (`image_delivered`, `image_omitted_reason`) with metadata intact.
 
-    ## Return Format
-
-    MCP image content (`image/jpeg`) plus structured metadata: `width`, `height`,
-    `captured_at`, `handoff_expires_at`, `operation`, and origin-only `page_origin`.
-
-    ## Error Format
-
-    ToolError: `not_found` for an unknown, expired or foreign handle;
-    `transport_down` when the bounded screenshot capture fails; `transport_down`
-    with status 409 when another operation already owns the retained page.
+    Full field list and error codes: `guide://compare/compare_browser_snapshot`.
     """
     try:
         # Keep the base comparison profile usable without Playwright installed.
@@ -1573,6 +1535,11 @@ async def compare_browser_snapshot(
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

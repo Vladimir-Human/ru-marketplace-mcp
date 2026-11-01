@@ -27,10 +27,11 @@ Run: uv run python scripts/gen_tools_doc.py [--check]
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # Profile: One documented MCP profile (display name, console script, import path).
-# Measurement: Collected tools plus the measured tools/list payload for one profile.
+# Measurement: Collected tools, resources and the measured tools/list payload for one profile.
 # render_type: Render a JSON-schema type, including arrays, enums and nullable unions.
 # render_parameters: Render a tool's input schema as "name: type = default" clauses.
 # first_paragraph: Take the first description paragraph and make it table-safe.
+# render_resources: Render a profile's served resource URIs for the generated docs.
 # render_docs: Render the complete docs/TOOLS.md text.
 # render_readme: Replace both README cost blocks with measured figures.
 # render_outputs: Collect measurements and render both output files under a root.
@@ -75,15 +76,20 @@ class Profile:
 
 @dataclass(frozen=True)
 class Measurement:
-    """Collected tools and the wire payload a client pays for."""
+    """Collected tools, the MCP resources they point at, and the wire payload."""
 
     profile: Profile
     tools: tuple[dict[str, Any], ...]
+    resources: tuple[str, ...]
     payload: bytes
 
     @property
     def tool_count(self) -> int:
         return len(self.tools)
+
+    @property
+    def resource_count(self) -> int:
+        return len(self.resources)
 
     @property
     def token_estimate(self) -> int:
@@ -113,13 +119,17 @@ def collect_profile(profile: Profile) -> Measurement:
         (tool.to_mcp_tool().model_dump(mode="json", by_alias=True, exclude_none=True) for tool in listed),
         key=lambda tool: str(tool["name"]),
     )
+    # The resources are part of the published surface: each tool description now
+    # names its guide, and the shared error reference lives at one URI. Sorted by
+    # URI so the generated file is deterministic.
+    resources = tuple(sorted(str(resource.uri) for resource in asyncio.run(module.mcp.list_resources())))
     payload = json.dumps(
         {"tools": tools},
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
-    return Measurement(profile=profile, tools=tuple(tools), payload=payload)
+    return Measurement(profile=profile, tools=tuple(tools), resources=resources, payload=payload)
 
 
 def collect_profiles() -> tuple[Measurement, ...]:
@@ -219,6 +229,13 @@ def render_profile_table(measurements: tuple[Measurement, ...]) -> list[str]:
     return lines
 
 
+def render_resources(resources: tuple[str, ...]) -> str:
+    """The profile's resources as one table-safe list; an em dash when it has none."""
+    if not resources:
+        return "—"
+    return ", ".join(f"`{uri}`" for uri in resources).replace("|", "\\|")
+
+
 def render_tool_section(measurement: Measurement) -> list[str]:
     groups: dict[str, list[dict[str, Any]]] = {}
     for tool in measurement.tools:
@@ -229,6 +246,11 @@ def render_tool_section(measurement: Measurement) -> list[str]:
         "",
         f"{measurement.tool_count} tools, {len(measurement.payload)} `tools/list` bytes "
         f"(≈{format_tokens(measurement.token_estimate)} tokens).",
+        "",
+        f"Resources ({measurement.resource_count}): {render_resources(measurement.resources)}.",
+        "Each tool description names its own guide, which carries the return-format field list",
+        "and the error mapping that used to sit in the description; `marketplace://errors` lists",
+        "every error code.",
         "",
     ]
     for prefix in sorted(groups):

@@ -83,6 +83,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import get_text_budgeted, proxy_from_env
 from pydantic import Field
 
@@ -115,6 +116,9 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 mcp = FastMCP(
     name="wb-connector",
     version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
 )
 mcp.add_middleware(RetryMiddleware(max_retries=3, base_delay=1.0))
 
@@ -912,25 +916,9 @@ async def wb_card(
     Returns prices in rubles, brand, supplier, supplier_rating, review_rating,
     feedbacks count, total_quantity for up to 100 SKUs.
 
-    ## Return Format
+    price_rub is None when the SKU has no sellable price — never 0; an unknown SKU is NOT an error, it simply does not appear in items.
 
-    WbCardResponse: {dest, count, items, meta}. Items carry nm_id, name, brand,
-    supplier, supplier_id, supplier_rating, review_rating, feedbacks,
-    total_quantity, in_stock, price_rub, price_original_rub. price_rub is None
-    when the SKU has no sellable price — never 0. Unknown SKUs are NOT an
-    error — they simply do not appear in items.
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed nm_ids; RateLimitedError on HTTP
-    429; TransportDownError on network failures, non-200 responses, an HTML wall
-    page from WB's edge, and unexpected internal errors; ParserDriftError on a
-    non-JSON or mis-shaped body.
-
-    Args:
-        nm_ids: 1..100 nmId integers.
-        dest: Region ID (default Moscow -1257786). Required for valid prices.
-              Other examples: -1257786 Moscow, -1029256 Saint Petersburg.
+    Full field list and error codes: `guide://wb/wb_card`.
     """
     log_event("wb_card.start", nm_count=len(nm_ids), dest=dest)
     if ctx is not None:
@@ -1061,16 +1049,7 @@ async def wb_root_info(
 
     All variants of one product share imt_id. Reviews indexed by imt_id, NOT by nmId.
 
-    ## Return Format
-
-    WbRootInfoResponse: {imt_id, subj_name, subj_root_name, colors,
-    compositions, options, host_used, meta}. imt_id is the root product id
-    shared by every variant — wb_reviews is indexed by it, not by nmId.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://wb/wb_root_info`.
     """
     log_event("wb_root_info.start", nm_id=nm_id)
     if ctx is not None:
@@ -1237,26 +1216,9 @@ async def wb_reviews(
     `sort` is applied CLIENT-SIDE over that pool. To surface complaints, "worst"
     reorders the returned pool by lowest rating first.
 
-    ## Return Format
+    an empty pool is NOT an error — a healthy response with zero feedbacks.
 
-    WbReviewsResponse: {imt_id, sort, pool_size, feedback_count, valuation,
-    valuation_distribution, feedbacks, host_used, meta}. Review items carry
-    rating, text, pros, cons, user, date. An empty pool is NOT an error — it
-    returns a healthy response with zero feedbacks.
-
-    ## Error Format
-
-    ToolError: BadRequestError on a bad limit or sort; ParserDriftError when
-    a 200 body has no feedbacks list; TransportDownError when every review
-    host fails and on unexpected internal errors.
-
-    Args:
-        imt_id: Root ID from wb_root_info.
-        limit: Max review texts to return (1..100). Counts always full.
-        sort: "recent"/"newest"/"default" (as returned, newest-first),
-              "best"/"highest" (highest rating first),
-              "worst"/"lowest"/"complaints" (LOWEST rating first — finds downsides).
-              Note: reorders the ~1000-review pool WB returns, not all feedbacks.
+    Full field list and error codes: `guide://wb/wb_reviews`.
     """
     log_event("wb_reviews.start", imt_id=imt_id, limit=limit, sort=sort)
     if ctx is not None:
@@ -1434,26 +1396,9 @@ async def wb_questions(
     shares one question pool. Passing an nmId returns an empty pool with no error,
     so resolve the root id via ``wb_root_info`` first.
 
-    ## Return Format
+    an empty pool is NOT an error — it means nobody has asked yet.
 
-    WbQuestionsResponse: {imt_id, total_available, returned, skip,
-    answered_count, has_more, questions, meta}. Question items carry
-    question_id, text, date, user, answered, answer_text, answer_date, nm_id.
-    An empty pool is NOT an error — it means nobody has asked yet.
-
-    ## Error Format
-
-    ToolError: BadRequestError on a bad limit or skip; RateLimitedError on
-    HTTP 429; TransportDownError on network failures, non-200 responses and
-    unexpected internal errors; ParserDriftError when a 200 body loses the
-    count key or the questions shape.
-
-    Args:
-        imt_id: Root ID from wb_root_info.
-        limit: Max questions to return (1..100).
-        skip: Offset into the pool, for pagination.
-        answered_only: Keep only questions that have a seller answer.
-        ctx: MCP context, when called as a tool.
+    Full field list and error codes: `guide://wb/wb_questions`.
     """
     log_event("wb_questions.start", imt_id=imt_id, limit=limit, skip=skip, answered_only=answered_only)
     if ctx is not None:
@@ -1639,25 +1584,9 @@ async def wb_search(
     Uses search.wb.ru v9 product data, with a warned legacy IDs/card fallback.
     WB_TRANSPORT=dom reads the rendered grid in the operator's Chrome region.
 
-    ## Return Format
+    zero matches returns WbNoResultsResponse (status "no_results"), which is NOT an error; an unknown total stays null, and a failed read never becomes no_results.
 
-    WbSearchResponse: {query, page, page_size, total_ids, count, items, meta},
-    with items in the same shape as wb_card. Zero matches — or a page past the
-    end — returns WbNoResultsResponse {status: "no_results", query, page,
-    total_ids} instead. Optional meta reports DOM warnings only when present.
-    That is NOT an error; unknown totals remain null.
-
-    ## Error Format
-
-    ToolError: BadRequestError on a page outside 1..20; RateLimitedError on
-    HTTP 429; ParserDriftError on malformed JSON/shapes when neither path
-    answers successfully; TransportDownError on refusals or transport failures.
-    Failed reads never become no_results without a positive empty answer.
-
-    Args:
-        query: Russian text.
-        dest: Region. Default Moscow.
-        page: 1..20 (each page returns ~30 IDs from the long list).
+    Full field list and error codes: `guide://wb/wb_search`.
     """
     log_event("wb_search.start", query=query[:100], page=page, dest=dest)
     if ctx is not None:
@@ -2078,17 +2007,7 @@ async def wb_seller(
 
     Chain from `wb_card`: its `supplier_id` field feeds straight into this tool.
 
-    ## Return Format
-
-    WbSellerResponse: {supplier_id, name, full_name, trademark, inn, kpp,
-    ogrn, legal_address, taxpayer_code, foreign_codes, host_used, meta}.
-    foreign_codes carries non-RU registration codes (unp/bin/unn) for EAEU
-    sellers.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://wb/wb_seller`.
     """
     log_event("wb_seller.start", supplier_id=supplier_id)
     if ctx is not None:
@@ -2235,17 +2154,7 @@ async def wb_categories(
     The live menu is ~800 KB, so responses are always a bounded slice — start at
     'top', then expand the branch you care about.
 
-    ## Return Format
-
-    WbCategoriesResponse: {root, max_depth, total_returned, truncated, items,
-    host_used, meta}. Nodes carry id, name, url, shard, query, depth,
-    children_count, children; shard+query are the selectors
-    wb_category_products needs to list a category feed.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://wb/wb_categories`.
     """
     log_event("wb_categories.start", root=root, max_depth=max_depth)
     if ctx is not None:
@@ -2369,27 +2278,9 @@ async def wb_category_products(
     returning an empty list, because an empty list here would read as "this
     category has no products", which is false.
 
-    ## Return Format
+    price_rub is None when the SKU has no sellable price — never 0.
 
-    WbCategoryProductsResponse: {shard, query, page, sort, dest, count,
-    has_more, items, meta}, with items in the same shape as wb_card. has_more
-    is inferred from a full page — WB reports no total here.
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed selectors or the unlistable
-    'blackhole' shard; NotFoundError on a 404 (stale shard/query pair);
-    RateLimitedError on HTTP 429; TransportDownError on network failures,
-    non-200 responses, an HTML wall page from WB's edge, and unexpected internal errors;
-    ParserDriftError on a non-JSON or mis-shaped body.
-
-    Args:
-        shard: Catalog shard from wb_categories.
-        query: Catalog selector from wb_categories (`cat=` or `subject=`).
-        page: Page number, up to 100 products each.
-        sort: Upstream ordering.
-        dest: WB region id; defaults to WB_DEFAULT_DEST.
-        ctx: MCP context, when called as a tool.
+    Full field list and error codes: `guide://wb/wb_category_products`.
     """
     shard_norm = (shard or "").strip()
     query_norm = (query or "").strip().lstrip("?&")
@@ -3263,6 +3154,11 @@ async def wb_selfcheck(ctx: Context | None = None) -> WbSelfCheckResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

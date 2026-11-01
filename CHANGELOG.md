@@ -11,6 +11,71 @@
 
 ### Added
 
+- Справочная половина описаний инструментов переехала из `tools/list` в MCP
+  resources: у каждого инструмента есть ресурс `guide://<источник>/<инструмент>`
+  с его секциями `## Return Format` и `## Error Format` — тем же текстом, слово
+  в слово, — а общий справочник кодов (`marketplace://errors`) собирается из
+  `ErrorCode` и классов ошибок, а не переписывается руками. Описание инструмента
+  оставляет ядро (что инструмент отвечает и инварианты, влияющие на решение) и
+  одну строку со ссылкой на свой гайд, поэтому половинки не могут разойтись.
+  Профиль, монтирующий коннекторы, отдаёт каждый гайд один раз и
+  `marketplace://errors` ровно один раз: `mcp_core.resources.mount_child` прячет
+  копию дочернего сервера в листинге родителя, не отбирая её у самого
+  коннектора, — иначе импорт объединённого сервера ломал бы отдельный
+  `wb-mcp` в том же процессе. Это смена канала по требованию владельца, а не
+  ослабление: `test_tool_docstring_sections.py` теперь требует ядро и парный
+  ресурс вместо обеих секций в докстринге.
+- Ядро описания сохранило не только первый абзац, но и инварианты, меняющие
+  решение агента: отсутствующее значение — `null`, а не `0` (`price_rub`,
+  `price_cny`, остатки MPStats); пустая выдача, неполный результат и
+  неизвестный SKU — не ошибка, а здоровый ответ или `partial=True`; цена по
+  подписке не участвует в ранжировании; `price_unit` у Cian говорит, что
+  значит сумма; карточка Taobao не читает Tmall; для снимка страницы нужно
+  владение handoff. Формулировки сжаты до одной строки перед ссылкой на гайд,
+  сам гайд по-прежнему несёт исходный текст слово в слово.
+- `scripts/mcp_wire.py` меряет всю цену профиля, а не только `tools/list`:
+  читает `instructions` из ответа на `initialize`, пишет рядом с `wire_tokens`
+  поле `instructions_tokens` и печатает обе величины и их сумму. Там же —
+  абсолютный потолок профиля из `ceilings` в `work/performance/wire-baseline.json`
+  (сумма инструментов и instructions): относительный гейт видит только рост
+  относительно baseline, который обновляют руками. В режиме проверки отсутствие
+  положительного потолка у проверяемого профиля — отказ, как и отсутствие
+  baseline или бюджета; `--update-baseline` записывает потолок новому профилю
+  (+5 % к замеру) и не трогает уже выставленный, потому что поднять потолок —
+  решение, а не побочный эффект замера.
+- The reference half of tool descriptions moved out of `tools/list` into MCP
+  resources: every tool has a `guide://<source>/<tool>` resource holding its
+  `## Return Format` and `## Error Format` sections — the same text, word for
+  word — and one shared error-code reference (`marketplace://errors`) is built
+  from `ErrorCode` and the connector error classes instead of being copied by
+  hand. The description keeps the core (what the tool answers and the invariants
+  that change the decision) plus one line naming its guide, so the two halves
+  cannot drift apart. A profile that mounts connectors serves each guide once and
+  `marketplace://errors` exactly once: `mcp_core.resources.mount_child` hides a
+  child's copy from the parent's listing without taking it away from the
+  connector, because deleting it made importing the unified server break a
+  standalone `wb-mcp` in the same process. A channel change by the owner's
+  order, not a weakening: `test_tool_docstring_sections.py` now requires the
+  core plus the paired resource instead of both sections in the docstring.
+- The core kept more than the first paragraph: the invariants that change what
+  the agent concludes stay in the description, compressed to one line before the
+  guide pointer — a missing value is `null`, never `0` (`price_rub`,
+  `price_cny`, MPStats stock); an empty, partial or unknown-SKU result is not an
+  error but a healthy response or `partial=True`; a subscription price never
+  ranks; Cian's `price_unit` says what the amount means; a Taobao card cannot
+  read a Tmall listing; a page snapshot needs ownership of the handoff. The
+  guide still carries the original text word for word.
+- `scripts/mcp_wire.py` measures a profile's whole cost, not only `tools/list`:
+  it reads `instructions` from the initialize result, records
+  `instructions_tokens` beside `wire_tokens`, and prints both plus their sum. It
+  also checks an absolute per-profile ceiling from `ceilings` in
+  `work/performance/wire-baseline.json` (tools plus instructions), because the
+  relative gate only sees growth against a baseline that is updated by hand. In
+  check mode a checked profile without a positive ceiling fails, like a missing
+  baseline or budget; `--update-baseline` records a ceiling for a new profile
+  (5% above the measurement) and leaves one already written alone, since raising
+  a ceiling is a decision rather than a side effect of measuring.
+
 - Дрейф структуры страницы виден в самом ответе инструмента: коннекторы, у
   которых есть реестр обязательных семейств ключей (avito, lamoda, taobao,
   citilink, dns), сверяют разобранный payload с этим реестром в общем
