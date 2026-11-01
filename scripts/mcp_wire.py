@@ -79,13 +79,32 @@ def _load_baseline(path: Path) -> dict[str, object]:
 
 
 def _check_gate(
-    snapshot: dict[str, object], baseline: dict[str, object], max_regression: float, max_latency_ms: float | None
+    snapshot: dict[str, object],
+    baseline: dict[str, object],
+    max_regression: float,
+    max_latency_ms: float | None,
+    gate: bool = False,
 ) -> dict[str, object]:
+    """Compare one snapshot with its baseline entry.
+
+    ``gate`` is the CI check mode (``--baseline`` without ``--update-baseline``).
+    There a missing profile or a missing ``wire_tokens`` budget is a failure: a
+    gate that compares against nothing passes any snapshot, however large.
+    Measurement runs and baseline creation keep the permissive reading.
+    """
     profiles = baseline.get("profiles", {})
-    old = profiles.get(snapshot["script"], {}) if isinstance(profiles, dict) else {}
+    entry = profiles.get(snapshot["script"]) if isinstance(profiles, dict) else None
+    old = entry if isinstance(entry, dict) else {}
     failures: list[str] = []
     token_delta = None
     latency_delta = None
+    if gate:
+        if entry is None:
+            failures.append(f"missing_baseline_profile:{snapshot['script']}")
+        else:
+            budget = old.get("wire_tokens")
+            if not (isinstance(budget, (int, float)) and budget > 0):
+                failures.append(f"missing_token_budget:{snapshot['script']}")
     if isinstance(old, dict):
         previous = old.get("wire_tokens")
         if isinstance(previous, (int, float)) and previous > 0:
@@ -120,7 +139,22 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv[1:])
     root = Path(args.directory) if args.directory else DEFAULT_ROOT
     scripts = args.scripts or ["compare-mcp", "marketplace-mcp"]
-    baseline = _load_baseline(args.baseline) if args.baseline else {"version": 1, "profiles": {}}
+    # Gate mode is a baseline comparison without --update-baseline: the run is
+    # a check, so a missing baseline or a missing budget must fail it instead
+    # of silently comparing against nothing. Measurement runs (no --baseline)
+    # and baseline creation (--update-baseline) stay permissive.
+    gate_mode = args.baseline is not None and not args.update_baseline
+    if args.baseline is None:
+        baseline = {"version": 1, "profiles": {}}
+    else:
+        if gate_mode and not args.baseline.exists():
+            print(f"baseline file not found: {args.baseline}", file=sys.stderr)
+            return 1
+        try:
+            baseline = _load_baseline(args.baseline)
+        except (OSError, ValueError) as exc:
+            print(f"cannot read baseline file {args.baseline}: {exc}", file=sys.stderr)
+            return 1
     snapshots: list[dict[str, object]] = []
     gates: dict[str, object] = {}
     for script in scripts:
@@ -131,7 +165,9 @@ def main(argv: list[str]) -> int:
             continue
         snapshot = _snapshot(script, tools, elapsed)
         snapshots.append(snapshot)
-        gates[script] = _check_gate(snapshot, baseline, args.max_token_regression_percent, args.max_latency_ms)
+        gates[script] = _check_gate(
+            snapshot, baseline, args.max_token_regression_percent, args.max_latency_ms, gate=gate_mode
+        )
         print("=" * 72)
         print(f"{script}: {len(tools)} tools, warm start to tools/list {elapsed:.1f}s")
         print("=" * 72)
@@ -193,6 +229,10 @@ def main(argv: list[str]) -> int:
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if not report["ok"]:
+        for script, gate_result in gates.items():
+            for failure in gate_result.get("failures", []):
+                print(f"{script}: {failure}", file=sys.stderr)
     return 0 if report["ok"] else 1
 
 

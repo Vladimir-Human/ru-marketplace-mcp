@@ -13,4 +13,6 @@ async def test_yandex_selfcheck_reaches_a_verdict():
 
     result = await yandex_selfcheck()
 
-    assert result.status in ("success", "drift_detected", "inconclusive")
+    if result.status == "inconclusive":
+        pytest.skip("selfcheck inconclusive: the source could not be judged from here (block, challenge or network)")
+    assert result.status == "success", f"selfcheck verdict: {result.status}"

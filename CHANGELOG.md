@@ -27,6 +27,30 @@
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
 
+### Fixed
+
+- Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
+  `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
+  профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не
+  молчаливый пропуск любого снимка. Обычная проверка по закоммиченному базлайну и
+  создание базлайна через `--update-baseline` работают как раньше. Ночной прогон
+  дополнительно запускает `marketplace-mcp doctor --status-file` (через
+  `scripts/live_check.py`, под общим бюджетом живых запросов) и падает только на
+  коде «парсер дрейфовал» (1); заблокированные источники (2) не будят никого.
+  Live-тесты самопроверки считают `drift_detected` провалом, а `inconclusive`
+  (блок, челлендж, сеть) — скипом, не провалом.
+
+- The MCP wire-cost gate fails closed: in gate mode (`--baseline` without
+  `--update-baseline`) a missing or unreadable baseline file and a checked
+  profile without a `wire_tokens` budget are clear failures, not a silent pass
+  of any snapshot. The normal regression check against the committed baseline
+  and baseline creation with `--update-baseline` keep working. The nightly job
+  additionally runs `marketplace-mcp doctor --status-file` (through
+  `scripts/live_check.py`, under the shared live-request budget) and fails only
+  on the parser-drift exit code (1); blocked sources (2) page no one. Live
+  selfcheck tests treat `drift_detected` as a failure and `inconclusive`
+  (block, challenge, network) as a skip, not a failure.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
