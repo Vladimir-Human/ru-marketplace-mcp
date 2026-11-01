@@ -126,6 +126,9 @@
   <requirement id="R-NIGHTLY-DRIFT-ALARM" source="Owner task brief, 2026-11-01">
     The nightly live job runs the doctor status check (scripts/live_check.py doctor --status-file, under the shared live request budget) and fails the job on the doctor alarm exit code 1 (a parser drifted); blocked/inconclusive (2) keeps the job green, and a hard error (3 or a crash) fails it. Live-marked selfcheck tests fail on drift_detected and skip, not fail, on inconclusive. scripts/test_ci_concurrency.py pins the workflow contract; the live assertions themselves are not run offline.
   </requirement>
+  <requirement id="R-CDP-BUDGET-SCHEDULING" source="Owner task in this session, 2026-11-01 (two CDP budget scheduling defects)">
+    Fix two scheduling defects in the shared CDP navigation budget. A request that queued while its host was healthy and gets its slot after that host's breaker opened must be refused exactly as a new request is refused — HostRefusingError with the same host, refusal count and remaining cooldown — and the permits it just took must be given back. Waiting for a busy host's slot must not hold global capacity: a request takes its host's slot first and the global slot only once that host is free, so a request for a free host is not delayed behind a request waiting for a busy one. Everything else stays: the global and per-host limits, pacing, error type and message, the public API, and FIFO order within a host. No deadlocks, and every acquired slot is released exactly once on refusal, on any exception and on asyncio.CancelledError.
+  </requirement>
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
   </rule>
