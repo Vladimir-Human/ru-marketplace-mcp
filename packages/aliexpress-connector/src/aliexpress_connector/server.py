@@ -36,7 +36,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
-# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
 # LINKS: M-ALIEXPRESS; M-COMPARE; M-MARKETPLACE; packages/aliexpress-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -45,7 +45,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _cdp_render_search: Read the rendered search grid from a landing page.
 # _cdp_card: Match the full item ID on an owned popup and bound cleanup on all exits.
 # _card_prices: Pair glyph-scored card prices without inventing absent modules.
-# aliexpress_search: Return normalized rendered offers and price warnings.
+# aliexpress_search: Return normalized rendered offers and price warnings,
+#                    plus a runtime shape-drift warning when a required key vanishes.
 # aliexpress_card: Return item details, ratings and orders, not review texts.
 # aliexpress_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -86,6 +87,7 @@ from aliexpress_connector.models_output import (
     MetaOut,
 )
 from aliexpress_connector.settings import get_settings
+from aliexpress_connector.shape_reference import SEARCH_REQUIRED_KEYS, SEARCH_SHAPE_REFERENCE
 
 _settings = get_settings()
 
@@ -645,6 +647,14 @@ async def aliexpress_search(
                 f"{coupon_seen} tile(s) advertise a coupon price; price_rub carries the regular "
                 f"price and the coupon value is not part of the response — treat 'cheapest' ranking with care"
             )
+        # The selfcheck compares this payload against the captured
+        # required-key registry; the tool's own answer now carries the same
+        # drift signal, so an agent does not need a human running doctor to
+        # learn the shape moved. Zero tiles raise before this point, so the
+        # key check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, ((key,) for key in SEARCH_REQUIRED_KEYS), source="aliexpress_search")
+        if drift:
+            warnings.append(drift)
         result = AliSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(
             result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="aliexpress_search"
@@ -858,12 +868,45 @@ async def _aliexpress_selfcheck_impl(ctx: Context | None) -> AliSelfcheckRespons
                     ],
                 )
             else:
-                notes = [
-                    f"{len(items_raw)} tiles extracted",
-                    f"{len(priced)} tiles with an attached price"
-                    + (f", {len(totals)} with an orders line" if totals else ""),
+                # Tiles extract — now ask the second question: did the SHAPE
+                # move? The registry was measured on a captured page; a live
+                # payload that loses a parser-critical path is structural drift
+                # even while tiles still come back. Types may vary with the
+                # data (str/null), so the required check is on key presence,
+                # not on the full signature. Array members need the "["
+                # separator: "price_texts.attached[]:str" must count as the
+                # key "price_texts.attached" being present.
+                live_signature = R.shape_signature(payload)
+                drift = R.diff_keys(SEARCH_SHAPE_REFERENCE, live_signature)
+                missing_required = [
+                    key
+                    for key in SEARCH_REQUIRED_KEYS
+                    if not any(entry.startswith(f"{key}{sep}") for entry in live_signature for sep in (":", "[", "."))
                 ]
-                checks["search"] = R.selfcheck_entry("healthy", baseline=baseline, notes=notes)
+                if missing_required:
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason="shape_drift",
+                        notes=[
+                            f"{len(items_raw)} tiles extracted",
+                            f"required paths missing: {', '.join(missing_required)}",
+                        ],
+                        shape_missing=drift["missing"],
+                        shape_added=drift["added"],
+                    )
+                else:
+                    notes = [
+                        f"{len(items_raw)} tiles extracted",
+                        f"{len(priced)} tiles with an attached price"
+                        + (f", {len(totals)} with an orders line" if totals else ""),
+                        "shape matches the captured reference",
+                    ]
+                    if drift["added"]:
+                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                    checks["search"] = R.selfcheck_entry(
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                    )
 
     # Chain the card probe off the search result so the canary never depends on
     # a hardcoded SKU that may have been delisted.
