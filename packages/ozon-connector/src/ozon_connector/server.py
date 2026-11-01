@@ -17,7 +17,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # PURPOSE: Expose Ozon product cards, reviews and search through composer data.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
-# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP; models_output; settings.
+# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP; models_output; settings; shape_reference.
 # LINKS: M-OZON; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -29,7 +29,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # _parse_search_tile: Preserve offer identity, price kinds and stock warnings.
 # ozon_card: Read a validated SKU/product path with a required widgetStates object.
 # ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data.
-# ozon_search: Search and normalize composer result tiles from a required widgetStates object.
+# ozon_search: Search and normalize composer result tiles from a required widgetStates object,
+#              plus a runtime shape-drift warning when a required key family vanishes.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
 # END_MODULE_MAP
 
@@ -84,6 +85,7 @@ from ozon_connector.models_output import (
     OzonSelfcheckResponse,
 )
 from ozon_connector.settings import get_settings
+from ozon_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 
 SERVER_VERSION = "2.7.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
@@ -1440,6 +1442,19 @@ async def _ozon_search_impl(
 
     items = _search_items_from_payload(payload)
 
+    # The selfcheck compares this payload against the captured family
+    # registry; the tool's own answer now carries the same drift signal, so
+    # an agent does not need a human running doctor to learn the shape moved.
+    # A tile parser that stopped reading action.link still yields titled,
+    # priced tiles — but every result silently lost its url/card_input, and
+    # only this family check notices. Zero items stay out: every per-item
+    # family is vacuously absent there and the no_items warning covers it.
+    warnings = _aggregate_offer_warnings(items[:30])
+    if items:
+        drift = R.shape_drift_warning({"items": items[:30]}, SEARCH_REQUIRED_FAMILIES, source="ozon_search")
+        if drift:
+            warnings.append(drift)
+
     return OzonSearchResponse(
         **R.attach_meta(
             {
@@ -1450,7 +1465,7 @@ async def _ozon_search_impl(
                 "count": len(items),
                 "items": items[:30],
             },
-            _aggregate_offer_warnings(items[:30]),
+            warnings,
             source="ozon_search",
         )
     )
@@ -1573,12 +1588,15 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
                 notes=[f"critical widget(s) vanished: {d['missing']}"],
             )
         elif not sm.get("ok"):
+            notes = ["widgets present but parse smoke yielded nothing (inner shape drift)"]
+            if sm.get("shape_drift"):
+                notes.insert(0, sm["shape_drift"])
             checks[name] = R.selfcheck_entry(
                 "drift",
                 baseline=baseline,
                 missing_widgets=[],
                 smoke=sm,
-                notes=["widgets present but parse smoke yielded nothing (inner shape drift)"],
+                notes=notes,
             )
         else:
             checks[name] = R.selfcheck_entry("healthy", baseline=baseline, added_widgets=d["added"][:10], smoke=sm)
@@ -1603,7 +1621,11 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
                 parsed = _parse_search_tile(it)
                 if parsed.get("title"):
                     items.append(parsed)
-        return {"ok": len(items) > 0, "parsed_items": len(items)}
+        # Tiles parsing is not enough: the search tool's own answer warns
+        # through the same required-family registry, and the canary must
+        # fail the same way when a parser-critical family vanishes.
+        drift = R.shape_drift_warning({"items": items}, SEARCH_REQUIRED_FAMILIES, source="ozon_search")
+        return {"ok": bool(items) and drift is None, "parsed_items": len(items), "shape_drift": drift}
 
     def _smoke_reviews(payload: dict) -> dict:
         widgets = payload.get("widgetStates") or {}

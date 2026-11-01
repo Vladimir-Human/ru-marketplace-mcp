@@ -35,6 +35,34 @@
   shape_reference says outright that a key-presence guard would never fire
   there.
 
+- Structural drift is now visible in six more tool responses: aliexpress,
+  cian, detmir, megamarket, ozon and wb gained a `shape_reference` — the
+  shape fingerprint of their search output (and card, where a captured
+  fixture exists), measured by the real parser over the fixture — plus the
+  same `shape_drift: <source>: missing <family>` warning through the shared
+  `mcp_core.resilience.shape_drift_warning`. Where the parser emits every
+  parsed key unconditionally (cian, detmir, megamarket, wb), the check runs
+  on the raw envelope, against the alias families the parser binds through;
+  ozon guards the one conditionally-emitted parser-critical key, the tile
+  url (losing `action.link` silently strips navigation from every result).
+  Their selfcheck canaries use the same registry. Yandex remains uncovered
+  — its shape_reference documents why a key-presence guard would never fire
+  there.
+
+- Дрейф структуры виден в самом ответе ещё у шести коннекторов: aliexpress,
+  cian, detmir, megamarket, ozon и wb получили свой `shape_reference` —
+  отпечаток формы выдачи (и карточки, где есть захваченный фиксстур),
+  измеренный настоящим парсером по фиксстуре, — и то же предупреждение
+  `shape_drift: <источник>: missing <семейство>` через общий
+  `mcp_core.resilience.shape_drift_warning`. Там, где парсер выдаёт все
+  ключи безусловно (cian, detmir, megamarket, wb), проверка идёт по сырому
+  конверту, по тем alias-семействам, через которые парсер биндится; у ozon
+  охраняется единственный условно излучаемый критичный ключ — url тайла
+  (без `action.link` каждый результат молча теряет навигацию). Их
+  selfcheck-канарейки используют тот же реестр. Yandex по-прежнему не
+  покрыт — его shape_reference объясняет, почему охрана по наличию ключей
+  там никогда не сработала бы.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
