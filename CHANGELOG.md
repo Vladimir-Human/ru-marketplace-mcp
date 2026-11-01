@@ -9,6 +9,32 @@
 
 ## [Unreleased]
 
+### Added
+
+- Дрейф структуры страницы виден в самом ответе инструмента: коннекторы, у
+  которых есть реестр обязательных семейств ключей (avito, lamoda, taobao,
+  citilink, dns), сверяют разобранный payload с этим реестром в общем
+  хелпере `mcp_core.resilience.shape_drift_warning`, и потеря целого семейства
+  даёт одно компактное предупреждение на вызов —
+  `shape_drift: <источник>: missing <семейство>` — в существующем
+  `meta.warnings` ответа (healthy становится false). Без новых сетевых
+  запросов: полный payload оплачивает только само сравнение. Поведение CLI
+  doctor не изменилось; yandex не покрыт — его парсер выдаёт все ключи
+  безусловно, и его shape_reference прямо говорит, что охрана по наличию
+  ключей там никогда не сработала бы.
+
+- Parser drift is now visible in the tool's own response: the connectors
+  that ship a required-key-family registry (avito, lamoda, taobao, citilink,
+  dns) compare the parsed payload against it through the shared
+  `mcp_core.resilience.shape_drift_warning`, and a whole family vanishing
+  adds one compact warning per call — `shape_drift: <source>: missing
+  <family>` — to the response's existing `meta.warnings` (healthy flips to
+  false). No extra network requests: a complete payload costs only the
+  comparison itself. CLI doctor behaviour is unchanged; yandex is not
+  covered — its parser emits every item key unconditionally, and its
+  shape_reference says outright that a key-presence guard would never fire
+  there.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0

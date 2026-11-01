@@ -69,7 +69,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
 # _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
 # _build_search_url: Encode query, page and validated location/category identifiers.
-# avito_search: Read paginated classifieds search.
+# avito_search: Read paginated classifieds search; warn when a required key family vanishes.
 # avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope.
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
 # avito_selfcheck: Chain search/card/seller to diagnose transport/parser health; not an MCP tool.
@@ -118,7 +118,7 @@ from avito_connector.models_output import (
     MetaOut,
 )
 from avito_connector.settings import get_settings
-from avito_connector.shape_reference import missing_required_families
+from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
 
 _settings = get_settings()
 
@@ -1011,6 +1011,16 @@ async def avito_search(
         warnings: list[str] = []
         if not items_raw and total not in (0, None):
             warnings.append("empty_items_with_nonzero_total")
+        if items_raw:
+            # The selfcheck compares this payload against the captured family
+            # registry; the tool's own answer now carries the same drift
+            # signal, so an agent does not need a human running doctor to
+            # learn the shape moved. An empty envelope stays out of the
+            # check: with zero items every per-item family is vacuously
+            # absent, and the empty-items warning above already covers it.
+            drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="avito_search")
+            if drift:
+                warnings.append(drift)
         items = [AvitoSearchItemOut(**it) for it in items_raw]
         result = AvitoSearchResponse(
             query=query,

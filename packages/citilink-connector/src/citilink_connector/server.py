@@ -31,7 +31,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _cdp_render: Serialize paced browser navigation and extractor execution.
 # _is_qrator_wall: Detect positive document-title or Qrator markup evidence.
 # _reject_qrator_wall: Invalidate cached walls and request operator browser action.
-# citilink_search: Validate rendered tiles before caching; allow nullable prices.
+# citilink_search: Validate rendered tiles before caching; allow nullable prices; warn when a required key vanishes.
 # citilink_card: Validate before caching; warn only on in-stock missing prices.
 # citilink_selfcheck: Report walls as inconclusive(blocked); not an MCP tool.
 # END_MODULE_MAP
@@ -402,6 +402,14 @@ async def citilink_search(
         warnings: list[str] = []
         if all(it.price_rub is None for it in items):
             warnings.append("no_prices_on_page")
+        # The selfcheck compares this payload against the captured
+        # required-key registry; the tool's own answer now carries the same
+        # drift signal, so an agent does not need a human running doctor to
+        # learn the shape moved. Zero tiles raise before this point, so the
+        # key check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, ((key,) for key in SEARCH_REQUIRED_KEYS), source="citilink_search")
+        if drift:
+            warnings.append(drift)
         result = CitilinkSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="citilink_search")
         result.meta = MetaOut(**attached["_meta"])

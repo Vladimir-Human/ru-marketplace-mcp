@@ -60,7 +60,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _grid_still_loading: An empty search page still rendering its grid, never a page offering login routes.
 # _anti_bot_challenge: Read challenge evidence; ignore hidden card widget text.
 # _page_challenge_kind: Classify handoffs from challenge evidence, not card fields.
-# taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid.
+# taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid; warn when a required key family vanishes.
 # taobao_card: Refuse Tmall cards clearly; reject challenge evidence before item mapping and success caching.
 # taobao_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -106,7 +106,11 @@ from taobao_connector.models_output import (
     TaobaoSelfcheckResponse,
 )
 from taobao_connector.settings import get_settings
-from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
+from taobao_connector.shape_reference import (
+    SEARCH_REQUIRED_FAMILIES,
+    SEARCH_SHAPE_REFERENCE,
+    missing_required_families,
+)
 
 # START_BLOCK_CONFIG_AND_INPUTS
 _settings = get_settings()
@@ -826,6 +830,14 @@ async def taobao_search(
         priceless = sum(1 for it in items if it.price_cny is None)
         if priceless == len(items):
             warnings.append("no_prices_on_page")
+        # The selfcheck's family registry now also guards the tool's own
+        # answer: a payload that lost a whole key family (a price alias or a
+        # structural wall marker) is drift the agent must see, not only a
+        # human running doctor. Zero items raise before this point, so the
+        # family check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="taobao_search")
+        if drift:
+            warnings.append(drift)
         result = TaobaoSearchResponse(query=query, page=page, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="taobao_search")
         result.meta = MetaOut(**attached["_meta"])
