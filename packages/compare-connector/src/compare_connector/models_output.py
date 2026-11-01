@@ -9,7 +9,7 @@ check before drawing conclusions.
 # PURPOSE: Describe comparison offers, everyday-price ranking and per-source outcomes.
 # SCOPE: Additive typed outputs; preserve native conditional prices without ranking them.
 # DEPENDS: Pydantic; compare_connector.identity.
-# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-NO-FABRICATION; R-TOOL-SCHEMA.
+# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
@@ -144,7 +144,8 @@ class CompareResponse(BaseModel):
     cheapest_comparable: MarketOffer | None = Field(
         default=None,
         description=(
-            "Lowest everyday price among offers whose titles do not identify an accessory or a used/display condition. "
+            "Lowest everyday price among offers whose titles do not name an accessory, a used/display "
+            "condition, or a storage/memory size contradicting the size the query states. "
             "Use this for a like-for-like recommendation; cheapest retains the raw lowest listing."
         ),
     )
