@@ -42,6 +42,42 @@
   promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
   its own manual step because `marketplace-mcp unblock` does not cover it.
 
+### Fixed
+
+- `coerce_price`, `coerce_int` и `coerce_rating` из `mcp_core.resilience` больше не
+  выдумывают число из неоднозначного текста. Цены: две цены, склеенные пробелом
+  («1 999 2 999», «1 999 2 999 ₽», «1,999,2,999»), дробь с тремя знаками
+  («3 983.999»), месячный платёж («от 5 751 ₽/ мес.»), выгода («выгода 5 000 ₽»)
+  и скидка («скидка 30%») дают `None`, а `validate_offer` помечает такую цену.
+  Счёт с суффиксом в любой письменности («12万») или со знаком валюты
+  («24 088₽») и рейтинг с не-пятибалльным знаменателем словами («4.5 из 10»)
+  тоже дают `None`. Цена «от 1 999 ₽» и обычные формы («1 999 ₽»,
+  «1 999,50 ₽», «1999.00») работают по-прежнему.
+
+- `coerce_price`, `coerce_int` and `coerce_rating` in `mcp_core.resilience` no
+  longer turn ambiguous text into a number. Prices: two prices glued by the
+  thousands-separator space ("1 999 2 999", "1 999 2 999 ₽", "1,999,2,999"), a
+  three-digit fraction ("3 983.999"), a monthly instalment
+  ("от 5 751 ₽/ мес."), a saving ("выгода 5 000 ₽") and a discount
+  ("скидка 30%") return `None`, and `validate_offer` flags such a price. A count
+  with a magnitude letter in any script ("12万") or a currency glyph ("24 088₽"),
+  and a rating with a non-5 denominator in words ("4.5 из 10"), also return
+  `None`. The "from" price ("от 1 999 ₽") and the ordinary shapes
+  ("1 999 ₽", "1 999,50 ₽", "1999.00") keep working.
+- Бюджет навигаций CDP: запрос, стоявший в очереди, когда у хоста открылся
+  размыкатель, больше не получает разрешение — когда подходит его очередь, он
+  получает тот же `HostRefusingError`, что и новый запрос, а взятые слоты
+  возвращаются сразу. Ожидание занятого хоста больше не занимает глобальный
+  слот, поэтому запрос к свободному хосту не ждёт за занятым. Освобождение
+  слотов при отказе и при отмене (`asyncio.CancelledError`) ровно одно.
+
+- CDP navigation budget: a request queued while its host's breaker opened is no
+  longer handed a permit — when its turn comes it is refused with the same
+  `HostRefusingError` a new request gets, and the permits are given back at once.
+  Waiting for a busy host no longer holds a global slot, so a request for a free
+  host is not delayed behind it. Slots are released exactly once on refusal and
+  on cancellation (`asyncio.CancelledError`).
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
