@@ -20,25 +20,41 @@ resource carries the error taxonomy. Mounted connectors registered that URI for
 their own standalone servers, so this one takes it over and the children's
 copies are hidden from this listing.
 
+``marketplace_health`` is this server's second own tool: it reads the CDP
+endpoint, the navigation budget and the retained-challenge registry without
+spending a navigation, so an agent can learn Chrome is down or a host is
+cooling down before it plans a fan-out. Nothing in it talks to a marketplace.
+
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Mount selected marketplace connectors behind one MCP server.
-# SCOPE: Preserve native tool names; skip failed/deselected/unconfigured sources; static capabilities.
-# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/resources/source_selection; fourteen source servers.
-# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS; M-RESOURCES.
+# PURPOSE: Mount selected marketplace connectors behind one MCP server and answer read-only transport health.
+# SCOPE: Preserve native tool names; skip failed/deselected/unconfigured sources; static capabilities; health from local state.
+# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/resources/source_selection and, lazily, cdp_budget/browser_handoff/chrome_cdp; fourteen source servers.
+# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS; M-RESOURCES; M-CAPABILITIES; M-UNBLOCK; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-CHROME-CDP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# MarketplaceSourcesResponse: Model mounted/skipped sources and cheap routing metadata.
+# MarketplaceSourcesResponse: Model mounted/skipped sources, cheap routing metadata and the CDP-needing mounts.
+# MarketplaceHealthResponse: Model CDP reachability, budget, retained handoffs, unblock pages and server version.
 # _mount_all: Import selected connectors and mount their unchanged tool names.
 # _mount_unavailable_reason: A connector's own reason it cannot answer until configured.
-# marketplace_sources: Report mounts, skip reasons, capabilities and server version.
+# _health_part: Run one read-only health producer, keeping a failure inside the answer.
+# _cdp_health: Probe the CDP endpoint read-only; a missing optional Playwright is part of the answer.
+# _budget_health: Snapshot the shared navigation budget, imported lazily with the browser tier.
+# _handoff_health: Diagnose the retained-challenge registry, imported lazily with the browser tier.
+# marketplace_sources: Report mounts, skip reasons, capabilities, CDP-needing sources and server version.
+# marketplace_health: Report transport health without navigating, autostarting or opening a tab.
 # apply_compact_output_schemas: Compact advertised schemas after mounting.
 # mount_child: Mount a connector while keeping one owner of the shared error URI.
 # register_reference_resources: Publish the guides and the shared error reference.
 # END_MODULE_MAP
 
 from __future__ import annotations
+
+import asyncio
+import ntpath
+from collections.abc import Callable
+from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -48,7 +64,8 @@ from mcp_core.resources import mount_child, register_reference_resources
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
-from marketplace_connector.capabilities import CAPABILITIES
+from marketplace_connector.capabilities import CAPABILITIES, browser_backed
+from marketplace_connector.unblock import UNBLOCK_PAGES
 
 
 class MarketplaceSourcesResponse(BaseModel):
@@ -69,6 +86,41 @@ class MarketplaceSourcesResponse(BaseModel):
         description=(
             "Static routing metadata: access tier, login/CDP requirement, currency, and whether text search is supported."
         ),
+    )
+    needs_cdp: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Mounted sources whose reads can go through the operator's Chrome, so they need a "
+            "running scraping browser; the rest answer over plain HTTP."
+        ),
+    )
+    server_version: str = Field(default="", description="Unified server version.")
+
+
+class MarketplaceHealthResponse(BaseModel):
+    """Transport health read from local state: no navigation, no tab, no autostart."""
+
+    cdp: dict[str, object] = Field(
+        default_factory=dict,
+        description=(
+            "The scraping Chrome's CDP endpoint as it answers right now: reachable, host, port, "
+            "version, page_targets and a short reason or error when something failed."
+        ),
+    )
+    budget: dict[str, object] = Field(
+        default_factory=dict,
+        description=(
+            "The shared CDP navigation budget: limits, in-flight count and per-host breakers with "
+            "refusals, open flag and retry_after_s — the remaining pause in seconds."
+        ),
+    )
+    handoffs: dict[str, object] = Field(
+        default_factory=dict,
+        description="The retained challenge-page registry: retention bounds, lease count and one entry per lease.",
+    )
+    unblock: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mounted source mapped to the page a human opens in the scraping Chrome to pass its check or log in.",
     )
     server_version: str = Field(default="", description="Unified server version.")
 
@@ -182,6 +234,69 @@ def _mount_all() -> None:
 _mount_all()
 
 
+# START_BLOCK_HEALTH
+def _health_part(name: str, producer: Callable[[], dict[str, Any]], fallback: dict[str, Any]) -> dict[str, Any]:
+    """Run one read-only health producer; a failure becomes part of the answer.
+
+    A health tool that raises is worse than no health tool: the agent loses the
+    whole pre-flight answer because one part broke. ``fallback`` holds the
+    fields that part must keep even then (``cdp.reachable=false`` is the one an
+    agent branches on). Only the exception class reaches the answer, because a
+    message can carry a URL or a profile path; the detail goes to stderr.
+    """
+    try:
+        return producer()
+    except Exception as exc:
+        log_event("marketplace.health_part_failed", part=name, error=f"{type(exc).__name__}: {str(exc)[:120]}")
+        return {**fallback, "error": f"{name} diagnostics unavailable ({type(exc).__name__})"}
+
+
+def _cdp_health() -> dict[str, Any]:
+    """Probe the CDP endpoint read-only; a missing optional Playwright is the answer.
+
+    The import is part of the probe: ``chrome_cdp`` pulls Playwright in at module
+    level and the cdp extra is optional, so with no browser tier installed this
+    must still answer instead of taking the server down.
+    """
+    try:
+        from mcp_core.transport import chrome_cdp
+
+        return chrome_cdp.cdp_endpoint_status()
+    except Exception as exc:
+        log_event("marketplace.health_part_failed", part="cdp", error=f"{type(exc).__name__}: {str(exc)[:120]}")
+        return {"reachable": False, "error": f"the CDP endpoint could not be read ({type(exc).__name__})"}
+
+
+def _budget_health() -> dict[str, Any]:
+    """The shared navigation budget's diagnostics: breakers, pauses, in-flight count."""
+    from mcp_core.transport.cdp_budget import budget_snapshot
+
+    return budget_snapshot()
+
+
+def _handoff_health() -> dict[str, Any]:
+    """The retained-challenge registry's diagnostics; imported lazily with the browser tier.
+
+    A lease carries the scraping profile's absolute path, which holds the OS
+    user name, and the challenge URL, whose query can hold a one-time token.
+    Planning needs neither, so the answer keeps only the profile folder name
+    and the URL without query or fragment.
+    """
+    from mcp_core.transport.browser_handoff import handoff_diagnostics
+
+    report = handoff_diagnostics()
+    for lease in report.get("leases") or ():
+        if isinstance(lease, dict):
+            if lease.get("profile"):
+                lease["profile"] = ntpath.basename(str(lease["profile"]).rstrip("\\/"))
+            if lease.get("url"):
+                lease["url"] = str(lease["url"]).split("#", 1)[0].split("?", 1)[0]
+    return report
+
+
+# END_BLOCK_HEALTH
+
+
 @mcp.tool(
     name="marketplace_sources",
     annotations=ToolAnnotations(
@@ -217,6 +332,41 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
             name: {**metadata, "mounted": name in {canonical(m) for m in _MOUNTED}}
             for name, metadata in CAPABILITIES.items()
         },
+        needs_cdp=sorted(name for name in _MOUNTED if browser_backed(CAPABILITIES.get(canonical(name)))),
+        server_version=SERVER_VERSION,
+    )
+
+
+@mcp.tool(
+    name="marketplace_health",
+    annotations=ToolAnnotations(
+        title="Transport Health Before a Fan-Out",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
+    ),
+)
+async def marketplace_health() -> MarketplaceHealthResponse:
+    """Report transport health from local state, spending no navigation.
+
+    Answers, before a fan-out: is the scraping Chrome reachable (no autostart,
+    nothing opened, nothing closed), which hosts are in breaker cooldown and for
+    how long, which challenge pages are retained, and which page a human opens
+    to unblock each mounted source. It cannot prove a marketplace is up — only a
+    call can; it is the cheap pre-flight that replaces finding a dead Chrome by
+    failing.
+
+    Full field list and error codes: `guide://marketplace/marketplace_health`.
+    """
+    # The CDP probe is two blocking HTTP GETs (up to ~2 s each against a dead
+    # port), so it runs off the event loop like the other /json reads do.
+    cdp = await asyncio.to_thread(_health_part, "cdp", _cdp_health, {"reachable": False})
+    return MarketplaceHealthResponse(
+        cdp=cdp,
+        budget=_health_part("budget", _budget_health, {}),
+        handoffs=_health_part("handoffs", _handoff_health, {}),
+        unblock={source: UNBLOCK_PAGES[source] for source in sorted(_MOUNTED) if source in UNBLOCK_PAGES},
         server_version=SERVER_VERSION,
     )
 

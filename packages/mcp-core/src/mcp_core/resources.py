@@ -374,13 +374,55 @@ Items carry sku, title, brand, price_rub (None when absent — never 0), url.
 ToolError: challenge_required on a visible challenge (not cached);
 TransportDownError on CDP/nav failures; ParserDriftError when a rendered
 page yields zero SKUs without challenge evidence.""",
+    "marketplace_health": """## Return Format
+
+MarketplaceHealthResponse: {cdp, budget, handoffs, unblock, server_version}.
+All of it reads local state: no navigation, no autostart, no tab opened or
+closed.
+
+``cdp``: {reachable, host, port, version, page_targets, reason} from GETs to the
+running Chrome's ``/json/version`` and ``/json/list`` only. ``reachable`` false
+means nothing answers on the configured CHROME_CDP_HOST/CHROME_CDP_PORT, or the
+optional browser tier is not installed — then the part is just {reachable:
+false, error} with the exception class. ``version`` is the browser string (null when it is
+down); ``page_targets`` is the open page count (null when the list could not be
+read).
+
+``budget``: the shared CDP navigation budget, as ``budget_snapshot()`` returns
+it: {max_concurrent, per_host, in_flight, peak_in_flight, queued_waits,
+breaker_threshold, breaker_cooldown_s, hosts{refusals, open, retry_after_s,
+opens}}. A host with ``open`` true is in breaker cooldown: navigations to it
+fail fast for ``retry_after_s`` more seconds.
+
+``handoffs``: the retained challenge-page registry, as
+``handoff_diagnostics()`` returns it: {retention_enabled, lifetime_s, idle_s,
+max_leases, count, leases[]}, each lease carrying scope, operation, url,
+endpoint, profile (the profile folder name only), expires_at,
+lifetime_remaining_s, idle_remaining_s, busy, cleaning, expired,
+queued_requests and handoff_id; url has no query or fragment. Reporting a lease neither
+resumes nor closes it.
+
+``unblock``: mounted source mapped to the page a human opens in the scraping
+Chrome to pass that source's check or log in, from the same static table
+``marketplace-mcp unblock`` uses. A mounted browser-backed source without an
+entry has no page and needs the step its own error names.
+
+## Error Format
+
+Never raises ToolError: a failing part is reported inside the answer —
+``cdp.reachable=false`` beside an ``error`` or ``reason``, and an ``error``
+field in place of the broken ``budget`` or ``handoffs`` snapshot. This is
+transport and routing state, not live source health: a healthy answer here says
+nothing about whether a marketplace will answer.""",
     "marketplace_sources": """## Return Format
 
 MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-capabilities, server_version}. ``skipped`` maps source name to the reason
-it is unavailable: an import error (usually a missing optional dependency),
-a missing credential its tools need, or an explicit ``MARKETPLACE_SOURCES``
-deselection.
+capabilities, needs_cdp, server_version}. ``skipped`` maps source name to the
+reason it is unavailable: an import error (usually a missing optional
+dependency), a missing credential its tools need, or an explicit
+``MARKETPLACE_SOURCES`` deselection. ``needs_cdp`` is the sorted subset of
+``mounted`` whose reads can go through the operator's Chrome — for those, a
+down browser is a reason to run ``marketplace_health`` before spending a call.
 
 ## Error Format
 

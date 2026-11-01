@@ -66,10 +66,11 @@ MPStats стоит особняком: это единственный **пла�
 
 Всего 39 инструментов в 14 серверах на общем рантайме `mcp-core`. Плюс объединённый
 `marketplace-mcp`, который монтирует всё разом — одна запись в конфиге клиента
-вместо четырнадцати. Он добавляет свой инструмент `marketplace_sources` (какие коннекторы
-поднялись, а какие отвалились и почему), так что с токеном MPStats в нём 40
-инструментов, а без токена — 38 (те же 39 смонтированных минус два `mpstats_*`,
-плюс `marketplace_sources`).
+вместо четырнадцати. У него два своих инструмента: `marketplace_sources` (какие
+коннекторы поднялись, а какие отвалились и почему) и `marketplace_health` (жив ли
+Chrome, какие хосты остывают, какую страницу открыть человеку). С токеном MPStats
+в нём 41 инструмент, без токена — 39: те же смонтированные источники минус два
+`mpstats_*`, плюс эти два.
 
 **Проверка 2.7.0:** 30 октября с одного адреса Wildberries при отказе API (HTTP 403) сам прочитал поиск через Chrome: 40 товаров, у всех цена. Код остальных источников с v2.6.0 не менялся; их проверял [прогон v2.6.0](docs/releases/RELEASE_NOTES_v2.6.0.md#статус-живой-проверки) того же дня (12 из 13 источников, MPStats без токена). [Подробности v2.7.0](docs/releases/RELEASE_NOTES_v2.7.0.md#статус-живой-проверки).
 
@@ -94,7 +95,7 @@ uvx ru-marketplace-mcp setup
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2733 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2742 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -298,7 +299,7 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 <!-- tools-cost:start -->
 Так сделано потому, что смонтированный сервер платится в каждом запросе:
 рекомендуемый режим сравнения цен стоит ≈1.7k токенов, режим с инспекцией
-карточки — ≈2.0k, полный набор — ≈12.8k (оценка по `tools/list`;
+карточки — ≈2.0k, полный набор — ≈13.1k (оценка по `tools/list`;
 подробности в [docs/TOOLS.md](docs/TOOLS.md)).
 <!-- tools-cost:end -->
 Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
@@ -688,7 +689,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2733 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2742 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -754,7 +755,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2733 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2742 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -829,11 +830,12 @@ answer `auth_missing` — so it is optional; the other thirteen servers never
 notice. The standalone `mpstats-mcp` still boots and answers `auth_missing`.
 
 39 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
-unified `marketplace-mcp` that mounts them all under one client entry. It adds its
-own `marketplace_sources` tool — which connectors mounted, and which dropped out and
-why — so it exposes 40 tools with an MPStats token and 38 without one: the 37
-mounted sources plus `marketplace_sources` when the two `mpstats_*` tools are left
-out. stdio is the default;
+unified `marketplace-mcp` that mounts them all under one client entry. It adds two
+tools of its own — `marketplace_sources` (which connectors mounted, and which dropped
+out and why) and `marketplace_health` (is Chrome up, which hosts are cooling down,
+which page unblocks a source) — so it exposes 41 tools with an MPStats token and 39
+without one: the 37 mounted sources plus those two when the two `mpstats_*` tools are
+left out. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -856,7 +858,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2733 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2742 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest path is the
@@ -937,7 +939,7 @@ disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
 A mounted server is paid on every request — ≈1.7k tokens for the
 recommended price-comparison profile, ≈2.0k for the decision profile and
-≈12.8k for the full set (estimated from `tools/list`; details in
+≈13.1k for the full set (estimated from `tools/list`; details in
 [docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
 <!-- tools-cost:end -->
 [dsh/README.md](dsh/README.md) covers enabling it and the full mode.
@@ -1325,7 +1327,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2733 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2742 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1387,7 +1389,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2733 offline
+are confidently wrong, so the project is arranged around verification: 2742 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

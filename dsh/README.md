@@ -18,7 +18,7 @@ from each server's `tools/list` by `scripts/gen_tools_doc.py` (the estimate
 | Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |
 | `compare-mcp` (recommended) | ~1.7k tokens per request | 4 |
 | `decision-mcp` (shortlist inspection) | ~2.0k tokens per request | 5 |
-| `marketplace-mcp` (full) | ~12.8k tokens per request | 38 |
+| `marketplace-mcp` (full) | ~13.1k tokens per request | 39 |
 <!-- tools-cost-dsh:end -->
 
 The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools
@@ -96,7 +96,7 @@ export RU_MARKETPLACE_MCP_FULL=1     # POSIX shell
 ```
 
 The enabled row then changes from `compare-mcp` (4 tools) to `marketplace-mcp`
-(40 tools). All three rows share `serverName: rumarket`, and their `disabled`
+(39 tools). All three rows share `serverName: rumarket`, and their `disabled`
 conditions are mutually exclusive, so exactly one server instance runs at a
 time.
 

@@ -11,7 +11,7 @@
       "tool_count": 4,
       "wire_tokens": 1735,
       "instructions_tokens": 36,
-      "latency_ms": 4859.0,
+      "latency_ms": 3719.0,
       "schema_sha256": "26ec5a533c2a7ddc6557060dfea417f7bae8354fef2a18cf8ba99228595a303e",
       "tools": [
         {
@@ -37,7 +37,7 @@
       "tool_count": 5,
       "wire_tokens": 2008,
       "instructions_tokens": 36,
-      "latency_ms": 4360.0,
+      "latency_ms": 3609.0,
       "schema_sha256": "6bdcc0c7cd137dee1316d30ac4933b2e339716af1232b2ac843493e0aa5c367b",
       "tools": [
         {
@@ -64,11 +64,11 @@
     },
     "marketplace-mcp": {
       "script": "marketplace-mcp",
-      "tool_count": 38,
-      "wire_tokens": 12787,
+      "tool_count": 39,
+      "wire_tokens": 13068,
       "instructions_tokens": 153,
-      "latency_ms": 4719.0,
-      "schema_sha256": "a1561c019d5b5b1dd4ea021c789e264c8198511a0bffe6d9412a616ffcdec8cd",
+      "latency_ms": 3734.0,
+      "schema_sha256": "c48aeedb228a1b2ba5c2da76bce22501a356d1b14d50840f1b1f136326dfda2c",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -80,7 +80,7 @@
         },
         {
           "name": "avito_card",
-          "tokens": 274
+          "tokens": 301
         },
         {
           "name": "avito_search",
@@ -151,8 +151,12 @@
           "tokens": 196
         },
         {
+          "name": "marketplace_health",
+          "tokens": 250
+        },
+        {
           "name": "marketplace_sources",
-          "tokens": 303
+          "tokens": 307
         },
         {
           "name": "megamarket_card",

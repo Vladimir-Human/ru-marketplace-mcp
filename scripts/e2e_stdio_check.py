@@ -29,7 +29,7 @@ from mcp.client.stdio import stdio_client
 # script name -> how many model-facing tools it must expose. Operator-only
 # *_selfcheck canaries are no longer MCP tools (they run via
 # `marketplace-mcp doctor`). The check pins MPSTATS_MP_AUTH empty, so the
-# unified server exposes 38 model-facing tools: without a token it does not
+# unified server exposes 39 model-facing tools: without a token it does not
 # mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
 EXPECTED_TOOLS = {
     "wb-mcp": 8,
@@ -47,7 +47,7 @@ EXPECTED_TOOLS = {
     "aliexpress-mcp": 2,
     "cian-mcp": 2,
     "mpstats-mcp": 2,
-    "marketplace-mcp": 38,  # 37 mounted + marketplace_sources; mpstats is skipped without a token
+    "marketplace-mcp": 39,  # 37 mounted + marketplace_sources + marketplace_health; mpstats is skipped without a token
 }
 
 TIMEOUT_S = 60.0
@@ -57,7 +57,7 @@ EXPECTED_VERSION = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproje
     "project"
 ]["version"]
 # The unified server's default, token-less mount. A real client with a token
-# sees 40 tools and mpstats mounted; this check pins the token-less surface so
+# sees 41 tools and mpstats mounted; this check pins the token-less surface so
 # it stays deterministic on a machine that happens to have MPSTATS_MP_AUTH set.
 EXPECTED_MOUNTS = {
     "wildberries",
