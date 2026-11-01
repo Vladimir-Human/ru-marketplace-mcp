@@ -401,6 +401,8 @@
   отмечает пропущенным с причиной от бюджета. Канарейка печатает причины
   пропусков, а сводка при пропусках пишет «PASS with skips», а не «все тесты
   прошли». Лимиты бюджета не менялись.
+- `coerce_price` отказывает и на множителях заглавными буквами (`15 ТЫС. ₽`,
+  `2 Млн ₽`): раньше ловилось только `тыс`/`млн` строчными.
 - Дрейф формы WB больше не срабатывает на законной странице со снятыми с
   продажи товарами: у неё у всех товаров `"sizes": []`, а ценовое семейство
   живёт внутри `sizes[]`, поэтому общий матчер
@@ -441,6 +443,8 @@
   refused as skipped with the budget's reason. The canary prints skip reasons
   and its summary says "PASS with skips" instead of "all live tests passed".
   The budget caps are unchanged.
+- `coerce_price` refuses magnitude words in any case (`15 ТЫС. ₽`, `2 Млн ₽`);
+  only lowercase `тыс`/`млн` were caught before.
 - WB shape drift no longer fires on the legitimate page whose products are all
   delisted: every product carries `"sizes": []` and the price family lives
   inside `sizes[]`, so the shared matcher
