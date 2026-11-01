@@ -27,6 +27,22 @@
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
 
+### Fixed
+
+- Бюджет навигаций CDP: запрос, стоявший в очереди, когда у хоста открылся
+  размыкатель, больше не получает разрешение — когда подходит его очередь, он
+  получает тот же `HostRefusingError`, что и новый запрос, а взятые слоты
+  возвращаются сразу. Ожидание занятого хоста больше не занимает глобальный
+  слот, поэтому запрос к свободному хосту не ждёт за занятым. Освобождение
+  слотов при отказе и при отмене (`asyncio.CancelledError`) ровно одно.
+
+- CDP navigation budget: a request queued while its host's breaker opened is no
+  longer handed a permit — when its turn comes it is refused with the same
+  `HostRefusingError` a new request gets, and the permits are given back at once.
+  Waiting for a busy host no longer holds a global slot, so a request for a free
+  host is not delayed behind it. Slots are released exactly once on refusal and
+  on cancellation (`asyncio.CancelledError`).
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
