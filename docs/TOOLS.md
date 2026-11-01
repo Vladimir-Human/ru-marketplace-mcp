@@ -18,7 +18,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 | --- | --- | ---: | ---: | ---: |
 | compare | `compare-mcp` | 4 | 6984 | ≈1.7k |
 | decision | `decision-mcp` | 5 | 8079 | ≈2.0k |
-| full | `marketplace-mcp` | 38 | 51624 | ≈12.8k |
+| full | `marketplace-mcp` | 39 | 52645 | ≈13.1k |
 
 ## compare — `compare-mcp`
 
@@ -64,9 +64,9 @@ every error code.
 
 ## full — `marketplace-mcp`
 
-38 tools, 51624 `tools/list` bytes (≈12.8k tokens).
+39 tools, 52645 `tools/list` bytes (≈13.1k tokens).
 
-Resources (39): `guide://aliexpress/aliexpress_card`, `guide://aliexpress/aliexpress_search`, `guide://avito/avito_card`, `guide://avito/avito_search`, `guide://avito/avito_seller`, `guide://cian/cian_card`, `guide://cian/cian_search`, `guide://citilink/citilink_card`, `guide://citilink/citilink_search`, `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://detmir/detmir_card`, `guide://detmir/detmir_categories`, `guide://detmir/detmir_category`, `guide://dns/dns_card`, `guide://dns/dns_search`, `guide://lamoda/lamoda_card`, `guide://lamoda/lamoda_search`, `guide://marketplace/marketplace_sources`, `guide://megamarket/megamarket_card`, `guide://megamarket/megamarket_search`, `guide://ozon/ozon_card`, `guide://ozon/ozon_reviews`, `guide://ozon/ozon_search`, `guide://taobao/taobao_card`, `guide://taobao/taobao_search`, `guide://wb/wb_card`, `guide://wb/wb_categories`, `guide://wb/wb_category_products`, `guide://wb/wb_questions`, `guide://wb/wb_reviews`, `guide://wb/wb_root_info`, `guide://wb/wb_search`, `guide://wb/wb_seller`, `guide://yandex/yandex_card`, `guide://yandex/yandex_search`, `marketplace://errors`.
+Resources (40): `guide://aliexpress/aliexpress_card`, `guide://aliexpress/aliexpress_search`, `guide://avito/avito_card`, `guide://avito/avito_search`, `guide://avito/avito_seller`, `guide://cian/cian_card`, `guide://cian/cian_search`, `guide://citilink/citilink_card`, `guide://citilink/citilink_search`, `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://detmir/detmir_card`, `guide://detmir/detmir_categories`, `guide://detmir/detmir_category`, `guide://dns/dns_card`, `guide://dns/dns_search`, `guide://lamoda/lamoda_card`, `guide://lamoda/lamoda_search`, `guide://marketplace/marketplace_health`, `guide://marketplace/marketplace_sources`, `guide://megamarket/megamarket_card`, `guide://megamarket/megamarket_search`, `guide://ozon/ozon_card`, `guide://ozon/ozon_reviews`, `guide://ozon/ozon_search`, `guide://taobao/taobao_card`, `guide://taobao/taobao_search`, `guide://wb/wb_card`, `guide://wb/wb_categories`, `guide://wb/wb_category_products`, `guide://wb/wb_questions`, `guide://wb/wb_reviews`, `guide://wb/wb_root_info`, `guide://wb/wb_search`, `guide://wb/wb_seller`, `guide://yandex/yandex_card`, `guide://yandex/yandex_search`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list
 and the error mapping that used to sit in the description; `marketplace://errors` lists
 every error code.
@@ -131,10 +131,11 @@ every error code.
 | `lamoda_card` | `sku_or_url: string` | Fetch a GraphQL card over HTTPS, falling back to an in-page Chrome POST. |
 | `lamoda_search` | `query: string` | Search Lamoda, rendered in the operator's Chrome (discovery is blocked tier 1). |
 
-### marketplace — `marketplace_*` (1 tool)
+### marketplace — `marketplace_*` (2 tools)
 
 | Tool | Parameters | Description |
 | --- | --- | --- |
+| `marketplace_health` | `—` | Report transport health from local state, spending no navigation. |
 | `marketplace_sources` | `—` | List which connectors this unified server actually mounted. |
 
 ### megamarket — `megamarket_*` (2 tools)

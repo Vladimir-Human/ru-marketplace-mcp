@@ -403,7 +403,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         module="marketplace_connector.server",
         console_script="marketplace-mcp",
         tool_prefix="",
-        tools=38,
+        tools=39,
     ),
 )
 

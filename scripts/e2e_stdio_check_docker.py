@@ -21,9 +21,9 @@ import uuid
 from stdio_probe import StdioProbe
 
 # The probe pins MPSTATS_MP_AUTH empty, so the token-less default surface is
-# 38 tools and 13 mounted sources: without a token the unified server does not
+# 39 tools and 13 mounted sources: without a token the unified server does not
 # mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
-EXPECTED_TOOLS = 38
+EXPECTED_TOOLS = 39
 EXPECTED_MOUNTS = 13
 TIMEOUT_S = 120.0
 

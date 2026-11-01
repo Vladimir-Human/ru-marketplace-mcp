@@ -829,12 +829,30 @@
       "type": "object"
     }
   },
+  "marketplace_health": {
+    "output": {
+      "properties": {
+        "budget": {},
+        "cdp": {},
+        "handoffs": {},
+        "server_version": {},
+        "unblock": {}
+      },
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    }
+  },
   "marketplace_sources": {
     "output": {
       "properties": {
         "capabilities": {},
         "mounted": {},
         "mounted_count": {},
+        "needs_cdp": {},
         "server_version": {},
         "skipped": {},
         "skipped_count": {}

@@ -8,12 +8,12 @@ description: Use this skill when the operator wants the full marketplace mount, 
 One server mounting every installed connector as a namespaced toolset:
 `wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`,
 `lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `cian_*`, `mpstats_*` plus
-`compare_prices` / `compare_sources` and its own `marketplace_sources`. Tool
-names keep their prefixes, so habits and configs carry over — but the operator
-wires a single `marketplace` entry instead of fourteen. The server exposes 40
-tools with `MPSTATS_MP_AUTH` set and 38 without it: the two `mpstats_*` tools
-are not mounted until the paid token is configured, because without it every
-call would answer `auth_missing`.
+`compare_prices` / `compare_sources` and its own `marketplace_sources` and
+`marketplace_health`. Tool names keep their prefixes, so habits and configs
+carry over — but the operator wires a single `marketplace` entry instead of
+fourteen. The server exposes 41 tools with `MPSTATS_MP_AUTH` set and 39 without
+it: the two `mpstats_*` tools are not mounted until the paid token is
+configured, because without it every call would answer `auth_missing`.
 
 ## When to use
 - "Where is X cheapest" — compare_prices fans out across all searchable sources
@@ -21,18 +21,36 @@ call would answer `auth_missing`.
 - Health overview: the CLI's `doctor` runs every selfcheck at once
 - A source came back empty and you can't tell installed-but-quiet from never-loaded
   → `marketplace_sources`
+- Planning a fan-out, or a call just failed with a CDP/transport error
+  → `marketplace_health` first: is Chrome up, is the host cooling down
+- A source wants a human at the browser → `marketplace_health` names the page
 
 ## Tools
 - `marketplace_sources()` — no arguments; returns `{mounted, skipped,
-  mounted_count, skipped_count, capabilities, server_version}`. `capabilities` is
-  static routing metadata per source: access tier, CDP/login requirements, currency,
-  text-search support, and whether the connector is mounted. `skipped` maps a source name to the
-  reason it is unavailable: an import error (usually a missing dependency), a
+  mounted_count, skipped_count, capabilities, needs_cdp, server_version}`.
+  `capabilities` is static routing metadata per source: access tier, CDP/login
+  requirements, currency, text-search support, and whether the connector is
+  mounted. `needs_cdp` is the sorted subset of `mounted` whose reads can go
+  through the operator's Chrome, so a dead browser is a reason to read
+  `marketplace_health` before spending a call. `skipped` maps a source name to
+  the reason it is unavailable: an import error (usually a missing dependency), a
   missing credential its tools need (MPStats without `MPSTATS_MP_AUTH`), or a
   `MARKETPLACE_SOURCES` deselection. Connectors are imported
   defensively, so a missing dep removes a marketplace instead of killing the server —
   but from the client an absent source looks identical to one that found nothing.
   Call this to tell the two apart: a name in `skipped` was never queried at all.
+- `marketplace_health()` — no arguments; read-only transport health without
+  spending a navigation. Returns `{cdp, budget, handoffs, unblock,
+  server_version}`. `cdp` is the scraping Chrome as it answers on the configured
+  CDP address: `reachable`, `host`, `port`, `version`, `page_targets`, and a
+  short `reason`/`error` when it is down. `budget` is the shared navigation
+  budget: limits, `in_flight`, and per host `{refusals, open, retry_after_s,
+  opens}` — an open host fails fast for `retry_after_s` more seconds. `handoffs`
+  lists the retained challenge pages. `unblock` maps each mounted source with a
+  page to the URL a human opens in the scraping Chrome. The tool never starts
+  Chrome, opens or closes a tab, or touches a marketplace, and it never raises:
+  a broken part is reported inside the answer. It does not prove a source is up
+  — only a real call does.
 
 ## Operator CLI
 - `marketplace-mcp install [client]` — print the exact mcpServers JSON to paste, or
@@ -72,6 +90,6 @@ call would answer `auth_missing`.
 ## DSH activation
 
 In DeepSeek Harness, the default profile exposes only `compare_prices` and
-`compare_sources` through the cheap compare mount. Per-marketplace tools and
-`marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
-do not call them in the default mode.
+`compare_sources` through the cheap compare mount. Per-marketplace tools,
+`marketplace_sources` and `marketplace_health` require `RU_MARKETPLACE_MCP_FULL=1`
+and a profile restart; do not call them in the default mode.
