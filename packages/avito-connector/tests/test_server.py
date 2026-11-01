@@ -507,6 +507,44 @@ async def test_card_refuses_non_item_page_paths_before_transport(monkeypatch, ba
 
 
 @pytest.mark.parametrize(
+    "bad",
+    [
+        "https://www.avito.ru/profile\\x_1234567890",
+        "https://www.avito.ru/profile%2Fx_1234567890",
+        "https://www.avito.ru/profile%2fx_1234567890",
+        "https://www.avito.ru/profile%5Cx_1234567890",
+        "https://www.avito.ru/profile%5cx_1234567890",
+    ],
+    ids=["backslash", "percent-2F", "percent-2f", "percent-5C", "percent-5c"],
+)
+async def test_card_refuses_separator_escapes_before_transport(monkeypatch, bad):
+    """R-AVITO-ITEM-PATH: an item path is a plain ASCII slug, so a backslash or
+    a percent escape is refused outright. Both make the browser read a path the
+    check never saw — Chromium treats "\\" as "/" in http(s) URLs, and a server
+    decodes %2F/%5C into a separator — so /profile\\x_1234567890 and
+    /profile%2Fx_1234567890 would open the personal route this check exists to
+    refuse. On the pre-fix code each of these was fetched, not refused."""
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card(bad)
+
+    assert "bad_request" in str(excinfo.value)
+    assert calls == []
+
+
+async def test_card_still_opens_a_plain_city_category_slug_path(monkeypatch):
+    """The same guard must not touch ordinary slugs: plain ASCII item paths keep
+    working, fetched exactly as validated."""
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    result = await server.avito_card("https://www.avito.ru/moskva/telefony/iphone_15_4612345678")
+
+    assert calls == ["https://www.avito.ru/moskva/telefony/iphone_15_4612345678"]
+    assert result.item_id == 4612345678
+
+
+@pytest.mark.parametrize(
     ("raw", "expected_url"),
     [
         (

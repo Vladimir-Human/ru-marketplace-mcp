@@ -9,6 +9,8 @@ price second, so the tile pairing is (min, next-above), never attached[0].
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from aliexpress_connector import server
 from fastmcp.exceptions import ToolError
@@ -146,6 +148,44 @@ def _patch_card(monkeypatch, payload):
         return payload
 
     monkeypatch.setattr(server, "_cdp_card", fake_card)
+
+
+def _patch_search_extract(monkeypatch, raw):
+    """Run the real extract-unwrap step behind the patched render seam."""
+
+    async def fake_render(url, ctx):
+        return server._unwrap_extract(raw, "search")
+
+    monkeypatch.setattr(server, "_cdp_render_search", fake_render)
+
+
+async def test_search_extract_drift_is_json_with_a_redacted_preview(monkeypatch):
+    """A failed extract must reach the agent as the shared JSON error, not a bare
+    string: the code and the retryable flag were invisible before, and the
+    200-char page preview must not carry a token into the message."""
+    _patch_search_extract(monkeypatch, "oops Bearer abc.def.ghi")
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.aliexpress_search("realme watch")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "parser_drift"
+    assert error["retryable"] is False
+    assert "abc.def.ghi" not in str(excinfo.value)
+    assert "<redacted>" in error["message"]
+
+
+async def test_search_extract_over_the_body_cap_is_json(monkeypatch):
+    """The same for the oversized-extract refusal: a code, not plain text."""
+    _patch_search_extract(monkeypatch, "x" * (server.MAX_BODY_BYTES + 1))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.aliexpress_search("realme watch")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "transport_down"
+    assert error["retryable"] is True
+    assert "body cap" in error["message"]
 
 
 async def test_card_current_price_first_in_sticky(monkeypatch):

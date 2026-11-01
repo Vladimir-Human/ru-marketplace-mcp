@@ -191,6 +191,28 @@ async def test_card_matched_popup_challenge_redirect_keeps_owned_cleanup(popups,
     assert popups.operator.close_calls == 0
 
 
+async def test_card_popup_challenge_is_json_with_the_challenge_contract(popups, monkeypatch):
+    """The x5sec verdict must reach the agent through the public card tool as the
+    shared JSON challenge error, not a bare string: before the fix the challenge
+    arrived with no error code and nothing telling the agent that a plain retry
+    cannot pass it and a human must act (R-CHALLENGE-ACTION)."""
+    popups.challenge = True
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: None)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.aliexpress_card(ITEM_URL)
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["requires_user_action"] is True
+    assert error["retryable_now"] is False
+    assert error["status_code"] == 403
+    assert "aliexpress.ru" in error["user_action"]
+    assert "unblock aliexpress" not in error["user_action"]
+    assert "challenge" in error["message"]
+    assert popups.owned.closed
+
+
 async def test_card_repeated_cancellation_waits_for_bounded_owned_cleanup(popups):
     popups.close_stalls = True
     task = asyncio.create_task(server._cdp_card(ITEM_URL, None))

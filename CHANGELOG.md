@@ -396,6 +396,78 @@
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
 
+- `avito_card` больше не принимает путь товара с обратным слешем или знаком
+  процента. `https://www.avito.ru/profile\x_1234567890` и
+  `/profile%2Fx_1234567890` проходили проверку формы — регулярка видит в них
+  обычные символы, — не попадали под запрет служебных разделов и открывались в
+  браузере оператора как `/profile/x_1234567890`: Chromium считает `\`
+  разделителем пути в http(s), а сервер раскодирует `%2F` и `%5C`. Теперь
+  такой путь отклоняется с `bad_request` до навигации, как и остальные
+  не-товарные адреса; обычные слаги вида
+  `/moskva/telefony/iphone_15_1234567890` работают как раньше.
+
+- Отказы девяти мест AliExpress (`_unwrap_extract`, карточка через popup,
+  челлендж x5sec) и оба отказа `mcp_core.kit.render_json` уходят агенту как
+  общий JSON ошибки (`raise_tool_error`), а не голым текстом: раньше
+  `str(ToolError(TransportDownError(...)))` было просто сообщением — без кода,
+  без `retryable` и полей челленджа, — а превью страницы в 200 символов в
+  тексте ошибки не вычищалось. Челлендж x5sec теперь `challenge_required`
+  (`requires_user_action: true`, `retryable_now: false`, `user_action` с
+  ручным шагом), как у x5sec на Taobao, а не `transport_down`, на который
+  агент повторял бы запрос впустую. Не-JSON выдача экстрактора в
+  `render_json` теперь тоже `parser_drift`, а не голый `JSONDecodeError`.
+
+- `run_server` ставит на каждом транспорте (stdio и HTTP) middleware
+  `ToolErrorRedactionMiddleware`. FastMCP сам превращает неожиданное исключение
+  внутри инструмента в `ToolError("Error calling tool ...: <текст исключения>")`,
+  и это происходит вне обработчиков коннектора: `build_client(...)` в yandex и
+  detmir стоит вне `try`, поэтому `ValueError` на прокси `htp://user:pass@host`
+  уносил учётные данные прямо в ответ. Middleware перевыпускает `ToolError` с
+  вычищенным текстом (сохраняя `__cause__`), пропускает остальные исключения без
+  изменений и не укорачивает сообщение — уже вычищенный JSON ошибки доходит до
+  агента байт в байт.
+
+- Ozon больше не отдаёт сырой текст апстрима. Тела страниц в `last_error`
+  успешного `ozon_reviews` и исключение Tier-1 в `ctx.debug` проходят через
+  `_redact`: раньше токен из тела ошибки попадал и в ответ агенту, и в лог
+  клиента.
+
+- `avito_card` no longer accepts an item path containing a backslash or a
+  percent sign. `https://www.avito.ru/profile\x_1234567890` and
+  `/profile%2Fx_1234567890` passed the shape check — the regex reads those as
+  ordinary characters — missed the service-route deny-list and opened in the
+  operator's browser as `/profile/x_1234567890`: Chromium treats `\` as a path
+  separator in http(s) URLs and a server decodes `%2F` and `%5C`. Such a path is
+  now refused with `bad_request` before any navigation, like the other
+  non-item addresses; ordinary slugs such as
+  `/moskva/telefony/iphone_15_1234567890` keep working.
+
+- Nine AliExpress failure sites (`_unwrap_extract`, the popup card path and the
+  x5sec challenge) and both `mcp_core.kit.render_json` refusals now reach the
+  agent as the shared error JSON (`raise_tool_error`) instead of plain text:
+  `str(ToolError(TransportDownError(...)))` used to be the bare message, with no
+  code, no `retryable` and no challenge fields, and the 200-character page
+  preview in it was never redacted. The x5sec challenge is now
+  `challenge_required` (`requires_user_action: true`, `retryable_now: false`,
+  a `user_action` naming the manual step), like Taobao's x5sec, instead of a
+  `transport_down` the agent would retry in vain. A non-JSON extract in
+  `render_json` is now `parser_drift` too, not a bare `JSONDecodeError`.
+
+- `run_server` installs `ToolErrorRedactionMiddleware` on every transport
+  (stdio and HTTP). FastMCP itself turns an unexpected exception inside a tool
+  into `ToolError("Error calling tool ...: <exception text>")`, outside the
+  connector's own handlers: `build_client(...)` sits outside the `try` in yandex
+  and detmir, so a `ValueError` on a `htp://user:pass@host` proxy carried the
+  credentials straight into the answer. The middleware re-raises a `ToolError`
+  with the redacted text (keeping `__cause__`), passes every other exception
+  through unchanged and never truncates the message, so an already-redacted
+  error JSON reaches the agent byte-identical.
+
+- Ozon no longer returns raw upstream text. Page bodies quoted in the
+  `last_error` of a successful `ozon_reviews` and the Tier-1 exception logged
+  through `ctx.debug` go through `_redact`: a token in an upstream error body
+  used to reach both the agent's answer and the client log.
+
 - Дрейф формы WB больше не срабатывает на законной странице со снятыми с
   продажи товарами: у неё у всех товаров `"sizes": []`, а ценовое семейство
   живёт внутри `sizes[]`, поэтому общий матчер
