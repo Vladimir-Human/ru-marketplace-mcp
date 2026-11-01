@@ -225,10 +225,16 @@ def score_case(case: dict[str, Any], answer: object) -> dict[str, Any]:
     }
 
 
+# MODEL_ROUTING_PROTOCOL.md section 3: at least three samples per case per model.
+PROTOCOL_MIN_SAMPLES = 3
+
+
 def evaluate_answers(bundle: dict[str, Any], answers: Any, model: str | None = None) -> dict[str, Any]:
     """Score an answers mapping (case id -> answer id) against the bundle."""
+    samples: Any = None
     if isinstance(answers, dict) and isinstance(answers.get("answers"), dict):
         model = model or answers.get("model")  # wrapper form carries metadata
+        samples = answers.get("samples_per_case")
         answers = answers["answers"]
     if not isinstance(answers, dict):
         raise ValueError("answers must be a JSON object mapping case id -> answer id")
@@ -255,6 +261,18 @@ def evaluate_answers(bundle: dict[str, Any], answers: Any, model: str | None = N
     if unknown:
         shown = ", ".join(unknown[:3]) + (" …" if len(unknown) > 3 else "")
         problems.append(f"{len(unknown)} answer id(s) match no case in the bundle: {shown}")
+    # A declared sample count is protocol metadata the verdict can check; the bare
+    # mapping form carries none, so its sampling stays visibly unchecked instead of
+    # being certified by ok (Notion audit probe, 2026-11-01).
+    unchecked: list[str] = []
+    if samples is None:
+        unchecked.append("samples_per_case not declared; sampling (protocol section 3) not checked")
+    elif isinstance(samples, bool) or not isinstance(samples, int):
+        problems.append(f"samples_per_case must be an integer, got {samples!r}")
+    elif samples < PROTOCOL_MIN_SAMPLES:
+        problems.append(
+            f"samples_per_case {samples} is below the protocol minimum of {PROTOCOL_MIN_SAMPLES} (protocol section 3)"
+        )
 
     return {
         "version": 1,
@@ -273,7 +291,9 @@ def evaluate_answers(bundle: dict[str, Any], answers: Any, model: str | None = N
         "accuracy": round(passed / len(rows), 4) if rows else None,
         "accuracy_answered": round(passed / answered, 4) if answered else None,
         "per_slice": {name: _slice_stats(rows, name) for name in SLICES},
+        "samples_per_case": samples,
         "problems": problems,
+        "protocol_unchecked": unchecked,
         "ok": not problems,
         "cases": rows,
     }

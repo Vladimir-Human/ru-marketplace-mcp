@@ -8,22 +8,34 @@ entry into claude_desktop_config.json instead of one per source.
 
 Each connector is imported defensively: a missing optional dependency (Ozon's
 curl_cffi and Playwright, Taobao's Playwright) removes that source's tools
-from the set rather than sinking the whole server. compare-prices rides along
-as its own namespace (``compare_prices``, ``compare_sources``).
+from the set rather than sinking the whole server, and a source whose tools
+cannot answer without configuration (MPStats without ``MPSTATS_MP_AUTH``)
+stays out too. compare-prices rides along as its own namespace
+(``compare_prices``, ``compare_sources``).
+
+The reference half of every mounted tool description — its return-format field
+list and error mapping — is not repeated here: each tool's docstring names a
+``guide://<source>/<tool>`` resource, and one shared ``marketplace://errors``
+resource carries the error taxonomy. Mounted connectors registered that URI for
+their own standalone servers, so this one takes it over and the children's
+copies are hidden from this listing.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Mount selected marketplace connectors behind one MCP server.
-# SCOPE: Preserve native tool names; skip failed/deselected imports; static capabilities.
-# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/source_selection; fourteen source servers.
-# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS.
+# SCOPE: Preserve native tool names; skip failed/deselected/unconfigured sources; static capabilities.
+# DEPENDS: FastMCP; Pydantic; mcp_core output_schema/resources/source_selection; fourteen source servers.
+# LINKS: M-MARKETPLACE; M-WB; M-OZON; M-YANDEX; M-DETMIR; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-CIAN; M-COMPARE; M-MPSTATS; M-RESOURCES.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketplaceSourcesResponse: Model mounted/skipped sources and cheap routing metadata.
 # _mount_all: Import selected connectors and mount their unchanged tool names.
+# _mount_unavailable_reason: A connector's own reason it cannot answer until configured.
 # marketplace_sources: Report mounts, skip reasons, capabilities and server version.
 # apply_compact_output_schemas: Compact advertised schemas after mounting.
+# mount_child: Mount a connector while keeping one owner of the shared error URI.
+# register_reference_resources: Publish the guides and the shared error reference.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -32,6 +44,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
+from mcp_core.resources import mount_child, register_reference_resources
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
@@ -45,8 +58,8 @@ class MarketplaceSourcesResponse(BaseModel):
     skipped: dict[str, str] = Field(
         default_factory=dict,
         description=(
-            "Source name mapped to the reason it is unavailable: an import error or an explicit "
-            "MARKETPLACE_SOURCES deselection."
+            "Source name mapped to the reason it is unavailable: an import error, a missing "
+            "credential its tools need, or an explicit MARKETPLACE_SOURCES deselection."
         ),
     )
     mounted_count: int = Field(default=0, description="How many sources mounted.")
@@ -70,7 +83,9 @@ mcp = FastMCP(
         "megamarket_*, lamoda_*, dns_*, citilink_*, aliexpress_*, mpstats_* plus compare_prices and "
         "compare_sources. cian_* is real estate (flats, houses, commercial "
         "property for sale or rent), not goods. Sources whose optional "
-        "dependencies are missing are simply absent from the set."
+        "dependencies are missing, or whose tools cannot answer until a "
+        "credential is configured, are simply absent from the set."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
     version=SERVER_VERSION,
 )
@@ -86,17 +101,39 @@ _SKIPPED: dict[str, str] = {}
 # CLI can read it without importing this module (which mounts every connector).
 
 
+def _mount_unavailable_reason(module: object) -> str | None:
+    """A connector's own "I cannot answer yet" reason, or ``None``.
+
+    Optional and generic: a source whose tools need configuration before they
+    can do anything exposes ``mount_unavailable_reason() -> str | None``. The
+    unified server then records that reason in ``skipped`` instead of mounting
+    schemas that would only fail. MPStats is the only source today: without
+    ``MPSTATS_MP_AUTH`` every call raises ``auth_missing`` before the wire, so
+    unmounted, its two schemas cost the agent nothing (R-MPSTATS-MOUNT-GATE).
+    """
+    probe = getattr(module, "mount_unavailable_reason", None)
+    if probe is None:
+        return None
+    reason = probe()
+    return reason if isinstance(reason, str) else None
+
+
 def _mount_all() -> None:
     """Import each connector defensively and mount it.
 
     A connector that fails to import (missing curl_cffi, missing Playwright, a
     broken install) reduces coverage; it must never prevent the unified server
-    from starting with the sources that do work.
+    from starting with the sources that do work. A connector that imports but
+    reports no usable configuration (``_mount_unavailable_reason``) is skipped
+    the same way.
 
     What is skipped gets recorded, not just logged. An operator reading tool
     output in a client never sees our stderr, so a silently absent marketplace
     would otherwise look identical to one that returned nothing — see
     ``marketplace_sources``.
+
+    A mounted connector keeps its own per-tool guides, but not its copy of the
+    shared error reference: this server owns that URI and registers its own.
     """
     mounts = (
         ("wildberries", "wb_connector.server"),
@@ -124,7 +161,16 @@ def _mount_all() -> None:
             continue
         try:
             module = __import__(module_path, fromlist=["mcp"])
-            mcp.mount(module.mcp)
+            unavailable = _mount_unavailable_reason(module)
+            if unavailable is not None:
+                _SKIPPED[name] = unavailable
+                log_event("marketplace.mount_skipped", source=name, error=unavailable[:120])
+                continue
+            # mount_child, not mount: every connector registers the shared
+            # `marketplace://errors` for its own standalone server, and this
+            # profile must serve that URI once, not once per mounted child
+            # (R-TOOL-RESOURCES).
+            mount_child(mcp, module.mcp)
             _MOUNTED.append(name)
         except Exception as exc:
             detail = f"{type(exc).__name__}: {exc}"
@@ -152,22 +198,15 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     ## Why this exists
 
     Connectors are imported defensively, so a missing dependency removes a
-    marketplace instead of killing the server. That is the right failure mode,
-    but it is invisible from the client: absent tools look the same as a source
-    that simply found nothing. Call this before concluding a marketplace has no
-    results — if it is in ``skipped``, it was never queried at all.
+    marketplace instead of killing the server. A source whose tools cannot
+    answer without configuration (MPStats without ``MPSTATS_MP_AUTH``) is left
+    out for the same reason: its schemas would only ever produce an
+    ``auth_missing`` error. That is the right failure mode, but it is invisible
+    from the client: absent tools look the same as a source that simply found
+    nothing. Call this before concluding a marketplace has no results — if it
+    is in ``skipped``, it was never queried at all.
 
-    ## Return Format
-
-    MarketplaceSourcesResponse: {mounted, skipped, mounted_count, skipped_count,
-    capabilities, server_version}. ``skipped`` maps source name to the reason
-    it is unavailable: an import error (usually a missing optional dependency)
-    or an explicit ``MARKETPLACE_SOURCES`` deselection.
-
-    ## Error Format
-
-    Never raises ToolError: pure introspection of the mounted connectors — a
-    failed import is recorded in ``skipped`` instead of being raised.
+    Full field list and error codes: `guide://marketplace/marketplace_sources`.
     """
     return MarketplaceSourcesResponse(
         mounted=sorted(_MOUNTED),
@@ -186,3 +225,8 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

@@ -27,7 +27,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
-# SCOPE: Read-only concurrent sources; partial/native-price outcomes; RUB ranking and identity evidence.
+# SCOPE: Read-only concurrent sources; everyday RUB ranking; conditional/native prices and identity evidence.
+# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
@@ -65,11 +66,19 @@ from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, NotFound
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
 from pydantic import Field
 
-from compare_connector.identity import ProductIdentity, identity_from_mapping, match_product_identity
+from compare_connector.identity import (
+    ProductIdentity,
+    extract_size_tokens,
+    format_size_tokens,
+    identity_from_mapping,
+    match_product_identity,
+    sizes_conflict,
+)
 from compare_connector.models_output import (
     CompareResponse,
     MarketOffer,
@@ -84,7 +93,14 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 # a slow source must not hold the whole comparison hostage.
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
 
-mcp = FastMCP(name="compare-connector", version=SERVER_VERSION, lifespan=browser_handoff_lifespan)
+mcp = FastMCP(
+    name="compare-connector",
+    version=SERVER_VERSION,
+    lifespan=browser_handoff_lifespan,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
+)
 
 _CARD_TOOL_NAMES = {
     "wildberries": "wb_card",
@@ -326,6 +342,13 @@ def _looks_like_an_accessory(title: str, query: str) -> bool:
     return any(m in low_title and m not in low_query for m in _ACCESSORY_MARKERS)
 
 
+def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: frozenset[str]) -> str:
+    """One warning per call, not per offer: every warning costs the agent tokens."""
+    verb = "offer states" if count == 1 else "offers state"
+    sizes = format_size_tokens({size for group in stated for size in group})
+    return f"identity_mismatch: {count} {verb} {sizes}, query asks {format_size_tokens(asked)}; not comparable"
+
+
 def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
     """Flag a cheapest offer that probably answers a different question.
 
@@ -367,15 +390,31 @@ def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
     return warnings
 
 
+# START_BLOCK_PRICE_POLICY
 def _ranks_in_rubles(offer: MarketOffer) -> bool:
     """Whether an offer may enter the cheapest-in-rubles ranking.
 
-    Both halves matter. price_rub is None for anything unpriced, and the
-    currency check stops a future adapter from filling price_rub with a figure
-    that is not roubles — the failure mode where a ¥300 listing is announced as
-    the cheapest option against ₽-priced rivals.
+    R-COMPARE-CONDITIONAL-PRICE: an explicitly conditional price never ranks,
+    even if an adapter fills price_rub with it. Unmarked source prices retain
+    their existing treatment; no missing price or foreign currency may rank.
     """
-    return offer.price_rub is not None and offer.currency == "rub"
+    return offer.price_rub is not None and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
+
+
+def _conditional_price_warning(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
+    """Name the excluded amount, not the offer whose everyday price may still rank."""
+    condition = kind
+    if kind == "wallet":
+        condition = "WB Wallet"
+    elif kind == "subscription":
+        condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
+    return (
+        f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
+        f"requires {condition}; not ranked"
+    )
+
+
+# END_BLOCK_PRICE_POLICY
 
 
 def _wb_product_url(nm_id: object) -> str:
@@ -495,6 +534,7 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
     response = await server.wb_search(query=query, page=1)
 
     offers: list[MarketOffer] = []
+    conditional_warnings: list[str] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
             MarketOffer(
@@ -503,7 +543,10 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 title=item.name,
                 brand=item.brand,
                 seller=item.supplier,
-                price_rub=item.price_rub,
+                # A struck price is not an everyday fallback for Wallet-only tiles.
+                price_rub=item.price_rub if item.price_kind in ("", "regular") else None,
+                price_native=item.price_rub,
+                price_kind=item.price_kind or None,
                 rating=item.review_rating,
                 rating_count=item.feedbacks,
                 # WB's legacy bool also uses False for an unreported quantity.
@@ -512,7 +555,13 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 url=_wb_product_url(item.nm_id),
             )
         )
-    return OfferBatch(offers, response)
+        if item.wallet_price_rub is not None and item.price_kind != "wallet":
+            conditional_warnings.append(
+                _conditional_price_warning("wildberries", str(item.nm_id or ""), item.wallet_price_rub, "wallet")
+            )
+    batch = OfferBatch(offers, response)
+    batch.warnings.extend(conditional_warnings)
+    return batch
 
 
 async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
@@ -536,6 +585,10 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 brand=item.brand,
                 seller=item.seller,
                 price_rub=item.price_rub,
+                price_native=item.price_rub if item.price_rub is not None else item.price_with_plus,
+                price_kind="regular"
+                if item.price_rub is not None
+                else ("subscription" if item.price_with_plus is not None else None),
                 price_with_subscription_rub=item.price_with_plus,
                 rating=item.rating,
                 rating_count=item.rating_count,
@@ -963,21 +1016,12 @@ async def compare_prices(
       there — `complete` tells you which case you are in.
 
     Titles are matched loosely: marketplaces name things differently, so scan the
-    results rather than assuming every row is the identical model.
+    results rather than assuming every row is the identical model. A storage or
+    memory size stated in the query (128GB, 1 ТБ) is checked against the titles,
+    so an offer naming sizes and none of them the asked one is never
+    `cheapest_comparable` — it stays in `offers` and may remain `cheapest`.
 
-    ## Return Format
-
-    CompareResponse: {query, sources_queried, sources_ok, complete,
-    total_offers, cheapest, price_spread_rub, offers, source_outcomes,
-    warnings, server_version}. offers is ranked by everyday price_rub —
-    cheapest first, offers without a rouble price after the ranked ones.
-    warnings carries validation/completeness warnings.
-
-    ## Error Format
-
-    On validation failure, raises ToolError with a JSON message describing the
-    error code and whether it is retryable. Individual source failures do NOT
-    raise — they are reported in `source_outcomes`.
+    Full field list and error codes: `guide://compare/compare_prices`.
     """
     text = (query or "").strip()
     if len(text) < 2:
@@ -1053,11 +1097,21 @@ async def compare_prices(
     failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
 
     cheapest = priced[0] if priced else None
-    comparable = [
-        offer
-        for offer in priced
-        if not _looks_like_an_accessory(offer.title, text) and not _looks_like_another_condition(offer.title, text)
-    ]
+    # A size the query states and the title contradicts is explicit text, not a
+    # heuristic, so it keeps the offer out of the like-for-like candidate rather
+    # than merely warning about it. The offer keeps its rank and may remain
+    # plain cheapest; only cheapest_comparable skips it.
+    query_sizes = extract_size_tokens(text)
+    comparable: list[MarketOffer] = []
+    size_excluded: list[frozenset[str]] = []
+    for offer in priced:
+        if _looks_like_an_accessory(offer.title, text) or _looks_like_another_condition(offer.title, text):
+            continue
+        title_sizes = extract_size_tokens(offer.title)
+        if sizes_conflict(query_sizes, title_sizes):
+            size_excluded.append(title_sizes)
+            continue
+        comparable.append(offer)
     cheapest_comparable = comparable[0] if comparable else None
     price_spread = None
     if len(priced) >= 2:
@@ -1081,14 +1135,26 @@ async def compare_prices(
             warnings.append("stock_filter: no priced offers were returned")
     for outcome in outcomes:
         warnings.extend(f"source_warning:{outcome.source}: {warning}" for warning in outcome.warnings)
+    # Only an offer left out of the ranking is named here; a Plus amount beside a
+    # ranked everyday price already sits in price_with_subscription_rub, and a
+    # warning per such offer would bill the agent twice for the same number.
+    for offer in offers:
+        kind, native = offer.price_kind, offer.price_native
+        if kind and kind != "regular" and native is not None:
+            warnings.append(_conditional_price_warning(offer.source, offer.product_id, native, kind, offer.currency))
     warnings.extend(_relevance_warnings(text, priced))
+    if size_excluded:
+        warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(
-            "comparable_price: the raw cheapest listing is an accessory or different condition; "
-            "cheapest_comparable is the safer like-for-like candidate"
+            "comparable_price: the raw cheapest listing is an accessory, a different condition or a different "
+            "variant; cheapest_comparable is the safer like-for-like candidate"
         )
     elif cheapest is not None and cheapest_comparable is None:
-        warnings.append("comparable_price: every priced listing looks like an accessory or different condition")
+        warnings.append(
+            "comparable_price: every priced listing looks like an accessory, a different condition "
+            "or a different variant"
+        )
     if foreign:
         currencies = ", ".join(sorted({offer.currency for offer in foreign}))
         warnings.append(
@@ -1232,22 +1298,7 @@ async def compare_verify_offer(
     mount. The returned card is source-native and therefore keeps fields the
     comparison intentionally normalises away.
 
-    ## Return Format
-
-    JSON object: `{source, product_id_or_url, card}`. `card` is the native
-    source response, preserving price, availability, seller, and source-specific
-    fields when the marketplace exposes them. `identity_verification`, when
-    requested, carries the observed typed identifiers and a match verdict;
-    absent manufacturer evidence yields unknown, never a title-derived exact match.
-    For Yandex, pass the search row's `variant_id` as `expected_variant_id`:
-    a different or missing card SKU is rejected before computing a price delta.
-    Without it, only the current default card price is checked.
-
-    ## Error Format
-
-    Raises `BadRequestError` when the source is unknown, not installed, or the
-    identifier cannot be validated; native card errors are returned as tool
-    errors with their source-specific taxonomy.
+    Full field list and error codes: `guide://compare/compare_verify_offer`.
     """
     if expected_price_rub is not None and (
         isinstance(expected_price_rub, bool) or not math.isfinite(expected_price_rub) or expected_price_rub < 0
@@ -1330,17 +1381,7 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     connector isn't installed" from "the marketplace refused us", which need
     completely different fixes.
 
-    ## Return Format
-
-    Plain object: {installed, searchable, not_installed, deselected, notes,
-    source_timeout_s, server_version, server_started_at, process_id}. notes
-    explains per-source access quirks (CDP-only sources, currencies, missing
-    text search).
-
-    ## Error Format
-
-    Never raises ToolError: pure introspection of which connector packages
-    are installed — nothing here touches the network.
+    Full field list and error codes: `guide://compare/compare_sources`.
     """
     log_event("compare_sources.start")
     if ctx is not None:
@@ -1457,16 +1498,7 @@ async def compare_browser_snapshot(
     (auto/always/never), and an explicit client vision hint. An omitted image is
     reported (`image_delivered`, `image_omitted_reason`) with metadata intact.
 
-    ## Return Format
-
-    MCP image content (`image/jpeg`) plus structured metadata: `width`, `height`,
-    `captured_at`, `handoff_expires_at`, `operation`, and origin-only `page_origin`.
-
-    ## Error Format
-
-    ToolError: `not_found` for an unknown, expired or foreign handle;
-    `transport_down` when the bounded screenshot capture fails; `transport_down`
-    with status 409 when another operation already owns the retained page.
+    Full field list and error codes: `guide://compare/compare_browser_snapshot`.
     """
     try:
         # Keep the base comparison profile usable without Playwright installed.
@@ -1503,6 +1535,11 @@ async def compare_browser_snapshot(
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

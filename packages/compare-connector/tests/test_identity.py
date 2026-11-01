@@ -1,9 +1,12 @@
 import pytest
 from compare_connector.identity import (
     ProductIdentity,
+    extract_size_tokens,
+    format_size_tokens,
     identity_from_mapping,
     match_product_identity,
     normalize_gtin,
+    sizes_conflict,
 )
 
 
@@ -143,3 +146,42 @@ def test_matching_gtin_does_not_override_conflicting_mpn():
         ProductIdentity(gtin="4006381333931", mpn="B12"),
     )
     assert result.status == "mismatch"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("ACME X100 64GB", frozenset({"64GB"})),
+        ("ACME X100 64 ГБ", frozenset({"64GB"})),
+        ("ACME X100 128гб", frozenset({"128GB"})),
+        ("ACME X100 1 ТБ", frozenset({"1TB"})),
+        ("Ноутбук ACME X100 8/128GB", frozenset({"128GB"})),
+        ("ACME X100 128", frozenset()),
+        ("iPhone 15 128GB 256GB", frozenset({"128GB", "256GB"})),
+        ("Внешний SSD 1.5 ТБ", frozenset()),
+    ],
+)
+def test_size_tokens_normalise_units_and_reject_guesses(text, expected):
+    """R-COMPARE-VARIANT-IDENTITY: only a number with a GB/TB unit is a size."""
+    assert extract_size_tokens(text) == expected
+
+
+@pytest.mark.parametrize(
+    "asked,stated,conflict",
+    [
+        ({"1TB"}, {"1024GB"}, False),
+        ({"1024GB"}, {"1TB"}, False),
+        ({"2TB"}, {"2048GB", "16GB"}, False),
+        ({"1TB"}, {"1000GB"}, True),
+        ({"1TB"}, {"2TB"}, True),
+        ({"512GB"}, {"1TB"}, True),
+    ],
+)
+def test_sizes_compare_in_gigabytes(asked, stated, conflict):
+    """R-COMPARE-VARIANT-IDENTITY: 1 TB = 1024 GB, as storage is sold; no rounding to 1000."""
+    assert sizes_conflict(frozenset(asked), frozenset(stated)) is conflict
+
+
+def test_sizes_are_listed_in_capacity_order_across_units():
+    """R-COMPARE-VARIANT-IDENTITY: the warning lists sizes by capacity, keeping each title's unit."""
+    assert format_size_tokens({"2048GB", "1TB", "512GB", "64GB"}) == "64GB/512GB/1TB/2048GB"

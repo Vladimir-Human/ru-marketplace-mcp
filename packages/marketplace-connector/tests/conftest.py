@@ -10,20 +10,35 @@ developer's own Claude Desktop or Cursor config (found in review on
 2026-10-30). Every test therefore starts with both paths inside its own
 ``tmp_path`` (folders not created), and with no ``claude`` on PATH; a test
 that needs a client creates the folder or patches ``shutil.which`` itself.
+
+The module also pins ``MPSTATS_MP_AUTH`` to an empty value: the unified server
+decides at import whether to mount the mpstats tools, and that decision must
+not depend on a developer's shell or ``.env`` (R-MPSTATS-MOUNT-GATE).
 """
 
 # START_MODULE_CONTRACT
 # PURPOSE: Isolate operator tests from real client configurations, home folders and uv cache discovery.
-# SCOPE: Temporary path overrides and no ambient UV/Claude discovery; tests opt into their fake deployments.
+# SCOPE: Temporary path overrides; no ambient UV/Claude discovery; a pinned token-less MPStats environment.
 # DEPENDS: pytest; marketplace_connector.cli.
-# LINKS: M-MARKETPLACE; R-OFFLINE; R-CLI-INSTALL-UVX.
+# LINKS: M-MARKETPLACE; R-OFFLINE; R-CLI-INSTALL-UVX; R-MPSTATS-MOUNT-GATE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _client_configs_never_reach_the_real_ones: Fake config/home/cache paths and disable real Claude/UV discovery.
 # END_MODULE_MAP
 
+import os
+
 import pytest
 from marketplace_connector import cli
+
+# The unified server decides at import whether MPStats can answer at all:
+# without a non-empty MPSTATS_MP_AUTH it does not mount the two mpstats tools
+# (R-MPSTATS-MOUNT-GATE). Pin that here, before any test module imports the
+# server, so a developer's exported token or .env file cannot change the
+# mounted surface mid-suite. An empty value wins over .env in pydantic-settings
+# and is not a token, so the baseline stays token-less; the gate tests set a
+# token explicitly and restore this afterwards.
+os.environ["MPSTATS_MP_AUTH"] = ""
 
 # START_BLOCK_CLIENT_PATH_ISOLATION
 

@@ -557,6 +557,11 @@ def test_ozon_selfcheck_includes_runtime_identity(monkeypatch):
                         "items": [
                             {
                                 "sku": 123,
+                                # The selfcheck's search smoke now also checks the
+                                # required-family registry, whose one member is the
+                                # tile url; a real capture carries an action link,
+                                # so the synthetic tile needs one to stay healthy.
+                                "action": {"link": "/product/good-filter-123/"},
                                 "mainState": [
                                     {
                                         "type": "textDS",

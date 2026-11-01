@@ -9,6 +9,125 @@
 
 ## [Unreleased]
 
+### Added
+
+- Справочная половина описаний инструментов переехала из `tools/list` в MCP
+  resources: у каждого инструмента есть ресурс `guide://<источник>/<инструмент>`
+  с его секциями `## Return Format` и `## Error Format` — тем же текстом, слово
+  в слово, — а общий справочник кодов (`marketplace://errors`) собирается из
+  `ErrorCode` и классов ошибок, а не переписывается руками. Описание инструмента
+  оставляет ядро (что инструмент отвечает и инварианты, влияющие на решение) и
+  одну строку со ссылкой на свой гайд, поэтому половинки не могут разойтись.
+  Профиль, монтирующий коннекторы, отдаёт каждый гайд один раз и
+  `marketplace://errors` ровно один раз: `mcp_core.resources.mount_child` прячет
+  копию дочернего сервера в листинге родителя, не отбирая её у самого
+  коннектора, — иначе импорт объединённого сервера ломал бы отдельный
+  `wb-mcp` в том же процессе. Это смена канала по требованию владельца, а не
+  ослабление: `test_tool_docstring_sections.py` теперь требует ядро и парный
+  ресурс вместо обеих секций в докстринге.
+- Ядро описания сохранило не только первый абзац, но и инварианты, меняющие
+  решение агента: отсутствующее значение — `null`, а не `0` (`price_rub`,
+  `price_cny`, остатки MPStats); пустая выдача, неполный результат и
+  неизвестный SKU — не ошибка, а здоровый ответ или `partial=True`; цена по
+  подписке не участвует в ранжировании; `price_unit` у Cian говорит, что
+  значит сумма; карточка Taobao не читает Tmall; для снимка страницы нужно
+  владение handoff. Формулировки сжаты до одной строки перед ссылкой на гайд,
+  сам гайд по-прежнему несёт исходный текст слово в слово.
+- `scripts/mcp_wire.py` меряет всю цену профиля, а не только `tools/list`:
+  читает `instructions` из ответа на `initialize`, пишет рядом с `wire_tokens`
+  поле `instructions_tokens` и печатает обе величины и их сумму. Там же —
+  абсолютный потолок профиля из `ceilings` в `work/performance/wire-baseline.json`
+  (сумма инструментов и instructions): относительный гейт видит только рост
+  относительно baseline, который обновляют руками. В режиме проверки отсутствие
+  положительного потолка у проверяемого профиля — отказ, как и отсутствие
+  baseline или бюджета; `--update-baseline` записывает потолок новому профилю
+  (+5 % к замеру) и не трогает уже выставленный, потому что поднять потолок —
+  решение, а не побочный эффект замера.
+- The reference half of tool descriptions moved out of `tools/list` into MCP
+  resources: every tool has a `guide://<source>/<tool>` resource holding its
+  `## Return Format` and `## Error Format` sections — the same text, word for
+  word — and one shared error-code reference (`marketplace://errors`) is built
+  from `ErrorCode` and the connector error classes instead of being copied by
+  hand. The description keeps the core (what the tool answers and the invariants
+  that change the decision) plus one line naming its guide, so the two halves
+  cannot drift apart. A profile that mounts connectors serves each guide once and
+  `marketplace://errors` exactly once: `mcp_core.resources.mount_child` hides a
+  child's copy from the parent's listing without taking it away from the
+  connector, because deleting it made importing the unified server break a
+  standalone `wb-mcp` in the same process. A channel change by the owner's
+  order, not a weakening: `test_tool_docstring_sections.py` now requires the
+  core plus the paired resource instead of both sections in the docstring.
+- The core kept more than the first paragraph: the invariants that change what
+  the agent concludes stay in the description, compressed to one line before the
+  guide pointer — a missing value is `null`, never `0` (`price_rub`,
+  `price_cny`, MPStats stock); an empty, partial or unknown-SKU result is not an
+  error but a healthy response or `partial=True`; a subscription price never
+  ranks; Cian's `price_unit` says what the amount means; a Taobao card cannot
+  read a Tmall listing; a page snapshot needs ownership of the handoff. The
+  guide still carries the original text word for word.
+- `scripts/mcp_wire.py` measures a profile's whole cost, not only `tools/list`:
+  it reads `instructions` from the initialize result, records
+  `instructions_tokens` beside `wire_tokens`, and prints both plus their sum. It
+  also checks an absolute per-profile ceiling from `ceilings` in
+  `work/performance/wire-baseline.json` (tools plus instructions), because the
+  relative gate only sees growth against a baseline that is updated by hand. In
+  check mode a checked profile without a positive ceiling fails, like a missing
+  baseline or budget; `--update-baseline` records a ceiling for a new profile
+  (5% above the measurement) and leaves one already written alone, since raising
+  a ceiling is a decision rather than a side effect of measuring.
+
+- Дрейф структуры страницы виден в самом ответе инструмента: коннекторы, у
+  которых есть реестр обязательных семейств ключей (avito, lamoda, taobao,
+  citilink, dns), сверяют разобранный payload с этим реестром в общем
+  хелпере `mcp_core.resilience.shape_drift_warning`, и потеря целого семейства
+  даёт одно компактное предупреждение на вызов —
+  `shape_drift: <источник>: missing <семейство>` — в существующем
+  `meta.warnings` ответа (healthy становится false). Без новых сетевых
+  запросов: полный payload оплачивает только само сравнение. Поведение CLI
+  doctor не изменилось; yandex не покрыт — его парсер выдаёт все ключи
+  безусловно, и его shape_reference прямо говорит, что охрана по наличию
+  ключей там никогда не сработала бы.
+
+- Parser drift is now visible in the tool's own response: the connectors
+  that ship a required-key-family registry (avito, lamoda, taobao, citilink,
+  dns) compare the parsed payload against it through the shared
+  `mcp_core.resilience.shape_drift_warning`, and a whole family vanishing
+  adds one compact warning per call — `shape_drift: <source>: missing
+  <family>` — to the response's existing `meta.warnings` (healthy flips to
+  false). No extra network requests: a complete payload costs only the
+  comparison itself. CLI doctor behaviour is unchanged; yandex is not
+  covered — its parser emits every item key unconditionally, and its
+  shape_reference says outright that a key-presence guard would never fire
+  there.
+
+- Structural drift is now visible in six more tool responses: aliexpress,
+  cian, detmir, megamarket, ozon and wb gained a `shape_reference` — the
+  shape fingerprint of their search output (and card, where a captured
+  fixture exists), measured by the real parser over the fixture — plus the
+  same `shape_drift: <source>: missing <family>` warning through the shared
+  `mcp_core.resilience.shape_drift_warning`. Where the parser emits every
+  parsed key unconditionally (cian, detmir, megamarket, wb), the check runs
+  on the raw envelope, against the alias families the parser binds through;
+  ozon guards the one conditionally-emitted parser-critical key, the tile
+  url (losing `action.link` silently strips navigation from every result).
+  Their selfcheck canaries use the same registry. Yandex remains uncovered
+  — its shape_reference documents why a key-presence guard would never fire
+  there.
+
+- Дрейф структуры виден в самом ответе ещё у шести коннекторов: aliexpress,
+  cian, detmir, megamarket, ozon и wb получили свой `shape_reference` —
+  отпечаток формы выдачи (и карточки, где есть захваченный фиксстур),
+  измеренный настоящим парсером по фиксстуре, — и то же предупреждение
+  `shape_drift: <источник>: missing <семейство>` через общий
+  `mcp_core.resilience.shape_drift_warning`. Там, где парсер выдаёт все
+  ключи безусловно (cian, detmir, megamarket, wb), проверка идёт по сырому
+  конверту, по тем alias-семействам, через которые парсер биндится; у ozon
+  охраняется единственный условно излучаемый критичный ключ — url тайла
+  (без `action.link` каждый результат молча теряет навигацию). Их
+  selfcheck-канарейки используют тот же реестр. Yandex по-прежнему не
+  покрыт — его shape_reference объясняет, почему охрана по наличию ключей
+  там никогда не сработала бы.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
@@ -46,6 +165,12 @@
   доносил паузу без искажений и не менялся. Для уже существующих защит Cian и
   Ozon добавлены отдельные офлайн-тесты (поиск и карточка), для Megamarket —
   тесты поиска и карточки.
+- Унифицированный сервер (`marketplace-mcp`) больше не монтирует инструменты
+  `mpstats_*`, когда в окружении нет непустого `MPSTATS_MP_AUTH`: каждый вызов
+  всё равно вернул бы `auth_missing`, а две схемы стоили около 971 токена
+  (≈6 % профиля) на каждом запросе. Источник попадает в `skipped` с причиной
+  «токен не задан», `doctor` по-прежнему показывает его выключенным, а
+  отдельный `mpstats-mcp` сохраняет прежнее поведение и отвечает `auth_missing`.
 
 - PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
   went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
@@ -82,6 +207,12 @@
   degrade; the card path already carried the pause intact and is unchanged.
   The existing Cian and Ozon guards gained dedicated offline tests (search and
   card each), and Megamarket got search and card tests.
+- The unified server (`marketplace-mcp`) no longer mounts the `mpstats_*` tools
+  when no non-empty `MPSTATS_MP_AUTH` is set: every call would return
+  `auth_missing`, while the two schemas cost about 971 tokens (~6% of the
+  profile) on every request. The source is reported in `skipped` with a
+  missing-token reason, `doctor` still shows it as off, and the standalone
+  `mpstats-mcp` keeps its behaviour and answers `auth_missing`.
 
 ### Security
 
@@ -120,6 +251,37 @@
   repeating the CDP readiness wait. A success (also `browser start` /
   `start_browser`) clears the memory, and an explicit start always tries for
   real.
+- Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
+  ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:
+  обёртка с `samples_per_case` меньше 3 или не целым числом теперь ошибка.
+  Голая карта ответов по-прежнему принимается, но отчёт пишет в
+  `protocol_unchecked`, что сэмплирование не проверено.
+
+- The routing eval runner (`scripts/model_routing_eval.py run`) no longer reports
+  `ok: true` for a run with fewer samples than the protocol asks: a wrapper with
+  `samples_per_case` below 3 or not an integer is now a problem. A bare answer
+  map is still accepted, and the report says in `protocol_unchecked` that its
+  sampling was not checked.
+- `compare_prices` больше не считает «1 ТБ» и «1024 ГБ» разными размерами:
+  размеры сравниваются в гигабайтах (1 ТБ = 1024 ГБ, как продают память
+  телефонов и ноутбуков). «1000 ГБ» по-прежнему не совпадает с «1 ТБ».
+
+- `compare_prices` no longer treats "1 TB" and "1024 GB" as different sizes:
+  sizes are compared in gigabytes (1 TB = 1024 GB, as phone and laptop storage
+  is sold). "1000 GB" still does not match "1 TB".
+- `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
+  цена с WB Кошельком, по подписке или с другим явным условием не выбирается
+  в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется
+  она; иначе `price_rub` остаётся `null`, а исходная сумма — в `price_native`.
+  Предупреждения называют условие и исключённую сумму, а сумму с WB Кошельком —
+  и рядом с обычной ценой. Зачёркнутая цена не подставляется вместо обычной.
+
+- `compare_prices` preserves the price kind in the new optional `price_kind`:
+  WB Wallet, subscription and other explicitly conditional prices cannot become
+  `cheapest` or `cheapest_comparable`. The regular price ranks when available;
+  otherwise `price_rub` stays `null` and the quoted amount remains in `price_native`.
+  Warnings name the condition and excluded amount, and a WB Wallet amount also
+  next to a regular price. A struck-through price is never substituted for the regular one.
 - Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
   `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
   профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не
@@ -189,6 +351,23 @@
   only raw `ConnectionError`/`TimeoutError`, while connectors raise an `mcp_core`
   `ToolError`, so it never fired. Bounded retries stay in the HTTP tier;
   `mcp-core` mounts only `BearerAuthMiddleware`.
+
+- `compare_prices` больше не выбирает в `cheapest_comparable` вариант другого
+  объёма: размеры, названные в запросе (`128GB`, `128 ГБ`, `1 ТБ`),
+  сравниваются с размерами в заголовке каждой заявки. Заявка, в заголовке
+  которой нет ни одного запрошенного размера, остаётся в `offers` и может быть
+  простым `cheapest`, но не `cheapest_comparable`; заголовок без размера или
+  запрос без размера не исключают ничего, а `8/128GB` не противоречит запросу
+  `128GB`. Об исключении сообщает одно компактное предупреждение
+  `identity_mismatch` на вызов.
+
+- `compare_prices` no longer picks a different-capacity variant as
+  `cheapest_comparable`: sizes stated in the query (`128GB`, `128 ГБ`, `1 ТБ`)
+  are compared with the sizes named in each offer title. An offer whose title
+  names none of the asked sizes stays in `offers` and may be plain `cheapest`,
+  but never `cheapest_comparable`; a title without a size, or a query without
+  one, excludes nothing, and `8/128GB` does not contradict a `128GB` query. One
+  compact `identity_mismatch` warning per call reports the exclusions.
 
 ## [2.7.0] - 2026-10-30
 

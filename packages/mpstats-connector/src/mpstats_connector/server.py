@@ -33,11 +33,12 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
-# SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests.
+# SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests; unified-mount availability gate.
 # DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction; models_output; settings.
-# LINKS: M-MPSTATS; M-MARKETPLACE; packages/mpstats-connector/tests.
+# LINKS: M-MPSTATS; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; packages/mpstats-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# mount_unavailable_reason: Why the unified server must not mount these tools, or None.
 # _cookie_header: Resolve the required auth secret without exposing its value.
 # _post_json_budgeted: Bound paced HTTP retries and response size.
 # _call: Classify HTTP/body auth, rate-limit, transport and parser failures.
@@ -77,6 +78,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import proxy_from_env
 from pydantic import Field
 
@@ -90,7 +92,7 @@ from mpstats_connector.models_output import (
     MpStatsWarehousesItem,
     MpStatsWarehousesResponse,
 )
-from mpstats_connector.settings import get_settings
+from mpstats_connector.settings import MPStatsSettings, get_settings
 
 _settings = get_settings()
 
@@ -100,6 +102,9 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 mcp = FastMCP(
     name="mpstats-connector",
     version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
 )
 
 # Verified live Jul 2026: the plugin endpoint answers from the chrome-extension
@@ -192,6 +197,25 @@ def _cookie_header() -> str:
     """
     token = (_settings.mp_auth.get_secret_value() or "").strip()
     return f"mp_auth={token}" if token else ""
+
+
+def mount_unavailable_reason() -> str | None:
+    """Why the unified server must not mount these tools, or ``None``.
+
+    Every call preflights ``MPSTATS_MP_AUTH`` and returns ``auth_missing``
+    without a token, so mounting the two schemas would make the agent pay for
+    them on every request with nothing behind them (R-MPSTATS-MOUNT-GATE). The
+    unified marketplace server asks this before mounting. The standalone
+    ``mpstats-mcp`` server never consults it and keeps its tools, answering
+    ``auth_missing`` exactly as before.
+
+    Reads the settings fresh rather than the module-level ``_settings``: the
+    mount decision happens once, and it must reflect the environment the
+    process was given. A blank value is not a token, matching ``_cookie_header``.
+    """
+    if (MPStatsSettings().mp_auth.get_secret_value() or "").strip():
+        return None
+    return "auth_missing: MPSTATS_MP_AUTH not set"
 
 
 async def _post_json_budgeted(
@@ -569,26 +593,9 @@ async def mpstats_item(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
-    ## Return Format
+    missing values are None, never 0, and a zero in a per-day graph means 'no data for that day'.
 
-    MpStatsItemResponse: {place, days, count, items, meta}. Each item carries
-    sku, place, seller, seller_id, brand, stock_now, price_avg_rub,
-    orders_per_day, days_on_stocks, totals {orders, sum, sum_prev} and four
-    per-day graphs (orders, prices, count, rubrics), oldest-first. Missing
-    values are None, never 0; a zero graph cell means "no data for that day".
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed skus or place; AuthMissingError
-    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-    429; TransportDownError on network failures, non-200 responses and HTML
-    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-    when no requested SKU has analytics.
-
-    Args:
-        skus: 1..100 positive SKU integers.
-        place: 'ozon' or 'wildberries'.
-        oz_fbs: Ozon FBS mode flag (default true).
+    Full field list and error codes: `guide://mpstats/mpstats_item`.
     """
     log_event("mpstats_item.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -678,23 +685,9 @@ async def mpstats_warehouses(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
-    ## Return Format
+    missing stock counts are None, never 0.
 
-    MpStatsWarehousesResponse: {place, days, count, items, meta}. Each item
-    carries sku and stocks {fbs, fbo, fbo_warehouses, last_update}. Missing
-    stock counts are None, never 0.
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed skus or place; AuthMissingError
-    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-    429; TransportDownError on network failures, non-200 responses and HTML
-    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-    when no requested SKU has stock data.
-
-    Args:
-        skus: 1..100 positive SKU integers.
-        place: 'ozon' or 'wildberries'.
+    Full field list and error codes: `guide://mpstats/mpstats_warehouses`.
     """
     log_event("mpstats_warehouses.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -885,3 +878,8 @@ async def mpstats_selfcheck(ctx: Context | None = None) -> MpStatsSelfCheckRespo
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -109,6 +109,50 @@ def identity_from_mapping(raw: Mapping[str, Any], *, source: str = "") -> Produc
 
 def _variants(values: dict[str, str]) -> dict[str, str]:
     return {("color" if k == "colour" else k): normalize_model(v) for k, v in values.items()}
+
+
+# Storage and memory sizes as marketplace titles write them: "128GB", "128 ГБ",
+# "1TB", "1 ТБ". Only a number attached to a gigabyte/terabyte unit counts: a
+# bare "128" is a model number far more often than a capacity, and a fractional
+# "1.5 ТБ" is not a size this extractor can state without guessing. Tokens keep
+# the unit the title used; only the comparison converts, with 1 TB = 1024 GB as
+# phone and laptop storage is sold, so "1 ТБ" and "1024 ГБ" agree while
+# "1000 ГБ" still does not.
+_SIZE_TOKEN = re.compile(r"(?<!\w)(?<!\d[.,])([0-9]{1,4})\s*(gb|гб|tb|тб)(?!\w)", re.IGNORECASE)
+_SIZE_UNITS = {"gb": "GB", "гб": "GB", "tb": "TB", "тб": "TB"}
+
+
+def extract_size_tokens(value: Any) -> frozenset[str]:
+    """Canonical sizes named in free-form text, e.g. ``"64 ГБ"`` -> ``"64GB"``.
+
+    Unit spelling, case and spacing are normalised; a value with no unit, a
+    fractional value and a unit outside GB/TB (megabytes never name the variant
+    of a phone or a laptop) all yield nothing rather than a guess.
+    """
+    return frozenset(f"{int(number)}{_SIZE_UNITS[unit.lower()]}" for number, unit in _SIZE_TOKEN.findall(_text(value)))
+
+
+def _size_in_gb(token: str) -> int:
+    return int(token[:-2]) * (1024 if token.endswith("TB") else 1)
+
+
+def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
+    """Whether sizes named in a title contradict the sizes a query asks for.
+
+    ``match_product_identity``'s rule, applied to sizes: only positive evidence
+    on both sides can disagree. A query that states no size, a title that names
+    none, and a title naming one of the asked sizes are all unknown, never a
+    contradiction — the same reason a missing variant attribute abstains.
+    Sizes are compared in gigabytes, so ``"1TB"`` and ``"1024GB"`` agree.
+    """
+    if not (asked and stated):
+        return False
+    return not ({_size_in_gb(token) for token in asked} & {_size_in_gb(token) for token in stated})
+
+
+def format_size_tokens(sizes: Iterable[str]) -> str:
+    """Canonical sizes in capacity order, e.g. ``"64GB/256GB/1TB"``."""
+    return "/".join(sorted(sizes, key=lambda token: (_size_in_gb(token), token)))
 
 
 def match_product_identity(expected: ProductIdentity, observed: ProductIdentity) -> IdentityMatch:
