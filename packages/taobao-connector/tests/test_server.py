@@ -395,6 +395,20 @@ async def test_search_maps_the_title_less_wall_to_transport_down(monkeypatch):
     assert "chrome scraping profile" in error["message"].lower()
 
 
+async def test_search_challenge_message_does_not_promise_a_visible_tab(monkeypatch):
+    """R-CHALLENGE-ACTION: retention is off, so no message may claim a visible page."""
+    _patch_render(monkeypatch, TITLE_LESS_WALL)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_search("手机")
+
+    error = _error_payload(excinfo)
+    assert error["error"] == "challenge_required"
+    assert "visible" not in error["message"].lower()
+    assert error["retryable_now"] is False
+    assert "marketplace-mcp unblock taobao" in error["user_action"]
+
+
 async def test_card_maps_the_title_less_wall_to_transport_down(monkeypatch):
     """Item pages redirect to the same wall; the card path must classify it
     identically instead of drifting on 'neither title nor price'."""
