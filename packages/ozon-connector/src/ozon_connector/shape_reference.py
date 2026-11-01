@@ -40,6 +40,4 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
 # Key families whose PRESENCE the tile parser depends on; the type may
 # legitimately vary with the data (``price_original:str`` on a discounted
 # tile, ``:null`` on a tile without one).
-SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
-    ("items[].url",),
-)
+SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (("items[].url",),)

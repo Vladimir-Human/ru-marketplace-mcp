@@ -48,9 +48,7 @@ _SCOPES: tuple[str, ...] = ("", "goods.", "favoriteOffer.")
 
 def _family(*aliases: str) -> tuple[str, ...]:
     """Every container x scope path an alias can be read from."""
-    return tuple(
-        f"{container}[].{scope}{alias}" for container in _CONTAINERS for scope in _SCOPES for alias in aliases
-    )
+    return tuple(f"{container}[].{scope}{alias}" for container in _CONTAINERS for scope in _SCOPES for alias in aliases)
 
 
 # Key families the parser binds through, as alternatives (mirroring pick's

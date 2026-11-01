@@ -15,8 +15,8 @@ import json
 from pathlib import Path
 
 import pytest
-from megamarket_connector import server, shape_reference
 from mcp_core.resilience import shape_signature
+from megamarket_connector import server, shape_reference
 
 FIXTURE = Path(__file__).parent / "fixtures" / "search_live.json"
 

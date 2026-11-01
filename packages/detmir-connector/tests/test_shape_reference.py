@@ -34,7 +34,9 @@ def test_card_normalization_matches_shape_golden() -> None:
 def test_category_normalization_matches_shape_golden() -> None:
     products = [server._parse_product(item) for item in CATEGORY_PAYLOAD["items"]]
 
-    assert shape_signature({"items": [p.model_dump() for p in products]}) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
+    assert shape_signature({"items": [p.model_dump() for p in products]}) == list(
+        shape_reference.SEARCH_SHAPE_REFERENCE
+    )
 
 
 def _stub_json(monkeypatch, payload: object) -> None:
