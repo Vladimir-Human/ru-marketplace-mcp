@@ -41,6 +41,19 @@
 
 ### Fixed
 
+- `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
+  цена с WB Кошельком, по подписке или с другим явным условием не выбирается
+  в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется
+  она; иначе `price_rub` остаётся `null`, а исходная сумма — в `price_native`.
+  Предупреждения называют условие и исключённую сумму, а сумму с WB Кошельком —
+  и рядом с обычной ценой. Зачёркнутая цена не подставляется вместо обычной.
+
+- `compare_prices` preserves the price kind in the new optional `price_kind`:
+  WB Wallet, subscription and other explicitly conditional prices cannot become
+  `cheapest` or `cheapest_comparable`. The regular price ranks when available;
+  otherwise `price_rub` stays `null` and the quoted amount remains in `price_native`.
+  Warnings name the condition and excluded amount, and a WB Wallet amount also
+  next to a regular price. A struck-through price is never substituted for the regular one.
 - Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
   `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
   профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не
@@ -95,6 +108,23 @@
   Waiting for a busy host no longer holds a global slot, so a request for a free
   host is not delayed behind it. Slots are released exactly once on refusal and
   on cancellation (`asyncio.CancelledError`).
+
+- `compare_prices` больше не выбирает в `cheapest_comparable` вариант другого
+  объёма: размеры, названные в запросе (`128GB`, `128 ГБ`, `1 ТБ`),
+  сравниваются с размерами в заголовке каждой заявки. Заявка, в заголовке
+  которой нет ни одного запрошенного размера, остаётся в `offers` и может быть
+  простым `cheapest`, но не `cheapest_comparable`; заголовок без размера или
+  запрос без размера не исключают ничего, а `8/128GB` не противоречит запросу
+  `128GB`. Об исключении сообщает одно компактное предупреждение
+  `identity_mismatch` на вызов.
+
+- `compare_prices` no longer picks a different-capacity variant as
+  `cheapest_comparable`: sizes stated in the query (`128GB`, `128 ГБ`, `1 ТБ`)
+  are compared with the sizes named in each offer title. An offer whose title
+  names none of the asked sizes stays in `offers` and may be plain `cheapest`,
+  but never `cheapest_comparable`; a title without a size, or a query without
+  one, excludes nothing, and `8/128GB` does not contradict a `128GB` query. One
+  compact `identity_mismatch` warning per call reports the exclusions.
 
 ## [2.7.0] - 2026-10-30
 

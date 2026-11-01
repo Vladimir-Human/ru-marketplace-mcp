@@ -22,7 +22,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 ## compare — `compare-mcp`
 
-4 tools, 8673 `tools/list` bytes (≈2.2k tokens).
+4 tools, 8907 `tools/list` bytes (≈2.2k tokens).
 
 ### compare — `compare_*` (4 tools)
 
@@ -35,7 +35,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 ## decision — `decision-mcp`
 
-5 tools, 9695 `tools/list` bytes (≈2.4k tokens).
+5 tools, 9929 `tools/list` bytes (≈2.5k tokens).
 
 ### compare — `compare_*` (4 tools)
 
