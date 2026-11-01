@@ -78,6 +78,13 @@
   `samples_per_case` below 3 or not an integer is now a problem. A bare answer
   map is still accepted, and the report says in `protocol_unchecked` that its
   sampling was not checked.
+- `compare_prices` больше не считает «1 ТБ» и «1024 ГБ» разными размерами:
+  размеры сравниваются в гигабайтах (1 ТБ = 1024 ГБ, как продают память
+  телефонов и ноутбуков). «1000 ГБ» по-прежнему не совпадает с «1 ТБ».
+
+- `compare_prices` no longer treats "1 TB" and "1024 GB" as different sizes:
+  sizes are compared in gigabytes (1 TB = 1024 GB, as phone and laptop storage
+  is sold). "1000 GB" still does not match "1 TB".
 - `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
   цена с WB Кошельком, по подписке или с другим явным условием не выбирается
   в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется
