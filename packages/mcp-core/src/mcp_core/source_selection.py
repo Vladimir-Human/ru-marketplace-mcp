@@ -15,8 +15,8 @@ canonicalised here rather than in either caller.
 # START_MODULE_CONTRACT
 # PURPOSE: Resolve the operator-selected subset of marketplace sources.
 # SCOPE: Environment selection and aliases; callers perform mounts/filtering.
-# DEPENDS: stdlib os; fixed known-source vocabulary.
-# LINKS: M-SOURCE-SELECTION; M-CORE.
+# DEPENDS: mcp_core.sources (the registry's mountable vocabulary and aliases); stdlib os.
+# LINKS: M-SOURCE-SELECTION; M-SOURCES; M-CORE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # SourceSelectionError: Reject requested source names absent from this release.
@@ -29,37 +29,18 @@ from __future__ import annotations
 
 import os
 
+from mcp_core.sources import ALIASES, MOUNTABLE
+
 ENV_VAR = "MARKETPLACE_SOURCES"
 
-# Keep this list in the same canonical vocabulary as the unified mount table
-# and compare's source map.  A typo must fail at startup instead of producing a
-# plausible-looking server with one or zero marketplaces mounted.
-KNOWN_SOURCES = frozenset(
-    {
-        "wildberries",
-        "ozon",
-        "yandex_market",
-        "detsky_mir",
-        "avito",
-        "taobao",
-        "megamarket",
-        "lamoda",
-        "dns",
-        "citilink",
-        "aliexpress",
-        "cian",
-        "compare",
-        "mpstats",
-    }
-)
+# The vocabulary and its aliases come from the source registry, so a source
+# cannot be mountable and unselectable at once: one record says what the unified
+# server mounts and what this variable may name. A typo still fails at startup
+# instead of producing a plausible-looking server with one or zero marketplaces
+# mounted.
+KNOWN_SOURCES = MOUNTABLE
 
-_ALIASES = {
-    "wb": "wildberries",
-    "yandex": "yandex_market",
-    "ym": "yandex_market",
-    "detmir": "detsky_mir",
-    "ali": "aliexpress",
-}
+_ALIASES = ALIASES
 
 
 class SourceSelectionError(ValueError):
