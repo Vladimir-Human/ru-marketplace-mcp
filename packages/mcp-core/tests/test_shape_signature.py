@@ -8,7 +8,7 @@ be caught. Each test below pins one half of that distinction.
 
 from __future__ import annotations
 
-from mcp_core.resilience import diff_keys, shape_signature
+from mcp_core.resilience import diff_keys, shape_drift_warning, shape_signature
 
 # A trimmed stand-in for a search payload: the parts a parser binds to.
 BASELINE = {
@@ -110,3 +110,28 @@ def test_recursion_is_bounded():
 def test_a_scalar_payload_is_handled():
     assert shape_signature("just a string") == [".:str"]
     assert shape_signature([]) == [".:empty_array"]
+
+
+def test_a_lost_family_yields_the_compact_drift_warning():
+    """The runtime half of the family check: one warning string naming the
+    lost family's aliases, not a raise — the tool's answer stays usable and
+    the agent sees the drift in meta.warnings."""
+    lost = {"total": 57, "items": [{"id": 1, "title": "x", "in_stock": True}]}
+
+    warning = shape_drift_warning(lost, (("items[].price", "items[].price_rub"),), source="test_search")
+
+    assert warning == "shape_drift: test_search: missing items[].price/items[].price_rub"
+
+
+def test_a_complete_payload_yields_no_drift_warning():
+    families = (("items[].id",), ("items[].title",), ("items[].price_rub",))
+
+    assert shape_drift_warning(BASELINE, families, source="test_search") is None
+
+
+def test_a_null_value_still_counts_as_a_present_family_member():
+    """Presence, not type: a null price key is a page without a price, not a
+    page that lost its price field."""
+    nulled = {"total": 0, "items": [{"id": 1, "title": "x", "price_rub": None}]}
+
+    assert shape_drift_warning(nulled, (("items[].price_rub",),), source="test_search") is None
