@@ -292,6 +292,10 @@ async def _fetch_search(json_query: dict[str, Any], ctx: Context | None) -> tupl
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body):
@@ -319,6 +323,10 @@ async def _fetch_card(offer_id: int, ctx: Context | None) -> tuple[int, str, str
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body) and _CARD_OK_RE.search(body[:80]):

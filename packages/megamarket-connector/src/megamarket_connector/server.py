@@ -24,9 +24,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
 # INVARIANTS: Reject failed API envelopes before success pacing/cache; preserve empty results.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
+# LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# _raise_if_host_pause: Re-raise the mapped CDP host pause out of the degrade handlers that swallow other failures.
 # _post: Issue browser API reads; cache only envelopes without explicit failures.
 # _raise_failed_envelope: Distinguish not-found, refusal/service failures and malformed errors.
 # _resolve_address_id: Resolve delivery context; profile access requires opt-in.
@@ -234,6 +235,31 @@ def _blocked_error(detail: str = "") -> TransportDownError:
     return TransportDownError(message, status_code=403)
 
 
+def _raise_if_host_pause(exc: Exception) -> None:
+    """R-CDP-HOST-PAUSE: re-raise ``exc`` when it is the mapped CDP host pause.
+
+    The degrade handlers around address resolution, the catalog redirect and
+    url/parse are deliberately non-fatal for endpoint failures — a weaker
+    search is better than none, and offline tests pin that for ordinary
+    ToolErrors. A timed refusal is different: swallowing it hides the pause
+    from the agent and caches a bogus "no address" verdict that outlives the
+    cooldown, so only the rate_limited-with-retry_after_s ToolError passes
+    through; every other failure keeps the existing degrade.
+    """
+    if not isinstance(exc, ToolError):
+        return
+    try:
+        payload = json.loads(str(exc))
+    except json.JSONDecodeError:
+        return
+    if (
+        isinstance(payload, dict)
+        and payload.get("error") == "rate_limited"
+        and payload.get("retry_after_s") is not None
+    ):
+        raise exc
+
+
 def _raise_failed_envelope(payload: dict[str, Any], what: str) -> None:
     """Reject API failures before they can be cached or parsed as catalog data."""
     errors = payload.get("errors") or payload.get("error")
@@ -363,7 +389,9 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
                     log_event("megamarket.address", source="profile", region=str(preferred.get("region") or "")[:40])
                     return _address_id
         except Exception as exc:
-            # Not logged in, or the profile endpoint refused. Fall through.
+            # Not logged in, or the profile endpoint refused. Fall through —
+            # unless the host itself is paused (R-CDP-HOST-PAUSE).
+            _raise_if_host_pause(exc)
             log_event("megamarket.address_profile_failed", error=_redact(str(exc))[:120])
     else:
         log_event(
@@ -388,6 +416,9 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
                 log_event("megamarket.address", source="suggest", query=_ADDRESS[:40])
                 return _address_id
     except Exception as exc:
+        # R-CDP-HOST-PAUSE: a swallowed pause would cache a "none" address for
+        # the process lifetime, so the search stays degraded after the cooldown.
+        _raise_if_host_pause(exc)
         log_event("megamarket.address_suggest_failed", error=_redact(str(exc))[:120])
 
     _address_source = "none"
@@ -455,6 +486,9 @@ async def _final_catalog_url(catalog_url: str, ctx: Context | None) -> str:
             async with open_page(catalog_url, wait_ms=4000) as page:
                 final_url = page.url
     except Exception as exc:
+        # R-CDP-HOST-PAUSE: let a host pause through; other probe failures
+        # keep the documented degrade (weaker search, not a failed one).
+        _raise_if_host_pause(exc)
         log_event("megamarket.redirect_failed", error=_redact(str(exc))[:120])
         return catalog_url
     if final_url and final_url not in (catalog_url, "about:blank"):
@@ -488,6 +522,8 @@ async def _resolve_search_params(query: str, ctx: Context | None) -> dict[str, A
     try:
         parsed = await _post("/urlService/url/parse", {"url": catalog_url}, ctx, "url parse")
     except Exception as exc:
+        # R-CDP-HOST-PAUSE: same as _final_catalog_url — only the pause passes.
+        _raise_if_host_pause(exc)
         log_event("megamarket.url_parse_failed", error=_redact(str(exc))[:120])
         return {}
 
