@@ -27,7 +27,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
-# SCOPE: Read-only concurrent sources; partial/native-price outcomes; RUB ranking and identity evidence.
+# SCOPE: Read-only concurrent sources; everyday RUB ranking; conditional/native prices and identity evidence.
+# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
@@ -367,15 +368,31 @@ def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
     return warnings
 
 
+# START_BLOCK_PRICE_POLICY
 def _ranks_in_rubles(offer: MarketOffer) -> bool:
     """Whether an offer may enter the cheapest-in-rubles ranking.
 
-    Both halves matter. price_rub is None for anything unpriced, and the
-    currency check stops a future adapter from filling price_rub with a figure
-    that is not roubles — the failure mode where a ¥300 listing is announced as
-    the cheapest option against ₽-priced rivals.
+    R-COMPARE-CONDITIONAL-PRICE: an explicitly conditional price never ranks,
+    even if an adapter fills price_rub with it. Unmarked source prices retain
+    their existing treatment; no missing price or foreign currency may rank.
     """
-    return offer.price_rub is not None and offer.currency == "rub"
+    return offer.price_rub is not None and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
+
+
+def _conditional_price_warning(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
+    """Name the excluded amount, not the offer whose everyday price may still rank."""
+    condition = kind
+    if kind == "wallet":
+        condition = "WB Wallet"
+    elif kind == "subscription":
+        condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
+    return (
+        f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
+        f"requires {condition}; not ranked"
+    )
+
+
+# END_BLOCK_PRICE_POLICY
 
 
 def _wb_product_url(nm_id: object) -> str:
@@ -495,6 +512,7 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
     response = await server.wb_search(query=query, page=1)
 
     offers: list[MarketOffer] = []
+    conditional_warnings: list[str] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
             MarketOffer(
@@ -503,7 +521,10 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 title=item.name,
                 brand=item.brand,
                 seller=item.supplier,
-                price_rub=item.price_rub,
+                # A struck price is not an everyday fallback for Wallet-only tiles.
+                price_rub=item.price_rub if item.price_kind in ("", "regular") else None,
+                price_native=item.price_rub,
+                price_kind=item.price_kind or None,
                 rating=item.review_rating,
                 rating_count=item.feedbacks,
                 # WB's legacy bool also uses False for an unreported quantity.
@@ -512,7 +533,13 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 url=_wb_product_url(item.nm_id),
             )
         )
-    return OfferBatch(offers, response)
+        if item.wallet_price_rub is not None and item.price_kind != "wallet":
+            conditional_warnings.append(
+                _conditional_price_warning("wildberries", str(item.nm_id or ""), item.wallet_price_rub, "wallet")
+            )
+    batch = OfferBatch(offers, response)
+    batch.warnings.extend(conditional_warnings)
+    return batch
 
 
 async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
@@ -536,6 +563,10 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 brand=item.brand,
                 seller=item.seller,
                 price_rub=item.price_rub,
+                price_native=item.price_rub if item.price_rub is not None else item.price_with_plus,
+                price_kind="regular"
+                if item.price_rub is not None
+                else ("subscription" if item.price_with_plus is not None else None),
                 price_with_subscription_rub=item.price_with_plus,
                 rating=item.rating,
                 rating_count=item.rating_count,
@@ -1081,6 +1112,13 @@ async def compare_prices(
             warnings.append("stock_filter: no priced offers were returned")
     for outcome in outcomes:
         warnings.extend(f"source_warning:{outcome.source}: {warning}" for warning in outcome.warnings)
+    # Only an offer left out of the ranking is named here; a Plus amount beside a
+    # ranked everyday price already sits in price_with_subscription_rub, and a
+    # warning per such offer would bill the agent twice for the same number.
+    for offer in offers:
+        kind, native = offer.price_kind, offer.price_native
+        if kind and kind != "regular" and native is not None:
+            warnings.append(_conditional_price_warning(offer.source, offer.product_id, native, kind, offer.currency))
     warnings.extend(_relevance_warnings(text, priced))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(
