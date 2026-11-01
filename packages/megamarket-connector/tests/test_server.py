@@ -11,9 +11,9 @@ import json
 
 import pytest
 from fastmcp.exceptions import ToolError
-from megamarket_connector import server
 from mcp_core.transport import chrome_cdp
 from mcp_core.transport.cdp_budget import NavigationBudget
+from megamarket_connector import server
 
 SEARCH_PAYLOAD = {
     "total": 541,
