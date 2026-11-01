@@ -27,6 +27,22 @@
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
 
+### Fixed
+
+- `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
+  цена с WB Кошельком, по подписке или с другим явным условием не выбирается
+  в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется
+  она; иначе `price_rub` остаётся `null`, а исходная сумма — в `price_native`.
+  Предупреждения называют условие и исключённую сумму, а сумму с WB Кошельком —
+  и рядом с обычной ценой. Зачёркнутая цена не подставляется вместо обычной.
+
+- `compare_prices` preserves the price kind in the new optional `price_kind`:
+  WB Wallet, subscription and other explicitly conditional prices cannot become
+  `cheapest` or `cheapest_comparable`. The regular price ranks when available;
+  otherwise `price_rub` stays `null` and the quoted amount remains in `price_native`.
+  Warnings name the condition and excluded amount, and a WB Wallet amount also
+  next to a regular price. A struck-through price is never substituted for the regular one.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
