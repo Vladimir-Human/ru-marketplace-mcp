@@ -54,7 +54,7 @@ plus ``test_resources.py`` in marketplace-connector pin both halves together.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from fastmcp import FastMCP
@@ -105,7 +105,8 @@ _CODE_NOTES = {
 # The classes that raise each code, in the order the reference lists them.
 # Imported names rather than a string table: a renamed or removed class stops
 # this import instead of silently dropping a row the agent will look for.
-_ERROR_CLASSES: tuple[type[ConnectorError], ...] = (
+# Each class takes only the message; the code and status are fixed by the class.
+_ERROR_CLASSES: tuple[Callable[[str], ConnectorError], ...] = (
     AuthMissingError,
     RateLimitedError,
     UpstreamTimeoutError,
