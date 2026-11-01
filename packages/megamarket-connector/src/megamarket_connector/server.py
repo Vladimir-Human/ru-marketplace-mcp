@@ -788,6 +788,15 @@ async def megamarket_search(
             drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="megamarket_search")
             if drift:
                 warnings.append(drift)
+            # Every price alias (finalPrice/price/currentPrice) dying at once
+            # returns a full page of priceless items, which used to answer
+            # _meta.healthy=true — the WB/Ozon/Taobao/Yandex guard this
+            # connector was missing.
+            warnings.extend(
+                R.validate_items(
+                    [it.model_dump() for it in items], require_title=True, absent_price="no_prices_on_page"
+                )
+            )
         result = MegamarketSearchResponse(
             query=query, tier_used="cdp", count=len(items), total_count=total, items=items
         )
@@ -852,7 +861,20 @@ async def megamarket_card(
             url=R.first_present(card, "url", "webUrl") or f"{SITE_BASE}/product/{item_id}",
             tier_used="cdp",
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="megamarket_card")
+        card_warnings: list[str] = []
+        card_fields = result.model_dump(by_alias=True, exclude={"meta"})
+        if result.price_rub is None and result.old_price_rub is None:
+            # No price alias matched at all. The container parsed, so this is the
+            # card's own value drift; without the warning the call answered
+            # _meta.healthy=true with price_rub=null.
+            card_warnings.append(
+                "no_price: no price alias (price/currentPrice/finalPrice) matched on the card (value selector drift?)"
+            )
+        # The card reports stock as is_available, which validate_offer does not
+        # know; map it so "available but unpriced" fires the same contradiction
+        # the search connectors report.
+        card_warnings.extend(R.validate_offer({**card_fields, "in_stock": card_fields.get("is_available")}))
+        attached = R.attach_meta(card_fields, card_warnings, source="megamarket_card")
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:
