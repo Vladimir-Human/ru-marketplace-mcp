@@ -66,6 +66,19 @@
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
 
+- Неудачный автозапуск Chrome запоминается на 45 секунд
+  (`_AUTOSTART_FAILURE_TTL_S`): следующие вызовы, включая уже ждущие блокировку,
+  получают тот же отказ сразу, с подсказкой о возрасте попытки, вместо
+  повторного ожидания готовности CDP. Успешный запуск (в том числе
+  `browser start`/`start_browser`) память очищает, а явный запуск всегда
+  пробует по-настоящему.
+
+- A failed Chrome autostart is remembered for 45 seconds
+  (`_AUTOSTART_FAILURE_TTL_S`): later callers, including those already waiting
+  on the lock, get the same failure at once with an age hint instead of
+  repeating the CDP readiness wait. A success (also `browser start` /
+  `start_browser`) clears the memory, and an explicit start always tries for
+  real.
 - Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
   `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
   профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не
