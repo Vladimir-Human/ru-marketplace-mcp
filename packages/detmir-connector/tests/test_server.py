@@ -573,6 +573,30 @@ async def test_different_regions_do_not_share_a_cache_entry(monkeypatch):
     assert urls[0] != urls[1], "a St Petersburg request must not be answerable from Moscow's cache"
 
 
+async def test_card_reports_cache_hit_only_on_a_replayed_answer(monkeypatch, no_delay):
+    """R-DETMIR-CACHE-FLAG: a fresh answer is cached=False, the replay is True.
+
+    The flag must be sampled before _fetch_json runs: _fetch_json stores the
+    fresh payload in _cache, so reading the cache afterwards reports a false hit
+    on a first, network-backed answer.
+    """
+    calls = 0
+
+    async def fake_get_text_with_retries(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        return 200, json.dumps(CARD_PAYLOAD)
+
+    monkeypatch.setattr(server, "get_text_with_retries", fake_get_text_with_retries)
+
+    fresh = await server.detmir_card(product_id=6673568)
+    replayed = await server.detmir_card(product_id=6673568)
+
+    assert fresh.meta.cached is False, "the first answer came from the network, not the cache"
+    assert replayed.meta.cached is True
+    assert calls == 1, "the second call must be served from the in-process cache"
+
+
 async def test_all_three_tools_are_still_registered():
     names = {tool.name for tool in await server.mcp.list_tools()}
     assert names == {"detmir_card", "detmir_category", "detmir_categories"}
