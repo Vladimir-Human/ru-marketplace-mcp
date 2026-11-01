@@ -30,6 +30,7 @@ Two rules this module exists to enforce, both protocol- or security-critical:
 # browser_handoff_lifespan: Close already-loaded handoffs on server shutdown.
 # TransportConfig: Hold transport and loopback/default endpoint configuration.
 # BearerAuthMiddleware: Compare bearer token and optional static tenant identity.
+# ToolErrorRedactionMiddleware: Redact credentials FastMCP leaves in an unexpected ToolError.
 # _parse_transport: Reject unsupported transport names; blank defaults to stdio.
 # _parse_port: Validate configured TCP port bounds.
 # _parse_host: Trim the bind host or select loopback.
@@ -50,11 +51,13 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 from mcp_core.logging import log_event
+from mcp_core.redact import redact_error_text
 
 if TYPE_CHECKING:
     from fastmcp import Context, FastMCP
@@ -178,6 +181,38 @@ class BearerAuthMiddleware(Middleware):
         return await call_next(context)
 
 
+class ToolErrorRedactionMiddleware(Middleware):
+    """Redact credentials FastMCP's own error boundary leaves in a ToolError.
+
+    FastMCP answers any non-FastMCP exception raised by a tool with
+    ``ToolError(f"Error calling tool {name!r}: {e}")`` built from the raw
+    exception text, and that happens outside every tool's own error handling: a
+    ``ValueError`` carrying a proxy URL or a token reaches the client before any
+    connector code can redact it. This is the one place that closes the hole for
+    every server and every transport. Errors this project raises itself go
+    through ``raise_tool_error``, which already redacts, so their text does not
+    change under the same rules and they pass through untouched
+    (R-SECRET-REDACTION).
+    """
+
+    async def on_call_tool(self, context, call_next):
+        try:
+            return await call_next(context)
+        except ToolError as exc:
+            text = str(exc)
+            # No bound: this middleware redacts, it does not truncate. Cutting a
+            # structured JSON error at redact_error_text's default 500
+            # characters would hand the agent unparseable JSON, and even the
+            # text's own length can cut it, because a secret shorter than
+            # "<redacted>" grows the text.
+            redacted = redact_error_text(text, max_len=sys.maxsize)
+            if redacted == text:
+                raise
+            # __cause__ keeps the original ToolError for a traceback; only the
+            # text the client reads changes.
+            raise ToolError(redacted) from exc
+
+
 def _parse_transport(raw: str | None) -> Transport:
     """Map the ``MCP_TRANSPORT`` value to a supported transport.
 
@@ -268,6 +303,11 @@ def run_server(mcp: FastMCP, *, server_name: str) -> int:
     stdout to the JSON-RPC stream.
     """
     config = resolve_transport()
+
+    # Installed before anything can run, on every transport: this is the only
+    # boundary that sees the ToolError FastMCP builds from an unexpected
+    # exception, which carries the raw exception text (R-SECRET-REDACTION).
+    mcp.add_middleware(ToolErrorRedactionMiddleware())
 
     try:
         if config.is_http:

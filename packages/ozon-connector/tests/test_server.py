@@ -789,6 +789,76 @@ def test_reviews_marks_partial_when_later_page_fails(monkeypatch):
     _run(scenario())
 
 
+def test_reviews_redacts_the_failing_page_body_in_last_error(monkeypatch):
+    """last_error is part of a successful answer, so the upstream body it quotes
+    must be redacted: an Ozon error page can echo a token back, and before the
+    fix that text travelled to the agent verbatim."""
+    calls = []
+    first_page_review = {
+        "uuid": "r1",
+        "content": {"score": 5, "comment": "good"},
+        "author": {"firstName": "Ann"},
+        "usefulness": {"useful": 1},
+        "publishedAt": 0,
+    }
+
+    async def fake_fetch(path, ctx):
+        calls.append(path)
+        if len(calls) == 1:
+            return (
+                200,
+                _reviews_body(
+                    reviews=[first_page_review],
+                    next_button="?page=2&page_key=abc&sort=published_at_desc",
+                ),
+                "fake",
+            )
+        return 500, 'upstream refused: "Bearer abc.def.ghi" https://ozon.ru/x?token=abc.def.ghi', "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+        data = (await server.ozon_reviews("123", limit=5)).model_dump()
+
+        assert data["partial"] is True
+        assert data["stop_reason"] == "http"
+        assert data["last_error"]["code"] == 500
+        assert "abc.def.ghi" not in json.dumps(data)
+        assert "<redacted>" in data["last_error"]["preview"]
+
+    _run(scenario())
+
+
+def test_fetch_composer_redacts_a_tier1_exception_in_the_client_log(monkeypatch):
+    """ctx.debug goes to the client's log, so the Tier-1 exception quoted there
+    must be redacted: a proxy or auth failure can carry the credential."""
+    logged = []
+
+    class RecordingContext:
+        async def debug(self, message):
+            logged.append(message)
+
+    async def exploding_bounded(func, *args, timeout_s):
+        raise RuntimeError("proxy htp://user:Bearer abc.def.ghi@host refused")
+
+    async def fake_cdp(api_url, ctx):
+        return 200, '{"from": "cdp"}'
+
+    async def scenario():
+        monkeypatch.setattr(server, "_min_gap", 0)
+        monkeypatch.setattr(server, "_run_sync_bounded", exploding_bounded)
+        monkeypatch.setattr(server, "_cdp_fetch_json", fake_cdp)
+
+        status, body, tier = await server._fetch_composer("/product/123/", RecordingContext())
+
+        assert (status, tier) == (200, "cdp")
+        assert json.loads(body) == {"from": "cdp"}
+        assert logged and "abc.def.ghi" not in " ".join(logged)
+        assert "<redacted>" in logged[0]
+
+    _run(scenario())
+
+
 def test_reviews_tag_each_item_with_the_variant_it_describes(monkeypatch):
     """A pooled review must be attributable to the SKU it is actually about.
 

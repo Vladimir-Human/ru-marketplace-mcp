@@ -46,7 +46,7 @@ import urllib.parse
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
-from mcp_core.errors import ParserDriftError, ToolError, TransportDownError
+from mcp_core.errors import ParserDriftError, TransportDownError, raise_tool_error
 from mcp_core.pacing import Pacer
 
 __all__ = [
@@ -195,8 +195,14 @@ async def render_json(
         async with open_page(url, wait_ms=wait_ms) as page:
             raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=evaluate_timeout)
     if not isinstance(raw, str) or len(raw.encode()) > max_body_bytes:
-        raise ToolError(TransportDownError("extracted page data missing or over the body cap"))
-    data = json.loads(raw)
+        raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        # The extractor returns JSON.stringify output, so text that is not JSON
+        # means the extractor itself broke: parser drift, as AliExpress reports
+        # the same case, not a bare JSONDecodeError (R-ERRORS).
+        raise_tool_error(ParserDriftError("page extractor returned non-JSON data"))
     if not isinstance(data, dict):
-        raise ToolError(ParserDriftError("page extractor returned a non-object payload"))
+        raise_tool_error(ParserDriftError("page extractor returned a non-object payload"))
     return data

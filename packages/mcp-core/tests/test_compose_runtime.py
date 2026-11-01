@@ -43,9 +43,14 @@ def test_compose_service_passes_http_startup_auth_gate(service_name, monkeypatch
     server = Mock()
     assert runtime.run_server(server, server_name=service_name) == 0
     server.run.assert_called_once_with(transport="http", host="0.0.0.0", port=8000, path="/mcp")
-    server.add_middleware.assert_called_once()
-    middleware = server.add_middleware.call_args.args[0]
-    assert isinstance(middleware, runtime.BearerAuthMiddleware)
+    # run_server installs the error-redaction boundary on every transport
+    # (R-SECRET-REDACTION) and, for HTTP, exactly one bearer check.
+    installed = [call.args[0] for call in server.add_middleware.call_args_list]
+    bearers = [m for m in installed if isinstance(m, runtime.BearerAuthMiddleware)]
+    assert len(bearers) == 1
+    assert sum(isinstance(m, runtime.ToolErrorRedactionMiddleware) for m in installed) == 1
+    assert len(installed) == 2
+    middleware = bearers[0]
     assert middleware._token == credentials[runtime.ENV_HTTP_AUTH_TOKEN]
     assert middleware._tenant_id == credentials[runtime.ENV_HTTP_TENANT_ID]
     assert all(port.startswith("127.0.0.1:") for port in service["ports"])
