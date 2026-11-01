@@ -996,6 +996,12 @@ async def avito_search(
         if not items_raw and total not in (0, None):
             warnings.append("empty_items_with_nonzero_total")
         if items_raw:
+            # Per-offer invariants (a fabricated or unparseable price, a rating
+            # off its scale, in_stock contradicting a missing price) are the
+            # shared drift alarm; without this call they only fire in WB and
+            # Ozon, while every other connector's fabricated price reaches the
+            # agent as a plain field.
+            warnings.extend(R.validate_items(items_raw, require_title=True, absent_price="no_prices_on_page"))
             # The selfcheck compares this payload against the captured family
             # registry; the tool's own answer now carries the same drift
             # signal, so an agent does not need a human running doctor to
@@ -1115,7 +1121,10 @@ async def avito_card(
         item["url"] = item["url"] or url
         result = AvitoCardResponse(**item, tier_used="cdp")
         _pacer.record_success()
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="avito_card")
+        # The card's own fields; `seller` carries the seller's rating, not the
+        # listing's, and must stay out of the offer invariants.
+        card = result.model_dump(by_alias=True, exclude={"meta", "seller"})
+        attached = R.attach_meta(card, R.validate_offer(card), source="avito_card")
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:

@@ -77,6 +77,7 @@ from typing import Annotated, Any
 import httpx
 from fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
@@ -349,6 +350,10 @@ async def yandex_search(
 
     warnings: list[str] = []
     extraction = "ssr"
+    # Per-offer invariants (an unparseable price, a rating off its scale) are the
+    # shared drift alarm; without this the connector's own all-None guards below
+    # were the only value check, and a fabricated price passed as a plain field.
+    warnings.extend(R.validate_items([p.model_dump() for p in items], require_title=True))
 
     # Drift guard: a page where every product lost both its price and its title
     # is the SSR shape quietly moving under the parser, not a catalog full of
@@ -396,7 +401,9 @@ async def yandex_search(
         has_next_page=bool(parsed.get("has_next_page")),
         returned=len(items),
         items=items,
-        meta=MetaOut(source="yandex_search", healthy=not warnings, warnings=warnings, extraction=extraction),
+        meta=MetaOut(
+            source="yandex_search", healthy=not R.health_warnings(warnings), warnings=warnings, extraction=extraction
+        ),
     )
 
 
@@ -499,6 +506,8 @@ async def yandex_card(
 
     reviews = [YandexReview(**review) for review in parsed.get("reviews", [])] if include_reviews else []
 
+    warnings.extend(R.validate_offer(parsed))
+
     log_event(
         "yandex_card.done",
         product_id=pid,
@@ -526,7 +535,9 @@ async def yandex_card(
         rating_stars=parsed.get("rating_stars", {}),
         reviews=reviews,
         url=url,
-        meta=MetaOut(source="yandex_card", healthy=not warnings, warnings=warnings, extraction="ssr"),
+        meta=MetaOut(
+            source="yandex_card", healthy=not R.health_warnings(warnings), warnings=warnings, extraction="ssr"
+        ),
     )
 
 

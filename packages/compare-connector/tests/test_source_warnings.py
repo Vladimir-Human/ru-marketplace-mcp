@@ -22,9 +22,37 @@ CASES = [
 ]
 
 
+# The smallest non-empty items list each search model accepts, keyed by the
+# module whose models_output defines it. The compare adapters read these fields
+# by typed attribute, so an offer built here must satisfy the real model.
+SAMPLE_ITEMS = {
+    "wb": lambda m: m.WbCardItem(nm_id=1, name="x", price_rub=100.0, total_quantity=2, in_stock=True),
+    "yandex": lambda m: m.YandexProduct(product_id="1", title="x", price_rub=100.0),
+    "ozon": lambda m: m.OzonSearchItemOut(sku="1", title="x", price="100 ₽"),
+    "avito": lambda m: m.AvitoSearchItemOut(item_id=1, title="x", price_rub=100.0),
+    "taobao": lambda m: m.TaobaoSearchItemOut(item_id="1", title="x", price_cny=100.0),
+    "megamarket": lambda m: m.MegamarketSearchItemOut(item_id="1", title="x", price_rub=100.0),
+    "lamoda": lambda m: m.LamodaSearchItemOut(sku="1", title="x", price_rub=100.0),
+    "dns": lambda m: m.DnsSearchItemOut(product_id="1", title="x", price_rub=100.0),
+    "citilink": lambda m: m.CitilinkSearchItemOut(product_id="1", title="x", price_rub=100.0),
+    "aliexpress": lambda m: m.AliSearchItemOut(item_id="1", title="x", price_rub=100.0),
+}
+
+
 @pytest.mark.parametrize("source,module,model,tool", CASES)
-async def test_every_native_adapter_preserves_warnings(monkeypatch, source, module, model, tool):
-    native = getattr(importlib.import_module(f"{module}_connector.models_output"), model)()
+async def test_an_unhealthy_native_answer_with_an_offer_keeps_its_rank_and_warning(
+    monkeypatch, source, module, model, tool
+):
+    """R-COMPARE-EMPTY-TRUST: health is about the source's own data quality.
+
+    A native response that reports a problem but still returned a usable offer
+    is ranked and its warning is reported; only an unhealthy EMPTY answer stops
+    counting as an ok source (the test below covers that case).
+    """
+    models = importlib.import_module(f"{module}_connector.models_output")
+    native = getattr(models, model)()
+    sample = SAMPLE_ITEMS[module](models)
+    native.items = [sample]
     native.meta.healthy = False
     native.meta.warnings = ["no_items: native response needs investigation"]
 
@@ -61,14 +89,46 @@ async def test_warning_does_not_drop_valid_offer_and_is_isolated_per_request(mon
 
 
 async def test_no_results_without_meta_is_not_invented_degradation(monkeypatch):
+    """R-COMPARE-EMPTY-TRUST: an honest no-results answer with no diagnostics is
+    information, not degradation — it stays ok and the comparison stays complete.
+    """
+
     async def search(**kwargs):
         return WbNoResultsResponse(query="none")
 
     monkeypatch.setattr(server, "SOURCES", {"wildberries": SimpleNamespace(wb_search=search)})
     result = await server.compare_prices("none", sources=["wildberries"])
     assert result.complete is True
+    assert result.sources_ok == ["wildberries"]
+    assert result.source_outcomes[0].status == "ok"
     assert result.source_outcomes[0].warnings == []
     assert not any(w.startswith("source_warning:") for w in result.warnings)
+
+
+async def test_a_zero_offer_answer_whose_own_diagnostics_failed_is_not_ok(monkeypatch):
+    """R-COMPARE-EMPTY-TRUST: an empty answer from a source that reports a
+    problem of its own is not an honest no-result.
+
+    Audit 2026-11-01: every native no_results counted as status ok, so
+    `complete` was only as honest as each connector's empty-result path — and
+    several of those turned drift into an empty success.
+    """
+
+    async def search(**kwargs):
+        return WbNoResultsResponse(
+            query="none",
+            meta=MetaOut(source="wb_search", healthy=False, warnings=["fallback_failed: the fallback died"]),
+        )
+
+    monkeypatch.setattr(server, "SOURCES", {"wildberries": SimpleNamespace(wb_search=search)})
+    result = await server.compare_prices("none", sources=["wildberries"])
+    outcome = result.source_outcomes[0]
+    assert result.complete is False
+    assert result.sources_ok == []
+    assert outcome.status == "unhealthy"
+    assert outcome.offers_returned == 0
+    assert any(w.startswith("unhealthy_empty") for w in outcome.warnings)
+    assert any(w.startswith("source_warning:wildberries:") for w in result.warnings)
 
 
 def test_unhealthy_without_reason_gets_explicit_diagnostic():

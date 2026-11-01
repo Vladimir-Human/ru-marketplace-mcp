@@ -437,7 +437,8 @@ def parse_search_page(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], li
             "equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
         )
     if items and all(item["price_rub"] is None for item in items):
-        warnings.append("wb_dom_search: no prices read from any tile — DOM shape may have moved")
+        warnings.append("no_prices_on_page: no price parsed from any tile — the tile price shape moved")
+
     return items, warnings
 
 

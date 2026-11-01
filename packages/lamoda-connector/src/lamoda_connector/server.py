@@ -540,9 +540,9 @@ async def lamoda_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = []
-        if all(it.price_rub is None for it in items):
-            warnings.append("no_prices_on_page")
+        warnings: list[str] = R.validate_items(
+            [it.model_dump() for it in items], require_title=True, absent_price="no_prices_on_page"
+        )
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family is drift the agent
         # must see, not only a human running doctor. The four render-based
@@ -608,7 +608,8 @@ async def lamoda_card(
             url=f"{SITE_BASE}/p/{sku.lower()}/",
             tier_used=product.get("_tier_used", "graphql"),
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="lamoda_card")
+        card = result.model_dump(by_alias=True, exclude={"meta", "sizes"})
+        attached = R.attach_meta(card, R.validate_offer(card), source="lamoda_card")
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:
