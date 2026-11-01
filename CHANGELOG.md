@@ -67,6 +67,17 @@
 
 ### Fixed
 
+- Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
+  ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:
+  обёртка с `samples_per_case` меньше 3 или не целым числом теперь ошибка.
+  Голая карта ответов по-прежнему принимается, но отчёт пишет в
+  `protocol_unchecked`, что сэмплирование не проверено.
+
+- The routing eval runner (`scripts/model_routing_eval.py run`) no longer reports
+  `ok: true` for a run with fewer samples than the protocol asks: a wrapper with
+  `samples_per_case` below 3 or not an integer is now a problem. A bare answer
+  map is still accepted, and the report says in `protocol_unchecked` that its
+  sampling was not checked.
 - `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
   цена с WB Кошельком, по подписке или с другим явным условием не выбирается
   в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется

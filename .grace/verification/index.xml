@@ -384,7 +384,7 @@
     <test file="packages/marketplace-connector/tests/test_tool_docstring_sections.py" checks="Published tools document Return Format and Error Format" />
     <test file="packages/marketplace-connector/tests/test_wire_frugality.py" checks="No registered operator selfchecks and compact advertised output schemas" />
     <test file="packages/marketplace-connector/tests/test_model_routing_eval.py" coverage="offline evaluation" checks="Case bundle validation, slice/size/catalog completeness, scoring alternatives/forbidden/missing answers and prompts" />
-    <test file="packages/marketplace-connector/tests/test_model_routing_eval_verdict.py" coverage="offline evaluation" checks="Complete versus partial verdict, invalid answer IDs, report fields and runner exit code" />
+    <test file="packages/marketplace-connector/tests/test_model_routing_eval_verdict.py" coverage="offline evaluation" checks="Complete versus partial verdict, invalid answer IDs, report fields and runner exit code; a declared samples_per_case below the protocol minimum of 3 (or not an integer) is not ok, 3 is ok, and a bare answer map reports its sampling as protocol_unchecked. The sampling cases fail on old code, which ignored samples_per_case." />
   </entry>
   <entry id="V-M-TOOLSDOC" module="M-TOOLSDOC" file="scripts/gen_tools_doc.py">
     <test file="scripts/test_gen_tools_doc.py" requirements="R-DOCS-TOOLS" title="test_generated_docs_are_deterministic_between_runs" checks="Two independent collect-and-render runs produce identical text with no CR characters" />
