@@ -28,7 +28,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only concurrent sources; everyday RUB ranking; conditional/native prices and identity evidence.
-# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-NO-FABRICATION.
+# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
@@ -70,7 +70,14 @@ from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
 from pydantic import Field
 
-from compare_connector.identity import ProductIdentity, identity_from_mapping, match_product_identity
+from compare_connector.identity import (
+    ProductIdentity,
+    extract_size_tokens,
+    format_size_tokens,
+    identity_from_mapping,
+    match_product_identity,
+    sizes_conflict,
+)
 from compare_connector.models_output import (
     CompareResponse,
     MarketOffer,
@@ -325,6 +332,13 @@ def _looks_like_an_accessory(title: str, query: str) -> bool:
     low_title = title.lower()
     low_query = query.lower()
     return any(m in low_title and m not in low_query for m in _ACCESSORY_MARKERS)
+
+
+def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: frozenset[str]) -> str:
+    """One warning per call, not per offer: every warning costs the agent tokens."""
+    verb = "offer states" if count == 1 else "offers state"
+    sizes = format_size_tokens({size for group in stated for size in group})
+    return f"identity_mismatch: {count} {verb} {sizes}, query asks {format_size_tokens(asked)}; not comparable"
 
 
 def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
@@ -994,7 +1008,10 @@ async def compare_prices(
       there — `complete` tells you which case you are in.
 
     Titles are matched loosely: marketplaces name things differently, so scan the
-    results rather than assuming every row is the identical model.
+    results rather than assuming every row is the identical model. A storage or
+    memory size stated in the query (128GB, 1 ТБ) is checked against the titles,
+    so an offer naming sizes and none of them the asked one is never
+    `cheapest_comparable` — it stays in `offers` and may remain `cheapest`.
 
     ## Return Format
 
@@ -1084,11 +1101,21 @@ async def compare_prices(
     failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
 
     cheapest = priced[0] if priced else None
-    comparable = [
-        offer
-        for offer in priced
-        if not _looks_like_an_accessory(offer.title, text) and not _looks_like_another_condition(offer.title, text)
-    ]
+    # A size the query states and the title contradicts is explicit text, not a
+    # heuristic, so it keeps the offer out of the like-for-like candidate rather
+    # than merely warning about it. The offer keeps its rank and may remain
+    # plain cheapest; only cheapest_comparable skips it.
+    query_sizes = extract_size_tokens(text)
+    comparable: list[MarketOffer] = []
+    size_excluded: list[frozenset[str]] = []
+    for offer in priced:
+        if _looks_like_an_accessory(offer.title, text) or _looks_like_another_condition(offer.title, text):
+            continue
+        title_sizes = extract_size_tokens(offer.title)
+        if sizes_conflict(query_sizes, title_sizes):
+            size_excluded.append(title_sizes)
+            continue
+        comparable.append(offer)
     cheapest_comparable = comparable[0] if comparable else None
     price_spread = None
     if len(priced) >= 2:
@@ -1120,13 +1147,18 @@ async def compare_prices(
         if kind and kind != "regular" and native is not None:
             warnings.append(_conditional_price_warning(offer.source, offer.product_id, native, kind, offer.currency))
     warnings.extend(_relevance_warnings(text, priced))
+    if size_excluded:
+        warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(
-            "comparable_price: the raw cheapest listing is an accessory or different condition; "
-            "cheapest_comparable is the safer like-for-like candidate"
+            "comparable_price: the raw cheapest listing is an accessory, a different condition or a different "
+            "variant; cheapest_comparable is the safer like-for-like candidate"
         )
     elif cheapest is not None and cheapest_comparable is None:
-        warnings.append("comparable_price: every priced listing looks like an accessory or different condition")
+        warnings.append(
+            "comparable_price: every priced listing looks like an accessory, a different condition "
+            "or a different variant"
+        )
     if foreign:
         currencies = ", ".join(sorted({offer.currency for offer in foreign}))
         warnings.append(

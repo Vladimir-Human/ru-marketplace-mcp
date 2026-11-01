@@ -17,7 +17,7 @@ from each server's `tools/list` by `scripts/gen_tools_doc.py` (the estimate
 |---|---|---|
 | Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |
 | `compare-mcp` (recommended) | ~2.2k tokens per request | 4 |
-| `decision-mcp` (shortlist inspection) | ~2.4k tokens per request | 5 |
+| `decision-mcp` (shortlist inspection) | ~2.5k tokens per request | 5 |
 | `marketplace-mcp` (full) | ~17.5k tokens per request | 40 |
 <!-- tools-cost-dsh:end -->
 

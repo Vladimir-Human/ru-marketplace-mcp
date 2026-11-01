@@ -1,6 +1,7 @@
 import pytest
 from compare_connector.identity import (
     ProductIdentity,
+    extract_size_tokens,
     identity_from_mapping,
     match_product_identity,
     normalize_gtin,
@@ -143,3 +144,21 @@ def test_matching_gtin_does_not_override_conflicting_mpn():
         ProductIdentity(gtin="4006381333931", mpn="B12"),
     )
     assert result.status == "mismatch"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("ACME X100 64GB", frozenset({"64GB"})),
+        ("ACME X100 64 ГБ", frozenset({"64GB"})),
+        ("ACME X100 128гб", frozenset({"128GB"})),
+        ("ACME X100 1 ТБ", frozenset({"1TB"})),
+        ("Ноутбук ACME X100 8/128GB", frozenset({"128GB"})),
+        ("ACME X100 128", frozenset()),
+        ("iPhone 15 128GB 256GB", frozenset({"128GB", "256GB"})),
+        ("Внешний SSD 1.5 ТБ", frozenset()),
+    ],
+)
+def test_size_tokens_normalise_units_and_reject_guesses(text, expected):
+    """R-COMPARE-VARIANT-IDENTITY: only a number with a GB/TB unit is a size."""
+    assert extract_size_tokens(text) == expected
