@@ -208,3 +208,24 @@ def test_output_is_capped():
 def test_empty_input_is_safe():
     assert redact_error_text("") == ""
     assert redact_url("") == ""
+
+
+# ---------------------------------------------------------------- idempotence ----
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"Cookie: mp_auth={_JWT}",
+        "Authorization: Bearer abc123def456ghi789jkl",
+        "failed to connect to http://bob:hunter2@proxy.example:3128",
+        "GET /v1?api_key=supersecretvalue123&next=1",
+    ],
+)
+def test_redacting_twice_changes_nothing(text):
+    """The logging and error functions redact their input even when a caller
+    already ran ``_redact``: the second pass must be a no-op, not mangle the
+    placeholder or the diagnosis."""
+    once = redact_error_text(text)
+
+    assert redact_error_text(once) == once

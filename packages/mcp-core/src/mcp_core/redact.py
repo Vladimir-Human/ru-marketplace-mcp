@@ -1,17 +1,19 @@
 # START_MODULE_CONTRACT
-# PURPOSE: Scrub recognized credentials from error text and diagnostic URLs.
+# PURPOSE: Scrub recognized credentials from error text, diagnostics and JSON-shaped values.
 # SCOPE: Pattern-based redaction and bounded error output; not general PII removal.
-# DEPENDS: stdlib re.
-# LINKS: M-REDACT; M-CORE; M-LOGGING.
+# DEPENDS: stdlib re,typing.
+# LINKS: M-REDACT; M-CORE; M-LOGGING; M-ERRORS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _strip_userinfo: Remove user:password material up to the last URL-token at sign.
 # redact_error_text: Scrub known token/cookie/JWT shapes before truncating text.
 # redact_url: Scrub sensitive query parameters and proxy userinfo.
+# redact_value: Redact every string in a JSON-shaped value, leaving other types.
 # END_MODULE_MAP
 from __future__ import annotations
 
 import re
+from typing import Any
 
 _BEARER_RE = re.compile(r"(Bearer\s+)[A-Za-z0-9._~+/=-]+", re.IGNORECASE)
 _API_KEY_RE = re.compile(r"(api[_-]?key=)[^&\s\"']+", re.IGNORECASE)
@@ -89,3 +91,26 @@ def redact_url(url: str) -> str:
         return ""
     redacted = _TOKEN_QUERY_RE.sub(r"\1<redacted>", url)
     return _strip_userinfo(redacted)
+
+
+def redact_value(value: Any) -> Any:
+    """Redact every string inside a JSON-shaped value.
+
+    Containers are rebuilt rather than mutated; non-string leaves are returned
+    unchanged, so an int, bool or float field is never turned into text. This is
+    what lets ``log_event`` and ``raise_tool_error`` redact by construction while
+    callers keep passing the raw values they always did.
+    """
+    if isinstance(value, str):
+        return redact_error_text(value)
+    if isinstance(value, dict):
+        return {key: redact_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_value(item) for item in value)
+    if isinstance(value, set):
+        return {redact_value(item) for item in value}
+    if isinstance(value, frozenset):
+        return frozenset(redact_value(item) for item in value)
+    return value

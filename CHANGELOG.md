@@ -44,6 +44,14 @@
 
 ### Security
 
+- Секреты вычищаются на выходе самими функциями, а не только там, где автор
+  вызова вспомнил про `_redact`: `log_event` прогоняет через правила `redact.py`
+  имя события и все строки в полях, включая вложенные в списки и словари, а
+  `raise_tool_error` — сообщение и строковые поля ToolError. Явные вызовы
+  `_redact` остались и безвредны, потому что повторная чистка ничего не меняет;
+  нестроковые значения не трогаются. Новых правил нет: формы токена, куки и
+  учётных данных в URL те же.
+
 - `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
   полный URL принимается только с путём страницы объявления — `/<id>`,
   `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
@@ -54,6 +62,14 @@
   `/profile/x_1234567890`) уходил в браузер оператора. Теперь любой другой
   путь (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, путь
   после идентификатора) отклоняется как `bad_request` до навигации.
+
+- Secrets are scrubbed on the way out by the functions themselves, not only where
+  a caller remembered `_redact`: `log_event` runs the `redact.py` rules over the
+  event name and every string in its fields, including strings nested in lists and
+  dicts, and `raise_tool_error` does the same for the message and string fields of
+  the ToolError. The explicit `_redact` calls stay and are harmless because a
+  second pass changes nothing; non-string values are left alone. No new rules:
+  the token, cookie and URL-credential shapes are unchanged.
 
 - `avito_card` opens pages in the operator's logged-in Chrome, so a full URL
   is accepted only with an item-page path — `/<id>`, `/<slug>_<id>` or
