@@ -31,7 +31,7 @@ from mcp_core.sources import MOUNT_GATED_SOURCES, SOURCES
 # *_selfcheck canaries are no longer MCP tools (they run via
 # `marketplace-mcp doctor`), and the per-source counts are the source registry's
 # `tools` facts. The check pins MPSTATS_MP_AUTH empty, so the unified server
-# exposes the `marketplace` profile's 38 model-facing tools: without a token it
+# exposes the `marketplace` profile's 39 model-facing tools: without a token it
 # does not mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
 EXPECTED_TOOLS = {spec.console_script: spec.tools for spec in SOURCES}
 # decision-mcp is the compare connector's second console script — the middle
