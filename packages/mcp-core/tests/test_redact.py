@@ -208,3 +208,99 @@ def test_output_is_capped():
 def test_empty_input_is_safe():
     assert redact_error_text("") == ""
     assert redact_url("") == ""
+
+
+# ------------------------------------------------- secret environment variables ----
+#
+# The pattern rules recognize shapes, not values: a secret env var the project
+# reads whose value carries no token/cookie/URL-credential shape would pass
+# through them, so redact_error_text also replaces the exact current values
+# of the variables in redact.py's registry.
+
+_NON_TOKEN_SECRET = "plain-paid-session-secret-7f3a"
+
+
+def test_a_non_token_shaped_env_secret_value_is_redacted(monkeypatch):
+    monkeypatch.setenv("MPSTATS_MP_AUTH", _NON_TOKEN_SECRET)
+
+    cleaned = redact_error_text(f"upstream rejected {_NON_TOKEN_SECRET} at probe")
+
+    assert _NON_TOKEN_SECRET not in cleaned
+    assert "<redacted>" in cleaned
+    assert "upstream rejected" in cleaned
+
+
+def test_the_http_serving_token_value_is_redacted_too(monkeypatch):
+    monkeypatch.setenv("MCP_HTTP_AUTH_TOKEN", "plain-http-serving-bearer-token")
+
+    cleaned = redact_error_text("server_start failed after plain-http-serving-bearer-token")
+
+    assert "plain-http-serving-bearer-token" not in cleaned
+
+
+def test_an_env_secret_set_after_import_is_still_redacted(monkeypatch):
+    """Values are read from the environment per call, never cached at import
+    time — any test-time setenv already happens after import, and the first
+    call below runs before the variable exists at all."""
+    monkeypatch.delenv("MPSTATS_MP_AUTH", raising=False)
+    text = f"probe carried {_NON_TOKEN_SECRET}"
+
+    assert _NON_TOKEN_SECRET in redact_error_text(text)
+
+    monkeypatch.setenv("MPSTATS_MP_AUTH", _NON_TOKEN_SECRET)
+
+    assert _NON_TOKEN_SECRET not in redact_error_text(text)
+
+
+@pytest.mark.parametrize("short", ["1", "debug"])
+def test_a_short_env_value_is_not_redacted(monkeypatch, short):
+    """The minimum length keeps a placeholder-ish short value from shredding
+    ordinary text: '1' or 'debug' set as a var must not eat those words."""
+    monkeypatch.setenv("MPSTATS_MP_AUTH", short)
+    text = {"1": "retried 1 time after reset", "debug": "mpstats probe debug mode"}[short]
+
+    assert redact_error_text(text) == text
+
+
+def test_the_longer_env_value_is_replaced_before_its_substring(monkeypatch):
+    """One value can contain another (a paste of one secret into the other's
+    var, or a shared prefix); replacing the shorter one first would replace
+    only its head and leave the longer value's tail ('-tail') in the log."""
+    monkeypatch.setenv("MPSTATS_MP_AUTH", "prefix-secret-shared")
+    monkeypatch.setenv("MCP_HTTP_AUTH_TOKEN", "prefix-secret-shared-tail")
+
+    cleaned = redact_error_text("probe rejected prefix-secret-shared-tail")
+
+    assert "prefix-secret-shared-tail" not in cleaned
+    assert "tail" not in cleaned
+    assert cleaned == "probe rejected <redacted>"
+
+
+def test_env_value_redaction_is_idempotent(monkeypatch):
+    monkeypatch.setenv("MPSTATS_MP_AUTH", _NON_TOKEN_SECRET)
+
+    once = redact_error_text(f"probe with {_NON_TOKEN_SECRET}")
+
+    assert _NON_TOKEN_SECRET not in once
+    assert redact_error_text(once) == once
+
+
+# ---------------------------------------------------------------- idempotence ----
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"Cookie: mp_auth={_JWT}",
+        "Authorization: Bearer abc123def456ghi789jkl",
+        "failed to connect to http://bob:hunter2@proxy.example:3128",
+        "GET /v1?api_key=supersecretvalue123&next=1",
+    ],
+)
+def test_redacting_twice_changes_nothing(text):
+    """The logging and error functions redact their input even when a caller
+    already ran ``_redact``: the second pass must be a no-op, not mangle the
+    placeholder or the diagnosis."""
+    once = redact_error_text(text)
+
+    assert redact_error_text(once) == once
