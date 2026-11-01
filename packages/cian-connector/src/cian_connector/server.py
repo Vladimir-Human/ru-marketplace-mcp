@@ -292,6 +292,10 @@ async def _fetch_search(json_query: dict[str, Any], ctx: Context | None) -> tupl
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body):
@@ -319,6 +323,10 @@ async def _fetch_card(offer_id: int, ctx: Context | None) -> tuple[int, str, str
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body) and _CARD_OK_RE.search(body[:80]):
@@ -835,6 +843,12 @@ async def cian_search(
         warnings: list[str] = []
         if not rows and total:
             warnings.append("empty_items_with_nonzero_total")
+        else:
+            # A real-estate offer is still an offer: an unparseable price or a
+            # rating off its scale is the same selector drift the goods
+            # connectors guard against. Cian's price_unit (total/month/day)
+            # stays out of scope — validate_offer reads values, not semantics.
+            warnings.extend(R.validate_items(rows, require_title=True, absent_price="no_prices_on_page"))
         if rows:
             # The selfcheck compares this payload against the captured family
             # registry; the tool's own answer now carries the same drift
@@ -949,6 +963,8 @@ async def cian_card(
             agent=CianAgentOut(**agent) if agent else None,
             tier_used=tier,
         )
+        card = result.model_dump(by_alias=True, exclude={"meta", "price_history", "agent"})
+        warnings.extend(R.validate_offer(card, require_title=True))
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="cian_card")
         result.meta = MetaOut(**attached["_meta"])
         return result

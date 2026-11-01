@@ -815,10 +815,13 @@ async def taobao_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = []
-        priceless = sum(1 for it in items if it.price_cny is None)
-        if priceless == len(items):
-            warnings.append("no_prices_on_page")
+        # Taobao prices are yuan, so the shared validator needs the field name.
+        warnings: list[str] = R.validate_items(
+            [it.model_dump() for it in items],
+            require_title=True,
+            price_key="price_cny",
+            absent_price="no_prices_on_page",
+        )
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family (a price alias or a
         # structural wall marker) is drift the agent must see, not only a
@@ -963,8 +966,11 @@ async def taobao_card(
             url=url,
             tier_used=tier,
         )
+        card = result.model_dump(by_alias=True, exclude={"meta"})
         attached = R.attach_meta(
-            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="taobao_card"
+            card,
+            [*R.validate_offer(card, price_key="price_cny"), *card_warnings],
+            source="taobao_card",
         )
         result.meta = MetaOut(**attached["_meta"])
         if tier == "cdp":

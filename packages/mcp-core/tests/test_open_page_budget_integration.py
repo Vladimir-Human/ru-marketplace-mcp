@@ -10,12 +10,14 @@ host blocks forever, and this test turns that deadlock into a plain failure.
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
+from fastmcp.exceptions import ToolError
 from mcp_core.transport import chrome_cdp
-from mcp_core.transport.cdp_budget import budget_snapshot
+from mcp_core.transport.cdp_budget import NavigationBudget, budget_snapshot
 
 URL = "https://shop.test/search?q=a"
 OTHER = "https://other.test/search?q=a"
@@ -83,3 +85,33 @@ async def test_a_non_http_url_is_refused_before_any_permit_is_taken(fake_browser
             pass
 
     assert budget_snapshot()["hosts"] == {}
+
+
+async def test_an_open_breaker_surfaces_the_remaining_pause_as_rate_limited(fake_browser, monkeypatch):
+    """R-CDP-HOST-PAUSE: the agent must see the remaining pause, not a generic
+    retryable transport failure.
+
+    A dedicated budget with a frozen clock is driven through its public API
+    (acquire + refused) until the breaker opens, so the HostRefusingError
+    open_page translates is the real one. On the old code open_page let that
+    RuntimeError escape bare, and the connectors' broad handlers relabelled it
+    transport_down with no pause — this test fails there, because a bare
+    RuntimeError is not the ToolError it expects.
+    """
+    budget = NavigationBudget(breaker_threshold=2, breaker_cooldown_s=47.0, clock=lambda: 1000.0)
+    for _ in range(2):
+        slot = await budget.acquire("shop.test")
+        slot.refused(403)
+        slot.release()
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+    with pytest.raises(ToolError) as excinfo:
+        async with chrome_cdp.open_page(URL):
+            pass
+
+    payload = json.loads(str(excinfo.value))
+    assert payload["error"] == "rate_limited"
+    assert payload["retryable"] is True
+    assert payload["retry_after_s"] == 47.0
+    assert payload["provider"] == "shop.test"
+    assert "paused for 47 s after 2 refusals" in payload["message"]
