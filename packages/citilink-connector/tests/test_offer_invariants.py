@@ -12,7 +12,6 @@ from __future__ import annotations
 import pytest
 from citilink_connector import server
 
-
 # A page where every tile kept its shape keys (price_text present but blank,
 # title present but None — a null member keeps the shape family alive) while
 # losing both the price and the title text. The pre-existing shape_drift

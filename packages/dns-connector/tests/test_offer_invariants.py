@@ -17,7 +17,6 @@ quiet and these tests isolate the item-honesty wiring.
 from __future__ import annotations
 
 import pytest
-
 from dns_connector import server
 
 # Two tiles whose title and price nodes stopped matching. The extractor emits
