@@ -67,6 +67,17 @@
 
 ### Fixed
 
+- Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
+  ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:
+  обёртка с `samples_per_case` меньше 3 или не целым числом теперь ошибка.
+  Голая карта ответов по-прежнему принимается, но отчёт пишет в
+  `protocol_unchecked`, что сэмплирование не проверено.
+
+- The routing eval runner (`scripts/model_routing_eval.py run`) no longer reports
+  `ok: true` for a run with fewer samples than the protocol asks: a wrapper with
+  `samples_per_case` below 3 or not an integer is now a problem. A bare answer
+  map is still accepted, and the report says in `protocol_unchecked` that its
+  sampling was not checked.
 - `compare_prices` больше не считает «1 ТБ» и «1024 ГБ» разными размерами:
   размеры сравниваются в гигабайтах (1 ТБ = 1024 ГБ, как продают память
   телефонов и ноутбуков). «1000 ГБ» по-прежнему не совпадает с «1 ТБ».

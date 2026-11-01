@@ -78,9 +78,48 @@ def test_the_runner_exit_code_follows_the_verdict(tmp_path: Path) -> None:
     assert result.returncode == 1, "a partial run must not exit successfully"
 
 
-@pytest.mark.parametrize("field", ["failed", "ok", "problems"])
+@pytest.mark.parametrize("field", ["failed", "ok", "problems", "samples_per_case", "protocol_unchecked"])
 def test_the_report_exposes_the_new_fields(field: str) -> None:
     bundle = mre.load_bundle(BUNDLE)
     report = mre.evaluate_answers(bundle, {})
 
     assert field in report
+
+
+@pytest.mark.parametrize("samples", [1, 2, "3", 2.5, True])
+def test_a_declared_run_below_the_sampling_minimum_is_not_ok(samples) -> None:
+    """Protocol section 3 asks for at least 3 samples per case; a complete map with fewer is not clean.
+
+    Old code ignored samples_per_case and reported ok for a one-sample run.
+    """
+    bundle = mre.load_bundle(BUNDLE)
+    answers = {case["id"]: case["expected"] for case in bundle["cases"]}
+
+    report = mre.evaluate_answers(bundle, {"model": "m", "samples_per_case": samples, "answers": answers})
+
+    assert report["complete"] is True
+    assert report["ok"] is False
+    assert "samples_per_case" in report["problems"][0]
+
+
+def test_a_declared_run_at_the_sampling_minimum_is_ok() -> None:
+    bundle = mre.load_bundle(BUNDLE)
+    answers = {case["id"]: case["expected"] for case in bundle["cases"]}
+
+    report = mre.evaluate_answers(bundle, {"model": "m", "samples_per_case": 3, "answers": answers})
+
+    assert report["ok"] is True
+    assert report["samples_per_case"] == 3
+    assert report["protocol_unchecked"] == []
+
+
+def test_a_bare_answer_map_says_its_sampling_is_unchecked() -> None:
+    """The bare form stays valid (protocol section 4) but cannot certify sampling, so the report says so."""
+    bundle = mre.load_bundle(BUNDLE)
+    answers = {case["id"]: case["expected"] for case in bundle["cases"]}
+
+    report = mre.evaluate_answers(bundle, answers)
+
+    assert report["ok"] is True
+    assert report["samples_per_case"] is None
+    assert report["protocol_unchecked"] == ["samples_per_case not declared; sampling (protocol section 3) not checked"]
