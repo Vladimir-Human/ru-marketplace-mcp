@@ -468,6 +468,73 @@
   through `ctx.debug` go through `_redact`: a token in an upstream error body
   used to reach both the agent's answer and the client log.
 
+- Дрейф формы WB больше не срабатывает на законной странице со снятыми с
+  продажи товарами: у неё у всех товаров `"sizes": []`, а ценовое семейство
+  живёт внутри `sizes[]`, поэтому общий матчер
+  `mcp_core.resilience.shape_drift_warning` объявлял семейство потерянным.
+  Теперь пустой контейнер (сигнатура пишет его как `<путь>:empty_array`) не
+  считается потерей ключа внутри себя — искать там нечего. Правило узкое:
+  работает только для вложенного массива (не для конверта выдачи, так что
+  пустой `items: []` рядом с заполненным `goods[]` дрейф не прячет) и только
+  если этот массив пуст у всех элементов; записи `sizes`, которые есть, но
+  потеряли ключ цены, остаются дрейфом, в том числе на смешанной странице.
+- Avito: реестр `SEARCH_REQUIRED_FAMILIES` получил алиасы третьего конверта
+  `data.items[]`, который `_parse_search_items` уже читает. Раньше ответ,
+  отданный только через `data.items`, разбирался, но все семейства читались как
+  потерянные — ложная тревога; потерянное семейство внутри этого конверта
+  по-прежнему называется своим именем.
+- Заголовки `shape_reference.py` у aliexpress, citilink, dns, lamoda и taobao
+  теперь прямо говорят, по какому payload идёт проверка семейств: это выход
+  самого экстрактора, где каждый ключ выдаётся на каждой плитке, поэтому дрейф
+  разметки площадки приходит к агенту пустыми значениями и ловится
+  `validate_items` (`no_prices_on_page`, `title_missing`), а пропавший ключ
+  значит, что экстрактор перестал его выдавать. У aliexpress исправлено
+  обратное утверждение, будто экстрактор выдаёт ключи условно.
+- Ночной job: шаг doctor с аварийным сигналом идёт ПЕРЕД канарейкой. Оба шага
+  пишут в один журнал живых запросов (`.live-budget.json` в корне репозитория,
+  8 запросов на площадку за прогон, ни один шаг его не сбрасывает), поэтому
+  канарейка, идя первой, тратила бюджет WB на свои live-тесты, `wb_selfcheck`
+  у doctor'а получал отказ, читался как inconclusive (2) и job оставался
+  зелёным при настоящем дрейфе WB. Сигнал важнее: канарейка остаётся
+  информационной и зелёной, как и была.
+- `scripts/live_check.py` отдаёт код 4 на собственные ошибки использования и на
+  неудачную установку бюджета вместо прежней двойки, а ночной job валит шаг на
+  4. Двойка у doctor'а значит «источники не удалось проверить, остаёмся
+  зелёными» — правильно для заблокированной площадки, но сломанный вызов
+  `live_check` не должен прятаться в том же коде.
+- WB shape drift no longer fires on the legitimate page whose products are all
+  delisted: every product carries `"sizes": []` and the price family lives
+  inside `sizes[]`, so the shared matcher
+  `mcp_core.resilience.shape_drift_warning` reported the family as lost. An
+  empty container (the signature writes it as `<path>:empty_array`) is no
+  longer read as a lost key inside itself — there is nothing in it to lose.
+  The rule is narrow: only a nested array counts (not the result envelope, so
+  an empty `items: []` next to a filled `goods[]` does not hide drift), and
+  only when it is empty on every element; `sizes` entries that exist without
+  a price key stay drift, on a mixed page too.
+- Avito: `SEARCH_REQUIRED_FAMILIES` gained the aliases of the third envelope
+  `data.items[]`, which `_parse_search_items` already read. A payload served
+  only through `data.items` parsed fine but every family read as missing — a
+  false alarm; a family actually lost inside that envelope is still named.
+- The `shape_reference.py` headers of aliexpress, citilink, dns, lamoda and
+  taobao now state what the family check runs on: the extractor's own output,
+  where every key is emitted on every tile, so marketplace markup drift reaches
+  the agent as empty values caught by `validate_items` (`no_prices_on_page`,
+  `title_missing`) while a vanished key means the extractor stopped emitting
+  it. AliExpress carried the opposite claim that the extractor emits keys
+  conditionally; that is corrected.
+- The nightly job now runs the doctor alarm step BEFORE the canary. Both steps
+  book into one live-request ledger (`.live-budget.json` at the repository
+  root, 8 requests per source per run, neither step resets it), so a canary
+  running first spent WB's budget on its live tests, the doctor's
+  `wb_selfcheck` was refused, read inconclusive (2) and the job stayed green on
+  real WB drift. The alarm has priority; the canary stays informational and
+  green as before.
+- `scripts/live_check.py` returns 4 for its own usage errors and a failed
+  budget install instead of the old 2, and the nightly job fails the step on 4.
+  The doctor's 2 means "sources could not be judged, stay green" — right for a
+  blocked marketplace, but a broken `live_check` invocation must not hide in
+  the same code.
 - `coerce_rating` больше не выдаёт рейтинг из счётчика отзывов: строка,
   содержащая число, сгруппированное по тысячам пробелом (обычным, неразрывным
   U+00A0, узким неразрывным U+202F или тонким U+2009), теперь даёт `None` и
@@ -692,6 +759,64 @@
   but never `cheapest_comparable`; a title without a size, or a query without
   one, excludes nothing, and `8/128GB` does not contradict a `128GB` query. One
   compact `identity_mismatch` warning per call reports the exclusions.
+
+- `compare_prices` больше не теряет поля восстановления из ошибки источника:
+  `SourceOutcome` несёт `retry_after_s` (сколько ждать после открытого
+  предохранителя CDP-хоста), `retryable_now`, `retry_when` и `user_action`
+  (контракт `challenge_required`), а описание `status` называет `unhealthy`.
+  Раньше через эту границу проходили только `error_code` и `retryable`, поэтому
+  «повторите» приходило без времени ожидания, а «нужно действие человека» — без
+  самого действия.
+- `compare_verify_offer` больше не подтверждает условную цену: карточка WB, у
+  которой `price_rub` — цена Wallet (`price_kind="wallet"`, DOM-транспорт),
+  получает `observed_price_rub=null`, `delta_rub=null`, `matches=null` и
+  названный `price_kind` вместо вердикта о цене, доступной только владельцу
+  Wallet.
+- `wb_search` больше не падает на честно пустом ответе v9: отказ legacy-фолбэка,
+  поднятый обычным `ToolError` (через `raise_tool_error`), теперь тоже ловится,
+  поэтому ответ остаётся `no_results` с `fallback_failed` и `healthy=false`, а
+  предупреждение называет код и сообщение фолбэка. Если v9 уже упал, ошибка
+  по-прежнему поднимается наверх.
+- `coerce_price` использует единственный список `DECOY_MARKERS` (переехал в
+  `mcp_core.resilience`, из него же генерируется decoy-regex DOM-слоя), поэтому
+  «Рассрочка 5 751 ₽» и «в 1356 пунктов» больше не становятся ценой; суффикс
+  магнитуды («12万», «1.2K») на ценовом пути отвергается, как в `coerce_int`, а
+  `coerce_rating` отвергает счётчик без своего разделителя («1 2999»).
+- Приведены в соответствие тексты: докстроки `ozon_search` (ноль позиций —
+  `no_items` и `healthy=false`) и `megamarket_search` (любое предупреждение без
+  префикса `info:` гасит `healthy`), справочник `marketplace://errors`
+  перечисляет `retryable_now`, `retry_when` и `user_action`, докстрока
+  `registered_tools` говорит, что возвращает локальные инструменты, а склейка
+  предложений в `instructions` девяти серверов получила потерянный пробел.
+
+- `compare_prices` no longer drops the recovery fields of a source error:
+  `SourceOutcome` carries `retry_after_s` (how long to wait after an open CDP
+  host breaker), `retryable_now`, `retry_when` and `user_action` (the
+  `challenge_required` contract), and the `status` description names
+  `unhealthy`. Only `error_code` and `retryable` used to cross that boundary, so
+  "retry" arrived with no clock and "a human must act" with no action.
+- `compare_verify_offer` no longer certifies a conditional price: a WB card
+  whose `price_rub` is the Wallet price (`price_kind="wallet"`, DOM transport)
+  answers `observed_price_rub=null`, `delta_rub=null`, `matches=null` and the
+  named `price_kind` instead of a verdict on a price only a Wallet holder gets.
+- `wb_search` no longer dies on a positively empty v9 answer: a legacy-fallback
+  refusal raised as a plain `ToolError` (through `raise_tool_error`) is caught
+  too, so the answer stays `no_results` with `fallback_failed` and
+  `healthy=false`, and the warning names the fallback's code and message. When
+  v9 already failed, the error is still raised as before.
+- `coerce_price` uses the one `DECOY_MARKERS` list (moved to
+  `mcp_core.resilience`, which also generates the DOM decoy regex), so
+  'Рассрочка 5 751 ₽' and 'в 1356 пунктов' are no longer read as prices; a
+  magnitude suffix ('12万', '1.2K') is refused on the price path exactly as
+  `coerce_int` refuses it, and `coerce_rating` refuses a counter missing its own
+  separator ('1 2999').
+- Texts corrected: the `ozon_search` docstring (zero parsed items means
+  `no_items` and `healthy=false`) and the `megamarket_search` docstring (any
+  warning without the `info:` prefix flips `healthy`), the
+  `marketplace://errors` reference now lists `retryable_now`, `retry_when` and
+  `user_action`, the `registered_tools` docstring says it returns local tools
+  only, and the appended sentence in nine servers' `instructions` got its
+  missing space back.
 
 ## [2.7.0] - 2026-10-30
 

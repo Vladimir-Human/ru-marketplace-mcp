@@ -12,7 +12,7 @@
       "wire_tokens": 1735,
       "model_tokens": 1429,
       "instructions_tokens": 36,
-      "latency_ms": 3063.0,
+      "latency_ms": 3765.0,
       "schema_sha256": "314450e09450b9c9671380bc16f3848988248fe598e73f6442d32dea1c8a1ef2",
       "tools": [
         {
@@ -43,7 +43,7 @@
       "wire_tokens": 2008,
       "model_tokens": 1636,
       "instructions_tokens": 36,
-      "latency_ms": 2922.0,
+      "latency_ms": 3735.0,
       "schema_sha256": "d837e8784dd65be0ce161251d3ea85b7fdce1b451f465036eae8c9e4576f58cf",
       "tools": [
         {
@@ -76,11 +76,11 @@
     "marketplace-mcp": {
       "script": "marketplace-mcp",
       "tool_count": 39,
-      "wire_tokens": 13068,
-      "model_tokens": 9487,
+      "wire_tokens": 13084,
+      "model_tokens": 9504,
       "instructions_tokens": 153,
-      "latency_ms": 3093.0,
-      "schema_sha256": "585783adc3fdd46e7e46e146b47b3cee0eeb288e7e79bfefd191432327077f93",
+      "latency_ms": 3719.0,
+      "schema_sha256": "cb40899b11a8f262c3b88353fbdc33550fef0f5e9c5b5eaf989d156ff79bd716",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -199,8 +199,8 @@
         },
         {
           "name": "megamarket_search",
-          "tokens": 337,
-          "model_tokens": 255
+          "tokens": 345,
+          "model_tokens": 264
         },
         {
           "name": "ozon_card",
@@ -214,8 +214,8 @@
         },
         {
           "name": "ozon_search",
-          "tokens": 235,
-          "model_tokens": 154
+          "tokens": 243,
+          "model_tokens": 162
         },
         {
           "name": "taobao_card",

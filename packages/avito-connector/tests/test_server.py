@@ -272,6 +272,39 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+async def test_search_reads_the_data_items_envelope_without_shape_drift(monkeypatch):
+    """The third envelope ``_parse_search_items`` accepts: listings served only
+    under data.items[] must answer healthy, not read as a page whose every key
+    family vanished."""
+    _patch_fetch(monkeypatch, _ok({"totalCount": 137, "data": {"items": SEARCH_PAYLOAD["items"]}}))
+
+    result = await server.avito_search("ноутбук")
+
+    assert result.count == 2
+    assert result.meta.healthy is True
+    assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
+
+
+async def test_search_flags_a_family_lost_in_the_data_items_envelope(monkeypatch):
+    """The aliases make the check honest rather than silent: with the price keys
+    gone, the missing family named is the price one, not the id family the old
+    registry could only see."""
+    price_family = next(family for family in SEARCH_REQUIRED_FAMILIES if "price" in family[0])
+    payload = {
+        "totalCount": 137,
+        "data": {
+            "items": [{key: value for key, value in item.items() if key != "price"} for item in SEARCH_PAYLOAD["items"]]
+        },
+    }
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    result = await server.avito_search("ноутбук")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    assert f"shape_drift: avito_search: missing {'/'.join(price_family)}" in result.meta.warnings
+
+
 @pytest.mark.parametrize(
     ("payload", "error_code"),
     [

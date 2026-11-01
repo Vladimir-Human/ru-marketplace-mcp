@@ -13,8 +13,11 @@ with ``mcp_core.resilience.shape_signature``. Two consumers:
 The runtime companion is ``SEARCH_REQUIRED_KEYS``: ``aliexpress_search`` warns
 ``shape_drift: aliexpress_search: missing <path>`` through the shared
 ``mcp_core.resilience.shape_drift_warning`` when a payload that still yields
-tiles lost a parser-critical key outright — the extractor emits tile keys
-conditionally, so a vanished key is structural drift, not data variation.
+tiles lost a parser-critical key outright. That payload is the EXTRACTOR's own
+output, and the extractor emits every key on every tile (2026-11-01 audit), so
+a vanished key means the extractor stopped emitting it; a marketplace page
+that changed shape reaches the agent as empty values instead, which
+``validate_items`` reports as ``no_prices_on_page`` / ``title_missing``.
 ``price_texts.attached`` counts as present when it is an empty array: a tile
 without a price is a data fact, a tile without the price module is drift.
 

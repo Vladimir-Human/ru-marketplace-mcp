@@ -113,6 +113,46 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+async def test_search_still_cries_drift_when_sizes_lost_their_price_keys(monkeypatch):
+    """The boundary of the delisted page below: sizes entries that EXIST but
+    carry no price key are a rename inside the array, so the price family is
+    gone and the guard must stay loud."""
+    payload = json.loads((FIXTURES / "search_v9_live.json").read_text(encoding="utf-8"))
+    drifted = copy.deepcopy(payload)
+    for product in drifted["products"]:
+        for size in product["sizes"]:
+            size.pop("price", None)
+    _patch_get_text(monkeypatch, {"v9/search": json.dumps(drifted)})
+
+    result = await server.wb_search("ноутбук")
+
+    assert result.count > 0
+    shape_warnings = [w for w in result.meta.warnings if w.startswith("shape_drift:")]
+    assert shape_warnings == [
+        "shape_drift: wb_search: missing products[].sizes[].price/products[].salePriceU/products[].priceU"
+    ]
+
+
+async def test_search_a_delisted_page_carries_no_shape_drift_warning(monkeypatch):
+    """card/v4 answers an all-delisted page with "sizes": [] on every product —
+    the state the legacy-fallback docstring describes. The sizes array is
+    present but empty, so no element could have lost its price key: that is a
+    data fact, and the no_prices warning — not a drift alarm — speaks for it."""
+    payload = json.loads((FIXTURES / "search_v9_live.json").read_text(encoding="utf-8"))
+    delisted = copy.deepcopy(payload)
+    for product in delisted["products"]:
+        product["sizes"] = []
+        product.pop("salePriceU", None)
+        product.pop("priceU", None)
+    _patch_get_text(monkeypatch, {"v9/search": json.dumps(delisted)})
+
+    result = await server.wb_search("ноутбук")
+
+    assert result.count > 0
+    assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
+    assert any("no_prices" in w for w in result.meta.warnings)
+
+
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     payload = json.loads((FIXTURES / "search_v9_live.json").read_text(encoding="utf-8"))

@@ -109,7 +109,7 @@ mcp = FastMCP(
         "DNS-Shop electronics catalog: search and product cards. Every read "
         "runs in the operator's own Chrome over CDP — Qrator's proof-of-work "
         "blocks all anonymous access. Start with dns_search; dns_card takes a "
-        "product id or dns-shop.ru product URL."
+        "product id or dns-shop.ru product URL. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )

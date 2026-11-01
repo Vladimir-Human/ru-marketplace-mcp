@@ -192,7 +192,7 @@ mcp = FastMCP(
         "Start with avito_search; avito_card takes an item id or URL and returns "
         "the seller block when present. avito_seller takes an Avito /brands/<id> "
         "or /user/<id>/profile URL or bare id (32-hex -> brands, otherwise user). "
-        "active_items is unavailable (None): /web/1/js/items ignores userId."
+        "active_items is unavailable (None): /web/1/js/items ignores userId. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )

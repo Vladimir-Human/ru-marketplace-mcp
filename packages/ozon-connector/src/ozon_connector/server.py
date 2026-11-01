@@ -1285,7 +1285,8 @@ async def ozon_search(
     Returns sku/title/price/rating per item. Schema parses Nov 2026
     `tileGridDesktop-*` widgets with `mainState` atom structure.
 
-    zero matching items is NOT an error: a healthy response with count=0 and empty items.
+    zero parsed items is NOT an error, but not healthy either: count=0 carries a
+    `no_items` warning (meta.healthy=false).
 
     Full field list and error codes: `guide://ozon/ozon_search`.
     """
