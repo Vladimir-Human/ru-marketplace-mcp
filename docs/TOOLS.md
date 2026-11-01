@@ -16,9 +16,9 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 | Profile | Console script | Tools | `tools/list` bytes | Tokens (≈) |
 | --- | --- | ---: | ---: | ---: |
-| compare | `compare-mcp` | 4 | 8673 | ≈2.2k |
-| decision | `decision-mcp` | 5 | 9695 | ≈2.4k |
-| full | `marketplace-mcp` | 38 | 66567 | ≈16.5k |
+| compare | `compare-mcp` | 4 | 8907 | ≈2.2k |
+| decision | `decision-mcp` | 5 | 9929 | ≈2.5k |
+| full | `marketplace-mcp` | 38 | 66801 | ≈16.6k |
 
 ## compare — `compare-mcp`
 
@@ -54,7 +54,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 ## full — `marketplace-mcp`
 
-38 tools, 66567 `tools/list` bytes (≈16.5k tokens).
+38 tools, 66801 `tools/list` bytes (≈16.6k tokens).
 
 ### aliexpress — `aliexpress_*` (2 tools)
 

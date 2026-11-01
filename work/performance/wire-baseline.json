@@ -4,9 +4,9 @@
     "compare-mcp": {
       "script": "compare-mcp",
       "tool_count": 4,
-      "wire_tokens": 2156,
-      "latency_ms": 3609.0,
-      "schema_sha256": "8309b84c3fd02bd7e13f6452a31e0e3f126f8ba1fc266978125e314a38cd9107",
+      "wire_tokens": 2213,
+      "latency_ms": 3109.0,
+      "schema_sha256": "b3f97190d0eeaf89ef92979b44faddc124632a878ae993463a75097589b3fb76",
       "tools": [
         {
           "name": "compare_browser_snapshot",
@@ -14,7 +14,7 @@
         },
         {
           "name": "compare_prices",
-          "tokens": 709
+          "tokens": 766
         },
         {
           "name": "compare_sources",
@@ -29,9 +29,9 @@
     "decision-mcp": {
       "script": "decision-mcp",
       "tool_count": 5,
-      "wire_tokens": 2411,
-      "latency_ms": 3515.0,
-      "schema_sha256": "d8e127c28f55c2eaf05a395dcb4928f5ba8da67b19155e9c47d3a88dd6156eb7",
+      "wire_tokens": 2468,
+      "latency_ms": 3516.0,
+      "schema_sha256": "97560021fd31b4cdd3ec63e84797168c0077b961723e6752c5d3e17b4ef390d1",
       "tools": [
         {
           "name": "compare_browser_snapshot",
@@ -39,7 +39,7 @@
         },
         {
           "name": "compare_prices",
-          "tokens": 709
+          "tokens": 766
         },
         {
           "name": "compare_sources",
@@ -58,9 +58,9 @@
     "marketplace-mcp": {
       "script": "marketplace-mcp",
       "tool_count": 38,
-      "wire_tokens": 16542,
-      "latency_ms": 4344.0,
-      "schema_sha256": "0cd5c0319d49e2e16b1f5793fb16274dc5b94c9c0804c8a8ab332472ec62f97c",
+      "wire_tokens": 16599,
+      "latency_ms": 3219.0,
+      "schema_sha256": "212a2666e69e7326b219be9f10a04ec711ecdcfb220b8f8ae742eb4b4365b70a",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -104,7 +104,7 @@
         },
         {
           "name": "compare_prices",
-          "tokens": 709
+          "tokens": 766
         },
         {
           "name": "compare_sources",
