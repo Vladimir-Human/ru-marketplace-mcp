@@ -70,6 +70,7 @@ from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
+
 # Which sources compare searches, which card tool it verifies them with and
 # which of them quote a foreign currency all come from the source registry.
 # SEARCHABLE below is the one per-source list compare still spells out, because

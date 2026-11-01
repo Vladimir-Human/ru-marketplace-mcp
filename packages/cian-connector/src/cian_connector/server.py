@@ -60,7 +60,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
-from mcp_core.kit import polite_wait
+from mcp_core.kit import blocked_error, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer

@@ -50,10 +50,10 @@ def test_names_aliases_and_lookups_agree():
 
 def test_the_mount_table_is_the_mounted_records_in_order():
     rows = [(spec.mount, spec.module) for spec in sources.SOURCES if spec.mount is not None]
-    assert sources.MOUNTS == tuple(rows)
+    assert tuple(rows) == sources.MOUNTS
 
     mounted = {spec.name for spec in sources.SOURCES if spec.mount is not None}
-    assert sources.MOUNTABLE == mounted
+    assert mounted == sources.MOUNTABLE
     assert "marketplace" not in sources.MOUNTABLE, "the unified server is not a source to select"
     assert "compare" in sources.MOUNTABLE
 
@@ -86,28 +86,28 @@ def test_every_operator_table_row_points_at_a_record():
         assert sources.BY_NAME[name].unblock_page == page
         assert page.startswith("https://"), page
 
-    assert sources.LOGIN_UNBLOCK_SOURCES <= set(sources.UNBLOCK_PAGES)
-    assert sources.DRIFT_PROBE_SOURCES <= set(sources.BY_NAME)
+    assert set(sources.UNBLOCK_PAGES) >= sources.LOGIN_UNBLOCK_SOURCES
+    assert set(sources.BY_NAME) >= sources.DRIFT_PROBE_SOURCES
 
 
 def test_comparison_tables_derive_from_the_card_tools():
     """A source is comparable exactly when it exposes a card tool to verify."""
     with_cards = {spec.name: spec.card_tool for spec in sources.SOURCES if spec.card_tool is not None}
 
-    assert sources.CARD_TOOL_NAMES == with_cards
-    assert sources.COMPARE_SOURCES == tuple(with_cards)
+    assert with_cards == sources.CARD_TOOL_NAMES
+    assert tuple(with_cards) == sources.COMPARE_SOURCES
     assert set(sources.CARD_TOOL_NAMES) == set(sources.COMPARE_SOURCES)
     for name, tool in with_cards.items():
         assert tool == sources.BY_NAME[name].tool_prefix + "card", name
 
     foreign = tuple(name for name in sources.COMPARE_SOURCES if sources.BY_NAME[name].currency != "rub")
-    assert sources.FOREIGN_CURRENCY_SOURCES == foreign
+    assert foreign == sources.FOREIGN_CURRENCY_SOURCES
     assert "taobao" in sources.FOREIGN_CURRENCY_SOURCES
 
 
 def test_mount_gated_sources_are_mounted_but_need_configuration():
     gated = {spec.name for spec in sources.SOURCES if spec.mount_gated}
-    assert sources.MOUNT_GATED_SOURCES == gated
+    assert gated == sources.MOUNT_GATED_SOURCES
     assert gated <= sources.MOUNTABLE
     for name in gated:
         assert sources.BY_NAME[name].mount is not None

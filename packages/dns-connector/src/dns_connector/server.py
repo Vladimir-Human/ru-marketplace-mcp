@@ -359,9 +359,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     The mechanism is shared (mcp_core.kit.render_json); this module-level name
     stays because the tools call it and the tests patch it.
     """
-    return await render_json(
-        url, extract_js, wait_ms, lock=_cdp_lock, wait=_polite_wait, max_body_bytes=MAX_BODY_BYTES
-    )
+    return await render_json(url, extract_js, wait_ms, lock=_cdp_lock, wait=_polite_wait, max_body_bytes=MAX_BODY_BYTES)
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:

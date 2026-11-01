@@ -23,6 +23,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from marketplace_connector import cli, unblock
+from marketplace_connector.capabilities import CAPABILITIES as CLI_CAPABILITIES
 from mcp_core.sources import (
     BY_NAME,
     CAPABILITIES,
@@ -37,8 +39,6 @@ from mcp_core.sources import (
     SOURCES,
     UNBLOCK_PAGES,
 )
-from marketplace_connector import cli, unblock
-from marketplace_connector.capabilities import CAPABILITIES as CLI_CAPABILITIES
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGES = ROOT / "packages"
@@ -191,8 +191,8 @@ def test_the_diagnose_script_probes_exactly_the_registry_drift_sources():
 
 
 def test_the_cli_and_compare_tables_are_the_registry_projections():
-    assert cli.SERVERS == list(CONFIG_SERVERS)
-    assert cli._SELFCHECKS == list(SELFCHECKS)
+    assert list(CONFIG_SERVERS) == cli.SERVERS
+    assert list(SELFCHECKS) == cli._SELFCHECKS
     assert cli.DIAGNOSE_DRIFT_SOURCES is DRIFT_PROBE_SOURCES
     assert cli._LOGIN_UNBLOCK_SOURCES is LOGIN_UNBLOCK_SOURCES
     assert unblock.UNBLOCK_PAGES is UNBLOCK_PAGES
