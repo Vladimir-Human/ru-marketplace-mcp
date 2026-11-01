@@ -78,6 +78,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import proxy_from_env
 from pydantic import Field
 
@@ -101,6 +102,9 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 mcp = FastMCP(
     name="mpstats-connector",
     version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
 )
 
 # Verified live Jul 2026: the plugin endpoint answers from the chrome-extension
@@ -589,26 +593,9 @@ async def mpstats_item(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
-    ## Return Format
+    missing values are None, never 0, and a zero in a per-day graph means 'no data for that day'.
 
-    MpStatsItemResponse: {place, days, count, items, meta}. Each item carries
-    sku, place, seller, seller_id, brand, stock_now, price_avg_rub,
-    orders_per_day, days_on_stocks, totals {orders, sum, sum_prev} and four
-    per-day graphs (orders, prices, count, rubrics), oldest-first. Missing
-    values are None, never 0; a zero graph cell means "no data for that day".
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed skus or place; AuthMissingError
-    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-    429; TransportDownError on network failures, non-200 responses and HTML
-    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-    when no requested SKU has analytics.
-
-    Args:
-        skus: 1..100 positive SKU integers.
-        place: 'ozon' or 'wildberries'.
-        oz_fbs: Ozon FBS mode flag (default true).
+    Full field list and error codes: `guide://mpstats/mpstats_item`.
     """
     log_event("mpstats_item.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -698,23 +685,9 @@ async def mpstats_warehouses(
     Requires the ``MPSTATS_MP_AUTH`` env var (a paid MPStats account JWT cookie).
     Without it the tool returns an ``auth_missing`` error.
 
-    ## Return Format
+    missing stock counts are None, never 0.
 
-    MpStatsWarehousesResponse: {place, days, count, items, meta}. Each item
-    carries sku and stocks {fbs, fbo, fbo_warehouses, last_update}. Missing
-    stock counts are None, never 0.
-
-    ## Error Format
-
-    ToolError: BadRequestError on malformed skus or place; AuthMissingError
-    when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-    429; TransportDownError on network failures, non-200 responses and HTML
-    blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-    when no requested SKU has stock data.
-
-    Args:
-        skus: 1..100 positive SKU integers.
-        place: 'ozon' or 'wildberries'.
+    Full field list and error codes: `guide://mpstats/mpstats_warehouses`.
     """
     log_event("mpstats_warehouses.start", sku_count=len(skus), place=place)
     if ctx is not None:
@@ -905,3 +878,8 @@ async def mpstats_selfcheck(ctx: Context | None = None) -> MpStatsSelfCheckRespo
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

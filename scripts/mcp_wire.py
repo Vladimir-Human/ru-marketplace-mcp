@@ -26,20 +26,33 @@ def estimate_tokens(text: str) -> int:
     return int(cyrillic / 3.0 + (len(text) - cyrillic) / 4.0)
 
 
-def fetch_tools(root: Path, script: str, timeout: float = 180.0) -> tuple[list[dict] | None, float]:
-    """Start ``uv run --directory <root> <script>`` and collect tools/list."""
+def fetch_profile(root: Path, script: str, timeout: float = 180.0) -> tuple[list[dict] | None, str, float]:
+    """Start ``uv run --directory <root> <script>`` and collect tools and instructions.
+
+    The same ``initialize`` + ``tools/list`` exchange a client performs on
+    activation. ``instructions`` come back in the initialize result and are paid
+    once per session, so they are measured next to the tool schemas rather than
+    assumed to be free.
+    """
     command = ["uv", "run", "--frozen", "--directory", str(root), script]
     started = time.monotonic()
     try:
         with StdioProbe(command) as probe:
             deadline = started + timeout
-            probe.initialize("wire-probe", deadline)
+            handshake = probe.initialize("wire-probe", deadline)
+            instructions = handshake.get("instructions")
             tools = probe.list_tools(deadline)
             elapsed = time.monotonic() - started
-        return tools, elapsed
+        return tools, instructions if isinstance(instructions, str) else "", elapsed
     except (ProbeError, OSError) as exc:
         print(f"{script}: {exc}", file=sys.stderr)
-        return None, time.monotonic() - started
+        return None, "", time.monotonic() - started
+
+
+def fetch_tools(root: Path, script: str, timeout: float = 180.0) -> tuple[list[dict] | None, float]:
+    """Start the server and collect ``tools/list``; see :func:`fetch_profile`."""
+    tools, _instructions, elapsed = fetch_profile(root, script, timeout)
+    return tools, elapsed
 
 
 def tool_tokens(tool: dict) -> int:
@@ -52,7 +65,7 @@ def wire_tokens(tools: list[dict]) -> int:
     return sum(tool_tokens(tool) for tool in tools)
 
 
-def _snapshot(script: str, tools: list[dict], elapsed: float) -> dict[str, object]:
+def _snapshot(script: str, tools: list[dict], elapsed: float, instructions: str = "") -> dict[str, object]:
     rows = []
     for tool in tools:
         rows.append({"name": tool.get("name", ""), "tokens": tool_tokens(tool)})
@@ -63,10 +76,18 @@ def _snapshot(script: str, tools: list[dict], elapsed: float) -> dict[str, objec
         "script": script,
         "tool_count": len(tools),
         "wire_tokens": total,
+        "instructions_tokens": estimate_tokens(instructions),
         "latency_ms": round(elapsed * 1000, 1),
         "schema_sha256": schema_hash,
         "tools": rows,
     }
+
+
+def total_tokens(snapshot: dict[str, object]) -> int:
+    """Everything one profile costs per session: ``tools/list`` plus ``instructions``."""
+    tools = snapshot.get("wire_tokens")
+    instructions = snapshot.get("instructions_tokens")
+    return int(tools or 0) + int(instructions or 0)
 
 
 def _load_baseline(path: Path) -> dict[str, object]:
@@ -76,6 +97,26 @@ def _load_baseline(path: Path) -> dict[str, object]:
     if not isinstance(value, dict) or not isinstance(value.get("profiles", {}), dict):
         raise ValueError(f"invalid baseline file: {path}")
     return value
+
+
+def _ceiling_failure(snapshot: dict[str, object], baseline: dict[str, object]) -> str | None:
+    """Compare one profile's whole cost with its absolute ceiling, if it has one.
+
+    The relative gate only sees a change since the last committed baseline, and
+    that baseline is rewritten by hand with ``--update-baseline``: a profile can
+    grow by just under the limit every release and never trip it. The ceiling is
+    the part that does not move on its own. A ceiling that is absent or not a
+    positive number fails closed in gate mode, where the caller checks the
+    baseline shape; here it simply does not constrain.
+    """
+    ceilings = baseline.get("ceilings")
+    ceiling = ceilings.get(snapshot["script"]) if isinstance(ceilings, dict) else None
+    if not (isinstance(ceiling, (int, float)) and ceiling > 0):
+        return None
+    total = total_tokens(snapshot)
+    if total > ceiling:
+        return f"ceiling_exceeded:{total}>{int(ceiling)}"
+    return None
 
 
 def _check_gate(
@@ -88,9 +129,10 @@ def _check_gate(
     """Compare one snapshot with its baseline entry.
 
     ``gate`` is the CI check mode (``--baseline`` without ``--update-baseline``).
-    There a missing profile or a missing ``wire_tokens`` budget is a failure: a
-    gate that compares against nothing passes any snapshot, however large.
-    Measurement runs and baseline creation keep the permissive reading.
+    There a missing profile, a missing ``wire_tokens`` budget or a missing
+    per-profile ceiling is a failure: a gate that compares against nothing
+    passes any snapshot, however large. Measurement runs and baseline creation
+    keep the permissive reading.
     """
     profiles = baseline.get("profiles", {})
     entry = profiles.get(snapshot["script"]) if isinstance(profiles, dict) else None
@@ -105,6 +147,10 @@ def _check_gate(
             budget = old.get("wire_tokens")
             if not (isinstance(budget, (int, float)) and budget > 0):
                 failures.append(f"missing_token_budget:{snapshot['script']}")
+            ceilings = baseline.get("ceilings")
+            ceiling = ceilings.get(snapshot["script"]) if isinstance(ceilings, dict) else None
+            if not (isinstance(ceiling, (int, float)) and ceiling > 0):
+                failures.append(f"missing_ceiling:{snapshot['script']}")
     if isinstance(old, dict):
         previous = old.get("wire_tokens")
         if isinstance(previous, (int, float)) and previous > 0:
@@ -114,6 +160,9 @@ def _check_gate(
         previous_latency = old.get("latency_ms")
         if isinstance(previous_latency, (int, float)) and previous_latency > 0:
             latency_delta = snapshot["latency_ms"] - previous_latency
+    ceiling_failure = _ceiling_failure(snapshot, baseline)
+    if ceiling_failure is not None:
+        failures.append(ceiling_failure)
     if max_latency_ms is not None and snapshot["latency_ms"] > max_latency_ms:
         failures.append(f"latency_ms:{snapshot['latency_ms']:.1f}>{max_latency_ms:.1f}")
     return {
@@ -121,6 +170,7 @@ def _check_gate(
         "failures": failures,
         "token_delta_percent": token_delta,
         "latency_delta_ms": latency_delta,
+        "total_tokens": total_tokens(snapshot),
         "baseline": old,
     }
 
@@ -158,12 +208,12 @@ def main(argv: list[str]) -> int:
     snapshots: list[dict[str, object]] = []
     gates: dict[str, object] = {}
     for script in scripts:
-        tools, elapsed = fetch_tools(root, script, args.timeout)
+        tools, instructions, elapsed = fetch_profile(root, script, args.timeout)
         if tools is None:
             print(f"{script}: did not answer within {elapsed:.1f}s")
             gates[script] = {"ok": False, "failures": ["no_tools_response"], "latency_ms": round(elapsed * 1000, 1)}
             continue
-        snapshot = _snapshot(script, tools, elapsed)
+        snapshot = _snapshot(script, tools, elapsed, instructions)
         snapshots.append(snapshot)
         gates[script] = _check_gate(
             snapshot, baseline, args.max_token_regression_percent, args.max_latency_ms, gate=gate_mode
@@ -194,7 +244,10 @@ def main(argv: list[str]) -> int:
         if len(rows) > 12:
             print(f"  ... {len(rows) - 12} more")
         output_total = sum(row[4] for row in rows)
-        print(f"\nTOTAL: ~{total} tokens paid on every request")
+        instruction_tokens = int(snapshot["instructions_tokens"])
+        print(f"\nTOTAL: ~{total} tokens of tools/list, paid on every request")
+        print(f"  initialize.instructions: ~{instruction_tokens} (paid once per session)")
+        print(f"  session total          : ~{total + instruction_tokens}")
         print(f"  output schema share: ~{output_total} ({100.0 * output_total / total if total else 0.0:.0f}%)")
         print(f"  description share  : ~{sum(row[2] for row in rows)}")
         print(f"  input schema share : ~{sum(row[3] for row in rows)}")
@@ -221,8 +274,25 @@ def main(argv: list[str]) -> int:
         if args.baseline is None:
             parser.error("--update-baseline requires --baseline")
         args.baseline.parent.mkdir(parents=True, exist_ok=True)
+        # Ceilings guard the whole per-profile cost (tools/list plus
+        # instructions) against creeping growth. A ceiling already on disk is
+        # kept: raising one is a decision, not a side effect of measuring. A new
+        # profile gets 5% above what was just measured, and the first floor of
+        # 1 keeps the value a positive number, as the gate requires.
+        known = baseline.get("ceilings")
+        ceilings: dict[str, int] = dict(known) if isinstance(known, dict) else {}
+        for snapshot in snapshots:
+            ceilings.setdefault(str(snapshot["script"]), int(total_tokens(snapshot) * 1.05) + 1)
         args.baseline.write_text(
-            json.dumps({"version": 1, "profiles": {s["script"]: s for s in snapshots}}, ensure_ascii=False, indent=2)
+            json.dumps(
+                {
+                    "version": 1,
+                    "ceilings": dict(sorted(ceilings.items())),
+                    "profiles": {s["script"]: s for s in snapshots},
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
             + "\n",
             encoding="utf-8",
         )

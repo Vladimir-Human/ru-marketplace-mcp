@@ -93,6 +93,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, open_page
@@ -145,6 +146,7 @@ mcp = FastMCP(
         "signed per session, so there is no anonymous tier. Start with "
         "taobao_search; taobao_card takes a Taobao item id or URL and refuses Tmall cards. "
         "Tmall search results already carry title, price, shop and URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 
@@ -749,22 +751,9 @@ async def taobao_search(
 ) -> TaobaoSearchResponse:
     """Search Taobao and Tmall listings, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_cny is None when the tile hides it — never 0; timeout means the grid was still rendering (retry), while an unexplained empty extraction is parser drift.
 
-    TaobaoSearchResponse: {status, query, page, tier_used, count, items[], meta}.
-    Items carry item_id (string), title, price_cny (None when hidden — never 0),
-    shop_name, sales label, url. The url keeps the listing's own host: Tmall
-    products answer with a detail.tmall.com link. Ad-click trackers are never
-    returned and never followed.
-
-    ## Error Format
-
-    ToolError: challenge_required when a login/CAPTCHA wall needs browser action;
-    retry after completing it in the scraping profile. TransportDownError when
-    Chrome/CDP is unreachable; timeout (retryable) when the grid is still
-    rendering at the deadline; ParserDriftError for unexplained empty extraction
-    of a page that was NOT loading. Challenge pages are never cached as
-    successful search results.
+    Full field list and error codes: `guide://taobao/taobao_search`.
     """
     log_event("taobao_search.start", query=query[:60], page=page)
     try:
@@ -867,25 +856,9 @@ async def taobao_card(
 ) -> TaobaoCardResponse:
     """Fetch one Taobao item card.
 
-    ## Return Format
+    price_cny is None when the page hides it or prices by variant — never 0; a card cannot read a Tmall (detail.tmall.com) listing, so use the search row for it.
 
-    TaobaoCardResponse: {status, item_id, title, price_cny, shop_name, sales,
-    description_images, url, tier_used, meta}. price_cny is None when the page
-    hides it or prices by variant — never 0. When the description-image count
-    drifts to a non-number, description_images degrades to 0 and meta.warnings
-    names the drift — the card itself still answers.
-
-    ## Error Format
-
-    ToolError: BadRequestError when no id can be extracted, and when the
-    listing is a Tmall one (detail.tmall.com) — the card cannot read Tmall, and
-    the search result already carries its title, price, shop and URL;
-    NotFoundError when the item page reports itself gone; challenge_required on
-    login/CAPTCHA walls; TransportDownError on CDP failures; ParserDriftError
-    when a rendered card has neither title nor price and no detected challenge.
-    Positive challenge evidence is checked before item mapping regardless of
-    title/price; hidden widget text is excluded by the card extractor. Only
-    successful cards are cached.
+    Full field list and error codes: `guide://taobao/taobao_card`.
     """
     log_event("taobao_card.start", input=item_id_or_url[:80])
     try:
@@ -1156,3 +1129,8 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

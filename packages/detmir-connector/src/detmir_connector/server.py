@@ -72,6 +72,7 @@ from mcp_core.errors import (
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import DEFAULT_USER_AGENT, RateLimiter, build_client, get_text_with_retries, proxy_from_env
 from pydantic import Field
 
@@ -112,7 +113,13 @@ _PRODUCT_ID_RE = re.compile(r"/product/index/id/(\d{3,12})")
 # interpolated into a filter expression.
 _ALIAS_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,80}$")
 
-mcp = FastMCP(name="detmir-connector", version=SERVER_VERSION)
+mcp = FastMCP(
+    name="detmir-connector",
+    version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
+)
 
 _limiter = RateLimiter(min_gap_s=_settings.min_gap)
 _cache: TTLCache[Any] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
@@ -363,18 +370,9 @@ async def detmir_card(
     ask about a specific city; it overrides ``DETMIR_REGION`` for this call only,
     so one session can compare cities.
 
-    ## Return Format
+    price_rub is None when the card states no price — never 0.
 
-    DetmirCardResponse: {product, region, meta}. product carries product_id,
-    title, article, brand, price_rub (None when absent — never 0),
-    old_price_rub, discount_percent, rating, review_count, questions_count,
-    availability, available_online, available_offline, store_count,
-    is_marketplace, vendor, url, picture.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_card`.
     """
     region_used = _resolve_region(region)
     log_event("detmir_card.start", product_id=product_id, region=region_used)
@@ -465,17 +463,9 @@ async def detmir_category(
     real JSON endpoint with proper pagination and an upstream total, so it
     supports "what's available and how much does it cost" without scraping.
 
-    ## Return Format
+    an empty page is NOT an error: it is reported through meta.warnings.
 
-    DetmirListResponse: {query, mode, total_available, category_title,
-    returned, offset, items, region, meta}. Items carry the same product
-    shape as detmir_card. An empty page is NOT an error — it is reported via
-    meta.warnings.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_category`.
     """
     slug = (alias or "").strip().lower()
     if not _ALIAS_RE.match(slug):
@@ -596,17 +586,7 @@ async def detmir_categories(
     list a category. Each node carries its `alias` and a `products_count`, so you
     can see where the inventory actually is before fetching a listing.
 
-    ## Return Format
-
-    DetmirCategoriesResponse: {parent, returned, total_available, items,
-    region, meta}. Items carry category_id, alias, title, full_name, level,
-    products_count, parent_id, url; alias is what detmir_category needs to
-    list a category.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_categories`.
     """
     region_used = _resolve_region(region)
     requested = (parent or "top").strip()
@@ -798,6 +778,11 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

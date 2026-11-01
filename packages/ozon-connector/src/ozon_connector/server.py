@@ -73,6 +73,7 @@ from mcp_core.process import (
     worker_process_kwargs,
 )
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import proxy_from_env
 from mcp_core.transport.chrome_cdp import NavBlocked, cdp_setup_hint, open_page
 from pydantic import Field
@@ -92,6 +93,9 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 mcp = FastMCP(
     name="ozon-connector",
     version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
 )
 
 # Strict allowlist for paths we are willing to navigate inside the operator's authenticated
@@ -655,22 +659,9 @@ async def ozon_card(
     9222) when Tier-1 hits Cloudflare 403. Tier-2 requires the operator running Chrome
     via scripts/start_chrome_cdp.ps1 (Windows) or scripts/start_chrome_cdp.sh (Linux/macOS) first.
 
-    ## Return Format
+    fields the page does not carry are None, never 0; an empty payload is a healthy response, not an error.
 
-    OzonCardResponse: {status, price, card_price, price_original, is_available,
-    rating_score, rating_count, title, seller, characteristics, url, tier_used,
-    meta} on success. Fields are None when the page does not carry them.
-
-    ## Error Format
-
-    Raises ToolError on validation (BadRequestError), transport/block
-    (TransportDownError — including the catch-all for unexpected internal
-    errors), or parser drift (ParserDriftError). No-results is NOT an error —
-    an empty widgetStates payload returns a healthy response with null fields.
-
-    Args:
-        sku_or_path: SKU integer-as-string, full Ozon URL, or /product/<digits>/ path.
-                     Other paths are rejected (SSRF prevention).
+    Full field list and error codes: `guide://ozon/ozon_card`.
     """
     log_event("ozon_card.start", sku=str(sku_or_path)[:120])
     try:
@@ -863,21 +854,9 @@ async def ozon_reviews(
     drawing any conclusion about a product, and say so when `own_reviews` is 0 —
     a headline 4.8 can be borrowed entirely from neighbours.
 
-    ## Return Format
+    a later page that fails after reviews were collected is a PARTIAL SUCCESS (partial=True, stop_reason set), not an error.
 
-    OzonReviewsResponse: {status, sort, rating_score, reviews_count, distribution,
-    returned, partial, stop_reason, last_error, requested_limit, reviews,
-    requested_item_id, own_reviews, pool_variants, meta}
-    on success. A later-page transport, JSON-decode or pagination failure with
-    reviews already collected is a PARTIAL SUCCESS (partial=True, stop_reason
-    set), and so is a later page without a widgetStates object.
-
-    ## Error Format
-
-    Raises ToolError on validation (BadRequestError), transport/block
-    (TransportDownError), or parser drift (ParserDriftError) — but ONLY when no
-    reviews have been collected yet. Once at least one page yielded reviews, a
-    later-page failure degrades to a partial-success return.
+    Full field list and error codes: `guide://ozon/ozon_reviews`.
     """
     log_event("ozon_reviews.start", sku=str(sku_or_path)[:120], limit=limit, sort=sort)
     try:
@@ -1328,16 +1307,9 @@ async def ozon_search(
     Returns sku/title/price/rating per item. Schema parses Nov 2026
     `tileGridDesktop-*` widgets with `mainState` atom structure.
 
-    ## Return Format
+    zero matching items is NOT an error: a healthy response with count=0 and empty items.
 
-    OzonSearchResponse: {status, query, page, tier_used, count, items, meta} on
-    success. Zero matching items is NOT an error — it returns a healthy response
-    with count=0 and empty items.
-
-    ## Error Format
-
-    Raises ToolError on validation (BadRequestError), transport/block
-    (TransportDownError), or parser drift (ParserDriftError).
+    Full field list and error codes: `guide://ozon/ozon_search`.
     """
     log_event("ozon_search.start", query=str(query)[:100], page=page)
     try:
@@ -1690,6 +1662,11 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

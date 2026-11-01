@@ -89,6 +89,7 @@ from mcp_core.errors import (
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import RateLimiter, build_client, get_text_with_retries, proxy_from_env
 from pydantic import Field
 
@@ -128,7 +129,13 @@ HEADERS = {
 # following — retried alongside the usual gateway statuses.
 _RETRY_STATUSES = frozenset({302, 502, 503, 504})
 
-mcp = FastMCP(name="yandex-connector", version=SERVER_VERSION)
+mcp = FastMCP(
+    name="yandex-connector",
+    version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
+)
 
 _limiter = RateLimiter(min_gap_s=_settings.min_gap)
 _cache: TTLCache[str] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=64)
@@ -292,21 +299,9 @@ async def yandex_search(
     Note `rating_count` counts star ratings, not written reviews; the written
     count is available per product via `yandex_card`.
 
-    ## Return Format
+    price_rub is None when absent — never 0; zero results is NOT an error, it is reported via meta.warnings.
 
-    YandexSearchResponse: {query, page, page_count, total_available,
-    has_next_page, returned, items, meta}. Items carry product_id, sku_id,
-    title, brand, seller, price_rub (everyday — None when absent, never 0),
-    price_with_plus, price_old_rub (struck-through reference), currency,
-    rating, rating_count, in_stock, is_express, url, image. Zero results is
-    NOT an error — it is reported via meta.warnings. meta.extraction names the
-    path: 'ssr' (full widget state), 'zone' (first-screen snippet payloads —
-    both prices, no brand) or 'ld+json' (degraded, Plus price only).
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://yandex/yandex_search`.
     """
     text = (query or "").strip()
     if len(text) < 2:
@@ -439,19 +434,9 @@ async def yandex_card(
     Reviews are capped at the ~13 Yandex renders server-side; the remainder load
     through an API this connector deliberately does not touch.
 
-    ## Return Format
+    price_rub is None when the page has no usable price — never 0; price_with_plus requires a subscription and never ranks.
 
-    YandexCardResponse: {product_id, sku_id, title, brand, seller,
-    description, image, price_rub, price_with_plus, price_before_discount_rub,
-    discount_percent, currency, offers_count, rating, rating_count,
-    review_count, rating_stars, reviews, url, meta}. price_rub is None when
-    the page has no usable price — never 0. Review items carry author,
-    rating, date, pros, cons, comment, votes_up, votes_down, photos.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://yandex/yandex_card`.
     """
     pid = (product_id or "").strip()
     if not pid.isdigit():
@@ -706,6 +691,11 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

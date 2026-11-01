@@ -110,8 +110,27 @@ names: "counts star ratings, not written reviews, which is usually far smaller".
 belong in `meta.warnings` with `healthy: false`. Silence reads as success.
 
 Every tool needs `ToolAnnotations(readOnlyHint=True, destructiveHint=False,
-idempotentHint=True, openWorldHint=True)` and an `## Error Format` note in its
-docstring.
+idempotentHint=True, openWorldHint=True)`, a core docstring (what the tool answers
+and the invariants that change the decision) and its `## Return Format` /
+`## Error Format` sections — but those two sections are reference text, and the
+description is paid on every request. They live in the tool's guide resource
+instead.
+
+Add the sections to the tool function's docstring as usual, then move them: put
+the tool's reference text in the `GUIDES` table in
+`packages/mcp-core/src/mcp_core/resources.py`, keyed by the tool name, and leave
+one line in the docstring:
+
+```
+Full field list and error codes: `guide://<source>/<tool>`.
+```
+
+`register_reference_resources(mcp)` at the end of the module publishes the guide
+under exactly that URI together with the shared `marketplace://errors`, and
+`packages/marketplace-connector/tests/test_tool_docstring_sections.py` checks the
+pair. If your server mounts other servers, use
+`mcp_core.resources.mount_child(parent, child)` rather than `parent.mount(child)`,
+so the shared error URI keeps one owner in the profile.
 
 ## 5. Add a tri-state selfcheck
 
