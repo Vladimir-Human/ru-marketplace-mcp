@@ -41,12 +41,12 @@ for line in sys.stdin:
     if mode == "missing_initialize":
         result["serverInfo"].pop("version")
     if request_id == 2:
-        result = {"tools": [{"name": "tool_" + str(i), "inputSchema": {"type": "object"}} for i in range(40)]}
+        result = {"tools": [{"name": "tool_" + str(i), "inputSchema": {"type": "object"}} for i in range(38)]}
         if mode == "badtools":
             result = {"tools": None}
     elif request_id == 3:
         version = "fixture-old" if mode == "stale_sources" else "fixture-current"
-        result = {"structuredContent": {"mounted_count": 14, "server_version": version}}
+        result = {"structuredContent": {"mounted_count": 13, "server_version": version}}
         if mode == "missing_sources":
             result["structuredContent"].pop("server_version")
         if mode == "toolerror":
@@ -75,7 +75,7 @@ def test_noisy_and_interleaved_child_completes(mode: str) -> None:
     with StdioProbe(command(mode)) as probe:
         deadline = time.monotonic() + 3
         probe.initialize("test", deadline)
-        assert len(probe.list_tools(deadline)) == 40
+        assert len(probe.list_tools(deadline)) == 38
         assert len(probe.stderr) <= 2500
     assert probe.proc.poll() is not None
 

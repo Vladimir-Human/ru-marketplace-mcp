@@ -33,11 +33,12 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
-# SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests.
+# SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests; unified-mount availability gate.
 # DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction; models_output; settings.
-# LINKS: M-MPSTATS; M-MARKETPLACE; packages/mpstats-connector/tests.
+# LINKS: M-MPSTATS; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; packages/mpstats-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# mount_unavailable_reason: Why the unified server must not mount these tools, or None.
 # _cookie_header: Resolve the required auth secret without exposing its value.
 # _post_json_budgeted: Bound paced HTTP retries and response size.
 # _call: Classify HTTP/body auth, rate-limit, transport and parser failures.
@@ -91,7 +92,7 @@ from mpstats_connector.models_output import (
     MpStatsWarehousesItem,
     MpStatsWarehousesResponse,
 )
-from mpstats_connector.settings import get_settings
+from mpstats_connector.settings import MPStatsSettings, get_settings
 
 _settings = get_settings()
 
@@ -194,6 +195,25 @@ def _cookie_header() -> str:
     """
     token = (_settings.mp_auth.get_secret_value() or "").strip()
     return f"mp_auth={token}" if token else ""
+
+
+def mount_unavailable_reason() -> str | None:
+    """Why the unified server must not mount these tools, or ``None``.
+
+    Every call preflights ``MPSTATS_MP_AUTH`` and returns ``auth_missing``
+    without a token, so mounting the two schemas would make the agent pay for
+    them on every request with nothing behind them (R-MPSTATS-MOUNT-GATE). The
+    unified marketplace server asks this before mounting. The standalone
+    ``mpstats-mcp`` server never consults it and keeps its tools, answering
+    ``auth_missing`` exactly as before.
+
+    Reads the settings fresh rather than the module-level ``_settings``: the
+    mount decision happens once, and it must reflect the environment the
+    process was given. A blank value is not a token, matching ``_cookie_header``.
+    """
+    if (MPStatsSettings().mp_auth.get_secret_value() or "").strip():
+        return None
+    return "auth_missing: MPSTATS_MP_AUTH not set"
 
 
 async def _post_json_budgeted(
