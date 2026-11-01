@@ -313,7 +313,9 @@ async def test_render_json_rejects_a_non_object_or_non_json_payload(monkeypatch)
 
     _install_fake_open_page(monkeypatch, "{not json")
 
-    with pytest.raises(json.JSONDecodeError):
+    # R-ERRORS: a non-JSON extract is refused through raise_tool_error as parser
+    # drift (it used to escape as a bare json.JSONDecodeError).
+    with pytest.raises(ToolError, match="non-JSON data"):
         await render_json(
             "https://example.test/search",
             "() => 1",
@@ -362,3 +364,19 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
     assert error["error"] == ErrorCode.PARSER_DRIFT
     assert error["retryable"] is False
     assert error["message"] == "page extractor returned a non-object payload"
+
+    _install_fake_open_page(monkeypatch, "{not json")
+
+    with pytest.raises(ToolError) as excinfo:
+        await render_json(
+            "https://example.test/search",
+            "() => 1",
+            8000,
+            lock=_OrderLock([]),
+            wait=_no_wait,
+            max_body_bytes=1024,
+        )
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == ErrorCode.PARSER_DRIFT
+    assert error["message"] == "page extractor returned non-JSON data"

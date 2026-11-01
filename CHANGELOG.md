@@ -414,7 +414,8 @@
   тексте ошибки не вычищалось. Челлендж x5sec теперь `challenge_required`
   (`requires_user_action: true`, `retryable_now: false`, `user_action` с
   ручным шагом), как у x5sec на Taobao, а не `transport_down`, на который
-  агент повторял бы запрос впустую.
+  агент повторял бы запрос впустую. Не-JSON выдача экстрактора в
+  `render_json` теперь тоже `parser_drift`, а не голый `JSONDecodeError`.
 
 - `run_server` ставит на каждом транспорте (stdio и HTTP) middleware
   `ToolErrorRedactionMiddleware`. FastMCP сам превращает неожиданное исключение
@@ -449,7 +450,8 @@
   preview in it was never redacted. The x5sec challenge is now
   `challenge_required` (`requires_user_action: true`, `retryable_now: false`,
   a `user_action` naming the manual step), like Taobao's x5sec, instead of a
-  `transport_down` the agent would retry in vain.
+  `transport_down` the agent would retry in vain. A non-JSON extract in
+  `render_json` is now `parser_drift` too, not a bare `JSONDecodeError`.
 
 - `run_server` installs `ToolErrorRedactionMiddleware` on every transport
   (stdio and HTTP). FastMCP itself turns an unexpected exception inside a tool

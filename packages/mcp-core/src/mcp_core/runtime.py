@@ -200,12 +200,12 @@ class ToolErrorRedactionMiddleware(Middleware):
             return await call_next(context)
         except ToolError as exc:
             text = str(exc)
-            # max_len is the text's own length: this middleware redacts, it
-            # does not bound. Cutting a structured JSON error at
-            # redact_error_text's default 500 characters would hand the agent
-            # unparseable JSON, which is exactly the failure this boundary
-            # exists to prevent.
-            redacted = redact_error_text(text, max_len=len(text))
+            # No bound: this middleware redacts, it does not truncate. Cutting a
+            # structured JSON error at redact_error_text's default 500
+            # characters would hand the agent unparseable JSON, and even the
+            # text's own length can cut it, because a secret shorter than
+            # "<redacted>" grows the text.
+            redacted = redact_error_text(text, max_len=sys.maxsize)
             if redacted == text:
                 raise
             # __cause__ keeps the original ToolError for a traceback; only the

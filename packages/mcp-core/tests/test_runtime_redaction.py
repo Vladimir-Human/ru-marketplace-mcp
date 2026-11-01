@@ -99,6 +99,21 @@ async def test_middleware_redacts_and_keeps_the_original_as_cause():
     assert excinfo.value.__cause__ is original
 
 
+async def test_middleware_never_cuts_a_text_the_redaction_grew(monkeypatch):
+    """A secret shorter than "<redacted>" makes the text longer; bounding the
+    result by the original length would cut the tail the agent needs."""
+    monkeypatch.setenv(runtime.ENV_HTTP_AUTH_TOKEN, "s3cr3t")
+    middleware = runtime.ToolErrorRedactionMiddleware()
+
+    async def call_next(context):
+        raise ToolError("proxy refused s3cr3t; check HTTPS_PROXY tail-marker")
+
+    with pytest.raises(ToolError) as excinfo:
+        await middleware.on_call_tool(None, call_next)
+
+    assert str(excinfo.value) == "proxy refused <redacted>; check HTTPS_PROXY tail-marker"
+
+
 async def test_middleware_passes_clean_errors_and_other_exceptions_through():
     middleware = runtime.ToolErrorRedactionMiddleware()
     clean = ToolError("nothing secret here")
