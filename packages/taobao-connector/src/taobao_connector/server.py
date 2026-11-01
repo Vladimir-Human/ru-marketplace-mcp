@@ -47,8 +47,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Taobao/Tmall search and Taobao-only item cards with prices kept in CNY.
 # SCOPE: Read-only DOM/state; no ad-click trackers; bounded loading polls; explicit Tmall card refusal; challenge handoffs.
-# DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
-# LINKS: M-TAOBAO; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
+# LINKS: M-TAOBAO; M-KIT; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _search_url: Build canonical percent-encoded search/cache/handoff URLs.
@@ -89,6 +89,7 @@ from mcp_core.errors import (
     UpstreamTimeoutError,
     raise_tool_error,
 )
+from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -159,9 +160,11 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _search_url(query: str, page: int = 1) -> str:
@@ -815,10 +818,13 @@ async def taobao_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = []
-        priceless = sum(1 for it in items if it.price_cny is None)
-        if priceless == len(items):
-            warnings.append("no_prices_on_page")
+        # Taobao prices are yuan, so the shared validator needs the field name.
+        warnings: list[str] = R.validate_items(
+            [it.model_dump() for it in items],
+            require_title=True,
+            price_key="price_cny",
+            absent_price="no_prices_on_page",
+        )
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family (a price alias or a
         # structural wall marker) is drift the agent must see, not only a
@@ -963,8 +969,11 @@ async def taobao_card(
             url=url,
             tier_used=tier,
         )
+        card = result.model_dump(by_alias=True, exclude={"meta"})
         attached = R.attach_meta(
-            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="taobao_card"
+            card,
+            [*R.validate_offer(card, price_key="price_cny"), *card_warnings],
+            source="taobao_card",
         )
         result.meta = MetaOut(**attached["_meta"])
         if tier == "cdp":

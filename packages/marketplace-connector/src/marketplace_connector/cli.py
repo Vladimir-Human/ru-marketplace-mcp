@@ -38,7 +38,7 @@ The verbs cover the moments an operator actually needs help with:
 # START_MODULE_CONTRACT
 # PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
 # SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
-# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
+# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.sources (source registry; per-source tables derived there); mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
 # LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -74,6 +74,7 @@ from typing import Any
 
 from mcp_core.logging import log_event
 from mcp_core.source_selection import canonical
+from mcp_core.sources import CONFIG_SERVERS, DRIFT_PROBE_SOURCES, LOGIN_UNBLOCK_SOURCES, SELFCHECKS
 
 from marketplace_connector import __version__
 from marketplace_connector.capabilities import CAPABILITIES, browser_backed
@@ -117,39 +118,11 @@ CLIENT_LABELS: dict[str, str] = {
     "claude-code": "Claude Code",
 }
 
-# (config key, console script, human note)
-SERVERS: list[tuple[str, str, str]] = [
-    ("wildberries", "wb-mcp", "anonymous HTTP — availability depends on your network"),
-    ("ozon", "ozon-mcp", "needs your Chrome for tier 2 — see docs/CDP_SETUP.md"),
-    ("yandex-market", "yandex-mcp", "anonymous HTTP"),
-    ("detsky-mir", "detmir-mcp", "anonymous HTTP"),
-    ("avito", "avito-mcp", "needs your Chrome — IP firewall"),
-    ("taobao", "taobao-mcp", "needs your Chrome — signed API"),
-    ("megamarket", "megamarket-mcp", "needs your Chrome — ServicePipe"),
-    ("lamoda", "lamoda-mcp", "cards anonymous; search needs your Chrome"),
-    ("dns", "dns-mcp", "needs your Chrome — Qrator proof-of-work"),
-    ("citilink", "citilink-mcp", "needs your Chrome — Qrator"),
-    ("aliexpress", "aliexpress-mcp", "needs your Chrome — AliExpress Russia"),
-    ("cian", "cian-mcp", "real estate; needs your Chrome — WAF by IP"),
-    ("compare-prices", "compare-mcp", "fans out across all of the above"),
-    ("mpstats", "mpstats-mcp", "optional paid analytics — requires MPSTATS_MP_AUTH in the server environment"),
-]
+# (config key, console script, human note) come from the source registry: the
+# per-source client config and the console scripts CI installs are one fact.
+SERVERS: list[tuple[str, str, str]] = list(CONFIG_SERVERS)
 
-_SELFCHECKS: list[tuple[str, str, str]] = [
-    ("wildberries", "wb_connector.server", "wb_selfcheck"),
-    ("ozon", "ozon_connector.server", "ozon_selfcheck"),
-    ("yandex_market", "yandex_connector.server", "yandex_selfcheck"),
-    ("detsky_mir", "detmir_connector.server", "detmir_selfcheck"),
-    ("avito", "avito_connector.server", "avito_selfcheck"),
-    ("taobao", "taobao_connector.server", "taobao_selfcheck"),
-    ("megamarket", "megamarket_connector.server", "megamarket_selfcheck"),
-    ("lamoda", "lamoda_connector.server", "lamoda_selfcheck"),
-    ("dns", "dns_connector.server", "dns_selfcheck"),
-    ("citilink", "citilink_connector.server", "citilink_selfcheck"),
-    ("aliexpress", "aliexpress_connector.server", "aliexpress_selfcheck"),
-    ("cian", "cian_connector.server", "cian_selfcheck"),
-    ("mpstats", "mpstats_connector.server", "mpstats_selfcheck"),
-]
+_SELFCHECKS: list[tuple[str, str, str]] = list(SELFCHECKS)
 
 # The usage screen. Short on purpose: it is read in a terminal, and the
 # details live in docs/QUICKSTART.md.
@@ -226,12 +199,13 @@ NEXT_STEP_SELFCHECK_ERROR = (
     "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues with this output."
 )
 
-# The sources scripts/diagnose_drift.py can actually probe: the keys of its
-# SOURCES table plus its API_SOURCES. Everything else (wildberries, ozon,
-# yandex_market, detsky_mir, avito, aliexpress, cian, mpstats) is rejected by
-# that script's argparse, so it must not be advertised as the way to diagnose
-# them. A test parses the script and keeps this set honest.
-DIAGNOSE_DRIFT_SOURCES = frozenset({"citilink", "dns", "lamoda", "taobao", "megamarket"})
+# The sources scripts/diagnose_drift.py can actually probe: its SOURCES keys
+# plus its API_SOURCES. Everything else (wildberries, ozon, yandex_market,
+# detsky_mir, avito, aliexpress, cian, mpstats) is rejected by that script's
+# argparse, so it must not be advertised as the way to diagnose them. The set
+# comes from the source registry's drift_probe facts; a test parses the script
+# and keeps both honest.
+DIAGNOSE_DRIFT_SOURCES = DRIFT_PROBE_SOURCES
 
 # The reason codes the connectors really emit for "the browser refused us"
 # or "the site wants a human". These are the selfcheck `reason` values, not
@@ -243,7 +217,7 @@ WALL_REASONS = frozenset({"blocked", "login_wall", "not_authenticated", "challen
 
 # Sources whose wall is a login rather than a bot check: the operator's action
 # there is "log in", and the page in UNBLOCK_PAGES is the login or home page.
-_LOGIN_UNBLOCK_SOURCES = frozenset({"taobao", "megamarket"})
+_LOGIN_UNBLOCK_SOURCES = LOGIN_UNBLOCK_SOURCES
 
 # Seconds ``unblock`` waits for the human when stdin is not a terminal.
 UNBLOCK_WAIT_DEFAULT_S = 180.0

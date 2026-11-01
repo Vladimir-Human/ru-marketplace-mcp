@@ -126,6 +126,41 @@ async def test_search_a_pricelss_item_is_none_never_zero(monkeypatch):
     assert result.items[1].price_rub != 0
 
 
+async def test_search_warns_when_no_item_kept_a_price(monkeypatch):
+    """Every finalPrice/price/currentPrice alias dying at once is drift.
+
+    Before this guard a full page of priceless items answered _meta.healthy=true
+    with no warning — the one empty-success path wb, ozon, taobao and yandex
+    already closed (audit 2026-11-01, item D3).
+    """
+    priceless = {
+        "total": 2,
+        "items": [
+            {"id": 1, "title": "Стиральная машина узкая LG", "url": "u"},
+            {"id": 2, "title": "Стиральная машина Bosch", "url": "u"},
+        ],
+    }
+    _patch_post(monkeypatch, priceless)
+
+    result = await server.megamarket_search("стиральная машина")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    assert any(w.startswith("no_prices_on_page") for w in result.meta.warnings), result.meta.warnings
+
+
+async def test_card_warns_when_no_price_alias_matched(monkeypatch):
+    """The card had no canary at all: price_rub=null answered with warnings=[]."""
+    _patch_post(monkeypatch, {"goods": {"id": 1234567, "title": "Стиральная машина", "isAvailable": True}})
+
+    result = await server.megamarket_card("1234567")
+
+    assert result.price_rub is None
+    assert result.meta.healthy is False
+    assert any(w.startswith("no_price") for w in result.meta.warnings), result.meta.warnings
+    assert any(w.startswith("instock_no_price") for w in result.meta.warnings), result.meta.warnings
+
+
 async def test_search_raises_drift_on_empty_items_with_nonzero_total(monkeypatch):
     """total=10 with nothing parseable is a contradiction, not a soft warning.
 

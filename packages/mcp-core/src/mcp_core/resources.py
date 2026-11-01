@@ -476,8 +476,10 @@ later-page failure degrades to a partial-success return.""",
     "ozon_search": """## Return Format
 
 OzonSearchResponse: {status, query, page, tier_used, count, items, meta} on
-success. Zero matching items is NOT an error — it returns a healthy response
-with count=0 and empty items.
+success. Zero parsed items is NOT an error, but it is NOT healthy either:
+count=0 with empty items carries a `no_items` warning (meta.healthy=false),
+because an empty tile grid and a tileGrid selector that stopped matching
+look the same from here.
 
 ## Error Format
 

@@ -128,6 +128,61 @@
   покрыт — его shape_reference объясняет, почему охрана по наличию ключей
   там никогда не сработала бы.
 
+- У проекта появился один реестр источников — `mcp_core.sources`: каноническое
+  имя и алиасы, пакет, модуль, консольный скрипт, префикс инструментов, имя в
+  таблице монтирования, ключ в конфиге клиента, selfcheck, карточный инструмент,
+  число инструментов, уровень доступа, CDP и логин, валюта, текстовый поиск,
+  страница разблокировки, признаки «стена — это логин» и «умеет diagnose_drift»,
+  гейт монтирования и строка-подсказка для конфига. Из него выведены
+  `KNOWN_SOURCES` и алиасы, таблица возможностей, таблицы CLI (конфиг и
+  selfcheck), карта страниц `unblock`, список источников сравнения с карточными
+  инструментами и валютной развилкой, счётчики инструментов в stdio-проверке и
+  обе таблицы CI. Точки, которые не могут импортировать Python (`pyproject.toml`,
+  `server.json`, а также литералы `mounts`, `SEARCHABLE` и таблиц
+  `scripts/diagnose_drift.py`, которые разбирают существующие тесты), остались
+  литералами, но новый тест сверяет каждую с реестром: пакет без записи и запись
+  без пакета теперь падают. Одиннадцатый источник стоит одной записи, а не
+  пятнадцати правок в пятнадцати местах. Первая же сверка нашла потерянную
+  строку: в `server.json` не было cian.
+- Общая сборка коннекторов переехала в `mcp_core.kit` и лежит там по одному
+  разу: вызов пейсинга, хвост ошибки отказа (подсказка пейсера плюс обрезанная
+  деталь), проверка хоста при разборе id товара, потоковое чтение с лимитом тела
+  и отрисовка страницы через CDP с разбором JSON. `chrome_cdp` импортируется
+  внутри `render_json`, а `curl_cffi` в mcp-core вообще не попадает: коннектор
+  передаёт свою точку входа сам, поэтому тест, патчащий `cffi.get` в своём
+  модуле, бьёт по тому же шву, что и раньше. Миграция не меняет ни поведение, ни
+  провод: у каждого коннектора остаётся своя обёртка с тем же именем, которое
+  патчат его тесты, а имена инструментов, докстринги, параметры, коды ошибок и
+  тексты сообщений не тронуты. dns и citilink, которые совпадали почти целиком,
+  делят общую часть и оставляют у себя только факты о своей площадке.
+
+- One registry of sources now lives in `mcp_core.sources`: canonical name and
+  aliases, package, module, console script, tool prefix, unified mount name,
+  per-source client config key, selfcheck, card tool, tool count, access tier,
+  CDP and login needs, currency, text search, unblock page, the login-wall and
+  drift-probe flags, the mount gate and the config note. Derived from it:
+  `KNOWN_SOURCES` and the aliases, the capability table, the CLI tables (config
+  and selfcheck), the `unblock` page map, compare's source list with its card
+  tools and foreign-currency split, the stdio check's tool counts and both CI
+  tables. The sites that cannot import Python (`pyproject.toml`, `server.json`,
+  and the `mounts`, `SEARCHABLE` and `scripts/diagnose_drift.py` literals
+  existing tests parse) stay literal, but a new parity test ties each of them to
+  the registry: a package without a record, or a record without a package, now
+  fails. A sixth source costs one record instead of fifteen edits in fifteen
+  places. The first comparison found a missing row: `server.json` had no cian
+  entry.
+- The shared connector assembly moved into `mcp_core.kit`, once: the pacing
+  call, the refusal-error tail (the pacer's rotation hint plus a bounded
+  detail), the host check when parsing a product id, the streamed read with its
+  body cap, and the paced CDP render-and-parse. `chrome_cdp` is imported inside
+  `render_json`, and curl_cffi never enters mcp-core at all: the connector
+  passes its own entry point, so a test that patches `cffi.get` on its module
+  still hits the seam it always did. The migration changes no behaviour and no
+  wire bytes: every connector keeps its own wrapper under the name its tests
+  patch, and tool names, docstrings, parameters, error codes and message texts
+  are untouched. dns and citilink, which matched almost completely, share the
+  mechanism and keep only their own site facts.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
@@ -250,6 +305,87 @@
   letters. The old rule required letters, so a bare '1 299' came back as a
   fabricated 1.0 rating. Letter-free comma text is untouched: '4,9' stays a
   rating and '4,500' keeps its old reading.
+- `server.json` получил потерянную строку cian: список серверов для реестра
+  MCP-серверов перечислял четырнадцать площадок из пятнадцати, и cian в нём
+  отсутствовал. Теперь этот список сверяется с реестром источников тестом.
+
+- `server.json` gained its missing cian row: the server list for the MCP
+  registry named fourteen of the fifteen marketplaces, and cian was absent. A
+  test now compares that list with the source registry.
+- Цена, которую парсер не смог получить, больше не проходит молча. `validate_offer`
+  теперь сообщает о неразобранной цене (`price_unparseable`), о пустой или
+  пробельной строке цены (`price_blank`), умеет читать ценовое поле коннектора
+  (`price_cny` у Taobao) и видит противоречие `in_stock` с неразобранной ценой;
+  раньше пробельная цена не давала ни одного предупреждения. Новый общий
+  `validate_items` собирает поверки по позициям в одно предупреждение на код,
+  когда сломана хотя бы половина выдачи, и подставляет привычный код
+  `no_prices_on_page`, если цены нет ни у одной позиции. Он подключён к поиску и
+  карточкам avito, cian, citilink, detmir, dns, lamoda, megamarket, taobao и
+  yandex (у wb и ozon такая проверка уже была); mpstats не подключён — его
+  строки это аналитические метрики, а не нормализованные заявки с ценой и
+  заголовком.
+
+- `meta.healthy` означает одно и то же во всех коннекторах: `true` только когда
+  ответ полный и его значениям можно верить, `false` при любом предупреждении о
+  дрейфе, валидации или полноте — включая предупреждение, которое коннектор
+  пишет в модель ответа вручную (общий хелпер `health_warnings` отделяет
+  информационные заметки от сомнений в данных). Предупреждение с префиксом
+  `info:` — это контекст, а не сомнение в данных, и флаг не гасит (так помечена
+  заметка WB о том, что регион задаёт браузер, а не `dest`). В WB это
+  исправляет `healthy=True` рядом с непустыми предупреждениями (поиск через DOM,
+  `wb_categories`), а карточка через DOM, у которой не разобрался ни один
+  запрошенный SKU, теперь несёт `no_items` вместо `healthy=true` с пустым
+  списком. Три-состояние канарейки (healthy/drift/inconclusive) не изменилось.
+
+- Пустой ответ и отказ площадки больше не выглядят успехом: поиск WB через DOM
+  на странице ≥2 без плашки «ничего не нашлось» отдаёт `no_results` с
+  предупреждением `page_end_unverified` и `healthy=false` (страница 1
+  по-прежнему даёт `parser_drift`, а пустая страница с плашкой остаётся
+  честной); пустой ответ API WB, когда v9 честно пуст и legacy-фолбэк упал,
+  несёт `fallback_failed` и `healthy=false`; megamarket помечает страницу без
+  единой цены (`no_prices_on_page`) и проверяет карточку (`no_price`); в
+  `compare_prices` источник с нулём заявок считается `ok` только если его
+  собственный ответ не сообщает о проблеме, иначе это `unhealthy` с
+  `unhealthy_empty` и `complete=false`. Докстрока `ozon_search` приведена в
+  соответствие с кодом: ноль позиций — это предупреждение `no_items` и
+  `healthy=false`.
+
+- A price the parser could not obtain no longer passes in silence. `validate_offer`
+  now reports an unparseable price (`price_unparseable`), a blank or
+  whitespace-only price string (`price_blank`), reads a connector's own price
+  field (`price_cny` on Taobao) and sees `in_stock` contradicting an unparsed
+  price; a whitespace price used to draw no warning at all. The new shared
+  `validate_items` rolls per-item findings into one warning per code when at
+  least half the page breaks it, and substitutes the established
+  `no_prices_on_page` code when not one item carries a price. It is wired into
+  the search and card tools of avito, cian, citilink, detmir, dns, lamoda,
+  megamarket, taobao and yandex (wb and ozon already had such a check); mpstats
+  is excluded because its rows are analytics metrics, not normalized offers with
+  a title and a price.
+
+- `meta.healthy` means one thing in every connector: `true` only when the answer
+  is complete and its values can be trusted, `false` for any drift, validation or
+  completeness warning — including one a connector writes into its response model
+  by hand (the shared `health_warnings` helper separates informational notes from
+  doubts about the data). A warning prefixed `info:` is context rather than doubt
+  about the data and does not flip the flag (WB's note that the region comes from
+  the browser, not from `dest`, is marked that way). In WB this fixes
+  `healthy=True` next to non-empty warnings (DOM search, `wb_categories`), and a
+  DOM card whose every requested SKU failed to parse now carries `no_items`
+  instead of `healthy=true` with an empty list. The tri-state canary
+  (healthy/drift/inconclusive) is unchanged.
+
+- An empty answer and a marketplace refusal no longer read as success: WB DOM
+  search on page 2 or later without the «nothing found» notice returns
+  `no_results` with a `page_end_unverified` warning and `healthy=false` (page 1
+  still raises `parser_drift`, and an empty page WITH the notice stays honest);
+  an empty WB API answer where v9 is positively empty and the legacy fallback
+  died carries `fallback_failed` and `healthy=false`; megamarket marks a page
+  where not one price alias matched (`no_prices_on_page`) and validates its card
+  (`no_price`); in `compare_prices` a source with zero offers counts as `ok`
+  only when its own answer reports no problem, otherwise it is `unhealthy` with
+  `unhealthy_empty` and `complete=false`. The `ozon_search` docstring now matches
+  the code: zero items means a `no_items` warning and `healthy=false`.
 
 - Неудачный автозапуск Chrome запоминается на 45 секунд
   (`_AUTOSTART_FAILURE_TTL_S`): следующие вызовы, включая уже ждущие блокировку,

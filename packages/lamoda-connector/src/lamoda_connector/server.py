@@ -23,8 +23,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
 # SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
-# DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache; models_output; settings; shape_reference.
-# LINKS: M-LAMODA; M-COMPARE; M-MARKETPLACE; packages/lamoda-connector/tests.
+# DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
+# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; packages/lamoda-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
@@ -62,6 +62,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -148,9 +149,11 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _extract_sku(raw: str) -> str | None:
@@ -537,9 +540,9 @@ async def lamoda_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = []
-        if all(it.price_rub is None for it in items):
-            warnings.append("no_prices_on_page")
+        warnings: list[str] = R.validate_items(
+            [it.model_dump() for it in items], require_title=True, absent_price="no_prices_on_page"
+        )
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family is drift the agent
         # must see, not only a human running doctor. The four render-based
@@ -605,7 +608,8 @@ async def lamoda_card(
             url=f"{SITE_BASE}/p/{sku.lower()}/",
             tier_used=product.get("_tier_used", "graphql"),
         )
-        attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), [], source="lamoda_card")
+        card = result.model_dump(by_alias=True, exclude={"meta", "sizes"})
+        attached = R.attach_meta(card, R.validate_offer(card), source="lamoda_card")
         result.meta = MetaOut(**attached["_meta"])
         return result
     except ToolError:

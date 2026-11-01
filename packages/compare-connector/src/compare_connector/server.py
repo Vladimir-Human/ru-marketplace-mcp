@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import importlib
 import json
 import math
 import os
@@ -69,6 +70,13 @@ from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.source_selection import selected
+
+# Which sources compare searches, which card tool it verifies them with and
+# which of them quote a foreign currency all come from the source registry.
+# SEARCHABLE below is the one per-source list compare still spells out, because
+# an existing test parses that literal; a parity test keeps it equal to the
+# registry's text-search sources.
+from mcp_core.sources import BY_NAME, CARD_TOOL_NAMES, COMPARE_SOURCES, FOREIGN_CURRENCY_SOURCES
 from pydantic import Field
 
 from compare_connector.identity import (
@@ -102,19 +110,10 @@ mcp = FastMCP(
     ),
 )
 
-_CARD_TOOL_NAMES = {
-    "wildberries": "wb_card",
-    "yandex_market": "yandex_card",
-    "detsky_mir": "detmir_card",
-    "ozon": "ozon_card",
-    "avito": "avito_card",
-    "taobao": "taobao_card",
-    "megamarket": "megamarket_card",
-    "lamoda": "lamoda_card",
-    "dns": "dns_card",
-    "citilink": "citilink_card",
-    "aliexpress": "aliexpress_card",
-}
+# Source -> card tool, from the source registry: a source takes part in
+# comparison exactly when it exposes a card tool compare can call. The private
+# name stays because the card dispatch and the tests read it.
+_CARD_TOOL_NAMES = CARD_TOOL_NAMES
 
 
 def _available_sources() -> dict[str, Any]:
@@ -122,85 +121,16 @@ def _available_sources() -> dict[str, Any]:
 
     A missing optional dependency (Ozon's curl_cffi/Playwright) or a broken
     install reduces coverage; it must not prevent the server from starting.
+    The list is the registry's comparison sources, so an adapter cannot exist
+    for a source the registry does not know, or the reverse.
     """
     sources: dict[str, Any] = {}
 
-    try:
-        from wb_connector import server as wb_server
-
-        sources["wildberries"] = wb_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="wildberries", error=_redact(str(exc))[:120])
-
-    try:
-        from yandex_connector import server as yandex_server
-
-        sources["yandex_market"] = yandex_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="yandex_market", error=_redact(str(exc))[:120])
-
-    try:
-        from detmir_connector import server as detmir_server
-
-        sources["detsky_mir"] = detmir_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="detsky_mir", error=_redact(str(exc))[:120])
-
-    try:
-        from ozon_connector import server as ozon_server
-
-        sources["ozon"] = ozon_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="ozon", error=_redact(str(exc))[:120])
-
-    try:
-        from avito_connector import server as avito_server
-
-        sources["avito"] = avito_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="avito", error=_redact(str(exc))[:120])
-
-    try:
-        from taobao_connector import server as taobao_server
-
-        sources["taobao"] = taobao_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="taobao", error=_redact(str(exc))[:120])
-
-    try:
-        from megamarket_connector import server as megamarket_server
-
-        sources["megamarket"] = megamarket_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="megamarket", error=_redact(str(exc))[:120])
-
-    try:
-        from lamoda_connector import server as lamoda_server
-
-        sources["lamoda"] = lamoda_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="lamoda", error=_redact(str(exc))[:120])
-
-    try:
-        from dns_connector import server as dns_server
-
-        sources["dns"] = dns_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="dns", error=_redact(str(exc))[:120])
-
-    try:
-        from citilink_connector import server as citilink_server
-
-        sources["citilink"] = citilink_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="citilink", error=_redact(str(exc))[:120])
-
-    try:
-        from aliexpress_connector import server as aliexpress_server
-
-        sources["aliexpress"] = aliexpress_server
-    except Exception as exc:
-        log_event("compare.source_unavailable", source="aliexpress", error=_redact(str(exc))[:120])
+    for name in COMPARE_SOURCES:
+        try:
+            sources[name] = importlib.import_module(BY_NAME[name].module)
+        except Exception as exc:
+            log_event("compare.source_unavailable", source=name, error=_redact(str(exc))[:120])
 
     chosen = selected()
     if chosen is not None:
@@ -228,12 +158,6 @@ SEARCHABLE = (
     "citilink",
     "aliexpress",
 )
-
-# Yuan sources rank separately from ruble ones: a baked-in CNY→RUB rate would go
-# silently stale, and ranking a stale conversion against live ruble prices
-# fabricates bargains. Taobao offers are reported with currency="cny" and are
-# excluded from the cheapest-rub ranking.
-FOREIGN_CURRENCY_SOURCES = ("taobao",)
 
 
 def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
@@ -499,13 +423,19 @@ def _stock_from_label(value: object) -> bool | None:
 
 
 class OfferBatch(list[MarketOffer]):
-    """Offers with native diagnostics; no shared state across concurrent sources."""
+    """Offers with native diagnostics; no shared state across concurrent sources.
+
+    ``native_healthy`` keeps the source's own verdict (None when the response
+    carried no meta) so the caller can tell an honest empty answer from one a
+    broken parser produced; ``warnings`` is the normalized diagnostic list.
+    """
 
     def __init__(self, offers: Iterable[MarketOffer], response: object) -> None:
         super().__init__(offers)
         meta = getattr(response, "meta", None)
         raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
         healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
+        self.native_healthy: bool | None = healthy if isinstance(healthy, bool) else None
         self.warnings: list[str] = []
         if isinstance(raw, list):
             for warning in raw:
@@ -948,12 +878,39 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
         currencies = "/".join(sorted({offer.currency.upper() for offer in native_priced}))
         unit = f" in {currencies}" if native_priced else ""
         detail = f"{len(offers)} results, {len(native_priced)} priced{unit} (not ranked)"
+    warnings = offers.warnings if isinstance(offers, OfferBatch) else []
+    native_healthy = offers.native_healthy if isinstance(offers, OfferBatch) else None
+    # A source that contributed NOTHING to a price comparison is only "ok" when
+    # its own answer says the data was fine. A native response that already
+    # reports a drift/validation warning turned a broken parser into an empty
+    # result, and calling that "ok" is what let `complete` claim a comparison
+    # over a source that had silently contributed nothing (audit 2026-11-01).
+    # An honest empty answer (no warnings, healthy) stays ok, as does an
+    # unhealthy answer that still returned usable offers: those offers are
+    # ranked, and the native warning rides along on the outcome.
+    if not offers and native_healthy is False:
+        warnings = [
+            *warnings,
+            "unhealthy_empty: the source answered with zero offers while its own diagnostics "
+            "reported a problem, so this is not an honest no-result",
+        ]
+        return (
+            SourceOutcome(
+                source=name,
+                status="unhealthy",
+                detail=f"{detail} — native validation did not pass",
+                warnings=warnings,
+                offers_returned=0,
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+            ),
+            offers,
+        )
     return (
         SourceOutcome(
             source=name,
             status="ok",
             detail=detail,
-            warnings=offers.warnings if isinstance(offers, OfferBatch) else [],
+            warnings=warnings,
             offers_returned=len(offers),
             elapsed_ms=round((time.monotonic() - started) * 1000),
         ),

@@ -34,8 +34,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
 # SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests; unified-mount availability gate.
-# DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction; models_output; settings.
-# LINKS: M-MPSTATS; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; packages/mpstats-connector/tests.
+# DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction/kit; models_output; settings.
+# LINKS: M-MPSTATS; M-KIT; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; packages/mpstats-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # mount_unavailable_reason: Why the unified server must not mount these tools, or None.
@@ -74,6 +74,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -183,9 +184,11 @@ async def _polite_wait() -> None:
     refunded, so the cost of hammering lands on the user, not on us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the pace
-    without rebuilding the pacer.
+    without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _cookie_header() -> str:
@@ -649,7 +652,7 @@ async def mpstats_item(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_item", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="mpstats_item", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 
@@ -739,7 +742,7 @@ async def mpstats_warehouses(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_warehouses", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="mpstats_warehouses", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 

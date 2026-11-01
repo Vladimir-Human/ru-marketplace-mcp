@@ -20,14 +20,17 @@ from __future__ import annotations
 import pytest
 from mcp_core.resilience import (
     REVIEW_TEXT_DRIFT_MIN_SAMPLE,
+    attach_meta,
     coerce_int,
     coerce_price,
     coerce_rating,
     first_present,
     flatten_text,
+    health_warnings,
     price_from_texts,
     selfcheck_entry,
     selfcheck_result,
+    validate_items,
     validate_offer,
     validate_review_block,
 )
@@ -198,6 +201,71 @@ def test_validate_offer_flags_an_ambiguous_price():
     warnings = validate_offer({"in_stock": True, "price": "1 999 2 999"})
     assert any("title" in warning for warning in warnings)
     assert any("price" in warning for warning in warnings)
+
+
+def test_validate_offer_flags_a_blank_or_unparseable_price_string():
+    """R-ITEM-HONESTY: a price field that is present but useless is drift.
+
+    Audit 2026-11-01: a whitespace-only price passed with NO warning at all
+    (`price.strip()` was empty, so the unparseable branch stayed silent), and
+    after coerce_price was hardened the remaining fabricated blobs — a
+    discount, an instalment line, two glued prices — still passed with
+    healthy=true because validate_offer only range-checked them.
+    """
+    for value, code in [
+        ("   ", "price_blank"),
+        ("", "price_blank"),
+        ("скидка 30%", "price_unparseable"),
+        ("1 999 2 999", "price_unparseable"),
+        ("от 5 751 ₽/ мес.", "price_unparseable"),
+        ("30%", "price_unparseable"),
+    ]:
+        warnings = validate_offer({"title": "X", "price": value})
+        assert any(warning.startswith(code) for warning in warnings), (value, warnings)
+
+
+def test_validate_offer_reads_a_connector_specific_price_key():
+    """R-ITEM-HONESTY: Taobao prices live in price_cny; a validator that only
+    knows price_rub/price would see no price at all and stay silent."""
+    warnings = validate_offer({"title": "X", "price_cny": "1 999 2 999"}, price_key="price_cny")
+    assert any(warning.startswith("price_unparseable") for warning in warnings)
+
+
+def test_validate_items_reports_a_systemic_invariant_break():
+    """R-ITEM-HONESTY: one bad tile is a listing, every bad tile is drift."""
+    items = [{"title": f"t{i}", "price_rub": "1 999 2 999"} for i in range(4)]
+    warnings = validate_items(items)
+    assert any(warning.startswith("price_unparseable: 4/4") for warning in warnings)
+
+
+def test_validate_items_does_not_call_one_bad_tile_in_five_drift():
+    items = [{"title": f"t{i}", "price_rub": 100.0 + i} for i in range(5)]
+    items[0]["price_rub"] = "1 999 2 999"
+    assert validate_items(items) == []
+
+
+def test_validate_items_names_the_absent_price_case_in_the_connectors_wording():
+    """R-ITEM-HONESTY: the per-code tally cannot express "no tile has a price",
+    so the caller supplies its established code and the wire stays stable."""
+    warnings = validate_items(
+        [{"title": "t", "price_cny": None}], price_key="price_cny", absent_price="no_prices_on_page"
+    )
+    assert warnings == ["no_prices_on_page"]
+
+
+def test_validate_items_is_silent_on_an_empty_page():
+    """Zero offers is not a per-item finding: the caller owns that verdict."""
+    assert validate_items([]) == []
+
+
+def test_attach_meta_keeps_an_informational_note_out_of_health():
+    """R-ITEM-HONESTY: healthy is False for any doubt about the data, and an
+    `info:` note is context, not a doubt (audit 2026-11-01: WB hardcoded
+    healthy=True next to a warning, so the flag meant nothing)."""
+    assert attach_meta({}, ["info: the region follows the scraping Chrome"], source="s")["_meta"]["healthy"] is True
+    assert attach_meta({}, ["no_prices_on_page"], source="s")["_meta"]["healthy"] is False
+    # A connector that builds MetaOut by hand uses the same split.
+    assert health_warnings(["info: region", "no_prices_on_page"]) == ["no_prices_on_page"]
 
 
 # --------------------------------------------------------------------------- #
