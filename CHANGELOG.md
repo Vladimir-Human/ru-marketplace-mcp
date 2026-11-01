@@ -145,6 +145,26 @@
   обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
   WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
   покрывает.
+- Открытый breaker хоста в бюджете CDP-навигации теперь доходит до агента как
+  временный отказ, а не как общий транспортный сбой: `open_page` переводит
+  `HostRefusingError` в существующий код `rate_limited` (`retryable=true` по
+  документации), несёт остаток паузы в поле `retry_after_s`, хост — в `provider`,
+  а сообщение говорит «paused for N s after M refusals». Раньше ни один коннектор
+  не ловил это исключение: широкие обработчики превращали его в `transport_down`
+  без паузы, а Avito проглатывал в `except Exception`, и агент повторял сразу
+  вместо ожидания. Отображение одно и общее — в `open_page`; широкие обработчики
+  на CDP-пути (Avito, Cian, Ozon) просто пропускают готовый `ToolError` дальше.
+- Пауза хоста больше не проглатывается деградирующими обработчиками Megamarket.
+  Адресная привязка, каталог-редирект и url/parse намеренно не фатальны для
+  обычных сбоев эндпоинтов (слабый поиск лучше никакого, и это закреплено
+  тестами), но временный отказ `rate_limited` с `retry_after_s` теперь проходит
+  сквозь них как есть. Раньше обработчик адресной привязки проглатывал паузу и
+  навсегда кэшировал вердикт «адрес не разрешён», из-за чего поиск и после паузы
+  шёл без адреса доставки. Ошибки без паузы (например, «не авторизован» из
+  профиля) сохраняют прежнее не фатальное поведение; путь карточки и раньше
+  доносил паузу без искажений и не менялся. Для уже существующих защит Cian и
+  Ozon добавлены отдельные офлайн-тесты (поиск и карточка), для Megamarket —
+  тесты поиска и карточки.
 - Унифицированный сервер (`marketplace-mcp`) больше не монтирует инструменты
   `mpstats_*`, когда в окружении нет непустого `MPSTATS_MP_AUTH`: каждый вызов
   всё равно вернул бы `auth_missing`, а две схемы стоили около 971 токена
@@ -166,6 +186,27 @@
   `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
   promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
   its own manual step because `marketplace-mcp unblock` does not cover it.
+- An open host breaker in the CDP navigation budget now reaches the agent as a
+  temporary refusal instead of a generic transport failure: `open_page` maps
+  `HostRefusingError` to the existing `rate_limited` code (`retryable=true` as
+  documented), carries the remaining pause in `retry_after_s`, the host in
+  `provider`, and says "paused for N s after M refusals" in the message. No
+  connector caught the exception before: broad handlers relabelled it
+  `transport_down` with no pause, and Avito swallowed it in an `except Exception`,
+  so the agent retried at once instead of waiting. The mapping is one shared
+  place — `open_page`; the broad handlers on the CDP path (Avito, Cian, Ozon)
+  just let the finished `ToolError` through.
+- Megamarket's degrade handlers no longer swallow the host pause. Address
+  resolution, the catalog redirect and url/parse are deliberately non-fatal for
+  ordinary endpoint failures (a weaker search beats none, and tests pin that),
+  but a `rate_limited` refusal with `retry_after_s` now passes through them
+  unchanged. Before, the address handler swallowed the pause and cached a
+  "no address" verdict for the process lifetime, so searches kept running
+  addressless even after the cooldown. Non-pause errors (say, "not
+  authenticated" from the profile endpoint) keep the existing non-fatal
+  degrade; the card path already carried the pause intact and is unchanged.
+  The existing Cian and Ozon guards gained dedicated offline tests (search and
+  card each), and Megamarket got search and card tests.
 - The unified server (`marketplace-mcp`) no longer mounts the `mpstats_*` tools
   when no non-empty `MPSTATS_MP_AUTH` is set: every call would return
   `auth_missing`, while the two schemas cost about 971 tokens (~6% of the
