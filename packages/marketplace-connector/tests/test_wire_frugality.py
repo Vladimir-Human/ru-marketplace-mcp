@@ -25,8 +25,10 @@ def test_no_operator_selfcheck_is_registered_as_a_tool():
     # The count changed from 45 to 34 on purpose (11 selfchecks left), from
     # 34 to 36 when the aliexpress connector (2 tools) joined the mount, and
     # from 37 to 39 when the cian connector (2 tools) joined, then to 40 with
-    # the comparison browser snapshot tool.
-    assert len(tools) == 40
+    # the comparison browser snapshot tool. It is 38 in the default test
+    # environment because the two mpstats tools are not mounted without
+    # MPSTATS_MP_AUTH (R-MPSTATS-MOUNT-GATE).
+    assert len(tools) == 38
 
 
 def test_every_output_schema_is_wire_frugal():

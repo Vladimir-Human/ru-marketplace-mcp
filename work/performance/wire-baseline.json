@@ -4,13 +4,13 @@
     "compare-mcp": {
       "script": "compare-mcp",
       "tool_count": 4,
-      "wire_tokens": 2023,
-      "latency_ms": 1721.9,
-      "schema_sha256": "1a86ba7d05a2da14a588b5cbf3c6553a06c1e9dee7bfc992ed755b48df89dd51",
+      "wire_tokens": 2156,
+      "latency_ms": 3609.0,
+      "schema_sha256": "8309b84c3fd02bd7e13f6452a31e0e3f126f8ba1fc266978125e314a38cd9107",
       "tools": [
         {
           "name": "compare_browser_snapshot",
-          "tokens": 370
+          "tokens": 500
         },
         {
           "name": "compare_prices",
@@ -18,7 +18,7 @@
         },
         {
           "name": "compare_sources",
-          "tokens": 250
+          "tokens": 253
         },
         {
           "name": "compare_verify_offer",
@@ -29,13 +29,13 @@
     "decision-mcp": {
       "script": "decision-mcp",
       "tool_count": 5,
-      "wire_tokens": 2278,
-      "latency_ms": 1720.7,
-      "schema_sha256": "2f230ff34a3e15fda8491614fdb12a46a868e27fa180a03840e30b4ad6f08d4a",
+      "wire_tokens": 2411,
+      "latency_ms": 3515.0,
+      "schema_sha256": "d8e127c28f55c2eaf05a395dcb4928f5ba8da67b19155e9c47d3a88dd6156eb7",
       "tools": [
         {
           "name": "compare_browser_snapshot",
-          "tokens": 370
+          "tokens": 500
         },
         {
           "name": "compare_prices",
@@ -43,7 +43,7 @@
         },
         {
           "name": "compare_sources",
-          "tokens": 250
+          "tokens": 253
         },
         {
           "name": "compare_verify_offer",
@@ -57,10 +57,10 @@
     },
     "marketplace-mcp": {
       "script": "marketplace-mcp",
-      "tool_count": 40,
-      "wire_tokens": 16549,
-      "latency_ms": 1793.6,
-      "schema_sha256": "2f22553e7ad814641ffba1ac877ca35451c425203ecf362ac83f5c689a7e3870",
+      "tool_count": 38,
+      "wire_tokens": 16542,
+      "latency_ms": 4344.0,
+      "schema_sha256": "0cd5c0319d49e2e16b1f5793fb16274dc5b94c9c0804c8a8ab332472ec62f97c",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -72,19 +72,19 @@
         },
         {
           "name": "avito_card",
-          "tokens": 280
+          "tokens": 443
         },
         {
           "name": "avito_search",
-          "tokens": 379
+          "tokens": 421
         },
         {
           "name": "avito_seller",
-          "tokens": 259
+          "tokens": 374
         },
         {
           "name": "cian_card",
-          "tokens": 461
+          "tokens": 481
         },
         {
           "name": "cian_search",
@@ -92,15 +92,15 @@
         },
         {
           "name": "citilink_card",
-          "tokens": 263
+          "tokens": 330
         },
         {
           "name": "citilink_search",
-          "tokens": 221
+          "tokens": 287
         },
         {
           "name": "compare_browser_snapshot",
-          "tokens": 370
+          "tokens": 500
         },
         {
           "name": "compare_prices",
@@ -108,7 +108,7 @@
         },
         {
           "name": "compare_sources",
-          "tokens": 250
+          "tokens": 253
         },
         {
           "name": "compare_verify_offer",
@@ -128,15 +128,15 @@
         },
         {
           "name": "dns_card",
-          "tokens": 258
+          "tokens": 282
         },
         {
           "name": "dns_search",
-          "tokens": 219
+          "tokens": 241
         },
         {
           "name": "lamoda_card",
-          "tokens": 276
+          "tokens": 302
         },
         {
           "name": "lamoda_search",
@@ -144,7 +144,7 @@
         },
         {
           "name": "marketplace_sources",
-          "tokens": 351
+          "tokens": 409
         },
         {
           "name": "megamarket_card",
@@ -155,20 +155,12 @@
           "tokens": 381
         },
         {
-          "name": "mpstats_item",
-          "tokens": 544
-        },
-        {
-          "name": "mpstats_warehouses",
-          "tokens": 427
-        },
-        {
           "name": "ozon_card",
           "tokens": 397
         },
         {
           "name": "ozon_reviews",
-          "tokens": 763
+          "tokens": 782
         },
         {
           "name": "ozon_search",
@@ -176,15 +168,15 @@
         },
         {
           "name": "taobao_card",
-          "tokens": 343
+          "tokens": 418
         },
         {
           "name": "taobao_search",
-          "tokens": 317
+          "tokens": 382
         },
         {
           "name": "wb_card",
-          "tokens": 384
+          "tokens": 387
         },
         {
           "name": "wb_categories",
@@ -192,7 +184,7 @@
         },
         {
           "name": "wb_category_products",
-          "tokens": 691
+          "tokens": 694
         },
         {
           "name": "wb_questions",
@@ -200,7 +192,7 @@
         },
         {
           "name": "wb_reviews",
-          "tokens": 515
+          "tokens": 519
         },
         {
           "name": "wb_root_info",
@@ -208,7 +200,7 @@
         },
         {
           "name": "wb_search",
-          "tokens": 391
+          "tokens": 409
         },
         {
           "name": "wb_seller",
@@ -220,7 +212,7 @@
         },
         {
           "name": "yandex_search",
-          "tokens": 664
+          "tokens": 705
         }
       ]
     }

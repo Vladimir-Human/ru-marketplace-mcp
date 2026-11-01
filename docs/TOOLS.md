@@ -18,7 +18,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 | --- | --- | ---: | ---: | ---: |
 | compare | `compare-mcp` | 4 | 8673 | ≈2.2k |
 | decision | `decision-mcp` | 5 | 9695 | ≈2.4k |
-| full | `marketplace-mcp` | 40 | 70222 | ≈17.5k |
+| full | `marketplace-mcp` | 38 | 66567 | ≈16.5k |
 
 ## compare — `compare-mcp`
 
@@ -54,7 +54,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 ## full — `marketplace-mcp`
 
-40 tools, 70222 `tools/list` bytes (≈17.5k tokens).
+38 tools, 66567 `tools/list` bytes (≈16.5k tokens).
 
 ### aliexpress — `aliexpress_*` (2 tools)
 
@@ -128,13 +128,6 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 | --- | --- | --- |
 | `megamarket_card` | `item_id_or_url: string` | Fetch one Megamarket product card. |
 | `megamarket_search` | `query: string` | Search the Megamarket catalog via the mobile API, inside the operator's Chrome. |
-
-### mpstats — `mpstats_*` (2 tools)
-
-| Tool | Parameters | Description |
-| --- | --- | --- |
-| `mpstats_item` | `skus: array[integer], place: string, oz_fbs: boolean = true` | Fetch per-SKU 30-day sales analytics from MPStats (Ozon or Wildberries). |
-| `mpstats_warehouses` | `skus: array[integer], place: string` | Fetch per-SKU warehouse stock split from MPStats (Ozon or Wildberries). |
 
 ### ozon — `ozon_*` (3 tools)
 
