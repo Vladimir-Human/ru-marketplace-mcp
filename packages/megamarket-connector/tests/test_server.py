@@ -11,6 +11,8 @@ import json
 
 import pytest
 from fastmcp.exceptions import ToolError
+from mcp_core.transport import chrome_cdp
+from mcp_core.transport.cdp_budget import NavigationBudget
 from megamarket_connector import server
 
 SEARCH_PAYLOAD = {
@@ -84,6 +86,23 @@ def _patch_post(monkeypatch, payload):
     monkeypatch.setattr(server, "_post", fake_post)
 
 
+async def _open_breaker(host: str, *, cooldown_s: float = 47.0) -> NavigationBudget:
+    """Drive a real budget through its public API until its breaker opens.
+
+    A dedicated instance with a frozen clock: two 4xx refusals with a 2-refusal
+    threshold open the breaker, leaving ``cooldown_s`` seconds of pause and the
+    refusal count the mapped error must report. The real ``server.open_page``
+    (``chrome_cdp.open_page``) then maps the budget's refusal, exactly as in a
+    live run.
+    """
+    budget = NavigationBudget(breaker_threshold=2, breaker_cooldown_s=cooldown_s, clock=lambda: 1000.0)
+    for _ in range(2):
+        slot = await budget.acquire(host)
+        slot.refused(403)
+        slot.release()
+    return budget
+
+
 # ---------------------------------------------------------- megamarket_search ----
 
 
@@ -105,6 +124,41 @@ async def test_search_a_pricelss_item_is_none_never_zero(monkeypatch):
 
     assert result.items[1].price_rub is None
     assert result.items[1].price_rub != 0
+
+
+async def test_search_warns_when_no_item_kept_a_price(monkeypatch):
+    """Every finalPrice/price/currentPrice alias dying at once is drift.
+
+    Before this guard a full page of priceless items answered _meta.healthy=true
+    with no warning — the one empty-success path wb, ozon, taobao and yandex
+    already closed (audit 2026-11-01, item D3).
+    """
+    priceless = {
+        "total": 2,
+        "items": [
+            {"id": 1, "title": "Стиральная машина узкая LG", "url": "u"},
+            {"id": 2, "title": "Стиральная машина Bosch", "url": "u"},
+        ],
+    }
+    _patch_post(monkeypatch, priceless)
+
+    result = await server.megamarket_search("стиральная машина")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    assert any(w.startswith("no_prices_on_page") for w in result.meta.warnings), result.meta.warnings
+
+
+async def test_card_warns_when_no_price_alias_matched(monkeypatch):
+    """The card had no canary at all: price_rub=null answered with warnings=[]."""
+    _patch_post(monkeypatch, {"goods": {"id": 1234567, "title": "Стиральная машина", "isAvailable": True}})
+
+    result = await server.megamarket_card("1234567")
+
+    assert result.price_rub is None
+    assert result.meta.healthy is False
+    assert any(w.startswith("no_price") for w in result.meta.warnings), result.meta.warnings
+    assert any(w.startswith("instock_no_price") for w in result.meta.warnings), result.meta.warnings
 
 
 async def test_search_raises_drift_on_empty_items_with_nonzero_total(monkeypatch):
@@ -158,6 +212,34 @@ async def test_search_maps_code7_to_transport_down(monkeypatch):
         await server.megamarket_search("телефон")
 
 
+async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
+    with retry_after_s through the real _post path, from the first CDP step
+    (address resolution), and leaves no poisoned address verdict behind. On the
+    old code the pause was swallowed by the address-suggest degrade handler,
+    which cached (None, "none") for the process lifetime — so after the cooldown
+    every search ran addressless — and the pause only surfaced later from the
+    main search call."""
+
+    budget = await _open_breaker("megamarket.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_search("ноутбук")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "megamarket.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
+    # The old code reached here too, but only after swallowing the pause in
+    # address resolution — these two assertions fail there: the swallowed
+    # failure cached "no address" and marked the source "none".
+    assert server._address_source is None
+    assert server._address_cache == {}
+
+
 # ------------------------------------------------------------ megamarket_card ----
 
 
@@ -190,6 +272,27 @@ async def test_card_maps_an_empty_card_to_not_found(monkeypatch):
 
     with pytest.raises(ToolError):
         await server.megamarket_card("1234567")
+
+
+async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: the card path takes no degrade detours, so this pins
+    the contract that the mapped pause reaches the tool boundary intact —
+    nothing between _post and the tool's ``except ToolError: raise`` may
+    relabel it. This path already held before the guard change; the test
+    exists to keep it held."""
+
+    budget = await _open_breaker("megamarket.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_card("1234567")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "megamarket.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
 
 
 @pytest.mark.parametrize(

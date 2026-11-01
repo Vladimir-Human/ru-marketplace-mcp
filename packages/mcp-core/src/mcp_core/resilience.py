@@ -33,7 +33,9 @@ step, not something already in place.
 # coerce_int: Parse unambiguous counts or return None.
 # coerce_price: Accept positive finite prices and reject ambiguous display blobs.
 # coerce_rating: Normalize ratings on the 0..5 scale.
+# health_warnings: Strip informational notes; the rest decide healthy.
 # validate_offer: Report missing or contradictory normalized offer fields.
+# validate_items: Aggregate per-item offer validation into systemic drift warnings.
 # validate_review_block: Check returned counts and sufficiently large text samples.
 # attach_meta: Mutate a result with source, health and warnings.
 # widget_prefixes: Strip volatile numeric widget suffixes.
@@ -322,15 +324,31 @@ def coerce_rating(value: Any) -> float | None:
 # --------------------------------------------------------------------------
 
 
-def validate_offer(item: dict, *, require_title: bool = True) -> list[str]:
+def health_warnings(warnings: list[str]) -> list[str]:
+    """The warnings that decide ``healthy``, per the contract in ``attach_meta``.
+
+    Any warning is a doubt about the data unless it is an ``info:`` note, so a
+    connector that builds its ``MetaOut`` by hand (WB does, for the tool-level
+    fields it adds) uses this instead of writing ``healthy=not warnings`` and
+    silently disagreeing with the connectors that go through ``attach_meta``.
+    """
+    return [warning for warning in warnings if not warning.startswith("info:")]
+
+
+def validate_offer(item: dict, *, require_title: bool = True, price_key: str | None = None) -> list[str]:
     """Invariant checks on one normalized offer (search item or card).
 
     These encode "things that must be true if parsing worked". A violation
     almost always means upstream schema drifted and a selector now points at
     the wrong field — exactly the silent failure mode we want to surface.
+
+    ``price_key`` names the price field when the connector does not call it
+    ``price_rub``/``price`` (Taobao's ``price_cny``). Without it such an item
+    would have no price at all as far as this validator is concerned, so a
+    drifted price would pass unmentioned.
     """
     warnings: list[str] = []
-    price = item.get("price_rub", item.get("price"))
+    price = item.get(price_key) if price_key else item.get("price_rub", item.get("price"))
     in_stock = item.get("in_stock")
     raw_rating = item.get("rating") if item.get("rating") is not None else item.get("rating_score")
     rating = coerce_rating(raw_rating)
@@ -342,15 +360,23 @@ def validate_offer(item: dict, *, require_title: bool = True) -> list[str]:
     # Normalize price for validation so a STRING price ('0', '-10', '3 983 ₽')
     # is range-checked, not just the literal int 0 (audit 2026-06-01: a string
     # '0' slipped through `price == 0` and a negative price ranked as cheapest).
-    price_num = coerce_price(price) if isinstance(price, str) else price
-    if price == 0 or price == 0.0:
-        warnings.append("price_zero: price is 0 — should be None when no offer (price selector drift)")
-    elif isinstance(price_num, (int, float)) and price_num <= 0:
+    # A price string that coerce_price REFUSES must be reported here: the
+    # coercion hardening is only half the promise, because an unparsed price
+    # otherwise reaches the caller as a silent None next to healthy=True.
+    price_num = coerce_price(price)
+    if isinstance(price_num, (int, float)) and not isinstance(price_num, bool) and price_num <= 0:
+        # coerce_price already refuses <= 0, so this is the literal 0/-10 case.
         warnings.append(f"price_non_positive: price={price!r} <= 0 (selector drift / dead listing)")
-    elif isinstance(price, str) and price.strip() and price_num is None:
-        warnings.append(f"price_unparseable: price={price!r} did not parse to a number (selector drift)")
+    elif isinstance(price, str):
+        if not price.strip():
+            warnings.append(f"price_blank: price={price!r} is blank (price selector drift)")
+        elif price_num is None:
+            warnings.append(f"price_unparseable: price={price!r} did not parse to a number (selector drift)")
+    elif price is not None and price_num is None:
+        # A present non-string value coerce_price refuses (a list, an object).
+        warnings.append(f"price_unparseable: price={price!r} is not a number (selector drift)")
 
-    if in_stock is True and (price is None):
+    if in_stock is True and (price is None or price_num is None):
         warnings.append("instock_no_price: in_stock=True but price is None (contradiction)")
 
     # A rating value that is PRESENT but coerce_rating rejected (out of 0..5,
@@ -367,6 +393,61 @@ def validate_offer(item: dict, *, require_title: bool = True) -> list[str]:
         warnings.append(f"count_negative: rating_count={count} < 0")
 
     return warnings
+
+
+def validate_items(
+    items: Iterable[Any],
+    *,
+    require_title: bool = True,
+    price_key: str | None = None,
+    absent_price: str | None = None,
+) -> list[str]:
+    """Aggregate per-item offer validation into connector-level drift warnings.
+
+    One warning per invariant CODE, kept only when at least half the returned
+    items break it (`max(1, n // 2)`, so a single-item result still speaks).
+    That threshold is what separates systemic selector drift — every tile's
+    price field now points at a neighbour — from one unusual listing, and it
+    keeps the response's warning list short enough to read.
+
+    Items may be dicts or Pydantic models (the connectors build both); a model
+    is validated with ``model_dump()``.
+
+    ``absent_price`` is the code used when NOT ONE item carries a price; the
+    per-code tally cannot express that by itself, because it counts items that
+    HAVE a price field holding a bad value. Pass the connector's established
+    wording (``no_prices_on_page``) to keep the wire stable. Any other
+    invariant code is reported as ``<code>: <hits>/<n> items affected
+    (likely schema drift)``, the form WB and Ozon already ship.
+
+    An empty ``items`` returns nothing: there are no offers to validate, and
+    the caller decides on its own whether emptiness is honest.
+    """
+    from collections import Counter
+
+    tally: Counter[str] = Counter()
+    total = 0
+    priced = 0
+    for item in items:
+        if not isinstance(item, dict):
+            item = item.model_dump()
+        total += 1
+        if coerce_price(item.get(price_key) if price_key else item.get("price_rub", item.get("price"))) is not None:
+            priced += 1
+        for warning in validate_offer(item, require_title=require_title, price_key=price_key):
+            tally[warning.split(":")[0]] += 1
+    if not total:
+        return []
+    threshold = max(1, total // 2)
+    out: list[str] = []
+    if absent_price and priced == 0:
+        out.append(absent_price)
+    out.extend(
+        f"{code}: {hits}/{total} items affected (likely schema drift)"
+        for code, hits in tally.items()
+        if hits >= threshold
+    )
+    return out
 
 
 REVIEW_TEXT_DRIFT_MIN_SAMPLE = 10
@@ -411,10 +492,25 @@ def validate_review_block(block: dict) -> list[str]:
 def attach_meta(result: dict, warnings: list[str], *, source: str) -> dict:
     """Attach a _meta block. Always present (even when healthy) so the agent can
     rely on its existence; warnings list is empty when healthy.
+
+    **What ``healthy`` means, everywhere in this workspace** (audit 2026-11-01:
+    it meant three different things, so the one flag the agent is told to read
+    was worth nothing): ``healthy`` is True only when the parser got a complete
+    answer AND every value in it was trustworthy. Any drift, validation or
+    completeness warning makes it False — including a warning the connector
+    adds by hand to a response model instead of going through this helper. A
+    connector must therefore never hardcode ``healthy=True`` next to a
+    non-empty ``warnings`` list.
+
+    Informational notes are not health: a warning whose text starts with
+    ``info:`` is a note about context the caller may want (which region was
+    used), never a doubt about the data, and it does not flip the flag. Every
+    other warning is a doubt about the data or about the parser, and does.
     """
+    data = health_warnings(warnings)
     result["_meta"] = {
         "source": source,
-        "healthy": not warnings,
+        "healthy": not data,
         "warnings": warnings,
     }
     return result

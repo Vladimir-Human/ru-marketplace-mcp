@@ -649,7 +649,7 @@ async def mpstats_item(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_item", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="mpstats_item", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 
@@ -739,7 +739,7 @@ async def mpstats_warehouses(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_warehouses", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="mpstats_warehouses", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 

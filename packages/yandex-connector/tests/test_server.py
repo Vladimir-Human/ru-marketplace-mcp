@@ -153,6 +153,29 @@ async def test_search_warns_on_empty_results(monkeypatch):
     assert any("no_results" in w for w in result.meta.warnings)
 
 
+async def test_search_warns_when_an_in_stock_item_lost_its_price(monkeypatch):
+    """_zone_items reports in_stock from the payload's own isAvailable, so an
+    offer can be flagged in stock while every price node stopped matching.
+
+    validate_offer's `instock_no_price` invariant is the alarm for that
+    contradiction, and it only fires once the search path calls it: on the
+    pre-change yandex_search the warnings list stayed empty and meta.healthy
+    stayed true (audit 2026-11-01, item B).
+    """
+    stub_html(monkeypatch, {"/search": load("search_washer.html")})
+    parsed = ssr.parse_search(load("search_washer.html"))
+    priced = [item for item in parsed["items"] if item.get("price_rub") is not None]
+    for item in priced:
+        item["price_rub"] = None
+    monkeypatch.setattr(server.ssr, "parse_search", lambda html: parsed)
+
+    result = await server.yandex_search(query="стиральная машина")
+
+    assert result.returned == len(priced)
+    assert result.meta.healthy is False
+    assert any(w.startswith("instock_no_price") for w in result.meta.warnings), result.meta.warnings
+
+
 async def test_search_raises_drift_when_the_page_is_unrecognisable(monkeypatch):
     """Neither products nor an empty-result banner means the SSR shape moved."""
     stub_html(monkeypatch, {"/search": "<html><body>redesigned</body></html>"})

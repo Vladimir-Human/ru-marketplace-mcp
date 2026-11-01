@@ -178,6 +178,26 @@
   обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
   WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
   покрывает.
+- Открытый breaker хоста в бюджете CDP-навигации теперь доходит до агента как
+  временный отказ, а не как общий транспортный сбой: `open_page` переводит
+  `HostRefusingError` в существующий код `rate_limited` (`retryable=true` по
+  документации), несёт остаток паузы в поле `retry_after_s`, хост — в `provider`,
+  а сообщение говорит «paused for N s after M refusals». Раньше ни один коннектор
+  не ловил это исключение: широкие обработчики превращали его в `transport_down`
+  без паузы, а Avito проглатывал в `except Exception`, и агент повторял сразу
+  вместо ожидания. Отображение одно и общее — в `open_page`; широкие обработчики
+  на CDP-пути (Avito, Cian, Ozon) просто пропускают готовый `ToolError` дальше.
+- Пауза хоста больше не проглатывается деградирующими обработчиками Megamarket.
+  Адресная привязка, каталог-редирект и url/parse намеренно не фатальны для
+  обычных сбоев эндпоинтов (слабый поиск лучше никакого, и это закреплено
+  тестами), но временный отказ `rate_limited` с `retry_after_s` теперь проходит
+  сквозь них как есть. Раньше обработчик адресной привязки проглатывал паузу и
+  навсегда кэшировал вердикт «адрес не разрешён», из-за чего поиск и после паузы
+  шёл без адреса доставки. Ошибки без паузы (например, «не авторизован» из
+  профиля) сохраняют прежнее не фатальное поведение; путь карточки и раньше
+  доносил паузу без искажений и не менялся. Для уже существующих защит Cian и
+  Ozon добавлены отдельные офлайн-тесты (поиск и карточка), для Megamarket —
+  тесты поиска и карточки.
 - Унифицированный сервер (`marketplace-mcp`) больше не монтирует инструменты
   `mpstats_*`, когда в окружении нет непустого `MPSTATS_MP_AUTH`: каждый вызов
   всё равно вернул бы `auth_missing`, а две схемы стоили около 971 токена
@@ -199,6 +219,27 @@
   `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
   promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
   its own manual step because `marketplace-mcp unblock` does not cover it.
+- An open host breaker in the CDP navigation budget now reaches the agent as a
+  temporary refusal instead of a generic transport failure: `open_page` maps
+  `HostRefusingError` to the existing `rate_limited` code (`retryable=true` as
+  documented), carries the remaining pause in `retry_after_s`, the host in
+  `provider`, and says "paused for N s after M refusals" in the message. No
+  connector caught the exception before: broad handlers relabelled it
+  `transport_down` with no pause, and Avito swallowed it in an `except Exception`,
+  so the agent retried at once instead of waiting. The mapping is one shared
+  place — `open_page`; the broad handlers on the CDP path (Avito, Cian, Ozon)
+  just let the finished `ToolError` through.
+- Megamarket's degrade handlers no longer swallow the host pause. Address
+  resolution, the catalog redirect and url/parse are deliberately non-fatal for
+  ordinary endpoint failures (a weaker search beats none, and tests pin that),
+  but a `rate_limited` refusal with `retry_after_s` now passes through them
+  unchanged. Before, the address handler swallowed the pause and cached a
+  "no address" verdict for the process lifetime, so searches kept running
+  addressless even after the cooldown. Non-pause errors (say, "not
+  authenticated" from the profile endpoint) keep the existing non-fatal
+  degrade; the card path already carried the pause intact and is unchanged.
+  The existing Cian and Ozon guards gained dedicated offline tests (search and
+  card each), and Megamarket got search and card tests.
 - The unified server (`marketplace-mcp`) no longer mounts the `mpstats_*` tools
   when no non-empty `MPSTATS_MP_AUTH` is set: every call would return
   `auth_missing`, while the two schemas cost about 971 tokens (~6% of the
@@ -229,6 +270,81 @@
   (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, a path
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
+
+- Цена, которую парсер не смог получить, больше не проходит молча. `validate_offer`
+  теперь сообщает о неразобранной цене (`price_unparseable`), о пустой или
+  пробельной строке цены (`price_blank`), умеет читать ценовое поле коннектора
+  (`price_cny` у Taobao) и видит противоречие `in_stock` с неразобранной ценой;
+  раньше пробельная цена не давала ни одного предупреждения. Новый общий
+  `validate_items` собирает поверки по позициям в одно предупреждение на код,
+  когда сломана хотя бы половина выдачи, и подставляет привычный код
+  `no_prices_on_page`, если цены нет ни у одной позиции. Он подключён к поиску и
+  карточкам avito, cian, citilink, detmir, dns, lamoda, megamarket, taobao и
+  yandex (у wb и ozon такая проверка уже была); mpstats не подключён — его
+  строки это аналитические метрики, а не нормализованные заявки с ценой и
+  заголовком.
+
+- `meta.healthy` означает одно и то же во всех коннекторах: `true` только когда
+  ответ полный и его значениям можно верить, `false` при любом предупреждении о
+  дрейфе, валидации или полноте — включая предупреждение, которое коннектор
+  пишет в модель ответа вручную (общий хелпер `health_warnings` отделяет
+  информационные заметки от сомнений в данных). Предупреждение с префиксом
+  `info:` — это контекст, а не сомнение в данных, и флаг не гасит (так помечена
+  заметка WB о том, что регион задаёт браузер, а не `dest`). В WB это
+  исправляет `healthy=True` рядом с непустыми предупреждениями (поиск через DOM,
+  `wb_categories`), а карточка через DOM, у которой не разобрался ни один
+  запрошенный SKU, теперь несёт `no_items` вместо `healthy=true` с пустым
+  списком. Три-состояние канарейки (healthy/drift/inconclusive) не изменилось.
+
+- Пустой ответ и отказ площадки больше не выглядят успехом: поиск WB через DOM
+  на странице ≥2 без плашки «ничего не нашлось» отдаёт `no_results` с
+  предупреждением `page_end_unverified` и `healthy=false` (страница 1
+  по-прежнему даёт `parser_drift`, а пустая страница с плашкой остаётся
+  честной); пустой ответ API WB, когда v9 честно пуст и legacy-фолбэк упал,
+  несёт `fallback_failed` и `healthy=false`; megamarket помечает страницу без
+  единой цены (`no_prices_on_page`) и проверяет карточку (`no_price`); в
+  `compare_prices` источник с нулём заявок считается `ok` только если его
+  собственный ответ не сообщает о проблеме, иначе это `unhealthy` с
+  `unhealthy_empty` и `complete=false`. Докстрока `ozon_search` приведена в
+  соответствие с кодом: ноль позиций — это предупреждение `no_items` и
+  `healthy=false`.
+
+- A price the parser could not obtain no longer passes in silence. `validate_offer`
+  now reports an unparseable price (`price_unparseable`), a blank or
+  whitespace-only price string (`price_blank`), reads a connector's own price
+  field (`price_cny` on Taobao) and sees `in_stock` contradicting an unparsed
+  price; a whitespace price used to draw no warning at all. The new shared
+  `validate_items` rolls per-item findings into one warning per code when at
+  least half the page breaks it, and substitutes the established
+  `no_prices_on_page` code when not one item carries a price. It is wired into
+  the search and card tools of avito, cian, citilink, detmir, dns, lamoda,
+  megamarket, taobao and yandex (wb and ozon already had such a check); mpstats
+  is excluded because its rows are analytics metrics, not normalized offers with
+  a title and a price.
+
+- `meta.healthy` means one thing in every connector: `true` only when the answer
+  is complete and its values can be trusted, `false` for any drift, validation or
+  completeness warning — including one a connector writes into its response model
+  by hand (the shared `health_warnings` helper separates informational notes from
+  doubts about the data). A warning prefixed `info:` is context rather than doubt
+  about the data and does not flip the flag (WB's note that the region comes from
+  the browser, not from `dest`, is marked that way). In WB this fixes
+  `healthy=True` next to non-empty warnings (DOM search, `wb_categories`), and a
+  DOM card whose every requested SKU failed to parse now carries `no_items`
+  instead of `healthy=true` with an empty list. The tri-state canary
+  (healthy/drift/inconclusive) is unchanged.
+
+- An empty answer and a marketplace refusal no longer read as success: WB DOM
+  search on page 2 or later without the «nothing found» notice returns
+  `no_results` with a `page_end_unverified` warning and `healthy=false` (page 1
+  still raises `parser_drift`, and an empty page WITH the notice stays honest);
+  an empty WB API answer where v9 is positively empty and the legacy fallback
+  died carries `fallback_failed` and `healthy=false`; megamarket marks a page
+  where not one price alias matched (`no_prices_on_page`) and validates its card
+  (`no_price`); in `compare_prices` a source with zero offers counts as `ok`
+  only when its own answer reports no problem, otherwise it is `unhealthy` with
+  `unhealthy_empty` and `complete=false`. The `ozon_search` docstring now matches
+  the code: zero items means a `no_items` warning and `healthy=false`.
 
 - Неудачный автозапуск Chrome запоминается на 45 секунд
   (`_AUTOSTART_FAILURE_TTL_S`): следующие вызовы, включая уже ждущие блокировку,
