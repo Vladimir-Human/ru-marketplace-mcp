@@ -12,7 +12,7 @@
       "wire_tokens": 1735,
       "model_tokens": 1429,
       "instructions_tokens": 36,
-      "latency_ms": 3734.0,
+      "latency_ms": 3063.0,
       "schema_sha256": "314450e09450b9c9671380bc16f3848988248fe598e73f6442d32dea1c8a1ef2",
       "tools": [
         {
@@ -43,7 +43,7 @@
       "wire_tokens": 2008,
       "model_tokens": 1636,
       "instructions_tokens": 36,
-      "latency_ms": 3750.0,
+      "latency_ms": 2922.0,
       "schema_sha256": "d837e8784dd65be0ce161251d3ea85b7fdce1b451f465036eae8c9e4576f58cf",
       "tools": [
         {
@@ -75,12 +75,12 @@
     },
     "marketplace-mcp": {
       "script": "marketplace-mcp",
-      "tool_count": 38,
-      "wire_tokens": 12814,
-      "model_tokens": 9321,
+      "tool_count": 39,
+      "wire_tokens": 13068,
+      "model_tokens": 9487,
       "instructions_tokens": 153,
-      "latency_ms": 3875.0,
-      "schema_sha256": "b58cc20f6dd0bf2b3a9f0109d70a0d40f32e44b4e3de348240274107d75b67ad",
+      "latency_ms": 3093.0,
+      "schema_sha256": "585783adc3fdd46e7e46e146b47b3cee0eeb288e7e79bfefd191432327077f93",
       "tools": [
         {
           "name": "aliexpress_card",
@@ -183,8 +183,13 @@
           "model_tokens": 121
         },
         {
+          "name": "marketplace_health",
+          "tokens": 250,
+          "model_tokens": 166
+        },
+        {
           "name": "marketplace_sources",
-          "tokens": 303,
+          "tokens": 307,
           "model_tokens": 212
         },
         {

@@ -41,7 +41,7 @@ for line in sys.stdin:
     if mode == "missing_initialize":
         result["serverInfo"].pop("version")
     if request_id == 2:
-        result = {"tools": [{"name": "tool_" + str(i), "inputSchema": {"type": "object"}} for i in range(38)]}
+        result = {"tools": [{"name": "tool_" + str(i), "inputSchema": {"type": "object"}} for i in range(39)]}
         if mode == "badtools":
             result = {"tools": None}
     elif request_id == 3:
@@ -75,7 +75,7 @@ def test_noisy_and_interleaved_child_completes(mode: str) -> None:
     with StdioProbe(command(mode)) as probe:
         deadline = time.monotonic() + 3
         probe.initialize("test", deadline)
-        assert len(probe.list_tools(deadline)) == 38
+        assert len(probe.list_tools(deadline)) == 39
         assert len(probe.stderr) <= 2500
     assert probe.proc.poll() is not None
 

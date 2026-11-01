@@ -128,6 +128,38 @@
   покрыт — его shape_reference объясняет, почему охрана по наличию ключей
   там никогда не сработала бы.
 
+- У агента появился один read-only взгляд на транспорт: `marketplace_health`
+  отвечает, жив ли Chrome на настроенном CDP-адресе (версия браузера и число
+  вкладок, если отвечает), какие хосты остывают в брейкере и сколько ждать,
+  какие челлендж-вкладки удержаны, и какую страницу открыть человеку, чтобы
+  разблокировать каждый смонтированный источник, — по тем же статическим
+  таблицам, которыми пользуется CLI. Инструмент ничего не тратит: не
+  запускает Chrome, не создаёт и не закрывает вкладки, не ходит на площадки;
+  он только читает `/json/version` и `/json/list` с таймаутом около двух
+  секунд, а сломанная часть попадает в ответ (`cdp.reachable=false` рядом с
+  `error`), а не в исключение. `budget_snapshot()` и `handoff_diagnostics()`
+  перестали быть тестовым API: их видит агент (у удержанной вкладки — только
+  имя папки профиля, без пути с именем пользователя ОС, и URL без query и
+  фрагмента). У `marketplace_sources`
+  появилось аддитивное поле `needs_cdp` — отсортированный список
+  смонтированных источников, которые могут читаться через Chrome; полный
+  список полей обоих инструментов лежит в их гайдах, докстринги не выросли.
+
+- The agent gets one read-only transport-health view: `marketplace_health`
+  answers whether Chrome is alive on the configured CDP address (browser
+  version and page-target count when it is), which hosts sit in breaker
+  cooldown and for how long, which challenge pages are retained, and which page
+  a human opens to unblock each mounted source — from the same static tables
+  the CLI uses. The tool spends nothing: it starts no Chrome, opens and closes
+  no tab, and never calls a marketplace; it only reads `/json/version` and
+  `/json/list` with a timeout of about two seconds, and a broken part lands in
+  the answer (`cdp.reachable=false` beside `error`) instead of an exception.
+  `budget_snapshot()` and `handoff_diagnostics()` are no longer test-only API:
+  the agent sees them (a retained lease shows only the profile folder name, not
+  the path with the OS user name, and its URL without query or fragment). `marketplace_sources` gained the additive `needs_cdp`
+  field — the sorted mounted sources that can be read through Chrome. The full
+  field lists of both tools live in their guides, so the docstrings did not
+  grow.
 - У проекта появился один реестр источников — `mcp_core.sources`: каноническое
   имя и алиасы, пакет, модуль, консольный скрипт, префикс инструментов, имя в
   таблице монтирования, ключ в конфиге клиента, selfcheck, карточный инструмент,

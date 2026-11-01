@@ -55,13 +55,13 @@ def test_the_mounted_count_matches_the_imported_sources():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
     # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 4 = 37 mounted tools across
-    # 13 servers, plus marketplace_sources, which this server owns rather than
-    # mounts. Operator-only *_selfcheck diagnostics are not MCP tools. mpstats
-    # is not mounted without MPSTATS_MP_AUTH (R-MPSTATS-MOUNT-GATE), so its two
-    # tools are absent here.
-    own = {"marketplace_sources"}
+    # 13 servers, plus marketplace_sources and marketplace_health, which this
+    # server owns rather than mounts. Operator-only *_selfcheck diagnostics are
+    # not MCP tools. mpstats is not mounted without MPSTATS_MP_AUTH
+    # (R-MPSTATS-MOUNT-GATE), so its two tools are absent here.
+    own = {"marketplace_sources", "marketplace_health"}
     assert own <= names
-    assert len(tools) == 38, f"expected 37 mounted tools + 1 own, got {len(tools)}"
+    assert len(tools) == 39, f"expected 37 mounted tools + 2 own, got {len(tools)}"
     assert len(names - own) == 37
 
 

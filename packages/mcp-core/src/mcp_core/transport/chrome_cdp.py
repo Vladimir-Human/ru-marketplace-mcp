@@ -59,6 +59,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # current_page_url: Refresh raw main-frame URL without extracting document content.
 # reveal_owned_page: Best-effort foreground activation of only the owned target.
 # _move_window_on_screen: Un-minimize a window and park it on-screen (shared with browser show).
+# cdp_endpoint_status: Read /json/version and the page count without starting or driving Chrome.
 # browser_status: Report CDP reachability, Chrome version, page count and window state.
 # show_browser_window: Move the scraping Chrome window on-screen and activate the first or named target.
 # open_tabs: Open pages in new tabs over browser-level CDP; never navigates or closes an existing tab.
@@ -1187,6 +1188,42 @@ async def _browser_cdp_channel() -> AsyncIterator[_RawCdpPage]:
         browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
     ) as bws:
         yield _RawCdpPage(bws, "")
+
+
+def cdp_endpoint_status(*, timeout_s: float = 2.0) -> dict[str, Any]:
+    """Read whether the scraping Chrome answers on the CDP endpoint, and its version.
+
+    Read-only by construction, unlike :func:`probe_session`: it opens no tab,
+    closes none, navigates nowhere and never autostarts Chrome — it only GETs
+    the ``/json/version`` and ``/json/list`` endpoints a running Chrome already
+    serves, each bounded by ``timeout_s``. ``browser_status`` would answer too,
+    but it pays a websocket round trip for the window state nobody planning a
+    fan-out needs.
+
+    Never raises for a dead endpoint: unreachable is the answer, with a short
+    reason naming only the exception class, since an exception message can carry
+    a URL or a profile path.
+    """
+    report: dict[str, Any] = {
+        "reachable": False,
+        "host": CDP_HOST,
+        "port": CDP_PORT,
+        "version": None,
+        "page_targets": None,
+        "reason": None,
+    }
+    try:
+        version_info = _cdp_http_json("/json/version", timeout_s=timeout_s)
+    except _CDP_HTTP_ERRORS as exc:
+        report["reason"] = f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})"
+        return report
+    report["reachable"] = True
+    if isinstance(version_info, dict) and isinstance(version_info.get("Browser"), str):
+        report["version"] = version_info["Browser"]
+    report["page_targets"] = _page_target_count(path="/json/list", timeout_s=timeout_s)
+    if report["page_targets"] is None:
+        report["reason"] = "the target list could not be read; the version above is live"
+    return report
 
 
 async def browser_status() -> dict[str, Any]:
