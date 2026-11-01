@@ -17,6 +17,15 @@ Usage:
 under the same budget as the other commands, so the release checklist's doctor
 round cannot pass the caps.
 
+Exit codes, and why 4 is separate: 0 the command ran (for doctor, everything
+healthy), 1 doctor's own alarm (a parser drifted), 2 doctor's own
+blocked/inconclusive verdict (nothing could be judged), 3 the live budget
+refused a request, 4 this script could not start or was called wrongly (usage
+error, or the budget hooks could not be installed). The CI drift alarm keeps
+exit 2 green - correctly, a blocked source must not page anyone - so a broken
+live_check has to be told apart from a blocked source instead of hiding in the
+same code (2026-11-01 audit).
+
 START_MODULE_CONTRACT
 PURPOSE: Run one marketplace selfcheck or tool call under the shared live budget.
 SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, doctor round, result and ledger output.
@@ -45,6 +54,11 @@ from typing import Any
 import live_budget
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# live_check's OWN usage/setup failures, kept out of the doctor's 2: the CI
+# drift alarm treats 2 as "blocked/inconclusive, stay green", so a script that
+# never reached a marketplace would otherwise leave the alarm silently green.
+USAGE_EXIT = 4
 
 
 def _dump(result: Any) -> Any:
@@ -115,35 +129,35 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
     if mode == "selfcheck":
         if len(argv) != 2:
             print("usage: live_check.py selfcheck <source>", file=sys.stderr)
-            return 2
+            return USAGE_EXIT
         from marketplace_connector.cli import _SELFCHECKS
 
         found = next(((module, tool) for name, module, tool in _SELFCHECKS if name == argv[1]), None)
         if found is None:
             known = ", ".join(name for name, _module, _tool in _SELFCHECKS)
             print(f"unknown source {argv[1]!r}; known: {known}", file=sys.stderr)
-            return 2
+            return USAGE_EXIT
         module_path, tool_name = found
         tool = getattr(__import__(module_path, fromlist=[tool_name]), tool_name)
         result = await tool()
     elif mode == "call":
         if len(argv) != 4:
             print("usage: live_check.py call <module> <tool> '<json kwargs>'", file=sys.stderr)
-            return 2
+            return USAGE_EXIT
         module_path, tool_name, raw_kwargs = argv[1], argv[2], argv[3]
         try:
             kwargs = json.loads(raw_kwargs)
         except json.JSONDecodeError as exc:
             print(f"kwargs must be a JSON object: {exc}", file=sys.stderr)
-            return 2
+            return USAGE_EXIT
         if not isinstance(kwargs, dict):
             print("kwargs must be a JSON object", file=sys.stderr)
-            return 2
+            return USAGE_EXIT
         tool = getattr(__import__(module_path, fromlist=[tool_name]), tool_name)
         result = await tool(**kwargs)
     else:
         print(__doc__, file=sys.stderr)
-        return 2
+        return USAGE_EXIT
 
     print(json.dumps(_dump(result), ensure_ascii=False, indent=1, default=str))
     return 0
@@ -152,14 +166,14 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
 def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
-        return 2
+        return USAGE_EXIT
     if not os.environ.get("LIVE_BUDGET_LEDGER"):
         os.environ["LIVE_BUDGET_LEDGER"] = str(REPO_ROOT / ".live-budget.json")
     try:
         budget = live_budget.install()
     except AttributeError as exc:
         print(f"live budget cannot be installed: {exc}", file=sys.stderr)
-        return 2
+        return USAGE_EXIT
     try:
         return asyncio.run(_run(argv, budget))
     except live_budget.BudgetExhausted as exc:

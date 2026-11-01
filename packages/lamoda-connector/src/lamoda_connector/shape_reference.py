@@ -11,6 +11,11 @@ payload with ``mcp_core.resilience.shape_signature``. Two consumers:
 * ``tests/test_shape_reference.py`` asserts the reference still agrees with
   the live fixture, so the registry cannot go stale silently.
 
+The family check runs on the EXTRACTOR's own output, where every key is emitted
+on every tile (2026-11-01 audit): a page that changed shape reaches the agent
+as empty values, which ``validate_items`` reports as ``no_prices_on_page`` /
+``title_missing``, while a vanished key means the extractor stopped emitting it.
+
 Never edit by hand: regenerate by re-running the extractor over a fresh
 captured page and replacing the fingerprint.
 """

@@ -396,6 +396,73 @@
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
 
+- Дрейф формы WB больше не срабатывает на законной странице со снятыми с
+  продажи товарами: у неё у всех товаров `"sizes": []`, а ценовое семейство
+  живёт внутри `sizes[]`, поэтому общий матчер
+  `mcp_core.resilience.shape_drift_warning` объявлял семейство потерянным.
+  Теперь пустой контейнер (сигнатура пишет его как `<путь>:empty_array`) не
+  считается потерей ключа внутри себя — искать там нечего. Правило узкое:
+  работает только для вложенного массива (не для конверта выдачи, так что
+  пустой `items: []` рядом с заполненным `goods[]` дрейф не прячет) и только
+  если этот массив пуст у всех элементов; записи `sizes`, которые есть, но
+  потеряли ключ цены, остаются дрейфом, в том числе на смешанной странице.
+- Avito: реестр `SEARCH_REQUIRED_FAMILIES` получил алиасы третьего конверта
+  `data.items[]`, который `_parse_search_items` уже читает. Раньше ответ,
+  отданный только через `data.items`, разбирался, но все семейства читались как
+  потерянные — ложная тревога; потерянное семейство внутри этого конверта
+  по-прежнему называется своим именем.
+- Заголовки `shape_reference.py` у aliexpress, citilink, dns, lamoda и taobao
+  теперь прямо говорят, по какому payload идёт проверка семейств: это выход
+  самого экстрактора, где каждый ключ выдаётся на каждой плитке, поэтому дрейф
+  разметки площадки приходит к агенту пустыми значениями и ловится
+  `validate_items` (`no_prices_on_page`, `title_missing`), а пропавший ключ
+  значит, что экстрактор перестал его выдавать. У aliexpress исправлено
+  обратное утверждение, будто экстрактор выдаёт ключи условно.
+- Ночной job: шаг doctor с аварийным сигналом идёт ПЕРЕД канарейкой. Оба шага
+  пишут в один журнал живых запросов (`.live-budget.json` в корне репозитория,
+  8 запросов на площадку за прогон, ни один шаг его не сбрасывает), поэтому
+  канарейка, идя первой, тратила бюджет WB на свои live-тесты, `wb_selfcheck`
+  у doctor'а получал отказ, читался как inconclusive (2) и job оставался
+  зелёным при настоящем дрейфе WB. Сигнал важнее: канарейка остаётся
+  информационной и зелёной, как и была.
+- `scripts/live_check.py` отдаёт код 4 на собственные ошибки использования и на
+  неудачную установку бюджета вместо прежней двойки, а ночной job валит шаг на
+  4. Двойка у doctor'а значит «источники не удалось проверить, остаёмся
+  зелёными» — правильно для заблокированной площадки, но сломанный вызов
+  `live_check` не должен прятаться в том же коде.
+- WB shape drift no longer fires on the legitimate page whose products are all
+  delisted: every product carries `"sizes": []` and the price family lives
+  inside `sizes[]`, so the shared matcher
+  `mcp_core.resilience.shape_drift_warning` reported the family as lost. An
+  empty container (the signature writes it as `<path>:empty_array`) is no
+  longer read as a lost key inside itself — there is nothing in it to lose.
+  The rule is narrow: only a nested array counts (not the result envelope, so
+  an empty `items: []` next to a filled `goods[]` does not hide drift), and
+  only when it is empty on every element; `sizes` entries that exist without
+  a price key stay drift, on a mixed page too.
+- Avito: `SEARCH_REQUIRED_FAMILIES` gained the aliases of the third envelope
+  `data.items[]`, which `_parse_search_items` already read. A payload served
+  only through `data.items` parsed fine but every family read as missing — a
+  false alarm; a family actually lost inside that envelope is still named.
+- The `shape_reference.py` headers of aliexpress, citilink, dns, lamoda and
+  taobao now state what the family check runs on: the extractor's own output,
+  where every key is emitted on every tile, so marketplace markup drift reaches
+  the agent as empty values caught by `validate_items` (`no_prices_on_page`,
+  `title_missing`) while a vanished key means the extractor stopped emitting
+  it. AliExpress carried the opposite claim that the extractor emits keys
+  conditionally; that is corrected.
+- The nightly job now runs the doctor alarm step BEFORE the canary. Both steps
+  book into one live-request ledger (`.live-budget.json` at the repository
+  root, 8 requests per source per run, neither step resets it), so a canary
+  running first spent WB's budget on its live tests, the doctor's
+  `wb_selfcheck` was refused, read inconclusive (2) and the job stayed green on
+  real WB drift. The alarm has priority; the canary stays informational and
+  green as before.
+- `scripts/live_check.py` returns 4 for its own usage errors and a failed
+  budget install instead of the old 2, and the nightly job fails the step on 4.
+  The doctor's 2 means "sources could not be judged, stay green" — right for a
+  blocked marketplace, but a broken `live_check` invocation must not hide in
+  the same code.
 - `coerce_rating` больше не выдаёт рейтинг из счётчика отзывов: строка,
   содержащая число, сгруппированное по тысячам пробелом (обычным, неразрывным
   U+00A0, узким неразрывным U+202F или тонким U+2009), теперь даёт `None` и

@@ -1783,7 +1783,10 @@ async def wb_search(
         # so an agent does not need a human running doctor to learn the shape
         # moved. The normalized items emit every key unconditionally, so the
         # guard runs on the RAW product objects the flattener binds through.
-        # Products are non-empty here: a no-results page returned above.
+        # Products are non-empty here: a no-results page returned above. An
+        # all-delisted page keeps its "sizes": [] — the price family is
+        # vacuously absent inside an empty array, not lost, and the no_prices
+        # warning below is what speaks for that page.
         drift = R.shape_drift_warning({"products": products}, SEARCH_REQUIRED_FAMILIES, source="wb_search")
         if drift:
             warnings.append(drift)

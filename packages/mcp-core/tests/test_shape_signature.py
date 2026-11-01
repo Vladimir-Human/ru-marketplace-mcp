@@ -135,3 +135,26 @@ def test_a_null_value_still_counts_as_a_present_family_member():
     nulled = {"total": 0, "items": [{"id": 1, "title": "x", "price_rub": None}]}
 
     assert shape_drift_warning(nulled, (("items[].price_rub",),), source="test_search") is None
+
+
+def test_an_empty_container_is_not_a_lost_element_family():
+    """Vacuity, not drift: a delisted WB page arrives with "sizes": [] on every
+    product, and a key inside an array that holds no elements cannot have been
+    lost — the same rule that keeps a zero-item payload out of the check. The
+    boundary stays sharp: an array that still HAS elements which lost the key
+    is a rename, and must warn."""
+    delisted = {"products": [{"id": 1, "name": "x", "sizes": [], "totalQuantity": 0}]}
+    renamed = {"products": [{"id": 1, "name": "x", "sizes": [{"optionId": 7}], "totalQuantity": 0}]}
+
+    assert shape_drift_warning(delisted, (("products[].sizes[].price",),), source="test_search") is None
+    assert (
+        shape_drift_warning(renamed, (("products[].sizes[].price",),), source="test_search")
+        == "shape_drift: test_search: missing products[].sizes[].price"
+    )
+    # A page mixing delisted products with sizes that lost the key still warns:
+    # the merged signature shows filled sizes next to the empty ones.
+    mixed = {"products": [delisted["products"][0], renamed["products"][0]]}
+    assert shape_drift_warning(mixed, (("products[].sizes[].price",),), source="test_search") is not None
+    # An empty sibling envelope is not vacuity: the filled one lost the key.
+    sibling = {"items": [], "goods": [{"name": "x"}]}
+    assert shape_drift_warning(sibling, (("items[].id", "goods[].id"),), source="test_search") is not None

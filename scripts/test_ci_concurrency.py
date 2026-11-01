@@ -218,6 +218,40 @@ def test_the_live_job_runs_the_doctor_drift_alarm() -> None:
     assert re.search(r"^\s*1\).*exit 1", step, re.M), "the doctor alarm (parser drift, exit 1) must fail the job"
 
 
+def test_the_doctor_alarm_runs_before_the_canary_on_one_ledger() -> None:
+    """The alarm must get its live requests before the canary spends them.
+
+    Both steps book into one ledger: the repo-root conftest.py gives
+    `pytest -m live` the default `.live-budget.json`, live_check.py defaults to
+    the same file, and neither step resets it. The cap is 8 requests per source
+    per run, and the canary's WB tests spend most of WB's 8 — so with the
+    canary first, the doctor's wb_selfcheck is refused, reads inconclusive
+    (exit 2) and the job stays green while WB actually drifted (2026-11-01
+    audit). The alarm has priority, so its step must come first.
+    """
+    text = CI.read_text(encoding="utf-8")
+    doctor = text.index("- name: Doctor drift alarm")
+    canary = text.index("- name: Run live canaries")
+
+    assert doctor < canary, "the doctor alarm must run before the canary, or the canary starves it of WB's budget"
+    live_job = _section("  live:")
+    assert "LIVE_BUDGET_LEDGER" not in live_job, "a per-step ledger would split the one budget both steps share"
+    assert "live_check.py reset" not in live_job, "a reset between the steps would hand the alarm a fresh cap"
+
+
+def test_a_broken_live_check_fails_the_alarm() -> None:
+    """Exit 4 is live_check's own usage/setup failure, not a blocked source.
+
+    The step keeps 2 green because a blocked marketplace must not page anyone.
+    A live_check that never ran is different: no selfcheck was judged, so a
+    green job would hide a broken alarm.
+    """
+    step = _section("      - name: Doctor drift alarm")
+
+    assert re.search(r"^\s*4\).*exit 1", step, re.M), "exit 4 (live_check setup/usage failure) must fail the job"
+    assert "exit 4" in step, "the step summary must name what exit 4 means"
+
+
 def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> None:
     """A manual image build must not cancel a pull-request build (audit S4-F16).
 

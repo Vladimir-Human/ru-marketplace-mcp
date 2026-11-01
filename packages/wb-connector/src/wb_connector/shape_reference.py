@@ -64,6 +64,12 @@ CARD_SHAPE_REFERENCE: tuple[str, ...] = (
 # nesting and the pre-July-2026 top-level kopeck fields, and is
 # presence-not-type: ``sizes[].price:null`` is a delisted item, not a lost
 # price field): drift means the WHOLE family vanished, not a single alias.
+# A delisted page carries ``"sizes": []`` on every product, which the
+# signature writes as ``products[].sizes:empty_array``; an empty container
+# has no element that could have lost its price key, so the shared matcher
+# counts the family present there (warning on that documented state was the
+# 2026-11-01 audit finding). Sizes entries that exist but carry no price key
+# stay drift — that is a rename inside the array, not emptiness.
 SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
     ("products[].id",),
     ("products[].name",),
