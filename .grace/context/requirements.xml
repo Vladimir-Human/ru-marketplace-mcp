@@ -12,6 +12,9 @@
   <rule id="R-NO-FABRICATION" source="CONTRIBUTING.md:What this codebase cares about; packages/mcp-core/src/mcp_core/resilience.py">
     A missing or ambiguous value is None, never a fabricated zero. Use coerce_price and coerce_int rather than guessing. Do not turn an unavailable price into the cheapest offer; preserve price-kind and conditional-price distinctions. This rule does not prohibit genuine zero counts where the upstream contract establishes them.
   </rule>
+  <requirement id="R-COERCE-AMBIGUOUS" source="Owner task 2026-11-01: v2.7.0 audit reproduction of coerce_price; packages/mcp-core/src/mcp_core/resilience.py">
+    coerce_price, coerce_int and coerce_rating return None when the text is ambiguous or is not a price, count or rating, and validate_offer flags the field, instead of guessing. Prices: two numbers glued by the thousands-separator space ('1 999 2 999', '1 999 2 999 ₽', '1,999,2,999'), an inconsistent grouping or a three-digit fraction ('3 983.999'), a monthly instalment ('от 5 751 ₽/ мес.'), a saving ('выгода 5 000 ₽') and a discount ('скидка 30%') are None, while a listing's "от" price and ordinary grouped/decimal shapes stay real prices. Counts: any-script magnitude letter ('12万') or a currency glyph ('24 088₽') is None. Ratings: a non-5 denominator written as a word ('4.5 из 10') is None.
+  </requirement>
   <rule id="R-DRIFT" source="CONTRIBUTING.md; packages/mcp-core/src/mcp_core/errors.py; packages/mcp-core/src/mcp_core/resilience.py">
     When a reachable payload no longer matches the expected structure, report parser_drift. Distinguish format change from transport_down, rate limits, missing products, login walls and challenge_required. Selfchecks report success, drift_detected or inconclusive; a blocked probe does not verify parser health. Shape signatures retain paths and types, not payload values; adoption differs by connector.
   </rule>
