@@ -27,6 +27,22 @@
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
 
+### Fixed
+
+- Неудачный автозапуск Chrome запоминается на 45 секунд
+  (`_AUTOSTART_FAILURE_TTL_S`): следующие вызовы, включая уже ждущие блокировку,
+  получают тот же отказ сразу, с подсказкой о возрасте попытки, вместо
+  повторного ожидания готовности CDP. Успешный запуск (в том числе
+  `browser start`/`start_browser`) память очищает, а явный запуск всегда
+  пробует по-настоящему.
+
+- A failed Chrome autostart is remembered for 45 seconds
+  (`_AUTOSTART_FAILURE_TTL_S`): later callers, including those already waiting
+  on the lock, get the same failure at once with an age hint instead of
+  repeating the CDP readiness wait. A success (also `browser start` /
+  `start_browser`) clears the memory, and an explicit start always tries for
+  real.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
