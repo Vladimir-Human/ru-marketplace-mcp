@@ -192,6 +192,34 @@
   проверка после публикации смотрит страницу PyPI и
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - Заметки к релизу v2.7.0 переписаны короче; подробности проверок остались в #152.
+- Ошибка `challenge_required` стала честной для агента: флаг `retryable` остаётся
+  `true` по документированному контракту, но добавлены `retryable_now=false`
+  (сейчас повтор не поможет), `user_action` с настоящей командой
+  `marketplace-mcp unblock <source>` или удержанной вкладкой и
+  `retry_when=after_user_confirmation`. Сообщения Taobao, Lamoda и WB больше не
+  обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
+  WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
+  покрывает.
+- Открытый breaker хоста в бюджете CDP-навигации теперь доходит до агента как
+  временный отказ, а не как общий транспортный сбой: `open_page` переводит
+  `HostRefusingError` в существующий код `rate_limited` (`retryable=true` по
+  документации), несёт остаток паузы в поле `retry_after_s`, хост — в `provider`,
+  а сообщение говорит «paused for N s after M refusals». Раньше ни один коннектор
+  не ловил это исключение: широкие обработчики превращали его в `transport_down`
+  без паузы, а Avito проглатывал в `except Exception`, и агент повторял сразу
+  вместо ожидания. Отображение одно и общее — в `open_page`; широкие обработчики
+  на CDP-пути (Avito, Cian, Ozon) просто пропускают готовый `ToolError` дальше.
+- Пауза хоста больше не проглатывается деградирующими обработчиками Megamarket.
+  Адресная привязка, каталог-редирект и url/parse намеренно не фатальны для
+  обычных сбоев эндпоинтов (слабый поиск лучше никакого, и это закреплено
+  тестами), но временный отказ `rate_limited` с `retry_after_s` теперь проходит
+  сквозь них как есть. Раньше обработчик адресной привязки проглатывал паузу и
+  навсегда кэшировал вердикт «адрес не разрешён», из-за чего поиск и после паузы
+  шёл без адреса доставки. Ошибки без паузы (например, «не авторизован» из
+  профиля) сохраняют прежнее не фатальное поведение; путь карточки и раньше
+  доносил паузу без искажений и не менялся. Для уже существующих защит Cian и
+  Ozon добавлены отдельные офлайн-тесты (поиск и карточка), для Megamarket —
+  тесты поиска и карточки.
 - Унифицированный сервер (`marketplace-mcp`) больше не монтирует инструменты
   `mpstats_*`, когда в окружении нет непустого `MPSTATS_MP_AUTH`: каждый вызов
   всё равно вернул бы `auth_missing`, а две схемы стоили около 971 токена
@@ -206,6 +234,34 @@
   the after-publication step checks the PyPI page and
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
+- The `challenge_required` error contract is now honest for the agent: `retryable`
+  stays `true` per the documented contract and the body gains `retryable_now=false`
+  (a plain retry now cannot pass), `user_action` naming the real
+  `marketplace-mcp unblock <source>` command or the retained tab, and
+  `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
+  promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
+  its own manual step because `marketplace-mcp unblock` does not cover it.
+- An open host breaker in the CDP navigation budget now reaches the agent as a
+  temporary refusal instead of a generic transport failure: `open_page` maps
+  `HostRefusingError` to the existing `rate_limited` code (`retryable=true` as
+  documented), carries the remaining pause in `retry_after_s`, the host in
+  `provider`, and says "paused for N s after M refusals" in the message. No
+  connector caught the exception before: broad handlers relabelled it
+  `transport_down` with no pause, and Avito swallowed it in an `except Exception`,
+  so the agent retried at once instead of waiting. The mapping is one shared
+  place — `open_page`; the broad handlers on the CDP path (Avito, Cian, Ozon)
+  just let the finished `ToolError` through.
+- Megamarket's degrade handlers no longer swallow the host pause. Address
+  resolution, the catalog redirect and url/parse are deliberately non-fatal for
+  ordinary endpoint failures (a weaker search beats none, and tests pin that),
+  but a `rate_limited` refusal with `retry_after_s` now passes through them
+  unchanged. Before, the address handler swallowed the pause and cached a
+  "no address" verdict for the process lifetime, so searches kept running
+  addressless even after the cooldown. Non-pause errors (say, "not
+  authenticated" from the profile endpoint) keep the existing non-fatal
+  degrade; the card path already carried the pause intact and is unchanged.
+  The existing Cian and Ozon guards gained dedicated offline tests (search and
+  card each), and Megamarket got search and card tests.
 - The unified server (`marketplace-mcp`) no longer mounts the `mpstats_*` tools
   when no non-empty `MPSTATS_MP_AUTH` is set: every call would return
   `auth_missing`, while the two schemas cost about 971 tokens (~6% of the
@@ -213,6 +269,28 @@
   missing-token reason, `doctor` still shows it as off, and the standalone
   `mpstats-mcp` keeps its behaviour and answers `auth_missing`.
 
+### Security
+
+- `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
+  полный URL принимается только с путём страницы объявления — `/<id>`,
+  `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
+  этот путь, без query и фрагмента. Путь вида `/<город>/<категория>/…` с
+  первым сегментом из служебных маршрутов Avito (`api`, `profile`, `account` и
+  т. п.) тоже отклоняется. Раньше путь из входного URL сохранялся
+  целиком, и путь с «хвостом» идентификатора после личного префикса (например,
+  `/profile/x_1234567890`) уходил в браузер оператора. Теперь любой другой
+  путь (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, путь
+  после идентификатора) отклоняется как `bad_request` до навигации.
+
+- `avito_card` opens pages in the operator's logged-in Chrome, so a full URL
+  is accepted only with an item-page path — `/<id>`, `/<slug>_<id>` or
+  `/<city>/<category>/<slug>_<id>` — and exactly that path is opened, without
+  query or fragment. A `/<city>/<category>/…` path whose first segment is one of
+  Avito's own routes (`api`, `profile`, `account` and the like) is refused too. Previously the input URL's path was kept as-is, so a
+  path with an item-id tail after a personal prefix (for example,
+  `/profile/x_1234567890`) reached the operator's browser. Any other path
+  (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, a path
+  continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
 
 - `server.json` получил потерянную строку cian: список серверов для реестра
@@ -223,6 +301,19 @@
   registry named fourteen of the fifteen marketplaces, and cian was absent. A
   test now compares that list with the source registry.
 
+- Неудачный автозапуск Chrome запоминается на 45 секунд
+  (`_AUTOSTART_FAILURE_TTL_S`): следующие вызовы, включая уже ждущие блокировку,
+  получают тот же отказ сразу, с подсказкой о возрасте попытки, вместо
+  повторного ожидания готовности CDP. Успешный запуск (в том числе
+  `browser start`/`start_browser`) память очищает, а явный запуск всегда
+  пробует по-настоящему.
+
+- A failed Chrome autostart is remembered for 45 seconds
+  (`_AUTOSTART_FAILURE_TTL_S`): later callers, including those already waiting
+  on the lock, get the same failure at once with an age hint instead of
+  repeating the CDP readiness wait. A success (also `browser start` /
+  `start_browser`) clears the memory, and an explicit start always tries for
+  real.
 - Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
   ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:
   обёртка с `samples_per_case` меньше 3 или не целым числом теперь ошибка.
@@ -301,6 +392,13 @@
   возвращаются сразу. Ожидание занятого хоста больше не занимает глобальный
   слот, поэтому запрос к свободному хосту не ждёт за занятым. Освобождение
   слотов при отказе и при отмене (`asyncio.CancelledError`) ровно одно.
+- `detmir_card` больше не выдаёт свежий ответ за кешированный: `meta.cached`
+  снимается до запроса, а `_fetch_json` пишет свежий ответ в кеш, поэтому первое
+  сетевое обращение теперь `cached=false`, а повтор — `cached=true`.
+- Из всех коннекторов убрана бесполезная привязка FastMCP `RetryMiddleware`: она
+  ретраит только сырые `ConnectionError`/`TimeoutError`, а коннекторы отдают
+  `mcp_core` `ToolError`, поэтому не срабатывала ни разу. Повторные попытки
+  остаются за HTTP-слоем; `mcp-core` монтирует только `BearerAuthMiddleware`.
 
 - CDP navigation budget: a request queued while its host's breaker opened is no
   longer handed a permit — when its turn comes it is refused with the same
@@ -308,6 +406,14 @@
   Waiting for a busy host no longer holds a global slot, so a request for a free
   host is not delayed behind it. Slots are released exactly once on refusal and
   on cancellation (`asyncio.CancelledError`).
+- `detmir_card` no longer passes off a fresh answer as cached: `meta.cached` is
+  sampled before the fetch, and `_fetch_json` writes the fresh payload into the
+  cache, so a first network-backed call is now `cached=false` and a replay is
+  `cached=true`.
+- Every connector dropped its inert FastMCP `RetryMiddleware` mount: it retries
+  only raw `ConnectionError`/`TimeoutError`, while connectors raise an `mcp_core`
+  `ToolError`, so it never fired. Bounded retries stay in the HTTP tier;
+  `mcp-core` mounts only `BearerAuthMiddleware`.
 
 - `compare_prices` больше не выбирает в `cheapest_comparable` вариант другого
   объёма: размеры, названные в запросе (`128GB`, `128 ГБ`, `1 ТБ`),

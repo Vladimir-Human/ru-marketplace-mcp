@@ -17,6 +17,8 @@ from pathlib import Path
 import pytest
 from cian_connector import server
 from fastmcp.exceptions import ToolError
+from mcp_core.transport import chrome_cdp
+from mcp_core.transport.cdp_budget import NavigationBudget
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -65,6 +67,23 @@ def _patch_card(monkeypatch, result, calls: list | None = None):
         return result
 
     monkeypatch.setattr(server, "_fetch_card", fake)
+
+
+async def _open_breaker(host: str, *, cooldown_s: float = 47.0) -> NavigationBudget:
+    """Drive a real budget through its public API until its breaker opens.
+
+    A dedicated instance with a frozen clock: two 4xx refusals with a 2-refusal
+    threshold open the breaker, leaving ``cooldown_s`` seconds of pause and the
+    refusal count the mapped error must report. The real ``server.open_page``
+    (``chrome_cdp.open_page``) maps the budget's refusal, exactly as in a live
+    run, so these tests exercise the shared mapping end to end.
+    """
+    budget = NavigationBudget(breaker_threshold=2, breaker_cooldown_s=cooldown_s, clock=lambda: 1000.0)
+    for _ in range(2):
+        slot = await budget.acquire(host)
+        slot.refused(403)
+        slot.release()
+    return budget
 
 
 def _ok(payload: dict) -> tuple[int, str, str]:
@@ -518,6 +537,54 @@ async def test_a_block_page_is_never_cached(monkeypatch):
             await server.cian_search("sale")
 
     assert len(calls) == 2
+
+
+async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
+    with retry_after_s through the real _fetch_search path, not as a generic
+    CDP failure. On the pre-guard code _fetch_search's except Exception turned
+    the pause into (0, redacted, "cdp_failed"), which cian_search reported as
+    transport_down ("fetch failed: HTTP 0") with no pause at all."""
+
+    async def no_wait():
+        return None
+
+    budget = await _open_breaker("www.cian.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_search("sale")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.cian.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
+
+
+async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: same contract through _fetch_card and cian_card,
+    whose broad except Exception used to relabel the pause the same way as the
+    search path (status 0, tier cdp_failed, transport_down, no pause)."""
+
+    async def no_wait():
+        return None
+
+    budget = await _open_breaker("www.cian.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_card("331002424")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.cian.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
 
 
 # ------------------------------------------------------------ selfcheck ----

@@ -70,7 +70,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
 # _build_search_url: Encode query, page and validated location/category identifiers.
 # avito_search: Read paginated classifieds search; warn when a required key family vanishes.
-# avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; never use a catalog envelope.
+# avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope.
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
 # avito_selfcheck: Chain search/card/seller to diagnose transport/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -87,7 +87,6 @@ from typing import Annotated, Any
 
 from curl_cffi import requests as cffi
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -148,6 +147,37 @@ AVITO_HEADERS = {
 
 # Item URL slugs: /moskva/noutbuki/thinkpad_x1_1234567890 — the id is the tail.
 _ITEM_ID_RE = re.compile(r"_(\d{6,})(?:\?|/|$)")
+# Paths a full URL may keep: an item-page shape only — /<id>, /<slug>_<id> or
+# /<city>/<category>/<slug>_<id>, the shapes of every captured item URL and
+# fixture. Everything else, including a one-segment personal prefix with an
+# item-like tail (/profile/x_1234567890) and a path continuing past the id,
+# never reaches the operator's logged-in browser.
+_ITEM_URL_PATH_RE = re.compile(r"/(?:(?:[^/]+/){2})?(?:[^/]+_)?(\d{6,})/?")
+# The /<city>/<category>/ shape cannot tell a city slug from a route prefix by
+# form alone, so first segments that are Avito's own personal or service routes
+# are refused outright: an item-shaped tail under them is not an item page.
+_NON_ITEM_ROOTS = frozenset(
+    {
+        "account",
+        "api",
+        "basket",
+        "cart",
+        "checkout",
+        "dashboard",
+        "favorites",
+        "messenger",
+        "my",
+        "notifications",
+        "orders",
+        "payments",
+        "personal",
+        "profile",
+        "settings",
+        "user",
+        "users",
+        "web",
+    }
+)
 _LOCATION_ID_RE = re.compile(r"^\d{2,10}$")
 
 mcp = FastMCP(
@@ -165,7 +195,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware())
 
 _cache: TTLCache = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
 _pacer = Pacer(_min_gap)
@@ -289,6 +318,10 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
         if exc.status:
             return exc.status, str(exc), "cdp_blocked"
         return 0, str(exc), "cdp_failed"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: open_page already mapped the pause to a rate_limited
+        # ToolError; swallowing it here would report a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, str(exc), "cdp_failed"
 
@@ -325,6 +358,10 @@ async def _fetch_item_page(url: str, ctx: Context | None) -> tuple[int, str, str
         return exc.status or 0, str(exc), "cdp"
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s", "cdp"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: the host-pause error from open_page must reach the
+        # tool boundary with its retry_after_s intact, not become a generic one.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp"
 
@@ -1006,8 +1043,10 @@ async def avito_card(
 ) -> AvitoCardResponse:
     """Read an Avito item over CDP: Product JSON-LD first, item-view DOM fallback.
 
-    Full avito.ru URLs retain their path but lose query/fragment; numeric ids
-    and slug paths use /{id}, which Avito redirects to the canonical item page.
+    Full avito.ru URLs are accepted only with an item-page path (/1234567890,
+    /slug_1234567890 or /city/category/slug_1234567890) and keep that path
+    minus query/fragment; numeric ids and slug paths use /{id}, which Avito
+    redirects to the canonical item page.
 
     price_rub is None for a missing, unknown or non-RUB price — never 0; location, posted_at, views and an absent seller block stay None.
 
@@ -1021,14 +1060,6 @@ async def avito_card(
             port = parts.port
         except ValueError:
             raise_tool_error(BadRequestError("invalid Avito item URL"))
-        item_id = _extract_item_id(parts.path)
-        if item_id is None:
-            raise_tool_error(
-                BadRequestError(
-                    f"could not extract an item id from {item_id_or_url!r}; "
-                    "pass bare digits, a /slug_1234567890 path, or a full avito.ru URL"
-                )
-            )
         if parts.scheme or parts.netloc:
             if (
                 parts.scheme not in ("http", "https")
@@ -1038,8 +1069,32 @@ async def avito_card(
                 or port not in (None, 80, 443)
             ):
                 raise_tool_error(BadRequestError("pass an http(s) avito.ru item URL without credentials"))
+            # A full URL is agent-controlled input aimed at the operator's
+            # logged-in browser: the path must be an item page, never an
+            # arbitrary avito.ru route, so only the item-page shapes above
+            # survive here (R-INPUT-TRUST).
+            path_match = _ITEM_URL_PATH_RE.fullmatch(parts.path)
+            root = parts.path.strip("/").split("/", 1)[0].lower()
+            if path_match is None or root in _NON_ITEM_ROOTS:
+                raise_tool_error(
+                    BadRequestError(
+                        f"URL path is not an Avito item page: {item_id_or_url!r}; "
+                        "pass /<id>, /<slug>_<id> or /<city>/<category>/<slug>_<id>"
+                    )
+                )
+            item_id = int(path_match.group(1))
+            # Rebuilt from validated pieces only: query and fragment are dropped.
             url = urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         else:
+            extracted = _extract_item_id(parts.path)
+            if extracted is None:
+                raise_tool_error(
+                    BadRequestError(
+                        f"could not extract an item id from {item_id_or_url!r}; "
+                        "pass bare digits, a /slug_1234567890 path, or a full avito.ru URL"
+                    )
+                )
+            item_id = extracted
             # Live 2026-10-12: /{id} redirects to the canonical item page, while
             # /_/{id} answers Avito's 404 page.
             url = f"{SITE_BASE}/{item_id}"

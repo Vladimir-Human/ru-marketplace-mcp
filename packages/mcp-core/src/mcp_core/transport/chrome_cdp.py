@@ -35,13 +35,14 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
 # _start_chrome_with_cdp: Spawn a dedicated-profile Chrome on loopback, off-screen only when asked.
 # _wait_for_cdp_port: Bounded wait for a spawned Chrome to bind the CDP port.
-# _ensure_cdp_running: Serialize loopback-only autostart and bounded readiness wait.
+# _ensure_cdp_running: Serialize loopback-only autostart, bounded readiness wait and a short negative cache.
+# _remembered_autostart_failure: Age-hinted message of a recent failed autostart, or None.
 # start_browser: Operator launch, visible by default, with a report instead of an exception.
 # _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
 # _windows_profile_match_expr: PowerShell regex for our --user-data-dir, quoted or bare, never a sibling.
@@ -92,8 +93,8 @@ from urllib.parse import urlsplit, urlunsplit
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
-from mcp_core.errors import TransportDownError
-from mcp_core.transport.cdp_budget import navigation_budget
+from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
+from mcp_core.transport.cdp_budget import HostRefusingError, navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
 # fallback raises a clear error instead).
@@ -236,6 +237,57 @@ def _chrome_candidates() -> list[str]:
 
 _AUTOSTART_LOCK = asyncio.Lock()
 
+# A failed autostart is remembered for this long. Without it, a fan-out over the
+# CDP sources (compare_prices queries several of them at once) queues each
+# caller on _AUTOSTART_LOCK and pays the full bounded readiness wait again, so a
+# dead Chrome turns one slow failure into minutes of them. The window is short
+# on purpose: the operator may start Chrome by hand, and the cheap loopback
+# probe still wins over a remembered failure.
+_AUTOSTART_FAILURE_TTL_S = 45.0
+_autostart_failure: tuple[float, str] | None = None
+
+
+def _clear_autostart_failure() -> None:
+    """Forget a remembered autostart failure; every success does this."""
+    global _autostart_failure
+    _autostart_failure = None
+
+
+def _remember_autostart_failure(msg: str) -> None:
+    """Remember one failed autostart attempt together with its time."""
+    global _autostart_failure
+    _autostart_failure = (time.monotonic(), msg)
+
+
+def _recent_autostart_failure() -> tuple[int, str] | None:
+    """Age in whole seconds and message of a fresh failure, else ``None``."""
+    if _autostart_failure is None:
+        return None
+    at, msg = _autostart_failure
+    age = time.monotonic() - at
+    if age >= _AUTOSTART_FAILURE_TTL_S:
+        _clear_autostart_failure()
+        return None
+    return int(age), msg
+
+
+def _remembered_autostart_failure() -> str | None:
+    """The remembered failure with a path-free age hint, or ``None``."""
+    recent = _recent_autostart_failure()
+    if recent is None:
+        return None
+    age, msg = recent
+    return f"{msg} — remembered autostart failure {age}s ago (retry window {int(_AUTOSTART_FAILURE_TTL_S)}s)"
+
+
+def _autostart_failure_hint() -> str | None:
+    """Only the age hint, so a masked error string can still name the memory."""
+    recent = _recent_autostart_failure()
+    if recent is None:
+        return None
+    age, _msg = recent
+    return f"remembered autostart failure {age}s ago (retry window {int(_AUTOSTART_FAILURE_TTL_S)}s)"
+
 
 def _cdp_port_open() -> bool:
     """Quick TCP probe: is something already listening on the CDP endpoint?"""
@@ -338,22 +390,36 @@ async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
     Autostart only makes sense on loopback: a remote ``CHROME_CDP_HOST`` means
     the operator runs Chrome elsewhere (a sidecar, the host's browser), and
     spawning a local one would connect to the wrong profile.
+
+    A failed attempt is remembered for ``_AUTOSTART_FAILURE_TTL_S`` seconds, so
+    callers arriving, or already waiting on the lock, during that window get the
+    same failure with an age hint at once instead of repeating the bounded
+    readiness wait. Any success clears the memory.
     """
     async with _AUTOSTART_LOCK:
         if _cdp_port_open():
+            _clear_autostart_failure()
             return True, "already running"
 
         if not CDP_IS_LOOPBACK:
             return False, f"Chrome not reachable on {CDP_HOST}:{CDP_PORT} (remote host — autostart is loopback-only)"
 
+        remembered = _remembered_autostart_failure()
+        if remembered is not None:
+            return False, remembered
+
         ok, msg = await asyncio.to_thread(_start_chrome_with_cdp)
         if not ok:
+            _remember_autostart_failure(msg)
             return False, msg
 
         if not await _wait_for_cdp_port(timeout_s):
-            return False, f"chrome started but CDP did not bind within {timeout_s}s"
+            msg = f"chrome started but CDP did not bind within {timeout_s}s"
+            _remember_autostart_failure(msg)
+            return False, msg
         if STEALTH and sys.platform == "win32":
             await asyncio.to_thread(_hide_chrome_windows)
+        _clear_autostart_failure()
         return True, msg
 
 
@@ -379,6 +445,7 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
     }
     async with _AUTOSTART_LOCK:
         if _cdp_port_open():
+            _clear_autostart_failure()
             report.update(ok=True, already_running=True)
             return report
 
@@ -388,6 +455,8 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
             )
             return report
 
+        # An explicit start ignores the remembered autostart failure on purpose:
+        # the operator asked for a real attempt, and only a success clears it.
         # Hidden means exactly the connector's autostart: off-screen only while
         # CHROME_STEALTH is on, so the two paths cannot disagree.
         ok, msg = await asyncio.to_thread(_start_chrome_with_cdp, stealth=STEALTH and not visible)
@@ -408,6 +477,7 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
         if off_screen:
             await asyncio.to_thread(_hide_chrome_windows)
         report.update(ok=True, started=True, off_screen=off_screen and not HEADLESS)
+        _clear_autostart_failure()
         return report
 
 
@@ -564,9 +634,13 @@ async def get_browser() -> AsyncIterator[Browser]:
         ok, _msg = await _ensure_cdp_running()
         if not ok:
             # The raw detail can contain an absolute profile path (and thus the
-            # OS username), so it never reaches a tool-visible error string.
+            # OS username), so it never reaches a tool-visible error string. The
+            # remembered-failure age is safe and tells the caller that a fresh
+            # attempt is not coming yet.
+            hint = _autostart_failure_hint()
+            suffix = f"; {hint}" if hint else ""
             raise RuntimeError(
-                f"CDP autostart failed (Chrome not reachable on {CDP_HOST}:{CDP_PORT} — {cdp_setup_hint()})"
+                f"CDP autostart failed (Chrome not reachable on {CDP_HOST}:{CDP_PORT} — {cdp_setup_hint()}){suffix}"
             )
 
     async with async_playwright() as p:
@@ -1517,7 +1591,7 @@ class NavigationPolicyError(RuntimeError):
 # START_CONTRACT: open_page
 # PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
 # INPUTS: HTTP(S) URL, settle delay and optional allowed-host set; default origin host.
-# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures.
+# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
 # SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
 # END_CONTRACT: open_page
 async def open_page(
@@ -1532,6 +1606,9 @@ async def open_page(
       * non-http(s) schemes are refused outright (scheme guard);
       * a block/auth/5xx main document raises ``NavBlocked`` rather than
         yielding a page that only looks like content;
+      * a host whose breaker is open raises ``rate_limited`` with the remaining
+        pause in ``retry_after_s`` (R-CDP-HOST-PAUSE), so an agent waits out the
+        cooldown instead of retrying at once;
       * tab creation, navigation and teardown are individually bounded, so a
         wedged CDP session cannot hang a tool call indefinitely;
       * when Playwright times out initializing existing tabs during attach,
@@ -1561,7 +1638,24 @@ async def open_page(
     host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
     budget = navigation_budget()
-    permit = await budget.acquire(initial_host or "")
+    try:
+        permit = await budget.acquire(initial_host or "")
+    except HostRefusingError as refusing:
+        # R-CDP-HOST-PAUSE: an open breaker is a timed refusal by the site, and
+        # the agent must act on the remaining pause, not on a generic retryable
+        # transport failure. The shared taxonomy answer is rate_limited with
+        # retry_after_s set to the remaining cooldown; raising it as a ToolError
+        # here is the one mapping every CDP connector shares, because their broad
+        # "except Exception" fetch guards pass ToolError through untouched.
+        raise_tool_error(
+            ConnectorError(
+                ErrorCode.RATE_LIMITED,
+                f"CDP navigation to {refusing.host} paused for {refusing.retry_after_s:g} s "
+                f"after {refusing.refusals} refusals",
+                provider=refusing.host,
+                retry_after_s=refusing.retry_after_s,
+            )
+        )
     stack = AsyncExitStack()
     page: PageLike
     try:

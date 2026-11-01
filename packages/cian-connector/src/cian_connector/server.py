@@ -50,7 +50,6 @@ from typing import Annotated, Any, Literal
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -157,7 +156,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware())
 
 _cache: TTLCache[tuple[int, str]] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
 _pacer = Pacer(_min_gap)
@@ -299,6 +297,10 @@ async def _fetch_search(json_query: dict[str, Any], ctx: Context | None) -> tupl
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body):
@@ -326,6 +328,10 @@ async def _fetch_card(offer_id: int, ctx: Context | None) -> tuple[int, str, str
     except NavBlocked as exc:
         _pacer.record_refusal()
         return exc.status or 0, str(exc), "cdp_blocked"
+    except ToolError:
+        # R-CDP-HOST-PAUSE: keep the mapped host-pause error and its
+        # retry_after_s, instead of relabelling it a generic CDP failure.
+        raise
     except Exception as exc:
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body) and _CARD_OK_RE.search(body[:80]):

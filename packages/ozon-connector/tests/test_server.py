@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 from fastmcp.exceptions import ToolError
+from mcp_core.transport import chrome_cdp
+from mcp_core.transport.cdp_budget import NavigationBudget
 from ozon_connector import server
 from pydantic import SecretStr
 
@@ -45,6 +47,24 @@ def clear_cache():
 
 def _run(coro):
     return asyncio.run(coro)
+
+
+async def _open_breaker(host: str, *, cooldown_s: float = 47.0) -> NavigationBudget:
+    """Drive a real budget through its public API until its breaker opens.
+
+    A dedicated instance with a frozen clock: two 4xx refusals with a 2-refusal
+    threshold open the breaker, leaving ``cooldown_s`` seconds of pause and the
+    refusal count the mapped error must report. Created inside the scenario's
+    event loop (ozon tests drive coroutines with asyncio.run), and the real
+    ``server.open_page`` (``chrome_cdp.open_page``) then maps the budget's
+    refusal, exactly as in a live run.
+    """
+    budget = NavigationBudget(breaker_threshold=2, breaker_cooldown_s=cooldown_s, clock=lambda: 1000.0)
+    for _ in range(2):
+        slot = await budget.acquire(host)
+        slot.refused(403)
+        slot.release()
+    return budget
 
 
 def _reviews_body(*, reviews=None, next_button=None):
@@ -431,6 +451,68 @@ def test_ozon_search_reports_actionable_cdp_block(monkeypatch):
         assert "403" in msg
 
     _run(scenario())
+
+
+def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
+    with retry_after_s through the real _fetch_composer path, not as a generic
+    CDP failure. On the pre-guard code _fetch_composer's except Exception
+    returned (0, str(exc), "cdp_failed"), which ozon_search reported as
+    transport_down ("Tier-1 blocked AND Tier-2 unreachable") with no pause.
+    Tier-1 is a local (not subprocess-callable) stub, so it fails and the
+    fetch falls through to CDP, where the open breaker refuses."""
+
+    def refused_get(url):
+        return 403, "denied"
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_sync_curl_get", refused_get)
+        budget = await _open_breaker("www.ozon.ru")
+        monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+        with pytest.raises(ToolError) as excinfo:
+            await server.ozon_search("ноутбук")
+        return json.loads(str(excinfo.value))
+
+    error = _run(scenario())
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.ozon.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
+
+
+def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
+    """R-CDP-HOST-PAUSE: same contract through _fetch_composer and ozon_card,
+    whose broad except Exception used to relabel the pause the same way as the
+    search path (status 0, tier cdp_failed, transport_down, no pause)."""
+
+    def refused_get(url):
+        return 403, "denied"
+
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        monkeypatch.setattr(server, "_sync_curl_get", refused_get)
+        budget = await _open_breaker("www.ozon.ru")
+        monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
+        with pytest.raises(ToolError) as excinfo:
+            await server.ozon_card("123456789")
+        return json.loads(str(excinfo.value))
+
+    error = _run(scenario())
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "www.ozon.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
 
 
 def test_ozon_search_skips_unhashable_sku_values(monkeypatch):

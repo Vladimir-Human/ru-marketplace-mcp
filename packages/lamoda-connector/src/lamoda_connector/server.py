@@ -49,7 +49,6 @@ from typing import Annotated, Any
 
 import httpx
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -136,7 +135,6 @@ mcp = FastMCP(
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware())
 
 _cache: TTLCache = TTLCache(ttl_s=_settings.cache_ttl, max_entries=128)
 _pacer = Pacer(_min_gap)
@@ -341,8 +339,8 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
             ):
                 raise_tool_error(
                     ChallengeRequiredError(
-                        "Lamoda requires user action in the connected Chrome. Complete the visible "
-                        "challenge on lamoda.ru, then retry.",
+                        "Lamoda requires user action in the connected Chrome. Complete the challenge "
+                        "on lamoda.ru, then call this tool again after the user confirms it is done.",
                         provider="lamoda",
                     )
                 )
@@ -527,7 +525,8 @@ async def lamoda_search(
         if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Lamoda requires user action in the connected Chrome. Complete the visible challenge, then retry.",
+                    "Lamoda requires user action in the connected Chrome. Complete the challenge on "
+                    "lamoda.ru, then call this tool again after the user confirms it is done.",
                     provider="lamoda",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
                     handoff_id=payload.get("_handoff_id"),
