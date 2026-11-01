@@ -1115,14 +1115,15 @@ async def avito_card(
             # Rebuilt from validated pieces only: query and fragment are dropped.
             url = urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         else:
-            item_id = _extract_item_id(parts.path)
-            if item_id is None:
+            extracted = _extract_item_id(parts.path)
+            if extracted is None:
                 raise_tool_error(
                     BadRequestError(
                         f"could not extract an item id from {item_id_or_url!r}; "
                         "pass bare digits, a /slug_1234567890 path, or a full avito.ru URL"
                     )
                 )
+            item_id = extracted
             # Live 2026-10-12: /{id} redirects to the canonical item page, while
             # /_/{id} answers Avito's 404 page.
             url = f"{SITE_BASE}/{item_id}"
