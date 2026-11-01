@@ -491,13 +491,19 @@ def _stock_from_label(value: object) -> bool | None:
 
 
 class OfferBatch(list[MarketOffer]):
-    """Offers with native diagnostics; no shared state across concurrent sources."""
+    """Offers with native diagnostics; no shared state across concurrent sources.
+
+    ``native_healthy`` keeps the source's own verdict (None when the response
+    carried no meta) so the caller can tell an honest empty answer from one a
+    broken parser produced; ``warnings`` is the normalized diagnostic list.
+    """
 
     def __init__(self, offers: Iterable[MarketOffer], response: object) -> None:
         super().__init__(offers)
         meta = getattr(response, "meta", None)
         raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
         healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
+        self.native_healthy: bool | None = healthy if isinstance(healthy, bool) else None
         self.warnings: list[str] = []
         if isinstance(raw, list):
             for warning in raw:
@@ -940,12 +946,39 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
         currencies = "/".join(sorted({offer.currency.upper() for offer in native_priced}))
         unit = f" in {currencies}" if native_priced else ""
         detail = f"{len(offers)} results, {len(native_priced)} priced{unit} (not ranked)"
+    warnings = offers.warnings if isinstance(offers, OfferBatch) else []
+    native_healthy = offers.native_healthy if isinstance(offers, OfferBatch) else None
+    # A source that contributed NOTHING to a price comparison is only "ok" when
+    # its own answer says the data was fine. A native response that already
+    # reports a drift/validation warning turned a broken parser into an empty
+    # result, and calling that "ok" is what let `complete` claim a comparison
+    # over a source that had silently contributed nothing (audit 2026-11-01).
+    # An honest empty answer (no warnings, healthy) stays ok, as does an
+    # unhealthy answer that still returned usable offers: those offers are
+    # ranked, and the native warning rides along on the outcome.
+    if not offers and native_healthy is False:
+        warnings = [
+            *warnings,
+            "unhealthy_empty: the source answered with zero offers while its own diagnostics "
+            "reported a problem, so this is not an honest no-result",
+        ]
+        return (
+            SourceOutcome(
+                source=name,
+                status="unhealthy",
+                detail=f"{detail} — native validation did not pass",
+                warnings=warnings,
+                offers_returned=0,
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+            ),
+            offers,
+        )
     return (
         SourceOutcome(
             source=name,
             status="ok",
             detail=detail,
-            warnings=offers.warnings if isinstance(offers, OfferBatch) else [],
+            warnings=warnings,
             offers_returned=len(offers),
             elapsed_ms=round((time.monotonic() - started) * 1000),
         ),

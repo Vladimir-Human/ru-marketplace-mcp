@@ -558,7 +558,7 @@ def test_render_reports_the_page_empty_notice(monkeypatch: pytest.MonkeyPatch) -
     [
         (1, False, "parser_drift"),  # no tiles and no notice: the selectors drifted
         (1, True, "no_results"),  # WB itself said nothing was found
-        (2, False, "no_results"),  # past the last page
+        (2, False, "no_results"),  # past the last page, or the same drift: unjudgeable
     ],
 )
 def test_dom_search_empty_grid_is_drift_unless_the_page_says_empty(
@@ -576,6 +576,27 @@ def test_dom_search_empty_grid_is_drift_unless_the_page_says_empty(
         assert json.loads(str(exc.value))["error"] == "parser_drift"
     else:
         assert _run(server.wb_search(query="UPD2018", page=page)).status == "no_results"
+
+
+def test_dom_search_unmarked_empty_page_past_the_first_is_not_healthy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A page past the first with no tiles AND no «nothing found» notice cannot
+    be told apart from selector drift, so it must not answer healthy=true.
+
+    The old guard only covered page 1 and returned a clean no_results for page
+    2, which reads as "the list ended" exactly when the tile selectors may have
+    stopped matching (audit 2026-11-01).
+    """
+    monkeypatch.setattr(server._settings, "transport", "dom")
+
+    async def fake_render(url: str, js: str, want: str) -> dict[str, Any]:
+        return {"tiles": [], "page_says_empty": False}
+
+    monkeypatch.setattr(D, "render", fake_render)
+    result = _run(server.wb_search(query="UPD2018", page=2))
+    data = result.model_dump(mode="json")
+    assert data["status"] == "no_results"
+    assert data["meta"]["healthy"] is False
+    assert sum(1 for w in data["meta"]["warnings"] if w.startswith("page_end_unverified")) == 1
 
 
 def test_dom_empty_search_keeps_nondefault_region_warning(monkeypatch: pytest.MonkeyPatch) -> None:

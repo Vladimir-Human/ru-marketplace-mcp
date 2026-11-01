@@ -783,8 +783,16 @@ def _card_products(data: dict[str, Any]) -> list[Any]:
 
 
 def _dom_dest_warning(dest: str) -> list[str]:
+    # ``info:`` because this is context, not a doubt about the parsed data: the
+    # DOM page reads whatever region the scraping Chrome is set to, so a caller
+    # who passed a non-default dest is told its value was not used. Per the
+    # health contract in resilience.attach_meta an informational note keeps
+    # meta.healthy true, while a parser-drift or validation warning would not
+    # (audit 2026-11-01: WB set healthy=True next to every warning regardless).
     if dest and dest != WB_DEFAULT_DEST:
-        return [f"wb_dom: dest={dest} ignored — the region follows the scraping-profile Chrome (set it on the site)"]
+        return [
+            f"info: wb_dom: dest={dest} ignored — the region follows the scraping-profile Chrome (set it on the site)"
+        ]
     return []
 
 
@@ -820,11 +828,19 @@ async def _wb_card_dom(
             "wb_dom_card: cross-border listing (foreign seller / AliExpress on WB) — longer delivery, returns by request"
         )
     log_event("wb_card.done", nm_count=len(nm_ids), items=len(items), transport="dom")
+    if wanted and not items:
+        # Every requested SKU was dropped: the card page could not be parsed for
+        # any of them. Without this the DOM path answered healthy=True with an
+        # empty items list — the "empty success" this flag exists to prevent.
+        warnings.append(
+            f"no_items: none of the {len(wanted)} requested nm_ids parsed from the rendered card "
+            "(card page shape drift?)"
+        )
     return WbCardResponse(
         dest=dest,
         count=len(items),
         items=items,
-        meta=MetaOut(source="wb_card", healthy=bool(items) or not wanted, warnings=warnings[:10]),
+        meta=MetaOut(source="wb_card", healthy=not R.health_warnings(warnings), warnings=warnings[:10]),
     )
 
 
@@ -842,27 +858,40 @@ async def _wb_search_dom(
         await ctx.debug(f"wb_search[dom]: {url}")
     payload = await dom_transport.render(url, dom_transport.SEARCH_EXTRACT_JS, "search")
     items, warnings = dom_transport.parse_search_page(payload)
-    if not items and page == 1 and not payload.get("page_says_empty"):
-        # An empty first page without WB's own «ничего не нашлось» means the tile
-        # selectors stopped matching; reporting no_results would hide the drift.
-        log_event("wb_search.dom_drift", query=query[:100], tiles=len(payload.get("tiles") or []))
-        raise_tool_error(
-            ParserDriftError(
-                "wb_search[dom]: the search page rendered no product tiles and no empty-result notice",
-                provider="wb",
+    if not items and not payload.get("page_says_empty"):
+        # An empty page without WB's own «ничего не нашлось» means the tile
+        # selectors stopped matching; reporting no_results with healthy=True
+        # would hide the drift. Page 1 answers parser_drift outright — unlike a
+        # later page it cannot be a legitimate past-the-end read, because page 1
+        # always has results if the query matched anything at all.
+        if page == 1:
+            log_event("wb_search.dom_drift", query=query[:100], tiles=len(payload.get("tiles") or []))
+            raise_tool_error(
+                ParserDriftError(
+                    "wb_search[dom]: the search page rendered no product tiles and no empty-result notice",
+                    provider="wb",
+                )
             )
+        # Page >= 2: WB repeats the last page instead of agreeing that the list
+        # ended, so an empty grid here is either the true end of the results or
+        # the same selector drift. Cannot be told apart, so neither is claimed.
+        log_event("wb_search.dom_empty_unmarked", query=query[:100], page=page)
+        warnings.insert(
+            0,
+            "page_end_unverified: the rendered page carried no product tiles and no «nothing found» "
+            "notice, so the end of the results cannot be told apart from tile-selector drift — "
+            "check the previous page before concluding the list ended",
         )
     warnings = _dom_dest_warning(dest) + warnings
     if fallback_reason:
         warnings.insert(0, _dom_fallback_warning(fallback_reason))
     if not items:
         log_event("wb_search.no_results", transport="dom", query=query[:100], page=page)
-        return WbNoResultsResponse(
-            query=query,
-            page=page,
-            total_ids=0,
-            meta=MetaOut(source="wb_search", healthy=True, warnings=warnings[:10]) if warnings else None,
-        )
+        # An empty page still carries its warnings, and healthy follows them: the
+        # region note is `info:`, so an honest empty answer stays healthy, while
+        # page_end_unverified flips it.
+        empty_meta = MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings[:10])
+        return WbNoResultsResponse(query=query, page=page, total_ids=0, meta=empty_meta if warnings else None)
     log_event("wb_search.done", transport="dom", items=len(items), page=page)
     return WbSearchResponse(
         query=query,
@@ -874,7 +903,7 @@ async def _wb_search_dom(
         # warning names it). WbCardItem.in_stock is True only with a usable price,
         # so that tile is not in stock here; it must never fail the whole page.
         items=[WbCardItem(**{**item, "in_stock": item["in_stock"] is True}) for item in items],
-        meta=MetaOut(source="wb_search", healthy=True, warnings=warnings[:10]),
+        meta=MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings[:10]),
     )
 
 
@@ -1026,7 +1055,7 @@ async def wb_card(
             dest=dest,
             count=len(item_dicts),
             items=[WbCardItem(**d) for d in item_dicts],
-            meta=MetaOut(source="wb_card", healthy=not warnings, warnings=warnings),
+            meta=MetaOut(source="wb_card", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
     except ToolError:
         raise
@@ -1361,7 +1390,7 @@ async def wb_reviews(
                 valuation_distribution=data.get("valuationDistribution"),
                 feedbacks=[WbReviewItem(**f) for f in feedbacks],
                 host_used=host,
-                meta=MetaOut(source="wb_reviews", healthy=not warnings, warnings=warnings),
+                meta=MetaOut(source="wb_reviews", healthy=not R.health_warnings(warnings), warnings=warnings),
             )
 
         message = (
@@ -1587,7 +1616,7 @@ async def wb_questions(
             answered_count=answered_count,
             has_more=offset < total_available,
             questions=[WbQuestionItem(**q) for q in collected],
-            meta=MetaOut(source="wb_questions", healthy=not warnings, warnings=warnings),
+            meta=MetaOut(source="wb_questions", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
     except ToolError:
         raise
@@ -1760,6 +1789,7 @@ async def wb_search(
             v9_error = TransportDownError(_redact(f"{type(exc).__name__}: {exc}"), provider="wb")
 
         fallback_used = False
+        fallback_error: ConnectorError | None = None
         if not products:
             # Legacy data is flagged when usable. Failure is not emptiness; only
             # a positively empty primary response can survive a failed fallback.
@@ -1767,18 +1797,34 @@ async def wb_search(
             fallback_used = True
             try:
                 products, total_found = await _search_via_search_goods(query, dest, page, ctx)
-            except ConnectorError as fallback_error:
-                log_event("wb_search.fallback_failed", error=_redact(str(fallback_error)))
+            except ConnectorError as exc:
+                fallback_error = exc
+                log_event("wb_search.fallback_failed", error=_redact(str(exc)))
                 if v9_error is not None:
-                    if isinstance(fallback_error, RateLimitedError):
-                        raise_tool_error(fallback_error)
+                    if isinstance(exc, RateLimitedError):
+                        raise_tool_error(exc)
                     if isinstance(v9_error, ParserDriftError):
                         raise_tool_error(v9_error)
-                    raise_tool_error(fallback_error)
+                    raise_tool_error(exc)
 
         if not products:
             log_event("wb_search.no_results", query=query[:100])
-            return WbNoResultsResponse(query=query, page=page, total_ids=total_found)
+            # v9 answering positively empty does not make the fallback's own
+            # death irrelevant: the legacy path that should have confirmed the
+            # emptiness never ran, and the agent must not read the answer as a
+            # verified "nothing found" (audit 2026-11-01).
+            empty_meta = None
+            if fallback_error is not None:
+                empty_meta = MetaOut(
+                    source="wb_search",
+                    healthy=False,
+                    warnings=[
+                        "fallback_failed: v9 reported no products and the legacy search-goods fallback "
+                        f"failed too ({_redact(str(fallback_error))[:160]}), so this empty answer is "
+                        "unconfirmed — the query may still have matches"
+                    ],
+                )
+            return WbNoResultsResponse(query=query, page=page, total_ids=total_found, meta=empty_meta)
 
         # Past the end, WB repeats page 1 rather than returning nothing. Honour
         # the documented contract — a page past the end is "no results" — instead
@@ -1825,7 +1871,7 @@ async def wb_search(
             total_ids=total_found or len(item_dicts),
             count=len(item_dicts),
             items=[WbCardItem(**d) for d in item_dicts],
-            meta=MetaOut(source="wb_search", healthy=not warnings, warnings=warnings),
+            meta=MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
     except ToolError:
         raise
@@ -2118,7 +2164,7 @@ async def wb_seller(
         taxpayer_code=str(R.first_present(obj, "taxpayerCode", default="") or "").strip(),
         foreign_codes=foreign,
         host_used=host_used,
-        meta=MetaOut(source="wb_seller", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="wb_seller", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
     log_event("wb_seller.done", supplier_id=supplier_id, has_inn=bool(inn))
     return result
@@ -2287,7 +2333,7 @@ async def wb_categories(
         truncated=truncated,
         items=items,
         host_used=host_used,
-        meta=MetaOut(source="wb_categories", healthy=not truncated, warnings=warnings),
+        meta=MetaOut(source="wb_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 
@@ -2511,7 +2557,7 @@ async def wb_category_products(
             # A full page implies more may follow; WB reports no total here.
             has_more=len(item_dicts) >= WB_CATEGORY_PAGE_SIZE,
             items=[WbCardItem(**d) for d in item_dicts],
-            meta=MetaOut(source="wb_category_products", healthy=not warnings, warnings=warnings),
+            meta=MetaOut(source="wb_category_products", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
     except ToolError:
         raise

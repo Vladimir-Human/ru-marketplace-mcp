@@ -850,6 +850,11 @@ def test_wb_search_unrecoverable_fallback_ids_without_positive_empty_are_drift(m
 
 @pytest.mark.parametrize("body, total", [('{"products": [], "total": 0}', 0), ('{"products": []}', None)])
 def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, total):
+    """R-ITEM-HONESTY: v9's own empty list answers no_results, but the legacy
+    fallback's death must leave a trace — the old code swallowed it and returned
+    a bare WbNoResultsResponse with meta=None, indistinguishable from a verified
+    "nothing found" (audit 2026-11-01)."""
+
     async def fake_safe_get_text(client, url):
         return (200, body, None) if "v9/search" in url else (500, "", None)
 
@@ -861,6 +866,10 @@ def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, t
     result = asyncio.run(server.wb_search("x"))
     assert result.status == "no_results"
     assert result.total_ids == total
+    data = result.model_dump(mode="json")
+    assert data["meta"]["healthy"] is False
+    assert any(w.startswith("fallback_failed") for w in data["meta"]["warnings"])
+    assert "HTTP 500" in data["meta"]["warnings"][0]
 
 
 def test_wb_search_returns_no_results_when_both_paths_are_empty(monkeypatch):

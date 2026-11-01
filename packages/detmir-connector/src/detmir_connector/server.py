@@ -416,12 +416,20 @@ async def detmir_card(
         warnings.append("no_title: upstream returned a product without a title")
     if product.price_rub is None:
         warnings.append("no_price: no usable price in the payload (item may be delisted)")
+    # The card is the same offer shape as one category row, so the shared
+    # invariants apply here too (a rating off its scale, a count below zero).
+    warnings.extend(R.validate_offer(product.model_dump(), require_title=True))
 
     log_event("detmir_card.done", product_id=product_id, price=product.price_rub, warnings=len(warnings))
     return DetmirCardResponse(
         product=product,
         region=region_used,
-        meta=MetaOut(source="detmir_card", healthy=not warnings, warnings=warnings, cached=_cache.get(url) is not None),
+        meta=MetaOut(
+            source="detmir_card",
+            healthy=not R.health_warnings(warnings),
+            warnings=warnings,
+            cached=_cache.get(url) is not None,
+        ),
     )
 
 
@@ -528,6 +536,10 @@ async def detmir_category(
     warnings: list[str] = []
     if not products:
         warnings.append(f"empty: no products for alias {slug!r} — check the slug against a catalog URL")
+    else:
+        # Per-offer invariants for the whole page: one fabricated or absent price
+        # is a listing, every price gone is the category payload drifting.
+        warnings.extend(R.validate_items([p.model_dump() for p in products], require_title=True))
 
     log_event("detmir_category.done", alias=slug, returned=len(products), total=total)
     return DetmirListResponse(
@@ -539,7 +551,7 @@ async def detmir_category(
         offset=offset,
         items=products,
         region=region_used,
-        meta=MetaOut(source="detmir_category", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="detmir_category", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 
@@ -664,7 +676,7 @@ async def detmir_categories(
         total_available=R.coerce_int(R.first_present(meta_node, "total", "length", default=None)),
         items=items,
         region=region_used,
-        meta=MetaOut(source="detmir_categories", healthy=not warnings, warnings=warnings),
+        meta=MetaOut(source="detmir_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
 
 

@@ -67,6 +67,81 @@
 
 ### Fixed
 
+- Цена, которую парсер не смог получить, больше не проходит молча. `validate_offer`
+  теперь сообщает о неразобранной цене (`price_unparseable`), о пустой или
+  пробельной строке цены (`price_blank`), умеет читать ценовое поле коннектора
+  (`price_cny` у Taobao) и видит противоречие `in_stock` с неразобранной ценой;
+  раньше пробельная цена не давала ни одного предупреждения. Новый общий
+  `validate_items` собирает поверки по позициям в одно предупреждение на код,
+  когда сломана хотя бы половина выдачи, и подставляет привычный код
+  `no_prices_on_page`, если цены нет ни у одной позиции. Он подключён к поиску и
+  карточкам avito, cian, citilink, detmir, dns, lamoda, megamarket, taobao и
+  yandex (у wb и ozon такая проверка уже была); mpstats не подключён — его
+  строки это аналитические метрики, а не нормализованные заявки с ценой и
+  заголовком.
+
+- `meta.healthy` означает одно и то же во всех коннекторах: `true` только когда
+  ответ полный и его значениям можно верить, `false` при любом предупреждении о
+  дрейфе, валидации или полноте — включая предупреждение, которое коннектор
+  пишет в модель ответа вручную (общий хелпер `health_warnings` отделяет
+  информационные заметки от сомнений в данных). Предупреждение с префиксом
+  `info:` — это контекст, а не сомнение в данных, и флаг не гасит (так помечена
+  заметка WB о том, что регион задаёт браузер, а не `dest`). В WB это
+  исправляет `healthy=True` рядом с непустыми предупреждениями (поиск через DOM,
+  `wb_categories`), а карточка через DOM, у которой не разобрался ни один
+  запрошенный SKU, теперь несёт `no_items` вместо `healthy=true` с пустым
+  списком. Три-состояние канарейки (healthy/drift/inconclusive) не изменилось.
+
+- Пустой ответ и отказ площадки больше не выглядят успехом: поиск WB через DOM
+  на странице ≥2 без плашки «ничего не нашлось» отдаёт `no_results` с
+  предупреждением `page_end_unverified` и `healthy=false` (страница 1
+  по-прежнему даёт `parser_drift`, а пустая страница с плашкой остаётся
+  честной); пустой ответ API WB, когда v9 честно пуст и legacy-фолбэк упал,
+  несёт `fallback_failed` и `healthy=false`; megamarket помечает страницу без
+  единой цены (`no_prices_on_page`) и проверяет карточку (`no_price`); в
+  `compare_prices` источник с нулём заявок считается `ok` только если его
+  собственный ответ не сообщает о проблеме, иначе это `unhealthy` с
+  `unhealthy_empty` и `complete=false`. Докстрока `ozon_search` приведена в
+  соответствие с кодом: ноль позиций — это предупреждение `no_items` и
+  `healthy=false`.
+
+- A price the parser could not obtain no longer passes in silence. `validate_offer`
+  now reports an unparseable price (`price_unparseable`), a blank or
+  whitespace-only price string (`price_blank`), reads a connector's own price
+  field (`price_cny` on Taobao) and sees `in_stock` contradicting an unparsed
+  price; a whitespace price used to draw no warning at all. The new shared
+  `validate_items` rolls per-item findings into one warning per code when at
+  least half the page breaks it, and substitutes the established
+  `no_prices_on_page` code when not one item carries a price. It is wired into
+  the search and card tools of avito, cian, citilink, detmir, dns, lamoda,
+  megamarket, taobao and yandex (wb and ozon already had such a check); mpstats
+  is excluded because its rows are analytics metrics, not normalized offers with
+  a title and a price.
+
+- `meta.healthy` means one thing in every connector: `true` only when the answer
+  is complete and its values can be trusted, `false` for any drift, validation or
+  completeness warning — including one a connector writes into its response model
+  by hand (the shared `health_warnings` helper separates informational notes from
+  doubts about the data). A warning prefixed `info:` is context rather than doubt
+  about the data and does not flip the flag (WB's note that the region comes from
+  the browser, not from `dest`, is marked that way). In WB this fixes
+  `healthy=True` next to non-empty warnings (DOM search, `wb_categories`), and a
+  DOM card whose every requested SKU failed to parse now carries `no_items`
+  instead of `healthy=true` with an empty list. The tri-state canary
+  (healthy/drift/inconclusive) is unchanged.
+
+- An empty answer and a marketplace refusal no longer read as success: WB DOM
+  search on page 2 or later without the «nothing found» notice returns
+  `no_results` with a `page_end_unverified` warning and `healthy=false` (page 1
+  still raises `parser_drift`, and an empty page WITH the notice stays honest);
+  an empty WB API answer where v9 is positively empty and the legacy fallback
+  died carries `fallback_failed` and `healthy=false`; megamarket marks a page
+  where not one price alias matched (`no_prices_on_page`) and validates its card
+  (`no_price`); in `compare_prices` a source with zero offers counts as `ok`
+  only when its own answer reports no problem, otherwise it is `unhealthy` with
+  `unhealthy_empty` and `complete=false`. The `ozon_search` docstring now matches
+  the code: zero items means a `no_items` warning and `healthy=false`.
+
 - `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
   цена с WB Кошельком, по подписке или с другим явным условием не выбирается
   в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется

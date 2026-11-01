@@ -401,9 +401,9 @@ async def citilink_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = []
-        if all(it.price_rub is None for it in items):
-            warnings.append("no_prices_on_page")
+        warnings: list[str] = R.validate_items(
+            [it.model_dump() for it in items], require_title=True, absent_price="no_prices_on_page"
+        )
         # The selfcheck compares this payload against the captured
         # required-key registry; the tool's own answer now carries the same
         # drift signal, so an agent does not need a human running doctor to
@@ -511,9 +511,10 @@ async def citilink_card(
             url=url,
             tier_used=tier,
         )
-        attached = R.attach_meta(
-            result.model_dump(by_alias=True, exclude={"meta"}), card_warnings, source="citilink_card"
-        )
+        # The card's own fields, plus the buy-block warning above; the offer
+        # invariants report a price that parsed into something unparseable.
+        card = result.model_dump(by_alias=True, exclude={"meta"})
+        attached = R.attach_meta(card, [*R.validate_offer(card), *card_warnings], source="citilink_card")
         result.meta = MetaOut(**attached["_meta"])
         if tier == "cdp":
             _cache.set(url, payload)
