@@ -30,7 +30,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _search_item_from_tile: Adapt DOM price/availability fields into public models.
 # _cdp_render: Serialize paced browser navigation and extractor execution.
 # _is_qrator_wall: Detect positive document-title or Qrator-markup evidence.
-# dns_search: Reject walls before mapping/cache; flag unrecognized empty grids.
+# dns_search: Reject walls before mapping/cache; flag unrecognized empty grids; warn when a required key vanishes.
 # dns_card: Read product-only title/price/stock; reject walls before mapping/cache.
 # dns_selfcheck: Classify walls as inconclusive/blocked; not an MCP tool.
 # END_MODULE_MAP
@@ -61,6 +61,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -108,6 +109,7 @@ mcp = FastMCP(
         "runs in the operator's own Chrome over CDP — Qrator's proof-of-work "
         "blocks all anonymous access. Start with dns_search; dns_card takes a "
         "product id or dns-shop.ru product URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 
@@ -400,16 +402,9 @@ async def dns_search(
 ) -> DnsSearchResponse:
     """Search DNS-Shop, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0.
 
-    DnsSearchResponse: {status, query, tier_used, count, items[], meta}.
-    price_rub is None when absent — never 0.
-
-    ## Error Format
-
-    ToolError: ChallengeRequiredError on a Qrator wall (never cached);
-    TransportDownError on CDP/navigation failures; ParserDriftError when
-    a rendered page yields zero product tiles without challenge evidence.
+    Full field list and error codes: `guide://dns/dns_search`.
     """
     log_event("dns_search.start", query=query[:60])
     try:
@@ -447,6 +442,14 @@ async def dns_search(
         warnings: list[str] = []
         if items and all(it.price_rub is None for it in items):
             warnings.append("no_prices_on_page")
+        # The selfcheck compares this payload against the captured
+        # required-key registry; the tool's own answer now carries the same
+        # drift signal, so an agent does not need a human running doctor to
+        # learn the shape moved. Zero tiles raise before this point, so the
+        # key check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, ((key,) for key in SEARCH_REQUIRED_KEYS), source="dns_search")
+        if drift:
+            warnings.append(drift)
         result = DnsSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="dns_search")
         result.meta = MetaOut(**attached["_meta"])
@@ -483,17 +486,9 @@ async def dns_card(
 ) -> DnsCardResponse:
     """Fetch one DNS-Shop product card.
 
-    ## Return Format
+    price_rub and old_price_rub are None when the card states none — never 0.
 
-    DnsCardResponse: {status, product_id, title, price_rub, old_price_rub,
-    is_available, url, tier_used, meta}.
-
-    ## Error Format
-
-    ToolError: BadRequestError when the URL carries no product id;
-    ChallengeRequiredError on a Qrator wall (never cached); TransportDownError
-    on CDP/navigation failures; ParserDriftError when a rendered card has neither
-    product title nor price and no challenge evidence.
+    Full field list and error codes: `guide://dns/dns_card`.
     """
     log_event("dns_card.start", input=product_url[:80])
     try:
@@ -672,3 +667,8 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

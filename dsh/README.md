@@ -16,9 +16,9 @@ from each server's `tools/list` by `scripts/gen_tools_doc.py` (the estimate
 | Mode | Cost while mounted | Model-facing tools |
 |---|---|---|
 | Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |
-| `compare-mcp` (recommended) | ~2.2k tokens per request | 4 |
-| `decision-mcp` (shortlist inspection) | ~2.4k tokens per request | 5 |
-| `marketplace-mcp` (full) | ~17.5k tokens per request | 40 |
+| `compare-mcp` (recommended) | ~1.7k tokens per request | 4 |
+| `decision-mcp` (shortlist inspection) | ~2.0k tokens per request | 5 |
+| `marketplace-mcp` (full) | ~12.8k tokens per request | 38 |
 <!-- tools-cost-dsh:end -->
 
 The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools

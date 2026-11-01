@@ -19,6 +19,10 @@ def test_all_installed_sources_are_mounted():
     # One definitive tool per installed source. Selfchecks are no longer
     # mounted (they are operator-only diagnostics for `marketplace-mcp doctor`),
     # so a source's mount marker is the first model-facing tool it guarantees.
+    # mpstats is absent on purpose: without MPSTATS_MP_AUTH its calls can only
+    # return auth_missing, so the unified server does not mount it
+    # (R-MPSTATS-MOUNT-GATE; the gate itself is tested in
+    # test_mpstats_mount_gate.py).
     expected_markers = {
         "wb_search",
         "ozon_card",
@@ -31,7 +35,6 @@ def test_all_installed_sources_are_mounted():
         "dns_search",
         "citilink_search",
         "compare_prices",
-        "mpstats_item",
     }
     missing = expected_markers - names
     assert not missing, f"sources not mounted: {missing}"
@@ -51,29 +54,35 @@ def test_tool_names_keep_their_source_prefixes():
 def test_the_mounted_count_matches_the_imported_sources():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
-    # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 4 + 2 = 39 mounted tools across
-    # 14 servers, plus marketplace_sources, which this server owns rather than
-    # mounts. Operator-only *_selfcheck diagnostics are not MCP tools.
+    # 8 + 3 + 2 + 3 + 3 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 4 = 37 mounted tools across
+    # 13 servers, plus marketplace_sources, which this server owns rather than
+    # mounts. Operator-only *_selfcheck diagnostics are not MCP tools. mpstats
+    # is not mounted without MPSTATS_MP_AUTH (R-MPSTATS-MOUNT-GATE), so its two
+    # tools are absent here.
     own = {"marketplace_sources"}
     assert own <= names
-    assert len(tools) == 40, f"expected 39 mounted tools + 1 own, got {len(tools)}"
-    assert len(names - own) == 39
+    assert len(tools) == 38, f"expected 37 mounted tools + 1 own, got {len(tools)}"
+    assert len(names - own) == 37
 
 
 def test_marketplace_sources_reports_what_mounted():
     """A skipped source must be visible to the client, not just to stderr."""
     result = asyncio.run(server.marketplace_sources())
 
-    assert result.mounted_count == 14
-    assert result.skipped_count == 0
-    assert result.skipped == {}
+    assert result.mounted_count == 13
+    assert result.skipped_count == 1
     assert "wildberries" in result.mounted
     assert "citilink" in result.mounted
     assert "aliexpress" in result.mounted
     assert "cian" in result.mounted
     assert result.capabilities["cian"]["requires_cdp"] is True
     assert result.capabilities["cian"]["text_search"] is False
-    assert "mpstats" in result.mounted
+    # mpstats cannot answer without MPSTATS_MP_AUTH, so it is skipped with the
+    # reason a human needs to turn it on, not mounted with dead tools.
+    assert set(result.skipped) == {"mpstats"}
+    assert "mpstats" not in result.mounted
+    assert "MPSTATS_MP_AUTH" in result.skipped["mpstats"]
+    assert result.capabilities["mpstats"]["mounted"] is False
     assert result.server_version == server.SERVER_VERSION
     assert result.capabilities["taobao"]["currency"] == "cny"
     assert result.capabilities["taobao"]["requires_login"] is True

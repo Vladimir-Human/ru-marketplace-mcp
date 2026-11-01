@@ -60,7 +60,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _grid_still_loading: An empty search page still rendering its grid, never a page offering login routes.
 # _anti_bot_challenge: Read challenge evidence; ignore hidden card widget text.
 # _page_challenge_kind: Classify handoffs from challenge evidence, not card fields.
-# taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid.
+# taobao_search: Read rendered Taobao/Tmall tiles, preserve missing prices, time out a loading grid; warn when a required key family vanishes.
 # taobao_card: Refuse Tmall cards clearly; reject challenge evidence before item mapping and success caching.
 # taobao_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -93,6 +93,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, open_page
@@ -106,7 +107,11 @@ from taobao_connector.models_output import (
     TaobaoSelfcheckResponse,
 )
 from taobao_connector.settings import get_settings
-from taobao_connector.shape_reference import SEARCH_SHAPE_REFERENCE, missing_required_families
+from taobao_connector.shape_reference import (
+    SEARCH_REQUIRED_FAMILIES,
+    SEARCH_SHAPE_REFERENCE,
+    missing_required_families,
+)
 
 # START_BLOCK_CONFIG_AND_INPUTS
 _settings = get_settings()
@@ -141,6 +146,7 @@ mcp = FastMCP(
         "signed per session, so there is no anonymous tier. Start with "
         "taobao_search; taobao_card takes a Taobao item id or URL and refuses Tmall cards. "
         "Tmall search results already carry title, price, shop and URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
 
@@ -745,22 +751,9 @@ async def taobao_search(
 ) -> TaobaoSearchResponse:
     """Search Taobao and Tmall listings, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_cny is None when the tile hides it — never 0; timeout means the grid was still rendering (retry), while an unexplained empty extraction is parser drift.
 
-    TaobaoSearchResponse: {status, query, page, tier_used, count, items[], meta}.
-    Items carry item_id (string), title, price_cny (None when hidden — never 0),
-    shop_name, sales label, url. The url keeps the listing's own host: Tmall
-    products answer with a detail.tmall.com link. Ad-click trackers are never
-    returned and never followed.
-
-    ## Error Format
-
-    ToolError: challenge_required when a login/CAPTCHA wall needs browser action;
-    retry after completing it in the scraping profile. TransportDownError when
-    Chrome/CDP is unreachable; timeout (retryable) when the grid is still
-    rendering at the deadline; ParserDriftError for unexplained empty extraction
-    of a page that was NOT loading. Challenge pages are never cached as
-    successful search results.
+    Full field list and error codes: `guide://taobao/taobao_search`.
     """
     log_event("taobao_search.start", query=query[:60], page=page)
     try:
@@ -826,6 +819,14 @@ async def taobao_search(
         priceless = sum(1 for it in items if it.price_cny is None)
         if priceless == len(items):
             warnings.append("no_prices_on_page")
+        # The selfcheck's family registry now also guards the tool's own
+        # answer: a payload that lost a whole key family (a price alias or a
+        # structural wall marker) is drift the agent must see, not only a
+        # human running doctor. Zero items raise before this point, so the
+        # family check never runs on a vacuously empty payload.
+        drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="taobao_search")
+        if drift:
+            warnings.append(drift)
         result = TaobaoSearchResponse(query=query, page=page, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="taobao_search")
         result.meta = MetaOut(**attached["_meta"])
@@ -855,25 +856,9 @@ async def taobao_card(
 ) -> TaobaoCardResponse:
     """Fetch one Taobao item card.
 
-    ## Return Format
+    price_cny is None when the page hides it or prices by variant — never 0; a card cannot read a Tmall (detail.tmall.com) listing, so use the search row for it.
 
-    TaobaoCardResponse: {status, item_id, title, price_cny, shop_name, sales,
-    description_images, url, tier_used, meta}. price_cny is None when the page
-    hides it or prices by variant — never 0. When the description-image count
-    drifts to a non-number, description_images degrades to 0 and meta.warnings
-    names the drift — the card itself still answers.
-
-    ## Error Format
-
-    ToolError: BadRequestError when no id can be extracted, and when the
-    listing is a Tmall one (detail.tmall.com) — the card cannot read Tmall, and
-    the search result already carries its title, price, shop and URL;
-    NotFoundError when the item page reports itself gone; challenge_required on
-    login/CAPTCHA walls; TransportDownError on CDP failures; ParserDriftError
-    when a rendered card has neither title nor price and no detected challenge.
-    Positive challenge evidence is checked before item mapping regardless of
-    title/price; hidden widget text is excluded by the card extractor. Only
-    successful cards are cached.
+    Full field list and error codes: `guide://taobao/taobao_card`.
     """
     log_event("taobao_card.start", input=item_id_or_url[:80])
     try:
@@ -1144,3 +1129,8 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from avito_connector import server
+from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 from fastmcp.exceptions import ToolError
 
 # ---------------------------------------------------------------- fixtures ----
@@ -195,6 +196,34 @@ async def test_search_warns_on_empty_items_with_nonzero_total(monkeypatch):
     assert result.count == 0
     assert result.meta.healthy is False
     assert "empty_items_with_nonzero_total" in result.meta.warnings
+
+
+async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
+    """A payload that still parses but lost a whole alias family is drift the
+    agent must see in the tool's own response, not only via doctor."""
+    price_family = next(family for family in SEARCH_REQUIRED_FAMILIES if "items[].price" in family)
+    payload = {
+        **SEARCH_PAYLOAD,
+        "items": [{key: value for key, value in item.items() if key != "price"} for item in SEARCH_PAYLOAD["items"]],
+    }
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    result = await server.avito_search("ноутбук")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    # The warning names the WHOLE family (both envelopes' aliases, catalog
+    # first), so compare against the registry's own join.
+    assert f"shape_drift: avito_search: missing {'/'.join(price_family)}" in result.meta.warnings
+
+
+async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypatch):
+    _patch_fetch(monkeypatch, _ok(SEARCH_PAYLOAD))
+
+    result = await server.avito_search("thinkpad")
+
+    assert result.meta.healthy is True
+    assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
 @pytest.mark.parametrize(

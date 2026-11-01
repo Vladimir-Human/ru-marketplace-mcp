@@ -11,9 +11,9 @@ One server mounting every installed connector as a namespaced toolset:
 `compare_prices` / `compare_sources` and its own `marketplace_sources`. Tool
 names keep their prefixes, so habits and configs carry over — but the operator
 wires a single `marketplace` entry instead of fourteen. The server exposes 40
-tools: 39 mounted plus `marketplace_sources`. `mpstats_*` is the optional paid
-source: without `MPSTATS_MP_AUTH` its tools answer `auth_missing` while
-everything else is unaffected.
+tools with `MPSTATS_MP_AUTH` set and 38 without it: the two `mpstats_*` tools
+are not mounted until the paid token is configured, because without it every
+call would answer `auth_missing`.
 
 ## When to use
 - "Where is X cheapest" — compare_prices fans out across all searchable sources
@@ -27,7 +27,9 @@ everything else is unaffected.
   mounted_count, skipped_count, capabilities, server_version}`. `capabilities` is
   static routing metadata per source: access tier, CDP/login requirements, currency,
   text-search support, and whether the connector is mounted. `skipped` maps a source name to the
-  import error that dropped it, usually a missing dependency. Connectors are imported
+  reason it is unavailable: an import error (usually a missing dependency), a
+  missing credential its tools need (MPStats without `MPSTATS_MP_AUTH`), or a
+  `MARKETPLACE_SOURCES` deselection. Connectors are imported
   defensively, so a missing dep removes a marketplace instead of killing the server —
   but from the client an absent source looks identical to one that found nothing.
   Call this to tell the two apart: a name in `skipped` was never queried at all.

@@ -23,6 +23,7 @@ nested types — that is deliberate, and a test guards it.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # compact_output_schema: Keep object property names with permissive value schemas.
+# registered_tools: Read the Tool objects this server answers tools/list with.
 # apply_compact_output_schemas: Rewrite local Tool schemas and count rewritten tools.
 # END_MODULE_MAP
 
@@ -54,6 +55,21 @@ def compact_output_schema(schema: Any) -> dict[str, Any]:
     return {"type": "object", "properties": {name: {} for name in properties}}
 
 
+def registered_tools(mcp: FastMCP) -> tuple[Tool, ...]:
+    """Every Tool this server answers ``tools/list`` with, in registration order.
+
+    FastMCP exposes no public enumeration for already-registered local
+    components in the installed version, so this reads the local provider's
+    component table — the same table ``apply_compact_output_schemas`` rewrites
+    and the one ``list_tools`` reads at request time. Both accessors live here
+    so a FastMCP upgrade that renames the internals has one place to adapt, and
+    ``test_output_schema.py`` pins it.
+    """
+    provider = getattr(mcp, "_local_provider", None)
+    components: dict[str, Any] = getattr(provider, "_components", {})
+    return tuple(component for component in components.values() if isinstance(component, Tool))
+
+
 def apply_compact_output_schemas(mcp: FastMCP) -> int:
     """Re-write every registered tool's ``output_schema`` to the compact form.
 
@@ -65,15 +81,8 @@ def apply_compact_output_schemas(mcp: FastMCP) -> int:
 
     Returns the number of tools re-written so the caller can choose to log it.
     """
-    # Ignored by mypy because FastMCP's public surface intentionally does not
-    # expose the provider internals this constrained patch relies on.
-    provider = getattr(mcp, "_local_provider", None)
-    components: dict[str, Any] = getattr(provider, "_components", {})
-
     rewritten = 0
-    for component in tuple(components.values()):
-        if not isinstance(component, Tool):
-            continue
+    for component in registered_tools(mcp):
         component.output_schema = compact_output_schema(component.output_schema)
         rewritten += 1
     return rewritten

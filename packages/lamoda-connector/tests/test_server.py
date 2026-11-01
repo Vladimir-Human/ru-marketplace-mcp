@@ -148,6 +148,35 @@ async def test_search_warns_when_no_tile_has_a_price(monkeypatch):
     assert "no_prices_on_page" in result.meta.warnings
 
 
+async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
+    """A rendered payload that still parses but lost a whole alias family is
+    drift the agent must see in the tool's own response, not only via doctor."""
+    payload = {
+        "title": SEARCH_EXTRACTED["title"],
+        "items": [
+            {key: value for key, value in item.items() if key != "price_rub"} for item in SEARCH_EXTRACTED["items"]
+        ],
+    }
+    _patch_render(monkeypatch, payload)
+
+    result = await server.lamoda_search("кроссовки")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    assert any(
+        w.startswith("shape_drift: lamoda_search: missing items[].price_texts.attached/") for w in result.meta.warnings
+    )
+
+
+async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypatch):
+    _patch_render(monkeypatch, SEARCH_EXTRACTED)
+
+    result = await server.lamoda_search("кроссовки")
+
+    assert result.meta.healthy is True
+    assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
+
+
 async def test_search_maps_zero_skus_to_parser_drift(monkeypatch):
     _patch_render(monkeypatch, {"title": "кроссовки", "items": []})
 
