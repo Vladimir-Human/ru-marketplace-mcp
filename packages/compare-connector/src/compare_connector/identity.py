@@ -114,9 +114,10 @@ def _variants(values: dict[str, str]) -> dict[str, str]:
 # Storage and memory sizes as marketplace titles write them: "128GB", "128 ГБ",
 # "1TB", "1 ТБ". Only a number attached to a gigabyte/terabyte unit counts: a
 # bare "128" is a model number far more often than a capacity, and a fractional
-# "1.5 ТБ" is not a size this extractor can state without guessing. Values are
-# never converted between units, so "1 ТБ" against "1024 ГБ" is reported as a
-# conflict rather than assumed equal.
+# "1.5 ТБ" is not a size this extractor can state without guessing. Tokens keep
+# the unit the title used; only the comparison converts, with 1 TB = 1024 GB as
+# phone and laptop storage is sold, so "1 ТБ" and "1024 ГБ" agree while
+# "1000 ГБ" still does not.
 _SIZE_TOKEN = re.compile(r"(?<!\w)(?<!\d[.,])([0-9]{1,4})\s*(gb|гб|tb|тб)(?!\w)", re.IGNORECASE)
 _SIZE_UNITS = {"gb": "GB", "гб": "GB", "tb": "TB", "тб": "TB"}
 
@@ -131,6 +132,10 @@ def extract_size_tokens(value: Any) -> frozenset[str]:
     return frozenset(f"{int(number)}{_SIZE_UNITS[unit.lower()]}" for number, unit in _SIZE_TOKEN.findall(_text(value)))
 
 
+def _size_in_gb(token: str) -> int:
+    return int(token[:-2]) * (1024 if token.endswith("TB") else 1)
+
+
 def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     """Whether sizes named in a title contradict the sizes a query asks for.
 
@@ -138,13 +143,16 @@ def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     on both sides can disagree. A query that states no size, a title that names
     none, and a title naming one of the asked sizes are all unknown, never a
     contradiction — the same reason a missing variant attribute abstains.
+    Sizes are compared in gigabytes, so ``"1TB"`` and ``"1024GB"`` agree.
     """
-    return bool(asked and stated and not (asked & stated))
+    if not (asked and stated):
+        return False
+    return not ({_size_in_gb(token) for token in asked} & {_size_in_gb(token) for token in stated})
 
 
 def format_size_tokens(sizes: Iterable[str]) -> str:
     """Canonical sizes in capacity order, e.g. ``"64GB/256GB/1TB"``."""
-    return "/".join(sorted(sizes, key=lambda token: (token.endswith("TB"), int(token[:-2]))))
+    return "/".join(sorted(sizes, key=lambda token: (_size_in_gb(token), token)))
 
 
 def match_product_identity(expected: ProductIdentity, observed: ProductIdentity) -> IdentityMatch:
