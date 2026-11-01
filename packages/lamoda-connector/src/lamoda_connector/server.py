@@ -131,7 +131,7 @@ mcp = FastMCP(
         "Lamoda fashion catalog: text search runs in the operator's Chrome over "
         "CDP (discovery is behind a redirect loop); product cards come from the "
         "GraphQL endpoint: HTTPS first, then an in-page Chrome POST if blocked. Lamoda exposes no ratings. "
-        "Start with lamoda_search; lamoda_card takes a SKU or product URL."
+        "Start with lamoda_search; lamoda_card takes a SKU or product URL. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )

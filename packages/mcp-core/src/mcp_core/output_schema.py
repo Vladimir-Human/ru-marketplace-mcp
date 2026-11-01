@@ -56,14 +56,13 @@ def compact_output_schema(schema: Any) -> dict[str, Any]:
 
 
 def registered_tools(mcp: FastMCP) -> tuple[Tool, ...]:
-    """Every Tool this server answers ``tools/list`` with, in registration order.
+    """Every Tool on this server's local provider, in registration order.
 
-    FastMCP exposes no public enumeration for already-registered local
-    components in the installed version, so this reads the local provider's
-    component table — the same table ``apply_compact_output_schemas`` rewrites
-    and the one ``list_tools`` reads at request time. Both accessors live here
-    so a FastMCP upgrade that renames the internals has one place to adapt, and
-    ``test_output_schema.py`` pins it.
+    Mounted child providers are not included: this is the local component table
+    ``apply_compact_output_schemas`` rewrites and ``list_tools`` reads, not the
+    whole ``tools/list`` surface. FastMCP exposes no public enumeration for
+    already-registered local components in the installed version, so the table
+    is read directly; ``test_output_schema.py`` pins that access.
     """
     provider = getattr(mcp, "_local_provider", None)
     components: dict[str, Any] = getattr(provider, "_components", {})

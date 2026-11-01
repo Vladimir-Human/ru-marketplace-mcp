@@ -134,7 +134,7 @@ mcp = FastMCP(
         "Megamarket catalog: search and product cards. Every read runs in the "
         "operator's own Chrome over CDP — ServicePipe blocks the mobile API by "
         "IP reputation, so there is no anonymous tier. Start with "
-        "megamarket_search; megamarket_card takes a goods id or product URL."
+        "megamarket_search; megamarket_card takes a goods id or product URL. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
@@ -705,9 +705,9 @@ async def megamarket_search(
     does the logged-in profile's default address win — that reads a private
     account endpoint, and the response says so in _meta.warnings
     ("address_source:profile" plus a "profile_address_read" notice).
-    _meta.healthy is false only for that profile read and for
-    "address_source:none" (no delivery address resolved); the default suggest
-    path answers healthy with no address warning.
+    Any warning that is not prefixed "info:" makes _meta.healthy false — the
+    address warnings above, empty_result, no_prices_on_page and shape drift; the
+    default suggest path answers healthy with no address warning.
 
     price_rub is None when the tile states no price — never 0.
 

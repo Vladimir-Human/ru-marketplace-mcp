@@ -95,6 +95,26 @@ async def test_missing_requested_wb_row_does_not_use_another_price(monkeypatch):
     assert result["price_verification"]["matches"] is None
 
 
+async def test_wb_wallet_only_price_is_not_certified(monkeypatch):
+    """R-COMPARE-CONDITIONAL-PRICE, R-NO-FABRICATION: a DOM card whose price_rub
+    is the Wallet price carries price_kind="wallet". Verifying it against
+    expected_price_rub would certify a price only a Wallet holder gets, so the
+    comparison stays unknown and the kind is named. Before this the verification
+    matched the conditional 900."""
+
+    async def card(*, nm_ids):
+        return WbCardResponse(count=1, items=[WbCardItem(nm_id=nm_ids[0], price_rub=900.0, price_kind="wallet")])
+
+    monkeypatch.setattr(server, "SOURCES", {"wildberries": SimpleNamespace(wb_card=card)})
+    result = await server.compare_verify_offer("wildberries", "164379765", expected_price_rub=900.0)
+
+    verification = result["price_verification"]
+    assert verification["observed_price_rub"] is None
+    assert verification["delta_rub"] is None
+    assert verification["matches"] is None
+    assert verification["price_kind"] == "wallet"
+
+
 @pytest.mark.parametrize("price", [None, True, 0, -1, float("nan"), float("inf")])
 async def test_invalid_observed_price_stays_unknown(monkeypatch, price):
     async def card(*, sku_or_path):

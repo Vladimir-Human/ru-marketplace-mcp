@@ -119,7 +119,7 @@ mcp = FastMCP(
         "AliExpress catalog: search and product cards, read inside the operator's "
         "own Chrome over CDP — x5sec blocks anonymous access. Start with "
         "aliexpress_search; aliexpress_card takes an item id or aliexpress.ru item URL. "
-        "Review TEXTS are not exposed: only the rating and order counts are read."
+        "Review TEXTS are not exposed: only the rating and order counts are read. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
