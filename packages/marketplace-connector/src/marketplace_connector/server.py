@@ -136,7 +136,7 @@ mcp = FastMCP(
         "compare_sources. cian_* is real estate (flats, houses, commercial "
         "property for sale or rent), not goods. Sources whose optional "
         "dependencies are missing, or whose tools cannot answer until a "
-        "credential is configured, are simply absent from the set."
+        "credential is configured, are simply absent from the set. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
     version=SERVER_VERSION,

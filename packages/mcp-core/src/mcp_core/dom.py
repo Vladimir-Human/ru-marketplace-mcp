@@ -69,36 +69,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from mcp_core.resilience import coerce_price, flatten_text
+from mcp_core.resilience import DECOY_MARKERS, coerce_price, flatten_text
 
-# Text markers for a node that holds a number which is NOT the price: monthly
-# instalments, loyalty bonuses, discount badges, delivery-point counts, ratings,
-# and (Taobao) sales counts like «200+人付款» — the number of buyers, which a
-# naive read promotes into a plausible-looking strikethrough price.
-#
-# ONE list, and the JavaScript regex below is generated from it. Writing the
-# words twice — once here, once inline in the JS — is how the two quietly stop
-# agreeing: someone adds "трейд-ин" to the Python tuple, the browser never sees
-# it, and the bug reads as a mysterious wrong price rather than a stale list.
-# Adding a marker anywhere means adding it here.
-DECOY_MARKERS: tuple[str, ...] = (
-    "мес",
-    "рассрочк",
-    "бонус",
-    "балл",
-    "кэшбэк",
-    "кешбэк",
-    "cashback",
-    "трейд-ин",
-    "trade-in",
-    "пункт",
-    "отзыв",
-    "%",
-    "付款",
-    "收货",
-    "已售",
-    "约售",
-)
+# DECOY_MARKERS — the text markers for a node that holds a number which is NOT
+# the price (instalments, loyalty bonuses, discount badges, delivery-point
+# counts, ratings, sales counts) — lives in mcp_core.resilience, because
+# coerce_price's display-string guard shares it. The JavaScript regex below is
+# generated from that one list; writing the words twice is how the two quietly
+# stop agreeing. Adding a marker means adding it in resilience.py.
 
 
 def _decoy_regex_literal() -> str:

@@ -146,7 +146,7 @@ mcp = FastMCP(
         "read runs in the operator's own Chrome over CDP — Taobao's data API is "
         "signed per session, so there is no anonymous tier. Start with "
         "taobao_search; taobao_card takes a Taobao item id or URL and refuses Tmall cards. "
-        "Tmall search results already carry title, price, shop and URL."
+        "Tmall search results already carry title, price, shop and URL. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )

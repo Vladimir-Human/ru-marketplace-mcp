@@ -240,6 +240,39 @@ async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeyp
     assert server._address_cache == {}
 
 
+async def test_search_reports_the_host_pause_from_the_catalog_redirect(monkeypatch):
+    """R-CDP-HOST-PAUSE: with the delivery address already resolved, the pause
+    must still reach the caller from the real catalog-redirect probe. The other
+    search test exercises only the address-suggest step (the autouse fixture
+    stubs the redirect out), so a regression in _final_catalog_url's guard would
+    have left the pause swallowed and the search degraded instead."""
+
+    async def resolved_address(ctx):
+        return "a-222"
+
+    async def must_not_post(api_path, body, ctx, what):
+        raise AssertionError(f"the redirect must report the pause before any POST: {api_path}")
+
+    budget = await _open_breaker("megamarket.ru")
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+    monkeypatch.setattr(server, "_resolve_address_id", resolved_address)
+    monkeypatch.setattr(server, "_final_catalog_url", _REAL_FINAL_CATALOG_URL)
+    # On the pre-guard code the redirect swallowed the pause and the search ran
+    # on; the failure then surfaced from a POST (here this stub's AssertionError)
+    # with a different error, so the rate_limited assertions below fail there.
+    monkeypatch.setattr(server, "_post", must_not_post)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.megamarket_search("ноутбук")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retryable"] is True
+    assert error["retry_after_s"] == 47.0
+    assert error["provider"] == "megamarket.ru"
+    assert "paused for 47 s after 2 refusals" in error["message"]
+
+
 # ------------------------------------------------------------ megamarket_card ----
 
 

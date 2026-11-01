@@ -17,7 +17,13 @@ from compare_connector import server
 from compare_connector.models_output import MarketOffer
 from fastmcp.exceptions import ToolError
 from mcp_core import resilience as R
-from mcp_core.errors import ChallengeRequiredError, ParserDriftError, RateLimitedError, raise_tool_error
+from mcp_core.errors import (
+    ChallengeRequiredError,
+    ParserDriftError,
+    RateLimitedError,
+    TransportDownError,
+    raise_tool_error,
+)
 from pydantic import ValidationError
 
 
@@ -345,6 +351,33 @@ def test_structured_error_code_takes_precedence_over_message(error, status, code
     assert result["error_code"] == code
     assert result["retryable"] is retryable
     assert result["requires_user_action"] is False
+
+
+async def test_recovery_fields_reach_the_source_outcome(monkeypatch):
+    """R-CDP-HOST-PAUSE, R-CHALLENGE-ACTION: an open host breaker's remaining
+    pause and the challenge's retry contract must survive _source_error into
+    SourceOutcome. Before this only error_code/retryable crossed that boundary,
+    so the agent saw rate_limited with no clock and challenge_required with no
+    user action — the two fields those requirements exist for."""
+
+    async def paused(query, limit):
+        raise_tool_error(TransportDownError("CDP navigation paused", provider="wildberries", retry_after_s=17.5))
+
+    async def challenged(query, limit):
+        raise_tool_error(ChallengeRequiredError("captcha", provider="taobao"))
+
+    stub_sources(monkeypatch, {"wildberries": paused, "taobao": challenged})
+
+    result = await server.compare_prices(query="тест", sources=["wildberries", "taobao"])
+
+    assert result.complete is False
+    outcomes = {o.source: o for o in result.source_outcomes}
+    assert outcomes["wildberries"].retry_after_s == 17.5
+    assert outcomes["wildberries"].retryable is True
+    challenge = outcomes["taobao"]
+    assert challenge.retryable_now is False
+    assert challenge.retry_when == "after_user_confirmation"
+    assert "marketplace-mcp unblock taobao" in (challenge.user_action or "")
 
 
 @pytest.mark.parametrize("message", ["broken", "[]", "null", '{"error": []}', '{"error": "new_code"}'])

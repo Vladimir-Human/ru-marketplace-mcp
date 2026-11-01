@@ -772,6 +772,17 @@ _SEARCH_IMPLS = {
 }
 
 
+def _payload_text(value: Any, limit: int) -> str | None:
+    """Redacted, bounded text from an error payload, or None when absent.
+
+    Payload text may quote upstream content, so it gets the same redaction and
+    bound as the detail line instead of being forwarded verbatim.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    return _redact(value)[:limit]
+
+
 def _source_error(exc: Exception) -> dict[str, Any]:
     """Preserve typed recovery signals before truncating/redacting error detail.
 
@@ -821,11 +832,25 @@ def _source_error(exc: Exception) -> dict[str, Any]:
             if expiry.tzinfo is not None:
                 handoff_expires_at = expiry.astimezone(datetime.UTC).isoformat().replace("+00:00", "Z")
     raw_handoff_id = payload.get("handoff_id")
+    retry_after_s: float | None = None
+    raw_retry_after = payload.get("retry_after_s")
+    if (
+        isinstance(raw_retry_after, (int, float))
+        and not isinstance(raw_retry_after, bool)
+        and math.isfinite(raw_retry_after)
+        and raw_retry_after >= 0
+    ):
+        retry_after_s = float(raw_retry_after)
+    raw_retryable_now = payload.get("retryable_now")
     return {
         "status": status,
         "detail": _redact(str(payload.get("message", str(exc))))[:200],
         "error_code": code.value,
         "retryable": code.retryable,
+        "retry_after_s": retry_after_s,
+        "retryable_now": raw_retryable_now if isinstance(raw_retryable_now, bool) else None,
+        "retry_when": _payload_text(payload.get("retry_when"), 60),
+        "user_action": _payload_text(payload.get("user_action"), 300),
         "requires_user_action": challenge,
         "challenge_type": challenge_type if challenge else None,
         "handoff_expires_at": handoff_expires_at,
@@ -1290,22 +1315,35 @@ async def compare_verify_offer(
     verification: dict[str, object] | None = None
     if expected_price_rub is not None:
         price_field = "price" if name == "ozon" else "price_rub"
-        observed = R.coerce_price(record.get(price_field))
-        if observed is not None:
-            delta = round(observed - expected_price_rub, 2)
-            verification = {
-                "expected_price_rub": expected_price_rub,
-                "observed_price_rub": observed,
-                "delta_rub": delta,
-                "matches": abs(delta) < 1.0,
-            }
-        else:
+        price_kind = record.get("price_kind")
+        if isinstance(price_kind, str) and price_kind and price_kind != "regular":
+            # A conditional amount (WB Wallet, subscription) is not the everyday
+            # price, so certifying it against expected_price_rub would confirm a
+            # price most buyers cannot get. Report the kind and refuse to compare.
             verification = {
                 "expected_price_rub": expected_price_rub,
                 "observed_price_rub": None,
                 "delta_rub": None,
                 "matches": None,
+                "price_kind": price_kind,
             }
+        else:
+            observed = R.coerce_price(record.get(price_field))
+            if observed is not None:
+                delta = round(observed - expected_price_rub, 2)
+                verification = {
+                    "expected_price_rub": expected_price_rub,
+                    "observed_price_rub": observed,
+                    "delta_rub": delta,
+                    "matches": abs(delta) < 1.0,
+                }
+            else:
+                verification = {
+                    "expected_price_rub": expected_price_rub,
+                    "observed_price_rub": None,
+                    "delta_rub": None,
+                    "matches": None,
+                }
     response = {
         "source": name,
         "product_id_or_url": product_id_or_url,

@@ -27,7 +27,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; packages/wb-connector/tests.
+# LINKS: M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -36,6 +36,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # _wb_card_dom: Adapt operator-browser cards into the public response model.
 # _wb_search_dom: Adapt operator-browser search with price semantics and region warnings.
 # _search_via_search_goods: Return legacy products or typed failures, never failed emptiness.
+# _fallback_failure_text: Name a failed fallback by its error code and message, never a raw envelope.
 # wb_card: Read a batch of product cards.
 # wb_root_info: Read root identity, variants and specifications from basket CDN.
 # wb_reviews: Read product review pools with sorting and pagination.
@@ -1573,6 +1574,29 @@ async def wb_questions(
         raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
 
 
+def _fallback_failure_text(exc: Exception) -> str:
+    """Name a fallback failure by code and message, never by a raw envelope.
+
+    A ``ConnectorError`` stringifies to its message, while a ToolError raised by
+    ``raise_tool_error`` carries a JSON payload; its ``error`` and ``message``
+    say what happened in a warning-sized form.
+    """
+    if isinstance(exc, ToolError):
+        try:
+            decoded = json.loads(str(exc))
+        except (ValueError, RecursionError):
+            pass
+        else:
+            if isinstance(decoded, dict):
+                code = decoded.get("error")
+                message = decoded.get("message")
+                if isinstance(code, str) and isinstance(message, str):
+                    return f"{code}: {message}"
+                if isinstance(code, str):
+                    return code
+    return str(exc)
+
+
 @mcp.tool(
     name="wb_search",
     annotations=ToolAnnotations(
@@ -1721,7 +1745,7 @@ async def wb_search(
             v9_error = TransportDownError(_redact(f"{type(exc).__name__}: {exc}"), provider="wb")
 
         fallback_used = False
-        fallback_error: ConnectorError | None = None
+        fallback_error: ConnectorError | ToolError | None = None
         if not products:
             # Legacy data is flagged when usable. Failure is not emptiness; only
             # a positively empty primary response can survive a failed fallback.
@@ -1729,10 +1753,16 @@ async def wb_search(
             fallback_used = True
             try:
                 products, total_found = await _search_via_search_goods(query, dest, page, ctx)
-            except ConnectorError as exc:
+            except (ConnectorError, ToolError) as exc:
+                # The fallback raises a plain ToolError on a refusal (its
+                # raise_tool_error calls), which the ConnectorError handler used
+                # to miss: a positively empty v9 answer then died instead of
+                # returning the warned no_results the code below builds.
                 fallback_error = exc
                 log_event("wb_search.fallback_failed", error=_redact(str(exc)))
                 if v9_error is not None:
+                    if isinstance(exc, ToolError):
+                        raise
                     if isinstance(exc, RateLimitedError):
                         raise_tool_error(exc)
                     if isinstance(v9_error, ParserDriftError):
@@ -1752,8 +1782,8 @@ async def wb_search(
                     healthy=False,
                     warnings=[
                         "fallback_failed: v9 reported no products and the legacy search-goods fallback "
-                        f"failed too ({_redact(str(fallback_error))[:160]}), so this empty answer is "
-                        "unconfirmed — the query may still have matches"
+                        f"failed too ({_redact(_fallback_failure_text(fallback_error))[:160]}), so this empty "
+                        "answer is unconfirmed — the query may still have matches"
                     ],
                 )
             return WbNoResultsResponse(query=query, page=page, total_ids=total_found, meta=empty_meta)

@@ -9,7 +9,8 @@ check before drawing conclusions.
 # PURPOSE: Describe comparison offers, everyday-price ranking and per-source outcomes.
 # SCOPE: Additive typed outputs; preserve native conditional prices without ranking them.
 # DEPENDS: Pydantic; compare_connector.identity.
-# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA.
+# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
+#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
@@ -101,7 +102,7 @@ class SourceOutcome(BaseModel):
     source: str = Field(default="", description="Marketplace name.")
     status: str = Field(
         default="",
-        description="ok, blocked (anti-bot or rate limit), timeout, error, or not_installed.",
+        description="ok, blocked (anti-bot or rate limit), timeout, error, unhealthy, or not_installed.",
     )
     detail: str = Field(default="", description="Human-readable outcome detail; the error text when it failed.")
     warnings: list[str] = Field(
@@ -113,6 +114,14 @@ class SourceOutcome(BaseModel):
     retryable: bool = Field(
         default=False, description="Retry may succeed; user action must be completed first if required."
     )
+    retry_after_s: float | None = Field(
+        default=None, description="Seconds to wait before retrying, when the source reports a pause."
+    )
+    retryable_now: bool | None = Field(
+        default=None, description="False when a plain retry now cannot work; None when unreported."
+    )
+    retry_when: str | None = Field(default=None, description="When to call again, e.g. after_user_confirmation.")
+    user_action: str | None = Field(default=None, description="Human step that unblocks this source, when named.")
     requires_user_action: bool = Field(
         default=False, description="Pause retries for this source until browser action completes."
     )
