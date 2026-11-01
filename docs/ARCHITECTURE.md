@@ -56,10 +56,15 @@ and nothing else.
 
 Every failure maps to `auth_missing`, `rate_limited`, `timeout`, `transport_down`,
 `parser_drift`, `bad_request`, `permission_denied`, `challenge_required`, or
-`not_found`, each carrying a `retryable` flag. `challenge_required` is the one a
-CDP caller meets most often: the page loaded but a wall stands in front of the data,
-and it is retryable once the wall is cleared. Tools raise `ToolError` with a JSON body, so an agent can decide
-whether to retry without parsing prose.
+`not_found`, each carrying a `retryable` flag. The flag is deliberate:
+`challenge_required` is the one a CDP caller meets most often — the page loaded but
+a wall stands in front of the data — and it stays `retryable` because a later call
+can succeed once the wall is cleared. Its body also says a plain retry now cannot
+pass it: `retryable_now=false`, `requires_user_action=true`, a concrete
+`user_action` (the `marketplace-mcp unblock <source>` command when no page is
+retained, or the tab this error kept open when `CHROME_CHALLENGE_HANDOFF_S` is on)
+and `retry_when=after_user_confirmation`. Tools raise `ToolError` with a JSON body,
+so an agent can decide whether to retry without parsing prose.
 
 The distinction that matters most: **`transport_down` means "we were refused",
 `parser_drift` means "the data changed shape".** Conflating them sends the reader
@@ -224,7 +229,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-2670 offline tests, no network required. Three flavours:
+2769 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

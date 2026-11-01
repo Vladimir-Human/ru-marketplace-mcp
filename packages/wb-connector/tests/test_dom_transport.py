@@ -534,6 +534,20 @@ def test_render_captcha_requires_the_operator(monkeypatch: pytest.MonkeyPatch) -
     assert body["error"] == "challenge_required" and body["requires_user_action"] is True
 
 
+def test_render_captcha_action_does_not_promise_a_tab(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-CHALLENGE-ACTION: retention is off, so no field may claim a visible page."""
+    page = _FakePage([{"state": "blocked", "captcha": True}], {})
+    _patch_open_page(monkeypatch, page)
+    with pytest.raises(ToolError) as exc:
+        _run(D.render(D.card_url(2), D.CARD_EXTRACT_JS, "card"))
+    body = json.loads(str(exc.value))
+    assert body["error"] == "challenge_required"
+    assert "is showing" not in body["message"]
+    assert "marketplace-mcp browser show" in body["user_action"]
+    assert body["retryable_now"] is False
+    assert body["retry_when"] == "after_user_confirmation"
+
+
 def test_render_challenge_that_never_clears(monkeypatch: pytest.MonkeyPatch) -> None:
     page = _FakePage([{"state": "challenge"}], {})
     _patch_open_page(monkeypatch, page)

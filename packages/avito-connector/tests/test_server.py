@@ -97,6 +97,18 @@ def _patch_item_page(monkeypatch, result):
     monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
 
 
+def _patch_item_page_recording(monkeypatch, result):
+    """Patch the card fetch and report every URL the tool tried to open."""
+    calls = []
+
+    async def fake_fetch_item_page(url, ctx):
+        calls.append(url)
+        return result
+
+    monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
+    return calls
+
+
 def _patch_selfcheck_pages(monkeypatch, product_html):
     fixtures = Path(__file__).parent / "fixtures"
     block = (fixtures / "item_seller_block_7924452716.html").read_text(encoding="utf-8")
@@ -365,6 +377,98 @@ async def test_card_accepts_a_slug_url(monkeypatch):
 async def test_card_rejects_input_without_an_item_id(bad):
     with pytest.raises(ToolError):
         await server.avito_card(bad)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "https://www.avito.ru/profile/x_1234567890",
+        "https://avito.ru/account/x_1234567890",
+        "https://www.avito.ru/orders/x_1234567890",
+        "https://www.avito.ru/favorites/x_1234567890",
+        "https://www.avito.ru/profile/favorites/saved/x_1234567890",
+        "https://www.avito.ru/x_1234567890/extra",
+        "https://www.avito.ru/api/1/anything",
+        "https://www.avito.ru/api/personal/x_1234567890",
+        "https://www.avito.ru/profile/items/x_1234567890",
+        "https://www.avito.ru/profile",
+        "https://www.avito.ru/account",
+        "https://www.avito.ru/orders",
+        "https://www.avito.ru/favorites",
+    ],
+    ids=[
+        "profile-item-tail",
+        "account-item-tail",
+        "orders-item-tail",
+        "favorites-item-tail",
+        "deep-personal-path",
+        "item-tail-then-path",
+        "api-path",
+        "api-prefix-item-shape",
+        "profile-prefix-item-shape",
+        "profile",
+        "account",
+        "orders",
+        "favorites",
+    ],
+)
+async def test_card_refuses_non_item_page_paths_before_transport(monkeypatch, bad):
+    """R-INPUT-TRUST: the card opens pages in the operator's logged-in Chrome,
+    so a full URL is fetched only when its path is an item-page shape. A
+    personal prefix with an item-like tail (/profile/x_1234567890 passes the
+    bare item-id regex) must be refused as bad_request before any navigation,
+    not fetched and later misclassified."""
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card(bad)
+
+    assert "bad_request" in str(excinfo.value)
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected_url"),
+    [
+        (
+            "https://www.avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+            "https://www.avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+        ),
+        (
+            "http://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+            "http://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+        ),
+        (
+            "https://www.avito.ru/noutbuk_thinkpad_x1_carbon_4612345678/",
+            "https://www.avito.ru/noutbuk_thinkpad_x1_carbon_4612345678/",
+        ),
+        (
+            "https://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678?context=1#details",
+            "https://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678",
+        ),
+    ],
+    ids=["www-https", "no-www-http", "slug-with-trailing-slash", "query-fragment-dropped"],
+)
+async def test_card_keeps_opening_real_item_urls_normalized(monkeypatch, raw, expected_url):
+    """Real item URLs keep working: city/category slug segments, with or
+    without www, http or https, a trailing slash and a query string — the
+    validated path is opened unchanged, the query/fragment dropped."""
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    result = await server.avito_card(raw)
+
+    assert calls == [expected_url]
+    assert result.item_id == 4612345678
+
+
+async def test_card_accepts_a_bare_id_item_url(monkeypatch):
+    """/<id> is the item-page shape the bare-id branch itself navigates to."""
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    result = await server.avito_card("https://www.avito.ru/4612345678")
+
+    assert calls == ["https://www.avito.ru/4612345678"]
+    assert result.item_id == 4612345678
 
 
 async def test_card_maps_404_to_not_found(monkeypatch):

@@ -715,10 +715,15 @@ def _stop_blocked(url: str, probe: dict[str, Any]) -> None:
     if probe.get("captcha"):
         raise_tool_error(
             ChallengeRequiredError(
-                "WB is showing a captcha in the scraping-profile Chrome. Not retrying: the operator "
-                "decides whether to open wildberries.ru there and continue.",
+                "WB answered with a captcha in the scraping-profile Chrome; the page is not kept open. "
+                "Not retrying: the operator decides whether to open wildberries.ru there and continue.",
                 provider="wb",
                 challenge_type="captcha",
+                user_action=(
+                    "Have the operator open wildberries.ru in the scraping-profile Chrome and pass the "
+                    "captcha; run `marketplace-mcp browser show` if the window is off-screen. Then call "
+                    "this tool again after the user confirms the challenge is done."
+                ),
             )
         )
     raise_tool_error(

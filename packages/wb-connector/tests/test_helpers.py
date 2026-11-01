@@ -2515,7 +2515,18 @@ def _healthy_selfcheck_responder(v9_response):
         ((200, "not json", None), "drift"),
         ((200, json.dumps({"products": []}), None), "drift"),
         ((200, json.dumps({"products": [{"name": "x"}]}), None), "drift"),
-        ((200, json.dumps({"products": [{"id": 1, "salePriceU": 1000}]}), None), "healthy"),
+        # R-SHAPE-DRIFT-WARNING (2026-11-01): a v9 product without its name and
+        # totalQuantity families is structural drift, so this once-healthy
+        # minimal product is now drift; the realistic product below is healthy.
+        ((200, json.dumps({"products": [{"id": 1, "salePriceU": 1000}]}), None), "drift"),
+        (
+            (
+                200,
+                json.dumps({"products": [{"id": 1, "name": "x", "salePriceU": 1000, "totalQuantity": 3}]}),
+                None,
+            ),
+            "healthy",
+        ),
     ],
 )
 def test_the_canary_sees_the_primary_search_path(monkeypatch, v9_response, expected_state):
@@ -2524,6 +2535,8 @@ def test_the_canary_sees_the_primary_search_path(monkeypatch, v9_response, expec
     When v9 was refused, wb_search fell through to the legacy id list and
     returned unrelated products with prices attached, while this canary stayed
     green because its other probe reads search-goods and never touched v9.
+    A product that lost a whole parser-critical key family is drift, not a
+    healthy answer (R-SHAPE-DRIFT-WARNING).
     """
 
     async def no_wait():

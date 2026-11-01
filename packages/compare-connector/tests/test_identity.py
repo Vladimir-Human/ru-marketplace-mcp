@@ -2,9 +2,11 @@ import pytest
 from compare_connector.identity import (
     ProductIdentity,
     extract_size_tokens,
+    format_size_tokens,
     identity_from_mapping,
     match_product_identity,
     normalize_gtin,
+    sizes_conflict,
 )
 
 
@@ -162,3 +164,24 @@ def test_matching_gtin_does_not_override_conflicting_mpn():
 def test_size_tokens_normalise_units_and_reject_guesses(text, expected):
     """R-COMPARE-VARIANT-IDENTITY: only a number with a GB/TB unit is a size."""
     assert extract_size_tokens(text) == expected
+
+
+@pytest.mark.parametrize(
+    "asked,stated,conflict",
+    [
+        ({"1TB"}, {"1024GB"}, False),
+        ({"1024GB"}, {"1TB"}, False),
+        ({"2TB"}, {"2048GB", "16GB"}, False),
+        ({"1TB"}, {"1000GB"}, True),
+        ({"1TB"}, {"2TB"}, True),
+        ({"512GB"}, {"1TB"}, True),
+    ],
+)
+def test_sizes_compare_in_gigabytes(asked, stated, conflict):
+    """R-COMPARE-VARIANT-IDENTITY: 1 TB = 1024 GB, as storage is sold; no rounding to 1000."""
+    assert sizes_conflict(frozenset(asked), frozenset(stated)) is conflict
+
+
+def test_sizes_are_listed_in_capacity_order_across_units():
+    """R-COMPARE-VARIANT-IDENTITY: the warning lists sizes by capacity, keeping each title's unit."""
+    assert format_size_tokens({"2048GB", "1TB", "512GB", "64GB"}) == "64GB/512GB/1TB/2048GB"

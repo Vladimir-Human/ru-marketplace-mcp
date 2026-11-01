@@ -32,7 +32,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
 # SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
-# DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings.
+# DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings; shape_reference.
 # LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; packages/detmir-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -41,7 +41,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _body_error_status: Detect error status embedded inside HTTP-success JSON.
 # _parse_product: Normalize product fields and preserve missing-price semantics.
 # detmir_card: Read one product with a region filter.
-# detmir_category: List a validated category alias with pagination.
+# detmir_category: List a validated category alias with pagination,
+#                   plus a runtime shape-drift warning when a required key family vanishes.
 # detmir_categories: Discover category rows, optionally by parent.
 # detmir_selfcheck: Probe operator endpoint/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -57,7 +58,6 @@ from typing import Annotated, Any
 
 import httpx
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -72,6 +72,7 @@ from mcp_core.errors import (
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport import DEFAULT_USER_AGENT, RateLimiter, build_client, get_text_with_retries, proxy_from_env
 from pydantic import Field
 
@@ -86,6 +87,7 @@ from detmir_connector.models_output import (
     MetaOut,
 )
 from detmir_connector.settings import get_settings
+from detmir_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 
 _settings = get_settings()
 
@@ -111,8 +113,13 @@ _PRODUCT_ID_RE = re.compile(r"/product/index/id/(\d{3,12})")
 # interpolated into a filter expression.
 _ALIAS_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,80}$")
 
-mcp = FastMCP(name="detmir-connector", version=SERVER_VERSION)
-mcp.add_middleware(RetryMiddleware(max_retries=2, base_delay=1.0))
+mcp = FastMCP(
+    name="detmir-connector",
+    version=SERVER_VERSION,
+    instructions=(
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
+    ),
+)
 
 _limiter = RateLimiter(min_gap_s=_settings.min_gap)
 _cache: TTLCache[Any] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=256)
@@ -363,18 +370,9 @@ async def detmir_card(
     ask about a specific city; it overrides ``DETMIR_REGION`` for this call only,
     so one session can compare cities.
 
-    ## Return Format
+    price_rub is None when the card states no price — never 0.
 
-    DetmirCardResponse: {product, region, meta}. product carries product_id,
-    title, article, brand, price_rub (None when absent — never 0),
-    old_price_rub, discount_percent, rating, review_count, questions_count,
-    availability, available_online, available_offline, store_count,
-    is_marketplace, vendor, url, picture.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_card`.
     """
     region_used = _resolve_region(region)
     log_event("detmir_card.start", product_id=product_id, region=region_used)
@@ -392,6 +390,9 @@ async def detmir_card(
     # request from cache.
     query = urllib.parse.urlencode({"filter": f"withregion:{region_used}"})
     url = f"{API_BASE}/v2/products/{product_id}?{query}"
+    # Sample the cache before the fetch: _fetch_json stores a fresh payload in
+    # _cache, so reading it afterwards would report a hit on a network-backed answer.
+    was_cached = _cache.get(url) is not None
     payload = await _fetch_json(url, "detmir_card", ctx)
 
     body_status = _body_error_status(payload)
@@ -428,7 +429,7 @@ async def detmir_card(
             source="detmir_card",
             healthy=not R.health_warnings(warnings),
             warnings=warnings,
-            cached=_cache.get(url) is not None,
+            cached=was_cached,
         ),
     )
 
@@ -470,17 +471,9 @@ async def detmir_category(
     real JSON endpoint with proper pagination and an upstream total, so it
     supports "what's available and how much does it cost" without scraping.
 
-    ## Return Format
+    an empty page is NOT an error: it is reported through meta.warnings.
 
-    DetmirListResponse: {query, mode, total_available, category_title,
-    returned, offset, items, region, meta}. Items carry the same product
-    shape as detmir_card. An empty page is NOT an error — it is reported via
-    meta.warnings.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_category`.
     """
     slug = (alias or "").strip().lower()
     if not _ALIAS_RE.match(slug):
@@ -537,6 +530,18 @@ async def detmir_category(
     if not products:
         warnings.append(f"empty: no products for alias {slug!r} — check the slug against a catalog URL")
     else:
+        # The selfcheck compares this payload against the captured family
+        # registry; the tool's own answer now carries the same drift signal,
+        # so an agent does not need a human running doctor to learn the shape
+        # moved. The parsed products emit every key unconditionally, so the
+        # guard runs on the RAW items the parser binds through (both envelope
+        # shapes wrap here, so the bare-array body fingerprints identically).
+        # An empty page stays out of the check: with zero items every
+        # per-item family is vacuously absent, and the warning above already
+        # covers it.
+        drift = R.shape_drift_warning({"items": items_raw}, SEARCH_REQUIRED_FAMILIES, source="detmir_category")
+        if drift:
+            warnings.append(drift)
         # Per-offer invariants for the whole page: one fabricated or absent price
         # is a listing, every price gone is the category payload drifting.
         warnings.extend(
@@ -594,17 +599,7 @@ async def detmir_categories(
     list a category. Each node carries its `alias` and a `products_count`, so you
     can see where the inventory actually is before fetching a listing.
 
-    ## Return Format
-
-    DetmirCategoriesResponse: {parent, returned, total_available, items,
-    region, meta}. Items carry category_id, alias, title, full_name, level,
-    products_count, parent_id, url; alias is what detmir_category needs to
-    list a category.
-
-    ## Error Format
-
-    On validation or transport/parse failure, raises ToolError with a JSON
-    message describing the error code and whether it is retryable.
+    Full field list and error codes: `guide://detmir/detmir_categories`.
     """
     region_used = _resolve_region(region)
     requested = (parent or "top").strip()
@@ -750,7 +745,10 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
         "category",
         detmir_category(alias=_settings.selfcheck_category, limit=3, offset=0, ctx=None),
         lambda r: (
-            r.returned > 0 and any(p.price_rub for p in r.items),
+            # meta.healthy carries the shape-drift warning the category tool now
+            # adds when a parser-critical key family vanished, so the canary
+            # fails the same way the runtime data path does.
+            r.returned > 0 and any(p.price_rub for p in r.items) and r.meta.healthy,
             f"returned={r.returned} total={r.total_available}",
         ),
     )
@@ -793,6 +791,11 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
 
 
 if __name__ == "__main__":

@@ -46,7 +46,6 @@ import urllib.parse
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
@@ -63,6 +62,7 @@ from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -110,9 +110,9 @@ mcp = FastMCP(
         "runs in the operator's own Chrome over CDP — Qrator's proof-of-work "
         "blocks all anonymous access. Start with citilink_search; citilink_card takes a "
         "product id or citilink.ru product URL."
+        "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )
-mcp.add_middleware(RetryMiddleware())
 
 _cache: TTLCache = TTLCache(ttl_s=_settings.cache_ttl, max_entries=128)
 _pacer = Pacer(_min_gap)
@@ -361,18 +361,9 @@ async def citilink_search(
 ) -> CitilinkSearchResponse:
     """Search Citilink, rendered in the operator's Chrome.
 
-    ## Return Format
+    price_rub is None when the tile states no price — never 0.
 
-    CitilinkSearchResponse: {status, query, tier_used, count, items[], meta}.
-    price_rub is None when absent — never 0.
-
-    ## Error Format
-
-    ToolError: ChallengeRequiredError (challenge_required) on a detected Qrator
-    wall: open citilink.ru in the scraping-profile Chrome, pass the check, retry.
-    TransportDownError on CDP/navigation failures; ParserDriftError when a
-    rendered page yields zero product tiles without challenge evidence.
-    Only validated successful searches are cached; cached legacy walls are invalidated.
+    Full field list and error codes: `guide://citilink/citilink_search`.
     """
     log_event("citilink_search.start", query=query[:60])
     try:
@@ -448,19 +439,9 @@ async def citilink_card(
 ) -> CitilinkCardResponse:
     """Fetch one Citilink product card.
 
-    ## Return Format
+    price_rub and old_price_rub are None when the card states none — never 0.
 
-    CitilinkCardResponse: {status, product_id, title, price_rub, old_price_rub,
-    is_available, url, tier_used, meta}.
-
-    ## Error Format
-
-    ToolError: BadRequestError when the URL carries no product id;
-    ChallengeRequiredError (challenge_required) on a detected Qrator wall: open
-    citilink.ru in the scraping-profile Chrome, pass the check, then retry.
-    TransportDownError on CDP/navigation failures; ParserDriftError when a rendered
-    card has neither product title nor price without challenge evidence.
-    Only validated successful cards are cached; cached legacy walls are invalidated.
+    Full field list and error codes: `guide://citilink/citilink_card`.
     """
     log_event("citilink_card.start", input=product_url[:80])
     try:
@@ -634,3 +615,8 @@ async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResp
 # replace the full Pydantic tree with top-level field names (~64 % fewer
 # wire tokens on the unified server).
 apply_compact_output_schemas(mcp)
+
+# The reference half of every tool description is served as an MCP resource
+# (guide://<source>/<tool>) and the error taxonomy as marketplace://errors, so
+# the agent pays for them when it reads them instead of on every request.
+register_reference_resources(mcp)
