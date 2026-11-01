@@ -76,7 +76,10 @@ down the wrong path — one needs a different IP, the other needs a code change.
   cannot exhaust memory.
 - *Retry only what a retry can fix.* Transport faults and gateway statuses
   (502/503/504) get bounded backoff. **429 never does** — retrying a rate limit
-  deepens it. Neither does any other 4xx.
+  deepens it. Neither does any other 4xx. Connectors mount no FastMCP retry
+  middleware: it retries only raw `ConnectionError`/`TimeoutError`, while every
+  tool surfaces a failure as an `mcp_core` `ToolError`, so bounded retries live
+  entirely in this tier.
 
 Redirects are **not** followed by default: several Russian marketplaces answer
 datacenter IPs with a self-referential 307 loop, and following it burns the request
@@ -224,7 +227,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-2573 offline tests, no network required. Three flavours:
+2574 offline tests, no network required. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.

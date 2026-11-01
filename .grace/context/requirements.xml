@@ -123,6 +123,12 @@
   <requirement id="R-CDP-BUDGET-SCHEDULING" source="Owner task in this session, 2026-11-01 (two CDP budget scheduling defects)">
     Fix two scheduling defects in the shared CDP navigation budget. A request that queued while its host was healthy and gets its slot after that host's breaker opened must be refused exactly as a new request is refused — HostRefusingError with the same host, refusal count and remaining cooldown — and the permits it just took must be given back. Waiting for a busy host's slot must not hold global capacity: a request takes its host's slot first and the global slot only once that host is free, so a request for a free host is not delayed behind a request waiting for a busy one. Everything else stays: the global and per-host limits, pacing, error type and message, the public API, and FIFO order within a host. No deadlocks, and every acquired slot is released exactly once on refusal, on any exception and on asyncio.CancelledError.
   </requirement>
+  <requirement id="R-DETMIR-CACHE-FLAG" source="Owner task in this session, 2026-11-01 (pre-release audit: detmir_card meta.cached)">
+    detmir_card reports meta.cached=true only when the answer was served from the in-process TTL cache; a first, network-backed answer reports false. The flag must be sampled before the fetch, because _fetch_json writes the fresh payload into the cache and reading it afterwards always reports a hit. The other detmir tools keep their current default and are out of scope.
+  </requirement>
+  <requirement id="R-NO-MCP-RETRY-MIDDLEWARE" source="Owner task in this session, 2026-11-01 (pre-release audit: RetryMiddleware)">
+    Connector servers must not mount FastMCP's RetryMiddleware. The audit claim that mcp-core has one is wrong: mcp-core defines and mounts only BearerAuthMiddleware for HTTP serving. The FastMCP class is dispatched through on_request, but it retries only raw ConnectionError/TimeoutError while every connector surfaces failures as an mcp_core ToolError, so it never fired. Nothing else imported it and no document or test promised it. Bounded retries remain the shared HTTP tier's (get_text_with_retries); do not add MCP-layer retry behaviour.
+  </requirement>
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
   </rule>

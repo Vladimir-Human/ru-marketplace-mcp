@@ -76,7 +76,6 @@ from typing import Annotated, Any
 
 import httpx
 from fastmcp import Context, FastMCP
-from fastmcp.server.middleware.error_handling import RetryMiddleware
 from mcp.types import ToolAnnotations
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
@@ -130,7 +129,6 @@ HEADERS = {
 _RETRY_STATUSES = frozenset({302, 502, 503, 504})
 
 mcp = FastMCP(name="yandex-connector", version=SERVER_VERSION)
-mcp.add_middleware(RetryMiddleware(max_retries=2, base_delay=1.0))
 
 _limiter = RateLimiter(min_gap_s=_settings.min_gap)
 _cache: TTLCache[str] = TTLCache(ttl_s=_settings.cache_ttl, max_entries=64)

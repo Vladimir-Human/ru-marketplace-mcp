@@ -35,6 +35,13 @@
   возвращаются сразу. Ожидание занятого хоста больше не занимает глобальный
   слот, поэтому запрос к свободному хосту не ждёт за занятым. Освобождение
   слотов при отказе и при отмене (`asyncio.CancelledError`) ровно одно.
+- `detmir_card` больше не выдаёт свежий ответ за кешированный: `meta.cached`
+  снимается до запроса, а `_fetch_json` пишет свежий ответ в кеш, поэтому первое
+  сетевое обращение теперь `cached=false`, а повтор — `cached=true`.
+- Из всех коннекторов убрана бесполезная привязка FastMCP `RetryMiddleware`: она
+  ретраит только сырые `ConnectionError`/`TimeoutError`, а коннекторы отдают
+  `mcp_core` `ToolError`, поэтому не срабатывала ни разу. Повторные попытки
+  остаются за HTTP-слоем; `mcp-core` монтирует только `BearerAuthMiddleware`.
 
 - CDP navigation budget: a request queued while its host's breaker opened is no
   longer handed a permit — when its turn comes it is refused with the same
@@ -42,6 +49,14 @@
   Waiting for a busy host no longer holds a global slot, so a request for a free
   host is not delayed behind it. Slots are released exactly once on refusal and
   on cancellation (`asyncio.CancelledError`).
+- `detmir_card` no longer passes off a fresh answer as cached: `meta.cached` is
+  sampled before the fetch, and `_fetch_json` writes the fresh payload into the
+  cache, so a first network-backed call is now `cached=false` and a replay is
+  `cached=true`.
+- Every connector dropped its inert FastMCP `RetryMiddleware` mount: it retries
+  only raw `ConnectionError`/`TimeoutError`, while connectors raise an `mcp_core`
+  `ToolError`, so it never fired. Bounded retries stay in the HTTP tier;
+  `mcp-core` mounts only `BearerAuthMiddleware`.
 
 ## [2.7.0] - 2026-10-30
 
