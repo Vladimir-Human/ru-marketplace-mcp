@@ -4,6 +4,13 @@ Talks MCP over stdio (``initialize`` + ``tools/list``), the exact exchange a
 dsh MCP client performs on activation, and estimates the token cost of the
 advertised tool schemas. The estimate is shared with the dsh bundle gate:
 Cyrillic characters weigh 1/3, everything else 1/4.
+
+Every profile carries two figures: ``wire_tokens`` for the whole ``tools/list``
+as the wire sends it, and ``model_tokens`` for the part a provider request
+actually carries to the model -- each tool's ``name``, ``description`` and
+``input_schema``. ``outputSchema``, ``annotations`` and the rest stay in the
+client, so without the second figure a growing description can hide behind a
+shrinking output schema.
 """
 
 from __future__ import annotations
@@ -60,22 +67,48 @@ def tool_tokens(tool: dict) -> int:
     return estimate_tokens(json.dumps(tool, ensure_ascii=False, separators=(",", ":")))
 
 
+def model_tool_tokens(tool: dict) -> int:
+    """The estimate for one tool as the model pays for it.
+
+    A provider request carries only the name, the description and the input
+    schema of each advertised tool; ``outputSchema``, ``annotations`` and
+    ``_meta`` stay in the client. Counting the whole tool hides a description
+    that grows while an output schema shrinks by the same amount.
+    """
+    payload = {
+        "name": tool.get("name", ""),
+        "description": tool.get("description") or "",
+        "input_schema": tool.get("inputSchema") or {},
+    }
+    return estimate_tokens(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+
+
 def wire_tokens(tools: list[dict]) -> int:
     """The estimate for a whole tools/list: the sum over its tools."""
     return sum(tool_tokens(tool) for tool in tools)
 
 
+def model_tokens(tools: list[dict]) -> int:
+    """The estimate for a whole tools/list as the model pays for it: the sum over its tools."""
+    return sum(model_tool_tokens(tool) for tool in tools)
+
+
 def _snapshot(script: str, tools: list[dict], elapsed: float, instructions: str = "") -> dict[str, object]:
+    """One profile's measurement: the whole wire and the part the model pays for."""
     rows = []
     for tool in tools:
-        rows.append({"name": tool.get("name", ""), "tokens": tool_tokens(tool)})
+        rows.append(
+            {"name": tool.get("name", ""), "tokens": tool_tokens(tool), "model_tokens": model_tool_tokens(tool)}
+        )
     rows.sort(key=lambda row: str(row["name"]))
     total = sum(int(row["tokens"]) for row in rows)
+    model_total = sum(int(row["model_tokens"]) for row in rows)
     schema_hash = hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
     return {
         "script": script,
         "tool_count": len(tools),
         "wire_tokens": total,
+        "model_tokens": model_total,
         "instructions_tokens": estimate_tokens(instructions),
         "latency_ms": round(elapsed * 1000, 1),
         "schema_sha256": schema_hash,
@@ -129,16 +162,16 @@ def _check_gate(
     """Compare one snapshot with its baseline entry.
 
     ``gate`` is the CI check mode (``--baseline`` without ``--update-baseline``).
-    There a missing profile, a missing ``wire_tokens`` budget or a missing
-    per-profile ceiling is a failure: a gate that compares against nothing
-    passes any snapshot, however large. Measurement runs and baseline creation
-    keep the permissive reading.
+    There a missing profile, a missing ``wire_tokens`` or ``model_tokens``
+    budget or a missing per-profile ceiling is a failure: a gate that compares
+    against nothing passes any snapshot, however large. Measurement runs and
+    baseline creation keep the permissive reading.
     """
     profiles = baseline.get("profiles", {})
     entry = profiles.get(snapshot["script"]) if isinstance(profiles, dict) else None
     old = entry if isinstance(entry, dict) else {}
     failures: list[str] = []
-    token_delta = None
+    deltas: dict[str, float | None] = {"wire_tokens": None, "model_tokens": None}
     latency_delta = None
     if gate:
         if entry is None:
@@ -147,16 +180,23 @@ def _check_gate(
             budget = old.get("wire_tokens")
             if not (isinstance(budget, (int, float)) and budget > 0):
                 failures.append(f"missing_token_budget:{snapshot['script']}")
+            model_budget = old.get("model_tokens")
+            if not (isinstance(model_budget, (int, float)) and model_budget > 0):
+                failures.append(f"missing_model_token_budget:{snapshot['script']}")
             ceilings = baseline.get("ceilings")
             ceiling = ceilings.get(snapshot["script"]) if isinstance(ceilings, dict) else None
             if not (isinstance(ceiling, (int, float)) and ceiling > 0):
                 failures.append(f"missing_ceiling:{snapshot['script']}")
     if isinstance(old, dict):
-        previous = old.get("wire_tokens")
-        if isinstance(previous, (int, float)) and previous > 0:
-            token_delta = (snapshot["wire_tokens"] - previous) / previous * 100
-            if token_delta > max_regression:
-                failures.append(f"wire_tokens_regression:{token_delta:.2f}%>{max_regression:.2f}%")
+        # Each measure is compared with its own baseline value: the whole wire
+        # can stay flat while the part the model pays for grows.
+        for measure in ("wire_tokens", "model_tokens"):
+            previous = old.get(measure)
+            if isinstance(previous, (int, float)) and previous > 0:
+                delta = (snapshot[measure] - previous) / previous * 100
+                deltas[measure] = delta
+                if delta > max_regression:
+                    failures.append(f"{measure}_regression:{delta:.2f}%>{max_regression:.2f}%")
         previous_latency = old.get("latency_ms")
         if isinstance(previous_latency, (int, float)) and previous_latency > 0:
             latency_delta = snapshot["latency_ms"] - previous_latency
@@ -168,7 +208,8 @@ def _check_gate(
     return {
         "ok": not failures,
         "failures": failures,
-        "token_delta_percent": token_delta,
+        "token_delta_percent": deltas["wire_tokens"],
+        "model_token_delta_percent": deltas["model_tokens"],
         "latency_delta_ms": latency_delta,
         "total_tokens": total_tokens(snapshot),
         "baseline": old,
@@ -245,9 +286,12 @@ def main(argv: list[str]) -> int:
             print(f"  ... {len(rows) - 12} more")
         output_total = sum(row[4] for row in rows)
         instruction_tokens = int(snapshot["instructions_tokens"])
+        model_total = int(snapshot["model_tokens"])
         print(f"\nTOTAL: ~{total} tokens of tools/list, paid on every request")
+        print(f"  model pays             : ~{model_total} of that (name, description, input_schema)")
         print(f"  initialize.instructions: ~{instruction_tokens} (paid once per session)")
         print(f"  session total          : ~{total + instruction_tokens}")
+        print(f"  model session total    : ~{model_total + instruction_tokens}")
         print(f"  output schema share: ~{output_total} ({100.0 * output_total / total if total else 0.0:.0f}%)")
         print(f"  description share  : ~{sum(row[2] for row in rows)}")
         print(f"  input schema share : ~{sum(row[3] for row in rows)}")

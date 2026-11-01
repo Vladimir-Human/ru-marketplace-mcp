@@ -112,8 +112,12 @@ jobs:
       - name: MCP wire-cost baseline
         # Keep the model-facing surface measurable. A schema expansion over the
         # stored baseline is a review signal, not an invisible context-cost
-        # regression. Latency is intentionally reported by the probe but is not
-        # gated because hosted runner load is variable.
+        # regression. Two measures are gated: the whole tools/list
+        # (wire_tokens) and model_tokens, the name/description/input_schema a
+        # provider request actually sends the model, so a description growing
+        # while an output schema shrinks cannot pass. Latency is intentionally
+        # reported by the probe but is not gated because hosted runner load is
+        # variable.
         run: uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp --baseline work/performance/wire-baseline.json --max-token-regression-percent 10
 
       - name: One version, everywhere

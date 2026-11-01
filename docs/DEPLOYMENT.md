@@ -57,8 +57,12 @@ uses the same selected subset.
 
 CI also checks the model-facing wire cost against the committed
 `work/performance/wire-baseline.json` snapshot. The gate allows at most 10%
-growth per profile; update the snapshot deliberately when a tool schema change
-is intended and review the resulting diff.
+growth per profile for each of two measures: `wire_tokens`, the whole
+`tools/list`, and `model_tokens`, the `name`/`description`/`input_schema` a
+provider request actually sends the model (`outputSchema` and annotations stay
+in the client); a baseline entry without either budget fails the check closed.
+Update the snapshot deliberately when a tool schema change is intended and
+review the resulting diff.
 
 ### stdio (default, unchanged)
 
