@@ -77,6 +77,42 @@ def test_coerce_rating_keeps_a_five_denominator_written_in_words():
     assert coerce_rating("4,5 из 5") == pytest.approx(4.5)
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1 299",  # plain space
+        "1\u00a0299",  # no-break space
+        "1\u202f299",  # narrow no-break space
+        "1\u2009299",  # thin space
+        "5 000",  # the count that would fabricate the maximum rating
+        "12 345",  # already out of range on its own; pinned for the rule
+    ],
+)
+def test_coerce_rating_rejects_a_thousands_grouped_count(value):
+    """A rating selector that lands on the review counter reads a grouped
+    count, not a rating. The old count rule needed letters, so the bare
+    '1 299' came back as a fabricated in-range 1.0 (audit 2026-11-01); the
+    space, not the letters, is what betrays the count."""
+    assert coerce_rating(value) is None
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("4,9", 4.9),
+        ("4.9", 4.9),
+        ("4.9/5", 4.9),
+        ("4,9 из 5", 4.9),
+        ("5", 5.0),
+        (" 4.7 ", 4.7),
+        (4.9, 4.9),
+    ],
+)
+def test_coerce_rating_keeps_ordinary_ratings(value, expected):
+    """The count guard must not eat the shapes a real rating arrives in."""
+    assert coerce_rating(value) == pytest.approx(expected)
+
+
 # --------------------------------------------------------------------------- #
 # coerce_price — never 0.0, never negative
 # --------------------------------------------------------------------------- #

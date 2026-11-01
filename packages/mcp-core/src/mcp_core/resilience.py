@@ -282,6 +282,13 @@ def coerce_rating(value: Any) -> float | None:
     Audit 2026-11-01 (CONFIRMED): the denominator was recognised only through
     '/', so the Russian '4.5 из 10' passed as 4.5. 'из N' now joins '/N'.
 
+    Audit 2026-11-01 (CONFIRMED): the count rule above needed letters, so a
+    bare thousands-grouped count ('1 299' — plain, no-break U+00A0, narrow
+    no-break U+202F or thin U+2009 space) reached the number extraction and
+    came back as a fabricated in-range rating (1.0). A space-grouped count is
+    now None with or without letters; letter-free comma text keeps its old
+    reading.
+
     Audit 2026-08-07 (wave of cycles 24-30): json.loads admits
     arbitrary-precision ints, and float() raises OverflowError past the ceiling;
     such a value is not a rating — degrade to None like coerce_price does,
@@ -303,6 +310,14 @@ def coerce_rating(value: Any) -> float | None:
             return None
         # A count-like blob ("4,500 reviews", "1 234 отзыва") is not a rating.
         if re.search(r"[A-Za-zА-Яа-я]", s) and re.search(r"\d[ ,]\d{3}\b", s):
+            return None
+        # A thousands-grouped count ("1 299", "12 345") is not a rating even
+        # without letters: a rating selector that lands on the review counter
+        # must not fabricate an in-range rating out of the first group. The
+        # space, not the letters, is what betrays the count — plain, no-break
+        # (U+00A0), narrow no-break (U+202F) and thin (U+2009) alike. A comma
+        # without letters keeps its old reading ('4,9' stays a rating).
+        if re.search(r"\d[ \u00a0\u202f\u2009]\d{3}\b", s):
             return None
         m = re.search(r"\d+[.,]?\d*", s)
         if not m:
