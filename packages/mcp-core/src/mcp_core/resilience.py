@@ -39,6 +39,7 @@ step, not something already in place.
 # widget_prefixes: Strip volatile numeric widget suffixes.
 # shape_signature: Fingerprint bounded paths/types independently of values.
 # diff_keys: Return sorted missing and added structural keys.
+# shape_drift_warning: One compact runtime warning when a required key family vanished.
 # selfcheck_entry: Build healthy/drift/inconclusive sub-check metadata.
 # selfcheck_result: Aggregate verdicts and inject omitted required checks.
 # flatten_text: Reduce display fields to usable scalar text, never container repr.
@@ -377,10 +378,11 @@ def attach_meta(result: dict, warnings: list[str], *, source: str) -> dict:
 
 
 # --------------------------------------------------------------------------
-# Structural drift detection for golden-fixture self-checks.
-# Compares the SHAPE (key sets / widget-name prefixes) of a live payload to a
-# frozen baseline, ignoring volatile values. Catches "webPrice widget vanished"
-# or "new required key appeared" before it silently breaks a parser.
+# Structural drift detection for golden-fixture self-checks and for the
+# runtime data path (shape_drift_warning). Compares the SHAPE (key sets /
+# widget-name prefixes) of a live payload to a frozen baseline, ignoring
+# volatile values. Catches "webPrice widget vanished" or "new required key
+# appeared" before it silently breaks a parser.
 # --------------------------------------------------------------------------
 
 
@@ -463,6 +465,45 @@ def diff_keys(expected: Iterable[str], actual: Iterable[str]) -> dict[str, list[
         "missing": sorted(exp - act),
         "added": sorted(act - exp),
     }
+
+
+def shape_drift_warning(
+    payload: Any,
+    required_families: Iterable[Iterable[str]],
+    *,
+    source: str,
+) -> str | None:
+    """One compact warning when a live payload lost a required key family.
+
+    The runtime companion to the selfcheck's structural comparison: the
+    tool's own response carries ``shape_drift: <source>: missing <family>``
+    in its meta warnings when a parser-critical family of keys vanished, so
+    the agent sees drift without a human running ``doctor``.
+    ``required_families`` is the connector's registry of alias families
+    (a flat required-key list is a list of one-member families); a rename
+    WITHIN a family is tolerated, the loss of every member is drift. A
+    family member is PRESENT regardless of its type — ``price:null`` is a
+    page without a price, not a page that lost its price field.
+
+    Comparison only, so the normal data path stays cheap: no fetch, no
+    validation, no state. A payload whose families all survive costs one
+    bounded signature walk and returns None; the first missing family is
+    named and the rest of the walk stops there.
+    """
+    signature = shape_signature(payload)
+    for family in required_families:
+        paths = tuple(family)
+        # A member counts when a signature entry EXTENDS one of its paths:
+        # entries continue a path with ':type', a '[...] array segment or a
+        # '.nested' key, so an entry like 'items[].id:int' or
+        # 'items[].price_texts.attached[]:str' matches, while 'identifier'
+        # does not extend 'id'.
+        present = any(
+            entry.startswith(f"{path}{sep}") for path in paths for entry in signature for sep in (":", "[", ".")
+        )
+        if not present:
+            return f"shape_drift: {source}: missing {'/'.join(paths)}"
+    return None
 
 
 # --------------------------------------------------------------------------
