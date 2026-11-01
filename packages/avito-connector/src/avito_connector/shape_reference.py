@@ -17,6 +17,10 @@ Envelope note, 2026-08-29: Avito moved the listings array from the payload's
 top level into ``payload.catalog.items[]`` — the reference below was
 re-fingerprinted from a fresh capture that carries the new envelope, and the
 required families accept BOTH shapes so an A/B rollout cannot flip the canary.
+Third envelope, 2026-11-01 (audit): ``_parse_search_items`` also reads
+``payload.data.items[]``, so the families carry that alias set too — a payload
+served only through ``data.items`` parsed fine while every family read as
+missing, which is a false drift alarm, not a health signal.
 
 Never edit by hand: regenerate by re-fingerprinting a fresh capture.
 """
@@ -73,9 +77,10 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
 
 # Key families the parser reads, as alternatives: the parser binds through
 # every alias, so drift means the WHOLE family vanished, not a single key.
-# Each family accepts both envelopes — the pre-2026-08 top-level items[] and
-# the current catalog.items[] — because the parser already binds either way,
-# and the canary must not cry drift when a client is served the old shape.
+# Each family accepts all three envelopes — the pre-2026-08 top-level items[],
+# the 2026-08 catalog.items[] and the data.items[] _parse_search_items also
+# reads — because the parser already binds any of them, and the canary must
+# not cry drift when a client is served another shape.
 SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
     (
         "catalog.items[].id",
@@ -84,12 +89,17 @@ SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
         "items[].id",
         "items[].itemId",
         "items[].item_id",
+        "data.items[].id",
+        "data.items[].itemId",
+        "data.items[].item_id",
     ),
     (
         "catalog.items[].title",
         "catalog.items[].name",
         "items[].title",
         "items[].name",
+        "data.items[].title",
+        "data.items[].name",
     ),
     (
         "catalog.items[].price",
@@ -102,6 +112,11 @@ SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (
         "items[].price_rub",
         "items[].priceDetailed.value",
         "items[].priceDetailed.price",
+        "data.items[].price",
+        "data.items[].priceRub",
+        "data.items[].price_rub",
+        "data.items[].priceDetailed.value",
+        "data.items[].priceDetailed.price",
     ),
 )
 

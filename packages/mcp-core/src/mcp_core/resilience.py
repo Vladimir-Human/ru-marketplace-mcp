@@ -621,6 +621,31 @@ def diff_keys(expected: Iterable[str], actual: Iterable[str]) -> dict[str, list[
     }
 
 
+def _emptied_container(path: str, entries: set[str]) -> bool:
+    """True when the path descends into a NESTED array that is empty everywhere.
+
+    The walker writes an empty list as ``<array path>:empty_array`` at the
+    array's own path (``products[].sizes:empty_array``), so the elements a
+    member below it looks for (``products[].sizes[].price``) do not exist:
+    the container being empty is a data fact — a page of delisted products —
+    not a key that vanished. It stays narrow on purpose:
+    - the top-level envelope (the first ``[]``) never counts: a zero-item
+      payload is the call site's business, and an empty sibling envelope
+      (``items: []`` next to a filled ``goods[]``) must not hide drift there;
+    - the signature merges elements, so ``:empty_array`` next to any
+      ``<container>[]`` entry means some elements are filled: a page mixing
+      delisted products and sizes that lost the key still warns;
+    - an ``:empty_object`` element is not an empty container.
+    """
+    start = path.find("[]", path.find("[]") + 2) if "[]" in path else -1
+    while start != -1:
+        container = path[:start]
+        if f"{container}:empty_array" in entries and not any(e.startswith(f"{container}[]") for e in entries):
+            return True
+        start = path.find("[]", start + 2)
+    return False
+
+
 def shape_drift_warning(
     payload: Any,
     required_families: Iterable[Iterable[str]],
@@ -637,14 +662,16 @@ def shape_drift_warning(
     (a flat required-key list is a list of one-member families); a rename
     WITHIN a family is tolerated, the loss of every member is drift. A
     family member is PRESENT regardless of its type — ``price:null`` is a
-    page without a price, not a page that lost its price field.
+    page without a price, not a page that lost its price field. A member
+    below an array the payload shows as empty (``sizes: []``) is present
+    too: with no elements there is no key to lose (``_emptied_container``).
 
     Comparison only, so the normal data path stays cheap: no fetch, no
     validation, no state. A payload whose families all survive costs one
     bounded signature walk and returns None; the first missing family is
     named and the rest of the walk stops there.
     """
-    signature = shape_signature(payload)
+    entries = set(shape_signature(payload))
     for family in required_families:
         paths = tuple(family)
         # A member counts when a signature entry EXTENDS one of its paths:
@@ -653,8 +680,8 @@ def shape_drift_warning(
         # 'items[].price_texts.attached[]:str' matches, while 'identifier'
         # does not extend 'id'.
         present = any(
-            entry.startswith(f"{path}{sep}") for path in paths for entry in signature for sep in (":", "[", ".")
-        )
+            entry.startswith(f"{path}{sep}") for path in paths for entry in entries for sep in (":", "[", ".")
+        ) or any(_emptied_container(path, entries) for path in paths)
         if not present:
             return f"shape_drift: {source}: missing {'/'.join(paths)}"
     return None
