@@ -27,6 +27,29 @@
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
 
+### Security
+
+- `avito_card` открывает страницы в залогиненном Chrome оператора, поэтому
+  полный URL принимается только с путём страницы объявления — `/<id>`,
+  `/<slug>_<id>` или `/<город>/<категория>/<slug>_<id>` — и открывается ровно
+  этот путь, без query и фрагмента. Путь вида `/<город>/<категория>/…` с
+  первым сегментом из служебных маршрутов Avito (`api`, `profile`, `account` и
+  т. п.) тоже отклоняется. Раньше путь из входного URL сохранялся
+  целиком, и путь с «хвостом» идентификатора после личного префикса (например,
+  `/profile/x_1234567890`) уходил в браузер оператора. Теперь любой другой
+  путь (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, путь
+  после идентификатора) отклоняется как `bad_request` до навигации.
+
+- `avito_card` opens pages in the operator's logged-in Chrome, so a full URL
+  is accepted only with an item-page path — `/<id>`, `/<slug>_<id>` or
+  `/<city>/<category>/<slug>_<id>` — and exactly that path is opened, without
+  query or fragment. A `/<city>/<category>/…` path whose first segment is one of
+  Avito's own routes (`api`, `profile`, `account` and the like) is refused too. Previously the input URL's path was kept as-is, so a
+  path with an item-id tail after a personal prefix (for example,
+  `/profile/x_1234567890`) reached the operator's browser. Any other path
+  (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, a path
+  continuing past the id) is now refused as `bad_request` before navigation.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).

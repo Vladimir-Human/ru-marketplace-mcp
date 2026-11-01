@@ -120,6 +120,9 @@
   <requirement id="R-CLI-INSTALL-UVX" source="Owner decision 2026-10-30 (DX wave 2, PR 6)">
     When _unified_entry has no checkout, UV is set, and sys.prefix resolves inside UV_CACHE_DIR (or the directory returned by the absolute UV binary's cache dir command), emit the absolute UV command with args tool run --from ru-marketplace-mcp==the package __version__ and the selected profile console script. Do not persist a temporary uv-cache console-script path. Explain that the entry runs a pinned release through uv and that a newer release needs install client --write --force from that release. Keep checkout and ordinary installed-console behavior and install/setup flags unchanged. Test through install/setup with fake UV, prefix, cache discovery, PATH/home/config paths; tests never touch real client configs or home folders. Run pytest with no cacheprovider and a workspace-local basetemp, and delete its temporary/cache-file artifacts at the end without helper plugins or ACL workarounds.
   </requirement>
+  <requirement id="R-AVITO-ITEM-PATH" source="Security task brief, 2026-11-01">
+    avito_card opens pages in the operator's logged-in Chrome, so a full-URL input is accepted only when its path is an item-page shape — a bare /digits path, a /slug_digits path or a /city/category/slug_digits path — and the navigated URL is rebuilt from the validated pieces without query or fragment; a three-segment path whose first segment is an Avito personal or service route (api, profile, account, orders and the like) is refused, since an item-shaped tail under it is not an item page.
+  </requirement>
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
   </rule>
