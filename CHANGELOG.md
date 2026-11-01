@@ -79,6 +79,19 @@
   repeating the CDP readiness wait. A success (also `browser start` /
   `start_browser`) clears the memory, and an explicit start always tries for
   real.
+- `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
+  цена с WB Кошельком, по подписке или с другим явным условием не выбирается
+  в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется
+  она; иначе `price_rub` остаётся `null`, а исходная сумма — в `price_native`.
+  Предупреждения называют условие и исключённую сумму, а сумму с WB Кошельком —
+  и рядом с обычной ценой. Зачёркнутая цена не подставляется вместо обычной.
+
+- `compare_prices` preserves the price kind in the new optional `price_kind`:
+  WB Wallet, subscription and other explicitly conditional prices cannot become
+  `cheapest` or `cheapest_comparable`. The regular price ranks when available;
+  otherwise `price_rub` stays `null` and the quoted amount remains in `price_native`.
+  Warnings name the condition and excluded amount, and a WB Wallet amount also
+  next to a regular price. A struck-through price is never substituted for the regular one.
 - Гейт стоимости MCP-схем падает закрыто: в режиме проверки (`--baseline` без
   `--update-baseline`) отсутствующий или нечитаемый файл базлайна и проверяемый
   профиль без бюджета `wire_tokens` — теперь ошибка с понятным сообщением, а не

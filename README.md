@@ -91,7 +91,7 @@ uvx ru-marketplace-mcp setup
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 2623 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 2634 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -549,6 +549,10 @@ compare_prices("кроссовки мужские")
 Маркетплейсы опрашиваются параллельно, и каждый отчитывается сам за себя. Если один
 заблокирован, сравнение не рушится: `complete: false` вместе с `source_outcomes`
 покажет, что именно вы видите. Подписочные цены в ранжировании не участвуют.
+Цена с WB Кошельком и другие явно условные цены тоже не выбираются в `cheapest`
+или `cheapest_comparable`: при наличии обычной цены ранжируется она. `price_kind`
+сохраняет тип цены (`regular`, `wallet`, `subscription`); `null` — источник его не
+сообщил. `conditional_price: …` в `warnings` называет условие и исключённую сумму.
 Повторы по (источник, id товара, id варианта) схлопываются. Разные SKU Яндекса
 сохраняются даже внутри одной товарной семьи. Наличие в сравнении трёхзначное:
 `true` — подтверждено, `false` — подтверждено отсутствие, `null` — неизвестно.
@@ -557,7 +561,9 @@ compare_prices("кроссовки мужские")
 
 У каждого предложения есть `currency` (строчный ISO-код, по умолчанию `rub`) и
 `price_native` — цена в этой валюте, как её показывает маркетплейс. Для российских
-источников она совпадает с `price_rub`; у Taobao в ней лежит цена в юанях, которую
+источников она совпадает с `price_rub`, если известна обычная цена; если известна
+только условная, её сумма остаётся в `price_native`, а `price_rub` — `null`.
+У Taobao в ней лежит цена в юанях, которую
 `price_rub` намеренно оставляет пустой. Раньше юаневую цену забирали и молча
 выбрасывали, и строка Taobao приходила с пустой ценой без намёка, что цена вообще
 есть. Теперь юань виден, но в рублёвом ранжировании по-прежнему не участвует: в
@@ -678,7 +684,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2623 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 2634 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -744,7 +750,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 2623 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 2634 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -843,7 +849,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2623 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 2634 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest path is the
@@ -1164,6 +1170,10 @@ compare_prices("кроссовки мужские")
 Sources are queried concurrently and each reports its own outcome. One marketplace
 being blocked never sinks the comparison: `complete: false` plus `source_outcomes`
 tells you exactly what you are looking at. Subscription prices never win the ranking.
+WB Wallet and other explicitly conditional prices cannot become `cheapest` or
+`cheapest_comparable` either; when a regular price is available, that price ranks.
+`price_kind` retains the kind (`regular`, `wallet`, `subscription`); `null` means
+unreported. A `conditional_price: …` warning names the condition and excluded amount.
 Repeats matching on (source, product id, variant id) are collapsed. Distinct Yandex
 SKUs remain visible within one product family. Comparison stock is tri-state:
 `true` means confirmed, `false` means unavailable, and `null` means unknown.
@@ -1172,7 +1182,8 @@ and ambiguous Ozon labels remain visible at the end of the list.
 
 Every offer carries `currency` (lowercase ISO code, default `rub`) and `price_native`,
 the price in that currency as the marketplace quotes it. For Russian sources it mirrors
-`price_rub`; for Taobao it holds the yuan price that `price_rub` deliberately leaves
+an available everyday `price_rub`; if only a conditional price is known, that amount
+stays in `price_native` while `price_rub` is null. For Taobao it holds the yuan price that `price_rub` deliberately leaves
 null. That yuan price used to be fetched and silently thrown away, so a Taobao row
 showed a blank price with no sign a real one existed. Now the yuan is reported but
 still never ranked against roubles: a `foreign_currency: …` warning lists how many
@@ -1305,7 +1316,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 2623 offline tests
+uv run pytest -q -m "not live and not cdp"    # 2634 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1367,7 +1378,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 2623 offline
+are confidently wrong, so the project is arranged around verification: 2634 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.
