@@ -850,7 +850,7 @@ async def cian_search(
             # rating off its scale is the same selector drift the goods
             # connectors guard against. Cian's price_unit (total/month/day)
             # stays out of scope — validate_offer reads values, not semantics.
-            warnings.extend(R.validate_items(rows, require_title=True))
+            warnings.extend(R.validate_items(rows, require_title=True, absent_price="no_prices_on_page"))
         items = [
             CianSearchItemOut(**{**row, "metro": CianMetroOut(**row["metro"][0]) if row["metro"] else None})
             for row in rows

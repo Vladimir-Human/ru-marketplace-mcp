@@ -988,7 +988,7 @@ async def avito_search(
             # shared drift alarm; without this call they only fire in WB and
             # Ozon, while every other connector's fabricated price reaches the
             # agent as a plain field.
-            warnings.extend(R.validate_items(items_raw, require_title=True))
+            warnings.extend(R.validate_items(items_raw, require_title=True, absent_price="no_prices_on_page"))
             # The selfcheck compares this payload against the captured family
             # registry; the tool's own answer now carries the same drift
             # signal, so an agent does not need a human running doctor to

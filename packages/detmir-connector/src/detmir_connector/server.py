@@ -539,7 +539,9 @@ async def detmir_category(
     else:
         # Per-offer invariants for the whole page: one fabricated or absent price
         # is a listing, every price gone is the category payload drifting.
-        warnings.extend(R.validate_items([p.model_dump() for p in products], require_title=True))
+        warnings.extend(
+            R.validate_items([p.model_dump() for p in products], require_title=True, absent_price="no_prices_on_page")
+        )
 
     log_event("detmir_category.done", alias=slug, returned=len(products), total=total)
     return DetmirListResponse(
