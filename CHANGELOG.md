@@ -396,6 +396,18 @@
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
 
+- `coerce_rating` больше не выдаёт рейтинг из счётчика отзывов: строка,
+  содержащая число, сгруппированное по тысячам пробелом (обычным, неразрывным
+  U+00A0, узким неразрывным U+202F или тонким U+2009), теперь даёт `None` и
+  с буквами, и без них. Раньше правило требовало букв, поэтому голое
+  «1 299» превращалось в выдуманный рейтинг 1.0. Текст без букв с запятой не
+  тронут: «4,9» остаётся рейтингом, а «4,500» читается как раньше.
+- `coerce_rating` no longer turns a review counter into a rating: a string
+  containing a number grouped by thousands with a space (plain, no-break
+  U+00A0, narrow no-break U+202F or thin U+2009) is now None with or without
+  letters. The old rule required letters, so a bare '1 299' came back as a
+  fabricated 1.0 rating. Letter-free comma text is untouched: '4,9' stays a
+  rating and '4,500' keeps its old reading.
 - `server.json` получил потерянную строку cian: список серверов для реестра
   MCP-серверов перечислял четырнадцать площадок из пятнадцати, и cian в нём
   отсутствовал. Теперь этот список сверяется с реестром источников тестом.
