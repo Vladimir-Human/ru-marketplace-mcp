@@ -413,8 +413,10 @@ jobs:
         # Informational only, and it runs AFTER the doctor alarm on purpose:
         # both steps share one live-budget ledger (see the step above), and the
         # WB tests here would otherwise starve the doctor's wb_selfcheck of
-        # WB's 8 requests per run. A blocked source is information, not a build
-        # failure, so we do not let a red assertion abort the job — but we DO
+        # WB's 8 requests per run. The price is paid here instead: a WB test
+        # whose request the spent budget refuses is reported SKIPPED with the
+        # budget's reason (root conftest.py), not failed as "drift or block".
+        # A blocked source is information, not a build failure, so we do not let a red assertion abort the job — but we DO
         # capture the exact pytest exit code and hand it to the summary step,
         # which is what makes the outcome honest instead of a blanket green.
         # Only wb, detmir and yandex carry @pytest.mark.live tests (3 of the 14
@@ -426,7 +428,7 @@ jobs:
         # (crash/collection failure) that is a genuine problem.
         run: |
           set +e
-          uv run pytest -q -m "live" --tb=short 2>&1 | tee live.log
+          uv run pytest -q -m "live" --tb=short -rs 2>&1 | tee live.log
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Summarise canary outcome
@@ -449,7 +451,13 @@ jobs:
             echo ""
             case "$RC" in
               0)
-                echo "### Result: PASS — all live tests passed (endpoints reachable and healthy)." ;;
+                # A recognised block and a live budget the doctor alarm above
+                # already spent both skip; a run with skips did not "all pass".
+                if grep -q " skipped" live.log; then
+                  echo "### Result: PASS with skips — no live test failed; the skipped ones met a recognised block or a live budget the doctor alarm had already spent (reasons in the log)."
+                else
+                  echo "### Result: PASS — all live tests passed (endpoints reachable and healthy)."
+                fi ;;
               1)
                 echo "### Result: FAILED — a live test failed: parser drift, or a block the selfcheck did not recognise (a recognised block skips). This step cannot tell them apart; the Doctor drift alarm step above can." ;;
               5)

@@ -246,7 +246,10 @@ _DECOY_RE = re.compile("|".join(re.escape(marker) for marker in DECOY_MARKERS), 
 # ambiguous — the price-path half of coerce_int's magnitude-letter rule. A
 # currency word ('руб'), a per-unit slash ('1 999 ₽/м') and a word that only
 # starts with such a letter ('129 990 Купить', 'KZT') are not markers.
-_MAGNITUDE_SUFFIX_RE = re.compile(r"\s*(?:万|千|百|亿|тыс|млн|млрд|трлн|[KkMmBbКкМм](?![A-Za-zА-Яа-яЁё]))")
+# Case-blind: '15 ТЫС. ₽' is the same 15 000.
+_MAGNITUDE_SUFFIX_RE = re.compile(
+    r"\s*(?:万|千|百|亿|тыс|млн|млрд|трлн|[KkMmBbКкМм](?![A-Za-zА-Яа-яЁё]))", re.IGNORECASE
+)
 
 
 def _parse_money_string(s: str) -> float | None:

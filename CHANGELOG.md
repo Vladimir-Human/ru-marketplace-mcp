@@ -395,6 +395,14 @@
   (`/profile`, `/account`, `/orders`, `/favorites`, `/api/...`, a path
   continuing past the id) is now refused as `bad_request` before navigation.
 ### Fixed
+- Ночная канарейка больше не падает с ложным «дрейф или блок», когда бюджет
+  живых запросов WB уже потратил шаг doctor (он теперь идёт первым на том же
+  журнале): тест, запрос которого бюджет отказал, корневой `conftest.py`
+  отмечает пропущенным с причиной от бюджета. Канарейка печатает причины
+  пропусков, а сводка при пропусках пишет «PASS with skips», а не «все тесты
+  прошли». Лимиты бюджета не менялись.
+- `coerce_price` отказывает и на множителях заглавными буквами (`15 ТЫС. ₽`,
+  `2 Млн ₽`): раньше ловилось только `тыс`/`млн` строчными.
 
 - `avito_card` больше не принимает путь товара с обратным слешем или знаком
   процента. `https://www.avito.ru/profile\x_1234567890` и
@@ -502,6 +510,14 @@
   4. Двойка у doctor'а значит «источники не удалось проверить, остаёмся
   зелёными» — правильно для заблокированной площадки, но сломанный вызов
   `live_check` не должен прятаться в том же коде.
+- The nightly canary no longer fails with a false "drift or block" when the
+  doctor step (now first on the same ledger) has already spent WB's live
+  budget: the root `conftest.py` reports a test whose request the budget
+  refused as skipped with the budget's reason. The canary prints skip reasons
+  and its summary says "PASS with skips" instead of "all live tests passed".
+  The budget caps are unchanged.
+- `coerce_price` refuses magnitude words in any case (`15 ТЫС. ₽`, `2 Млн ₽`);
+  only lowercase `тыс`/`млн` were caught before.
 - WB shape drift no longer fires on the legitimate page whose products are all
   delisted: every product carries `"sizes": []` and the price family lives
   inside `sizes[]`, so the shared matcher

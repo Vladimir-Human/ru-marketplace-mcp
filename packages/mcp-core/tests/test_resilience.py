@@ -218,7 +218,7 @@ def test_price_from_texts_skips_a_decoy_and_takes_the_real_price():
     assert price_from_texts("в 1356 пунктов", "58 999 ₽") == pytest.approx(58999.0)
 
 
-@pytest.mark.parametrize("value", ["12万", "1.2万", "1.2K", "15 тыс. ₽"])
+@pytest.mark.parametrize("value", ["12万", "1.2万", "1.2K", "15 тыс. ₽", "15 ТЫС. ₽", "2 Млн ₽"])
 def test_a_magnitude_suffix_is_not_a_price(value):
     """R-NO-FABRICATION: coerce_int refuses a magnitude suffix, the price path
     ignored it — '12万' read as 12.0, '1.2K' as 1.2. The digits alone understate
