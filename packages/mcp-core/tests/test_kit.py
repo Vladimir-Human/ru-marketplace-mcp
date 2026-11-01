@@ -322,3 +322,43 @@ async def test_render_json_rejects_a_non_object_or_non_json_payload(monkeypatch)
             wait=_no_wait,
             max_body_bytes=1024,
         )
+
+
+async def test_render_json_refusals_are_json_errors(monkeypatch):
+    """Every render_json refusal must carry the shared error JSON the agent reads
+    — the code and the retryable flag — not the bare message the ToolError used
+    to hold. The oversized/missing extract is a transport outcome, the non-object
+    payload is parser drift."""
+    _install_fake_open_page(monkeypatch, "x" * 2048)
+
+    with pytest.raises(ToolError) as excinfo:
+        await render_json(
+            "https://example.test/search",
+            "() => 1",
+            8000,
+            lock=_OrderLock([]),
+            wait=_no_wait,
+            max_body_bytes=1024,
+        )
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == ErrorCode.TRANSPORT_DOWN
+    assert error["retryable"] is True
+    assert "over the body cap" in error["message"]
+
+    _install_fake_open_page(monkeypatch, json.dumps([1, 2]))
+
+    with pytest.raises(ToolError) as excinfo:
+        await render_json(
+            "https://example.test/search",
+            "() => 1",
+            8000,
+            lock=_OrderLock([]),
+            wait=_no_wait,
+            max_body_bytes=1024,
+        )
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == ErrorCode.PARSER_DRIFT
+    assert error["retryable"] is False
+    assert error["message"] == "page extractor returned a non-object payload"

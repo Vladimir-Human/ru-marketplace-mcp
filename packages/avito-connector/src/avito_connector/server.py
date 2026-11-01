@@ -150,8 +150,9 @@ _ITEM_ID_RE = re.compile(r"_(\d{6,})(?:\?|/|$)")
 # Paths a full URL may keep: an item-page shape only — /<id>, /<slug>_<id> or
 # /<city>/<category>/<slug>_<id>, the shapes of every captured item URL and
 # fixture. Everything else, including a one-segment personal prefix with an
-# item-like tail (/profile/x_1234567890) and a path continuing past the id,
-# never reaches the operator's logged-in browser.
+# item-like tail (/profile/x_1234567890), a path continuing past the id and any
+# path carrying a backslash or a percent escape (a separator to the browser,
+# plain text to this regex), never reaches the operator's logged-in browser.
 _ITEM_URL_PATH_RE = re.compile(r"/(?:(?:[^/]+/){2})?(?:[^/]+_)?(\d{6,})/?")
 # The /<city>/<category>/ shape cannot tell a city slug from a route prefix by
 # form alone, so first segments that are Avito's own personal or service routes
@@ -1079,9 +1080,17 @@ async def avito_card(
             # logged-in browser: the path must be an item page, never an
             # arbitrary avito.ru route, so only the item-page shapes above
             # survive here (R-INPUT-TRUST).
+            #
+            # An item path is a plain ASCII slug: a backslash or a percent
+            # escape in it would let the browser read a different path than
+            # this check does — Chromium treats "\" as "/" in http(s) URLs, and
+            # a server decodes "%2F"/"%5C" into a separator — so
+            # /profile\x_1234567890 and /profile%2Fx_1234567890 would open the
+            # personal route the check exists to refuse (R-AVITO-ITEM-PATH).
+            unsafe_path = "\\" in parts.path or "%" in parts.path
             path_match = _ITEM_URL_PATH_RE.fullmatch(parts.path)
             root = parts.path.strip("/").split("/", 1)[0].lower()
-            if path_match is None or root in _NON_ITEM_ROOTS:
+            if unsafe_path or path_match is None or root in _NON_ITEM_ROOTS:
                 raise_tool_error(
                     BadRequestError(
                         f"URL path is not an Avito item page: {item_id_or_url!r}; "

@@ -67,6 +67,7 @@ from mcp_core.cache import TTLCache
 from mcp_core.dom import JS_HELPERS, title_from_tile
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     ParserDriftError,
     ToolError,
     TransportDownError,
@@ -171,7 +172,10 @@ def _is_punish(payload: dict[str, Any]) -> bool:
     return bool(payload.get("punish")) or bool(payload.get("url") and "punish" in str(payload["url"]))
 
 
-def _challenge_error(detail: str = "") -> TransportDownError:
+def _challenge_error(detail: str = "") -> ChallengeRequiredError:
+    # A human must pass x5sec, so this is challenge_required (retryable_now
+    # false), as for Taobao's x5sec (R-CHALLENGE-ACTION). There is no
+    # `marketplace-mcp unblock aliexpress`, so the manual step is spelled out.
     message = (
         "AliExpress challenged the session (x5sec). Open aliexpress.ru in the "
         "scraping-profile Chrome, pass the check by hand, then retry; the "
@@ -182,7 +186,15 @@ def _challenge_error(detail: str = "") -> TransportDownError:
         message += f" {hint}"
     if detail:
         message += f" Detail: {detail[:160]}"
-    return TransportDownError(message, status_code=403)
+    return ChallengeRequiredError(
+        message,
+        provider="aliexpress",
+        user_action=(
+            "Open aliexpress.ru in the scraping-profile Chrome (run `marketplace-mcp browser show` "
+            "if the window is off-screen) and have the user pass the check there. Then call this "
+            "tool again after the user confirms it is done."
+        ),
+    )
 
 
 # --------------------------------------------------------------- search JS ----
@@ -386,13 +398,13 @@ async def _cdp_render_search(url: str, ctx: Context | None) -> dict[str, Any]:
 
 def _unwrap_extract(raw: Any, what: str) -> dict[str, Any]:
     if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
-        raise ToolError(TransportDownError("extracted page data missing or over the body cap"))
+        raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ToolError(ParserDriftError(f"non-JSON {what} extract; preview: {str(raw)[:200]}")) from exc
+    except json.JSONDecodeError:
+        raise_tool_error(ParserDriftError(f"non-JSON {what} extract; preview: {str(raw)[:200]}"))
     if not isinstance(data, dict):
-        raise ToolError(ParserDriftError(f"{what} extractor returned a non-object payload"))
+        raise_tool_error(ParserDriftError(f"{what} extractor returned a non-object payload"))
     return data
 
 
@@ -416,7 +428,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
             # that this transport could neither identify nor clean up.
             context = getattr(page, "context", None)
             if context is None:
-                raise ToolError(
+                raise_tool_error(
                     TransportDownError(
                         "aliexpress_card needs the Playwright-managed CDP page (tab-hopping); "
                         "the raw-CDP fallback carries no page context. Run with the default transport."
@@ -440,7 +452,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
             listen = getattr(page, "on", None)
             unlisten = getattr(page, "remove_listener", None)
             if not callable(listen) or not callable(unlisten):
-                raise ToolError(TransportDownError("aliexpress_card needs Playwright popup events"))
+                raise_tool_error(TransportDownError("aliexpress_card needs Playwright popup events"))
             listen("popup", observe_popup)
 
             async def collect_owned() -> None:
@@ -486,7 +498,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                 )
                 opened = await asyncio.wait_for(page.evaluate(opener), timeout=10.0)
                 if not isinstance(opened, str) or "opened" not in opened:
-                    raise ToolError(TransportDownError(f"could not open the item tab ({opened})"))
+                    raise_tool_error(TransportDownError(f"could not open the item tab ({opened})"))
                 target = None
                 for _ in range(20):
                     await asyncio.sleep(1)
@@ -502,7 +514,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                         break
                 if target is None:
                     # No delivered item is a transport outcome, not a proven refusal.
-                    raise ToolError(
+                    raise_tool_error(
                         TransportDownError(
                             "the item tab never materialised (popup blocked, closed, or challenged); "
                             "open aliexpress.ru in the scraping profile and retry — this is not a parser failure"
@@ -527,11 +539,11 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                         pass
                     await asyncio.sleep(1)
                 if raw is None:
-                    raise ToolError(TransportDownError("item tab produced no extractable content"))
+                    raise_tool_error(TransportDownError("item tab produced no extractable content"))
                 data = _unwrap_extract(raw, "card")
                 if _is_punish(data):
                     _pacer.record_refusal()
-                    raise ToolError(_challenge_error("the item tab opened onto an x5sec challenge"))
+                    raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
                 return data
             finally:
                 task = asyncio.create_task(cleanup())

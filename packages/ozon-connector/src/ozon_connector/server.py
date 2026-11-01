@@ -522,7 +522,7 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
             await ctx.debug("Ozon Tier-1 403 (Cloudflare __cf_bm); trying CDP")
     except Exception as exc:
         if ctx:
-            await ctx.debug(f"Ozon Tier-1 exception: {exc}; trying CDP")
+            await ctx.debug(_redact(f"Ozon Tier-1 exception: {exc}; trying CDP"))
 
     try:
         status, body = await _cdp_fetch_json(api_url, ctx)
@@ -931,14 +931,14 @@ async def _ozon_reviews_impl(
                 )
             partial = True
             stop_reason = "all_tiers_failed"
-            last_error = {"type": "all_tiers_failed", "message": body[:300]}
+            last_error = {"type": "all_tiers_failed", "message": _redact(body[:300])}
             break
         if status_code == 403:
             if not collected:
                 raise_tool_error(_ozon_blocked_error(tier, body))
             partial = True
             stop_reason = "blocked"
-            last_error = {"type": "blocked", "code": 403, "tier": tier, "message": body[:200]}
+            last_error = {"type": "blocked", "code": 403, "tier": tier, "message": _redact(body[:200])}
             break
         if status_code != 200:
             if not collected:
@@ -950,7 +950,7 @@ async def _ozon_reviews_impl(
                 )
             partial = True
             stop_reason = "http"
-            last_error = {"type": "http", "code": status_code, "tier": tier, "preview": body[:200]}
+            last_error = {"type": "http", "code": status_code, "tier": tier, "preview": _redact(body[:200])}
             break
         try:
             payload = json.loads(body)
@@ -959,7 +959,7 @@ async def _ozon_reviews_impl(
                 raise_tool_error(ParserDriftError(f"non-JSON response body via {tier}; preview: {body[:200]}"))
             partial = True
             stop_reason = "parse"
-            last_error = {"type": "parse", "tier": tier, "preview": body[:200]}
+            last_error = {"type": "parse", "tier": tier, "preview": _redact(body[:200])}
             break
         if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates"), dict):
             if not collected:
