@@ -1,17 +1,21 @@
 # START_MODULE_CONTRACT
-# PURPOSE: Scrub recognized credentials from error text and diagnostic URLs.
+# PURPOSE: Scrub recognized credentials and secret env var values from error text, diagnostics and JSON-shaped values.
 # SCOPE: Pattern-based redaction and bounded error output; not general PII removal.
-# DEPENDS: stdlib re.
-# LINKS: M-REDACT; M-CORE; M-LOGGING.
+# DEPENDS: stdlib os,re,typing.
+# LINKS: M-REDACT; M-CORE; M-LOGGING; M-ERRORS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _strip_userinfo: Remove user:password material up to the last URL-token at sign.
+# _redact_env_values: Replace the exact current values of secret environment variables, longest first.
 # redact_error_text: Scrub known token/cookie/JWT shapes before truncating text.
 # redact_url: Scrub sensitive query parameters and proxy userinfo.
+# redact_value: Redact every string in a JSON-shaped value, leaving other types.
 # END_MODULE_MAP
 from __future__ import annotations
 
+import os
 import re
+from typing import Any
 
 _BEARER_RE = re.compile(r"(Bearer\s+)[A-Za-z0-9._~+/=-]+", re.IGNORECASE)
 _API_KEY_RE = re.compile(r"(api[_-]?key=)[^&\s\"']+", re.IGNORECASE)
@@ -66,11 +70,52 @@ _COOKIE_PAIR_RE = re.compile(r"\b([A-Za-z0-9_-]*(?:auth|token|session)=)[^;,\s\"
 # base64url segments, the first always starting `eyJ` ({" encoded).
 _JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 
+_PLACEHOLDER = "<redacted>"
+
+# The pattern rules above recognize shapes, not values: a secret env var this
+# project reads whose value carries no token/cookie/URL-credential shape would
+# sail through them, so its exact current value is replaced too. MPSTATS_MP_AUTH
+# is the paid MPStats cookie (mpstats-connector settings) and MCP_HTTP_AUTH_TOKEN
+# is the HTTP serving bearer token (runtime.ENV_HTTP_AUTH_TOKEN, spelled here
+# because importing runtime would cycle: redact <- logging <- runtime). A
+# connector that reads a new secret adds its name here — one line of data, no
+# code. Proxy vars stay out: their credential part is already covered by the
+# URL userinfo rule and their host is deliberately kept readable.
+_SECRET_ENV_VARS = ("MPSTATS_MP_AUTH", "MCP_HTTP_AUTH_TOKEN")
+# Shorter values are ignored: real credentials are far longer, while "1" or
+# "debug" set in the environment would otherwise eat those ordinary words out
+# of every diagnostic. Six keeps the shortest plausible secrets in scope.
+_SECRET_ENV_MIN_LEN = 6
+
+
+def _redact_env_values(text: str) -> str:
+    """Replace the exact current values of the secret environment variables."""
+    values: set[str] = set()
+    for name in _SECRET_ENV_VARS:
+        # Read per call, never cached at import time, so a value set later is
+        # still covered. Connectors strip a value before using it, so both
+        # spellings can leak.
+        raw = os.environ.get(name) or ""
+        for value in (raw, raw.strip()):
+            if len(value) < _SECRET_ENV_MIN_LEN or value in _PLACEHOLDER:
+                # A value occurring inside the placeholder is not a credential
+                # ("redact"), and replacing it would make the second pass chew
+                # the placeholder itself, breaking idempotence.
+                continue
+            values.add(value)
+    # Longest first: when one value contains another, replacing the shorter one
+    # first would leave the longer value's tail in the text. Plain str.replace,
+    # no per-call regex.
+    for value in sorted(values, key=len, reverse=True):
+        text = text.replace(value, _PLACEHOLDER)
+    return text
+
 
 def redact_error_text(text: str, max_len: int = 500) -> str:
     if not text:
         return ""
-    redacted = _BEARER_RE.sub(r"\1<redacted>", text)
+    redacted = _redact_env_values(text)
+    redacted = _BEARER_RE.sub(r"\1<redacted>", redacted)
     redacted = _API_KEY_RE.sub(r"\1<redacted>", redacted)
     redacted = _TOKEN_QUERY_RE.sub(r"\1<redacted>", redacted)
     redacted = _AUTH_HEADER_RE.sub(r"\1<redacted>", redacted)
@@ -89,3 +134,26 @@ def redact_url(url: str) -> str:
         return ""
     redacted = _TOKEN_QUERY_RE.sub(r"\1<redacted>", url)
     return _strip_userinfo(redacted)
+
+
+def redact_value(value: Any) -> Any:
+    """Redact every string inside a JSON-shaped value.
+
+    Containers are rebuilt rather than mutated; non-string leaves are returned
+    unchanged, so an int, bool or float field is never turned into text. This is
+    what lets ``log_event`` and ``raise_tool_error`` redact by construction while
+    callers keep passing the raw values they always did.
+    """
+    if isinstance(value, str):
+        return redact_error_text(value)
+    if isinstance(value, dict):
+        return {key: redact_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_value(item) for item in value)
+    if isinstance(value, set):
+        return {redact_value(item) for item in value}
+    if isinstance(value, frozenset):
+        return frozenset(redact_value(item) for item in value)
+    return value

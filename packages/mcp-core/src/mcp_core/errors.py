@@ -1,8 +1,9 @@
 # START_MODULE_CONTRACT
 # PURPOSE: Encode provider-neutral failures as machine-readable MCP ToolErrors.
-# SCOPE: Error taxonomy, retryability, optional status and user-action/challenge metadata.
-# DEPENDS: FastMCP ToolError; stdlib json,enum,typing.
-# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF.
+# SCOPE: Error taxonomy, retryability, optional status and user-action/challenge metadata;
+#        message and string fields are redacted on the way out.
+# DEPENDS: M-REDACT; FastMCP ToolError; stdlib json,enum,typing.
+# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF; M-REDACT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # ErrorCode: Enumerate stable wire codes and their retryability.
@@ -16,7 +17,7 @@
 # NotFoundError: Represent unavailable resources with status 404.
 # PermissionDeniedError: Represent forbidden access with status 403.
 # ChallengeRequiredError: Add retry timing, user action, challenge and optional handoff metadata.
-# raise_tool_error: Raise FastMCP ToolError containing serialized connector error.
+# raise_tool_error: Redact and raise a FastMCP ToolError from a serialized connector error.
 # END_MODULE_MAP
 from __future__ import annotations
 
@@ -25,6 +26,8 @@ from enum import StrEnum
 from typing import NoReturn
 
 from fastmcp.exceptions import ToolError
+
+from mcp_core.redact import redact_value
 
 
 class ErrorCode(StrEnum):
@@ -204,4 +207,4 @@ class ChallengeRequiredError(ConnectorError):
 
 
 def raise_tool_error(err: ConnectorError) -> NoReturn:
-    raise ToolError(json.dumps(err.to_dict(), ensure_ascii=False))
+    raise ToolError(json.dumps(redact_value(err.to_dict()), ensure_ascii=False))
