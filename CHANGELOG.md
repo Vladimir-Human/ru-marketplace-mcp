@@ -128,6 +128,61 @@
   покрыт — его shape_reference объясняет, почему охрана по наличию ключей
   там никогда не сработала бы.
 
+- У проекта появился один реестр источников — `mcp_core.sources`: каноническое
+  имя и алиасы, пакет, модуль, консольный скрипт, префикс инструментов, имя в
+  таблице монтирования, ключ в конфиге клиента, selfcheck, карточный инструмент,
+  число инструментов, уровень доступа, CDP и логин, валюта, текстовый поиск,
+  страница разблокировки, признаки «стена — это логин» и «умеет diagnose_drift»,
+  гейт монтирования и строка-подсказка для конфига. Из него выведены
+  `KNOWN_SOURCES` и алиасы, таблица возможностей, таблицы CLI (конфиг и
+  selfcheck), карта страниц `unblock`, список источников сравнения с карточными
+  инструментами и валютной развилкой, счётчики инструментов в stdio-проверке и
+  обе таблицы CI. Точки, которые не могут импортировать Python (`pyproject.toml`,
+  `server.json`, а также литералы `mounts`, `SEARCHABLE` и таблиц
+  `scripts/diagnose_drift.py`, которые разбирают существующие тесты), остались
+  литералами, но новый тест сверяет каждую с реестром: пакет без записи и запись
+  без пакета теперь падают. Одиннадцатый источник стоит одной записи, а не
+  пятнадцати правок в пятнадцати местах. Первая же сверка нашла потерянную
+  строку: в `server.json` не было cian.
+- Общая сборка коннекторов переехала в `mcp_core.kit` и лежит там по одному
+  разу: вызов пейсинга, хвост ошибки отказа (подсказка пейсера плюс обрезанная
+  деталь), проверка хоста при разборе id товара, потоковое чтение с лимитом тела
+  и отрисовка страницы через CDP с разбором JSON. `chrome_cdp` импортируется
+  внутри `render_json`, а `curl_cffi` в mcp-core вообще не попадает: коннектор
+  передаёт свою точку входа сам, поэтому тест, патчащий `cffi.get` в своём
+  модуле, бьёт по тому же шву, что и раньше. Миграция не меняет ни поведение, ни
+  провод: у каждого коннектора остаётся своя обёртка с тем же именем, которое
+  патчат его тесты, а имена инструментов, докстринги, параметры, коды ошибок и
+  тексты сообщений не тронуты. dns и citilink, которые совпадали почти целиком,
+  делят общую часть и оставляют у себя только факты о своей площадке.
+
+- One registry of sources now lives in `mcp_core.sources`: canonical name and
+  aliases, package, module, console script, tool prefix, unified mount name,
+  per-source client config key, selfcheck, card tool, tool count, access tier,
+  CDP and login needs, currency, text search, unblock page, the login-wall and
+  drift-probe flags, the mount gate and the config note. Derived from it:
+  `KNOWN_SOURCES` and the aliases, the capability table, the CLI tables (config
+  and selfcheck), the `unblock` page map, compare's source list with its card
+  tools and foreign-currency split, the stdio check's tool counts and both CI
+  tables. The sites that cannot import Python (`pyproject.toml`, `server.json`,
+  and the `mounts`, `SEARCHABLE` and `scripts/diagnose_drift.py` literals
+  existing tests parse) stay literal, but a new parity test ties each of them to
+  the registry: a package without a record, or a record without a package, now
+  fails. A sixth source costs one record instead of fifteen edits in fifteen
+  places. The first comparison found a missing row: `server.json` had no cian
+  entry.
+- The shared connector assembly moved into `mcp_core.kit`, once: the pacing
+  call, the refusal-error tail (the pacer's rotation hint plus a bounded
+  detail), the host check when parsing a product id, the streamed read with its
+  body cap, and the paced CDP render-and-parse. `chrome_cdp` is imported inside
+  `render_json`, and curl_cffi never enters mcp-core at all: the connector
+  passes its own entry point, so a test that patches `cffi.get` on its module
+  still hits the seam it always did. The migration changes no behaviour and no
+  wire bytes: every connector keeps its own wrapper under the name its tests
+  patch, and tool names, docstrings, parameters, error codes and message texts
+  are untouched. dns and citilink, which matched almost completely, share the
+  mechanism and keep only their own site facts.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
@@ -159,6 +214,14 @@
   `mpstats-mcp` keeps its behaviour and answers `auth_missing`.
 
 ### Fixed
+
+- `server.json` получил потерянную строку cian: список серверов для реестра
+  MCP-серверов перечислял четырнадцать площадок из пятнадцати, и cian в нём
+  отсутствовал. Теперь этот список сверяется с реестром источников тестом.
+
+- `server.json` gained its missing cian row: the server list for the MCP
+  registry named fourteen of the fifteen marketplaces, and cian was absent. A
+  test now compares that list with the source registry.
 
 - Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
   ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:

@@ -22,13 +22,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Citilink product search and cards from rendered pages.
 # SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
-# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing; models_output; settings; shape_reference.
-# LINKS: M-CITILINK; M-COMPARE; M-MARKETPLACE; packages/citilink-connector/tests.
+# DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
+# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; packages/citilink-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# _extract_product_id: Validate bare handles or product URLs before navigation.
+# _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
+# _extract_product_id: Validate bare handles or citilink.ru product URLs before navigation (shared host check).
 # _search_item_from_tile: Normalize attached/current and old-price tile fields.
-# _cdp_render: Serialize paced browser navigation and extractor execution.
+# _cdp_render: Delegate paced browser navigation and extractor execution to mcp_core.kit.render_json.
 # _is_qrator_wall: Detect positive document-title or Qrator markup evidence.
 # _reject_qrator_wall: Invalidate cached walls and request operator browser action.
 # citilink_search: Validate rendered tiles before caching; allow nullable prices; warn when a required key vanishes.
@@ -40,7 +41,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import json
 import re
 import urllib.parse
 from typing import Annotated, Any
@@ -59,12 +59,13 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import host_checked_id, polite_wait, render_json
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
-from mcp_core.transport.chrome_cdp import NavBlocked, open_page
+from mcp_core.transport.chrome_cdp import NavBlocked
 from pydantic import Field
 
 from citilink_connector.models_output import (
@@ -125,9 +126,11 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit); this module-level name stays because the tools call it and
+    the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _extract_product_id(raw: str) -> str | None:
@@ -136,27 +139,10 @@ def _extract_product_id(raw: str) -> str | None:
     Host-checked on purpose. The id is the only thing that survives this
     function, and the card URL is rebuilt from SITE_BASE, so a caller cannot
     smuggle ``/product/<id>`` into a path on someone else's domain and
-    steer the operator's logged-in Chrome there. Anything that is not
-    citilink.ru, or carries a scheme we do not navigate, returns None.
+    steer the operator's logged-in Chrome there. The check is the shared one
+    (mcp_core.kit.host_checked_id); this pattern and this host are ours.
     """
-    raw = raw.strip()
-    if not raw:
-        return None
-    if _BARE_ID_RE.fullmatch(raw):
-        return raw.lower()
-    parts = urllib.parse.urlsplit(raw)
-    if parts.scheme:
-        if parts.scheme not in ("http", "https"):
-            return None
-        host = (parts.hostname or "").rstrip(".").lower()
-        if host != "citilink.ru" and not host.endswith(".citilink.ru"):
-            return None
-        raw = parts.path
-    elif raw.startswith("//"):
-        # Scheme-relative: the authority is someone else's, so treat it as off-host.
-        return None
-    match = _PRODUCT_ID_RE.search(raw)
-    return match.group(1).lower() if match else None
+    return host_checked_id(raw, hosts=("citilink.ru",), path_re=_PRODUCT_ID_RE, bare_re=_BARE_ID_RE)
 
 
 _SEARCH_EXTRACT_TEMPLATE = """
@@ -316,17 +302,12 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
 
     The first navigation pays the proof-of-work (wait_ms is generous for that
     reason); later reads on the same session are fast. Serialized via _cdp_lock.
+    The mechanism is shared (mcp_core.kit.render_json); this module-level name
+    stays because the tools call it and the tests patch it.
     """
-    async with _cdp_lock:
-        await _polite_wait()
-        async with open_page(url, wait_ms=wait_ms) as page:
-            raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
-    if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
-        raise ToolError(TransportDownError("extracted page data missing or over the body cap"))
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        raise ToolError(ParserDriftError("page extractor returned a non-object payload"))
-    return data
+    return await render_json(
+        url, extract_js, wait_ms, lock=_cdp_lock, wait=_polite_wait, max_body_bytes=MAX_BODY_BYTES
+    )
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:

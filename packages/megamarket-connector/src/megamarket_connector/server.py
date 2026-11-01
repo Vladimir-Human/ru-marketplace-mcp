@@ -23,8 +23,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Megamarket search and cards from its mobile catalog API.
 # SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
 # INVARIANTS: Reject failed API envelopes before success pacing/cache; preserve empty results.
-# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
+# DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _post: Issue browser API reads; cache only envelopes without explicit failures.
@@ -61,6 +61,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import blocked_error, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -148,9 +149,11 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _extract_item_id(raw: str) -> str | None:
@@ -223,17 +226,13 @@ def _is_ip_block(payload: Any) -> bool:
 
 
 def _blocked_error(detail: str = "") -> TransportDownError:
+    """The refusal error, with the pacer's standing-block hint (mcp_core.kit)."""
     message = (
         "Megamarket refused the session by IP reputation (ServicePipe code 7). "
         "Open megamarket.ru in the Chrome scraping profile, let the challenge pass, then retry; "
         "a Russian residential IP for that browser is the durable fix."
     )
-    hint = _pacer.rotation_hint()
-    if hint:
-        message += f" {hint}"
-    if detail:
-        message += f" Detail: {detail[:160]}"
-    return TransportDownError(message, status_code=403)
+    return blocked_error(message, pacer=_pacer, detail=detail)
 
 
 def _raise_failed_envelope(payload: dict[str, Any], what: str) -> None:

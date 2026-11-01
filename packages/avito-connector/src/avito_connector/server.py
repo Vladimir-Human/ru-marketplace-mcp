@@ -50,8 +50,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
-# DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors; models_output; settings; shape_reference.
-# LINKS: M-AVITO; M-COMPARE; M-MARKETPLACE; packages/avito-connector/tests.
+# DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
+# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -83,7 +83,7 @@ import json
 import re
 import urllib.parse
 from html.parser import HTMLParser
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from curl_cffi import requests as cffi
 from fastmcp import Context, FastMCP
@@ -102,6 +102,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import blocked_error, polite_wait, sync_curl_get
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -179,37 +180,24 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _sync_curl_get(url: str, proxy: str | None = None) -> tuple[int, str]:
     """Tier-1: curl_cffi GET with an incremental body cap (see ozon_connector)."""
-    kwargs: dict[str, Any] = {}
-    if proxy:
-        kwargs["proxies"] = {"http": proxy, "https": proxy}
-    chunks: list[bytes] = []
-    total = 0
-    r = cffi.get(url, headers=AVITO_HEADERS, impersonate=cast(Any, IMPERSONATE), timeout=TIMEOUT, stream=True, **kwargs)
-    try:
-        encoding = r.encoding or "utf-8"
-        for chunk in r.iter_content(chunk_size=64 * 1024):
-            total += len(chunk)
-            if total > MAX_BODY_BYTES:
-                raise ValueError(f"body exceeds {MAX_BODY_BYTES} bytes (aborted at {total} during stream)")
-            chunks.append(chunk)
-        body = b"".join(chunks)
-        try:
-            text = body.decode(encoding, errors="replace")
-        except (LookupError, TypeError):
-            text = body.decode("utf-8", errors="replace")
-        return r.status_code, text
-    finally:
-        try:
-            r.close()
-        except Exception:
-            pass
+    return sync_curl_get(
+        url,
+        get=cffi.get,
+        headers=AVITO_HEADERS,
+        impersonate=IMPERSONATE,
+        timeout=TIMEOUT,
+        max_body_bytes=MAX_BODY_BYTES,
+        proxy=proxy,
+    )
 
 
 async def _cdp_fetch(url: str, ctx: Context | None) -> tuple[int, str]:
@@ -696,17 +684,13 @@ def parse_seller_profile(html: str) -> dict[str, Any]:
 
 
 def _blocked_error(tier: str, detail: str = "") -> TransportDownError:
+    """The refusal error, with the pacer's standing-block hint (mcp_core.kit)."""
     message = (
         f"Avito returned an IP-firewall block via {tier}. "
         "Open avito.ru in the Chrome CDP profile, solve the captcha, then retry; "
         "from a datacenter IP a Russian residential proxy (AVITO_PROXY) is the tier-1 fix."
     )
-    hint = _pacer.rotation_hint()
-    if hint:
-        message += f" {hint}"
-    if detail:
-        message += f" Detail: {detail[:160]}"
-    return TransportDownError(message, status_code=403)
+    return blocked_error(message, pacer=_pacer, detail=detail)
 
 
 def _raise_for_fetch_failure(status: int, body: str, tier: str, what: str) -> None:

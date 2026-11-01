@@ -17,8 +17,8 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # PURPOSE: Expose Ozon product cards, reviews and search through composer data.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
-# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
+# DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
+# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -49,7 +49,7 @@ import tempfile
 import urllib.parse
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 import httpx
 from curl_cffi import requests as cffi
@@ -65,6 +65,7 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import blocked_error, polite_wait, sync_curl_get
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -282,9 +283,11 @@ async def _polite_wait() -> None:
     """Space this source's requests out, and back off if it refused us.
 
     Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer.
+    pace without rebuilding the pacer. The pacing itself is shared
+    (mcp_core.kit.polite_wait); this module-level name stays because the tools
+    call it and the tests patch it.
     """
-    await _pacer.wait(min_gap=_min_gap)
+    await polite_wait(_pacer, _min_gap)
 
 
 def _sync_curl_get(url: str, proxy: str | None = None) -> tuple[int, str]:
@@ -292,53 +295,24 @@ def _sync_curl_get(url: str, proxy: str | None = None) -> tuple[int, str]:
 
     Streams the response and aborts mid-download once MAX_BODY_BYTES is
     exceeded. Defense-in-depth match for httpx-based connectors which all
-    stream rather than buffer-then-check.
+    stream rather than buffer-then-check. The loop is the shared one
+    (mcp_core.kit.sync_curl_get); this wrapper keeps the module-level name the
+    fetch path and its tests patch.
 
     Maintenance note: IMPERSONATE='chrome' is auto-latest WITHIN the
     installed curl-cffi version; uv.lock pins that version. Run
     `uv lock --upgrade-package curl-cffi --project ozon` quarterly to
     keep the JA3/JA4 fingerprint pool current with Chrome stable.
     """
-    chunks: list[bytes] = []
-    total = 0
-    encoding = "utf-8"
-    # The proxy arrives as an explicit argument rather than an environment
-    # variable because this function runs in a subprocess whose environment is
-    # deliberately reduced to an allowlist (mcp_core.process.safe_child_env), and
-    # that allowlist excludes proxy vars on purpose. Passing it as an argument
-    # keeps the child's environment minimal while still honouring OZON_PROXY.
-    kwargs: dict[str, Any] = {}
-    if proxy:
-        kwargs["proxies"] = {"http": proxy, "https": proxy}
-    r = cffi.get(
+    return sync_curl_get(
         url,
+        get=cffi.get,
         headers=OZON_HEADERS,
-        # curl_cffi types this as a Literal of known profiles, but the value is
-        # operator-configurable via OZON_IMPERSONATE, so the check is deferred to
-        # curl_cffi itself (which raises clearly on an unknown profile).
-        impersonate=cast(Any, IMPERSONATE),
+        impersonate=IMPERSONATE,
         timeout=TIMEOUT,
-        stream=True,
-        **kwargs,
+        max_body_bytes=MAX_BODY_BYTES,
+        proxy=proxy,
     )
-    try:
-        encoding = r.encoding or "utf-8"
-        for chunk in r.iter_content(chunk_size=64 * 1024):
-            total += len(chunk)
-            if total > MAX_BODY_BYTES:
-                raise ValueError(f"body exceeds {MAX_BODY_BYTES} bytes (aborted at {total} during stream)")
-            chunks.append(chunk)
-        body = b"".join(chunks)
-        try:
-            text = body.decode(encoding, errors="replace")
-        except (LookupError, TypeError):
-            text = body.decode("utf-8", errors="replace")
-        return r.status_code, text
-    finally:
-        try:
-            r.close()
-        except Exception:
-            pass
 
 
 def _canonical_composer_path(api_path: str) -> str:
