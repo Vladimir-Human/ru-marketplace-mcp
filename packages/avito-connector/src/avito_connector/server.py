@@ -156,9 +156,26 @@ _ITEM_URL_PATH_RE = re.compile(r"/(?:(?:[^/]+/){2})?(?:[^/]+_)?(\d{6,})/?")
 # form alone, so first segments that are Avito's own personal or service routes
 # are refused outright: an item-shaped tail under them is not an item page.
 _NON_ITEM_ROOTS = frozenset(
-    {"account", "api", "basket", "cart", "checkout", "dashboard", "favorites", "messenger",
-     "my", "notifications", "orders", "payments", "personal", "profile", "settings", "user",
-     "users", "web"}
+    {
+        "account",
+        "api",
+        "basket",
+        "cart",
+        "checkout",
+        "dashboard",
+        "favorites",
+        "messenger",
+        "my",
+        "notifications",
+        "orders",
+        "payments",
+        "personal",
+        "profile",
+        "settings",
+        "user",
+        "users",
+        "web",
+    }
 )
 _LOCATION_ID_RE = re.compile(r"^\d{2,10}$")
 
