@@ -71,6 +71,10 @@ def test_missing_required_families_reports_only_absent_families() -> None:
         item["idRenamed"] = item.pop("id")
 
     missing = shape_reference.missing_required_families(shape_signature(payload))
+    # The registry grew the data.items[] aliases (2026-11-01 audit), so this
+    # pins the whole id family as it now stands — the assertion is extended,
+    # not relaxed: a rename inside the family must still keep it out of the
+    # missing list.
     assert (
         "catalog.items[].id",
         "catalog.items[].itemId",
@@ -78,6 +82,9 @@ def test_missing_required_families_reports_only_absent_families() -> None:
         "items[].id",
         "items[].itemId",
         "items[].item_id",
+        "data.items[].id",
+        "data.items[].itemId",
+        "data.items[].item_id",
     ) in missing
 
 
@@ -93,3 +100,36 @@ def test_the_pre_2026_08_top_level_envelope_still_passes_the_families() -> None:
     }
 
     assert shape_reference.missing_required_families(shape_signature(legacy_payload)) == []
+
+
+def test_the_data_items_envelope_passes_the_families() -> None:
+    """The third envelope ``_parse_search_items`` reads: a payload whose
+    listings live only under data.items must satisfy the same families, or
+    every intact key reads as drift."""
+    payload = {
+        "count": 1,
+        "data": {
+            "items": [
+                {"id": 1, "title": "Ноутбук", "priceDetailed": {"value": 59900}, "urlPath": "/x"},
+            ]
+        },
+    }
+
+    assert shape_reference.missing_required_families(shape_signature(payload)) == []
+
+
+def test_a_data_items_payload_that_lost_a_family_reports_only_that_family() -> None:
+    """The other half: the aliases make the check honest, they do not silence
+    it. With the price keys gone only the price family is missing — the id and
+    title families survive in the same data.items envelope."""
+    payload = {
+        "count": 1,
+        "data": {
+            "items": [
+                {"id": 1, "title": "Ноутбук", "urlPath": "/x"},
+            ]
+        },
+    }
+    price_family = next(family for family in shape_reference.SEARCH_REQUIRED_FAMILIES if "price" in family[0])
+
+    assert shape_reference.missing_required_families(shape_signature(payload)) == [price_family]

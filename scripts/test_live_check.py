@@ -110,3 +110,47 @@ def test_the_ledger_summary_names_the_requests_the_budget_refused(
     lines = capsys.readouterr().out.strip().splitlines()
     assert lines[-2] == "total 1/40; ozon 1/1"
     assert lines[-1].startswith("refused before sending (over a cap): ozon 2;")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        pytest.param([], id="no-arguments"),
+        pytest.param(["nonsense"], id="unknown-mode"),
+        pytest.param(["selfcheck"], id="selfcheck-without-a-source"),
+        pytest.param(["selfcheck", "not-a-source"], id="unknown-source"),
+        pytest.param(["call", "mod", "tool"], id="call-without-kwargs"),
+        pytest.param(["call", "mod", "tool", "{not json"], id="unparsable-kwargs"),
+        pytest.param(["call", "mod", "tool", "[1, 2]"], id="non-object-kwargs"),
+    ],
+)
+def test_a_usage_failure_exits_4_not_the_doctors_blocked_code(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit 4 for live_check's own usage errors.
+
+    The CI drift alarm keeps the doctor's 2 ("blocked/inconclusive") green, so a
+    mis-typed command line must not borrow that code and read as a blocked
+    source. Nothing here reaches a marketplace.
+    """
+    monkeypatch.setenv("LIVE_BUDGET_LEDGER", str(tmp_path / ".live-budget.json"))
+
+    assert live_check.main(argv) == 4
+
+
+def test_a_failed_budget_install_exits_4(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A setup failure is a broken alarm, not a blocked source: the hooks that
+    count requests could not be installed, so no check ran at all."""
+    monkeypatch.setenv("LIVE_BUDGET_LEDGER", str(tmp_path / ".live-budget.json"))
+
+    def broken_install() -> live_budget.Budget:
+        raise AttributeError("live budget hook point httpx.AsyncClient.send is missing")
+
+    monkeypatch.setattr(live_budget, "install", broken_install)
+
+    assert live_check.main(["selfcheck", "wb"]) == 4
