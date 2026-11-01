@@ -100,6 +100,34 @@
   shape_reference says outright that a key-presence guard would never fire
   there.
 
+- Structural drift is now visible in six more tool responses: aliexpress,
+  cian, detmir, megamarket, ozon and wb gained a `shape_reference` — the
+  shape fingerprint of their search output (and card, where a captured
+  fixture exists), measured by the real parser over the fixture — plus the
+  same `shape_drift: <source>: missing <family>` warning through the shared
+  `mcp_core.resilience.shape_drift_warning`. Where the parser emits every
+  parsed key unconditionally (cian, detmir, megamarket, wb), the check runs
+  on the raw envelope, against the alias families the parser binds through;
+  ozon guards the one conditionally-emitted parser-critical key, the tile
+  url (losing `action.link` silently strips navigation from every result).
+  Their selfcheck canaries use the same registry. Yandex remains uncovered
+  — its shape_reference documents why a key-presence guard would never fire
+  there.
+
+- Дрейф структуры виден в самом ответе ещё у шести коннекторов: aliexpress,
+  cian, detmir, megamarket, ozon и wb получили свой `shape_reference` —
+  отпечаток формы выдачи (и карточки, где есть захваченный фиксстур),
+  измеренный настоящим парсером по фиксстуре, — и то же предупреждение
+  `shape_drift: <источник>: missing <семейство>` через общий
+  `mcp_core.resilience.shape_drift_warning`. Там, где парсер выдаёт все
+  ключи безусловно (cian, detmir, megamarket, wb), проверка идёт по сырому
+  конверту, по тем alias-семействам, через которые парсер биндится; у ozon
+  охраняется единственный условно излучаемый критичный ключ — url тайла
+  (без `action.link` каждый результат молча теряет навигацию). Их
+  selfcheck-канарейки используют тот же реестр. Yandex по-прежнему не
+  покрыт — его shape_reference объясняет, почему охрана по наличию ключей
+  там никогда не сработала бы.
+
 ### Changed
 
 - Публикация на PyPI включена: владелец настроил издателя 31 октября, и v2.7.0
@@ -132,6 +160,24 @@
 
 ### Fixed
 
+- Раннер оценки маршрутизации (`scripts/model_routing_eval.py run`) больше не
+  ставит `ok: true` прогону с меньшим числом сэмплов, чем требует протокол:
+  обёртка с `samples_per_case` меньше 3 или не целым числом теперь ошибка.
+  Голая карта ответов по-прежнему принимается, но отчёт пишет в
+  `protocol_unchecked`, что сэмплирование не проверено.
+
+- The routing eval runner (`scripts/model_routing_eval.py run`) no longer reports
+  `ok: true` for a run with fewer samples than the protocol asks: a wrapper with
+  `samples_per_case` below 3 or not an integer is now a problem. A bare answer
+  map is still accepted, and the report says in `protocol_unchecked` that its
+  sampling was not checked.
+- `compare_prices` больше не считает «1 ТБ» и «1024 ГБ» разными размерами:
+  размеры сравниваются в гигабайтах (1 ТБ = 1024 ГБ, как продают память
+  телефонов и ноутбуков). «1000 ГБ» по-прежнему не совпадает с «1 ТБ».
+
+- `compare_prices` no longer treats "1 TB" and "1024 GB" as different sizes:
+  sizes are compared in gigabytes (1 TB = 1024 GB, as phone and laptop storage
+  is sold). "1000 GB" still does not match "1 TB".
 - `compare_prices` сохраняет тип цены в новом необязательном `price_kind`:
   цена с WB Кошельком, по подписке или с другим явным условием не выбирается
   в `cheapest` и `cheapest_comparable`. Если обычная цена известна, ранжируется

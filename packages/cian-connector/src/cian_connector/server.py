@@ -28,13 +28,14 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
-# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings.
+# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings; shape_reference.
 # LINKS: M-CIAN; M-MARKETPLACE; packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
 # _extract_offer_id: Resolve numeric handles or Cian offer URLs.
-# cian_search: Read filtered offers with explicit price units and partial fields.
+# cian_search: Read filtered offers with explicit price units and partial fields,
+#              plus a runtime shape-drift warning when a required key family vanishes.
 # cian_card: Read embedded offer-card state and classify removed/blocked pages.
 # cian_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -79,6 +80,7 @@ from cian_connector.models_output import (
     MetaOut,
 )
 from cian_connector.settings import get_settings
+from cian_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
 
 _settings = get_settings()
 
@@ -835,6 +837,18 @@ async def cian_search(
         warnings: list[str] = []
         if not rows and total:
             warnings.append("empty_items_with_nonzero_total")
+        if rows:
+            # The selfcheck compares this payload against the captured family
+            # registry; the tool's own answer now carries the same drift
+            # signal, so an agent does not need a human running doctor to
+            # learn the shape moved. The parsed rows emit every key
+            # unconditionally, so the guard runs on the RAW envelope the
+            # parser binds through; an empty result stays out of the check
+            # because with zero offers every per-item family is vacuously
+            # absent and the warning above already covers it.
+            drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="cian_search")
+            if drift:
+                warnings.append(drift)
         items = [
             CianSearchItemOut(**{**row, "metro": CianMetroOut(**row["metro"][0]) if row["metro"] else None})
             for row in rows
@@ -1041,6 +1055,16 @@ async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:
             raise ValueError("offers carry no id")
         if all(row["address"] is None for row in rows):
             raise ValueError("offers carry no address — geo family lost")
+        # The parser binds the raw envelope through alias families, so a
+        # rename WITHIN a family is fine — but the loss of a whole family is
+        # drift the value checks above cannot see (id renamed away while
+        # title survives would serve every offer without an id). Compare
+        # against the captured reference, the same registry cian_search warns
+        # with at runtime.
+        missing = missing_required_families(R.shape_signature(payload))
+        if missing:
+            lost = "; ".join("/".join(family) for family in missing)
+            raise ValueError(f"payload lost parser-critical key families: {lost}")
         return f"{len(rows)} offers parsed, total {total}", priced[0]["offer_id"]
 
     def _card_smoke(envelope: Any) -> tuple[str, None]:

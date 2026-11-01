@@ -23,7 +23,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Megamarket search and cards from its mobile catalog API.
 # SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
 # INVARIANTS: Reject failed API envelopes before success pacing/cache; preserve empty results.
-# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings.
+# DEPENDS: FastMCP; mcp_core CDP/cache/pacing; models_output; settings; shape_reference.
 # LINKS: M-MEGAMARKET; M-COMPARE; M-MARKETPLACE; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -32,7 +32,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _resolve_address_id: Resolve delivery context; profile access requires opt-in.
 # _final_catalog_url: Resolve the catalog redirect before reading search parameters.
 # _is_ip_block: Detect code-7 ServicePipe refusals rather than treating them as data.
-# megamarket_search: Normalize paginated mobile catalog offers and drift states.
+# megamarket_search: Normalize paginated mobile catalog offers and drift states,
+#                    plus a runtime shape-drift warning when a required key family vanishes.
 # megamarket_card: Read one goods envelope with nullable price/stock fields.
 # megamarket_selfcheck: Diagnose operator transport/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -76,6 +77,7 @@ from megamarket_connector.models_output import (
     MetaOut,
 )
 from megamarket_connector.settings import get_settings
+from megamarket_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
 
 _settings = get_settings()
 
@@ -741,6 +743,17 @@ async def megamarket_search(
                 "addressless session with an empty result rather than an error, so check the session "
                 "before concluding the product does not exist"
             )
+        else:
+            # The selfcheck compares this payload against the captured family
+            # registry; the tool's own answer now carries the same drift
+            # signal, so an agent does not need a human running doctor to
+            # learn the shape moved. The parsed items emit every key
+            # unconditionally, so the guard runs on the RAW envelope the
+            # parser binds through; the empty-result warning above already
+            # covers a vacuously empty payload.
+            drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="megamarket_search")
+            if drift:
+                warnings.append(drift)
         result = MegamarketSearchResponse(
             query=query, tier_used="cdp", count=len(items), total_count=total, items=items
         )
@@ -876,7 +889,23 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
     else:
         items_raw, total, container_found = _parse_items(payload)
         if items_raw:
-            checks["search"] = R.selfcheck_entry("healthy", baseline=baseline, notes=[f"{len(items_raw)} items parsed"])
+            # Items parsing is not enough: the parser binds the raw envelope
+            # through alias families, and the loss of a whole family is drift
+            # the count above cannot see. Same registry megamarket_search warns
+            # with at runtime.
+            missing = missing_required_families(R.shape_signature(payload))
+            if missing:
+                lost = "; ".join("/".join(family) for family in missing)
+                checks["search"] = R.selfcheck_entry(
+                    "drift",
+                    baseline=baseline,
+                    reason="shape_drift",
+                    notes=[f"{len(items_raw)} items parsed, but parser-critical key families lost: {lost}"],
+                )
+            else:
+                checks["search"] = R.selfcheck_entry(
+                    "healthy", baseline=baseline, notes=[f"{len(items_raw)} items parsed"]
+                )
         elif container_found and total not in (0, None):
             # total says there are matches and none of them parsed. That is a
             # contradiction inside one payload, so the item shape moved.
