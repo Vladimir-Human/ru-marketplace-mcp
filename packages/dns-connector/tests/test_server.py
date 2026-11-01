@@ -193,6 +193,33 @@ async def test_search_a_pricelss_tile_is_none_never_zero(monkeypatch):
     assert result.items[1].price_rub != 0
 
 
+async def test_search_warns_when_a_required_key_vanishes(monkeypatch):
+    """Tiles that still parse without a parser-critical key are structural
+    drift the agent must see in the tool's own response, not only via doctor."""
+    drifted = {
+        "title": SEARCH_EXTRACTED["title"],
+        "items": [
+            {key: value for key, value in item.items() if key != "price_text"} for item in SEARCH_EXTRACTED["items"]
+        ],
+    }
+    _patch_render(monkeypatch, drifted)
+
+    result = await server.dns_search("ноутбук")
+
+    assert result.count == 2
+    assert result.meta.healthy is False
+    assert any(w.startswith("shape_drift: dns_search: missing items[].price_text") for w in result.meta.warnings)
+
+
+async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypatch):
+    _patch_render(monkeypatch, SEARCH_EXTRACTED)
+
+    result = await server.dns_search("ноутбук")
+
+    assert result.meta.healthy is True
+    assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
+
+
 async def test_search_maps_zero_tiles_to_parser_drift(monkeypatch):
     _patch_render(monkeypatch, {"title": "ноутбук", "items": []})
 
