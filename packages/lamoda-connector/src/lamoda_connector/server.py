@@ -332,8 +332,8 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
             ):
                 raise_tool_error(
                     ChallengeRequiredError(
-                        "Lamoda requires user action in the connected Chrome. Complete the visible "
-                        "challenge on lamoda.ru, then retry.",
+                        "Lamoda requires user action in the connected Chrome. Complete the challenge "
+                        "on lamoda.ru, then call this tool again after the user confirms it is done.",
                         provider="lamoda",
                     )
                 )
@@ -525,7 +525,8 @@ async def lamoda_search(
         if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
-                    "Lamoda requires user action in the connected Chrome. Complete the visible challenge, then retry.",
+                    "Lamoda requires user action in the connected Chrome. Complete the challenge on "
+                    "lamoda.ru, then call this tool again after the user confirms it is done.",
                     provider="lamoda",
                     handoff_expires_at=payload.get("_handoff_expires_at"),
                     handoff_id=payload.get("_handoff_id"),

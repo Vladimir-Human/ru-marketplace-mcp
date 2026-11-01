@@ -19,7 +19,7 @@
     When a reachable payload no longer matches the expected structure, report parser_drift. Distinguish format change from transport_down, rate limits, missing products, login walls and challenge_required. Selfchecks report success, drift_detected or inconclusive; a blocked probe does not verify parser health. Shape signatures retain paths and types, not payload values; adoption differs by connector.
   </rule>
   <rule id="R-ERRORS" source="packages/mcp-core/src/mcp_core/errors.py:ErrorCode,ConnectorError,raise_tool_error">
-    Use ErrorCode: auth_missing, rate_limited, timeout, transport_down, parser_drift, bad_request, permission_denied, challenge_required, not_found. Only rate_limited, timeout, transport_down and challenge_required have retryable=true. ConnectorError serializes error, message and retryable plus applicable provider, retry_after_s and status_code; raise_tool_error wraps JSON in FastMCP ToolError. ChallengeRequiredError additionally describes required user action and optional handoff metadata.
+    Use ErrorCode: auth_missing, rate_limited, timeout, transport_down, parser_drift, bad_request, permission_denied, challenge_required, not_found. Only rate_limited, timeout, transport_down and challenge_required have retryable=true. ConnectorError serializes error, message and retryable plus applicable provider, retry_after_s and status_code; raise_tool_error wraps JSON in FastMCP ToolError. ChallengeRequiredError additionally serializes requires_user_action=true, retryable_now=false, retry_when=after_user_confirmation, a concrete user_action naming the real CLI command or the retained tab, the challenge type and optional handoff metadata.
   </rule>
   <rule id="R-STDOUT" source="CONTRIBUTING.md; scripts/check_no_print.py; packages/mcp-core/src/mcp_core/logging.py">
     Never write application diagnostics to stdout in MCP server code: stdio stdout belongs to JSON-RPC. Use log_event on stderr or FastMCP Context logging. Operator cli.py and __main__ entrypoints are excluded by the no-print guard; their human-facing output is not an MCP server diagnostic channel.
@@ -135,4 +135,7 @@
   <rule id="R-GRACE" source="CONTRIBUTING.md:GRACE">
     Changing behaviour requires updating the nearby contract, .grace/graph/index.xml and .grace/verification/index.xml in the same change. Keep requirements source-grounded and distinguish static test coverage from executed or live verification.
   </rule>
+  <requirement id="R-CHALLENGE-ACTION" source="Owner brief (challenge_required contract), 2026-11-01">
+    For challenge_required the calling agent must see from structured fields that a plain retry now will not help (retryable_now=false), that a human must act (requires_user_action=true), what that action is (user_action: the real `marketplace-mcp unblock &lt;source&gt;` or `marketplace-mcp browser show` command when no page is retained, or the tab the error kept open when CHROME_CHALLENGE_HANDOFF_S retains it), and when to call again (retry_when=after_user_confirmation). The error message must not promise a visible browser tab when retention is off. Keep the documented retryable=true for challenge_required and add fields instead of changing the flag; do not add or rename error codes.
+  </requirement>
 </requirements>

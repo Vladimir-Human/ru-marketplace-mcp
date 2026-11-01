@@ -18,6 +18,14 @@
   проверка после публикации смотрит страницу PyPI и
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - Заметки к релизу v2.7.0 переписаны короче; подробности проверок остались в #152.
+- Ошибка `challenge_required` стала честной для агента: флаг `retryable` остаётся
+  `true` по документированному контракту, но добавлены `retryable_now=false`
+  (сейчас повтор не поможет), `user_action` с настоящей командой
+  `marketplace-mcp unblock <source>` или удержанной вкладкой и
+  `retry_when=after_user_confirmation`. Сообщения Taobao, Lamoda и WB больше не
+  обещают видимую вкладку, когда `CHROME_CHALLENGE_HANDOFF_S` её не удерживает, а
+  WB называет свою ручную команду, потому что `marketplace-mcp unblock` его не
+  покрывает.
 
 - PyPI publishing is on: the owner set up the publisher on 31 October, and v2.7.0
   went out to PyPI by a manual run on its tag. README and `docs/QUICKSTART.md`
@@ -26,6 +34,13 @@
   the after-publication step checks the PyPI page and
   `uvx ru-marketplace-mcp@X.Y.Z setup --dry-run`.
 - The v2.7.0 release notes are rewritten shorter; the check details stay in #152.
+- The `challenge_required` error contract is now honest for the agent: `retryable`
+  stays `true` per the documented contract and the body gains `retryable_now=false`
+  (a plain retry now cannot pass), `user_action` naming the real
+  `marketplace-mcp unblock <source>` command or the retained tab, and
+  `retry_when=after_user_confirmation`. Taobao, Lamoda and WB messages no longer
+  promise a visible tab when `CHROME_CHALLENGE_HANDOFF_S` keeps none, and WB names
+  its own manual step because `marketplace-mcp unblock` does not cover it.
 
 ### Fixed
 
