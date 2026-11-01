@@ -28,6 +28,7 @@ step, not something already in place.
 # LINKS: M-RESILIENCE; M-DOM; M-MODELS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# DECOY_MARKERS: The one list of non-price text markers, shared with the DOM decoy regex.
 # first_present: Bind the first non-null alias while preserving false/empty values.
 # deep_first: Search nested dict/list payloads within a depth bound.
 # coerce_int: Parse unambiguous counts or return None.
@@ -174,7 +175,12 @@ def coerce_price(value: Any) -> float | None:
     neighbour figure ('от 5 751 ₽/ мес.', 'выгода 5 000 ₽', 'скидка 30%')
     parsed as the price. All are None now: grouping is checked to be
     consistent and a non-price qualifier is refused, while 'от' ("from") stays
-    a real price.
+    a real price. The qualifier list is DECOY_MARKERS, the same one list the DOM
+    extractor's decoy regex is generated from, so the two cannot drift apart.
+
+    Audit 2026-11-01 (CONFIRMED): a magnitude suffix next to the number was
+    ignored — '12万' read as 12.0 and '1.2K' as 1.2, while coerce_int refuses
+    both. The price path now refuses a magnitude marker after the number too.
 
     Audit 2026-08-06 (found by property tests): a digit run past the float
     ceiling (~1.8e308) raised OverflowError, breaking totality — one poisoned
@@ -196,6 +202,53 @@ def coerce_price(value: Any) -> float | None:
     return None
 
 
+# Text markers for a number that is NOT the price: monthly instalments, loyalty
+# bonuses, discount badges, delivery-point counts, ratings, savings, and
+# (Taobao) sales counts like «200+人付款» — the number of buyers, which a naive
+# read promotes into a plausible-looking price.
+#
+# ONE list, and both consumers are generated from it: the display-string guard
+# in _parse_money_string below and the DOM extractor's JavaScript decoy regex
+# (mcp_core.dom). A second hand-written list is how the two quietly stop
+# agreeing — someone adds a marker to the Python side, the other never sees it,
+# and the bug reads as a mysterious wrong price rather than a stale list.
+# Adding a marker anywhere means adding it here.
+DECOY_MARKERS: tuple[str, ...] = (
+    "мес",
+    "рассрочк",
+    "бонус",
+    "балл",
+    "кэшбэк",
+    "кешбэк",
+    "cashback",
+    "трейд-ин",
+    "trade-in",
+    "пункт",
+    "отзыв",
+    "выгод",
+    "скидк",
+    "эконом",
+    "saving",
+    "discount",
+    "month",
+    "%",
+    "付款",
+    "收货",
+    "已售",
+    "约售",
+)
+
+_DECOY_RE = re.compile("|".join(re.escape(marker) for marker in DECOY_MARKERS), re.IGNORECASE)
+
+# Magnitude shorthands make the digits a different number than they read:
+# '12万' is 120 000 CNY, '1.2K' is 1 200 and '15 тыс.' is 15 000. Returning the
+# digits alone understates the price, so a marker right after the number is
+# ambiguous — the price-path half of coerce_int's magnitude-letter rule. A
+# currency word ('руб'), a per-unit slash ('1 999 ₽/м') and a word that only
+# starts with such a letter ('129 990 Купить', 'KZT') are not markers.
+_MAGNITUDE_SUFFIX_RE = re.compile(r"\s*(?:万|千|百|亿|тыс|млн|млрд|трлн|[KkMmBbКкМм](?![A-Za-zА-Яа-яЁё]))")
+
+
 def _parse_money_string(s: str) -> float | None:
     """Parse ONE money number from a display string, or None if absent/ambiguous.
 
@@ -209,11 +262,13 @@ def _parse_money_string(s: str) -> float | None:
         return None
     # Normalize unicode spaces to plain space, drop currency/letters except sep.
     t = s.replace("\u2009", " ").replace("\u00a0", " ").replace("\u202f", " ")
-    # A display blob that names a saving, a discount or a per-month instalment is
-    # not the item's price: those figures sit beside the real price and are
-    # smaller, so a "cheapest" ranking would pick one of them. "от" ("from") is
-    # NOT such a word — a listing's "from" price is a real price.
-    if "%" in t or re.search(r"выгод|скидк|эконом|saving|discount|\bмес\b|месяц|month", t.lower()):
+    # A display blob that names a saving, a discount, an instalment, a bonus or a
+    # delivery-point count is not the item's price: those figures sit beside the
+    # real price and are smaller, so a "cheapest" ranking would pick one of them.
+    # DECOY_MARKERS is the project's ONE list of such words, shared with the DOM
+    # extractor's JavaScript; "от" ("from") is NOT in it — a listing's "from"
+    # price is a real price.
+    if _DECOY_RE.search(t):
         return None
     # Find number-like tokens: digits with optional grouping and one decimal tail.
     matches = list(re.finditer(r"\d[\d \.\,]*\d|\d", t))
@@ -233,6 +288,12 @@ def _parse_money_string(s: str) -> float | None:
     tokens = [tok for tok in tokens if tok]
     if len(tokens) != 1:
         return None  # zero or multiple numbers → ambiguous → fail loud
+    # A magnitude suffix right after the number makes the digits a different
+    # number than they read ('12万' is 120 000, '1.2K' is 1 200, '15 тыс.' is
+    # 15 000); returning the digits alone would understate the price, so it is
+    # refused exactly as coerce_int refuses a magnitude letter.
+    if _MAGNITUDE_SUFFIX_RE.match(t, matches[0].end()):
+        return None
     return _parse_money_token(tokens[0])
 
 
@@ -289,7 +350,8 @@ def coerce_rating(value: Any) -> float | None:
     no-break U+202F or thin U+2009 space) reached the number extraction and
     came back as a fabricated in-range rating (1.0). A space-grouped count is
     now None with or without letters; letter-free comma text keeps its old
-    reading.
+    reading. The guard also carries a run longer than three digits without its
+    own separator ('1 2999'), which a trailing word boundary let through.
 
     Audit 2026-08-07 (wave of cycles 24-30): json.loads admits
     arbitrary-precision ints, and float() raises OverflowError past the ceiling;
@@ -318,8 +380,10 @@ def coerce_rating(value: Any) -> float | None:
         # must not fabricate an in-range rating out of the first group. The
         # space, not the letters, is what betrays the count — plain, no-break
         # (U+00A0), narrow no-break (U+202F) and thin (U+2009) alike. A comma
-        # without letters keeps its old reading ('4,9' stays a rating).
-        if re.search(r"\d[ \u00a0\u202f\u2009]\d{3}\b", s):
+        # without letters keeps its old reading ('4,9' stays a rating). Three or
+        # more digits after the space: a word boundary let '1 2999' (a longer
+        # counter missing its own separator) through as a fabricated 1.0.
+        if re.search(r"\d[ \u00a0\u202f\u2009]\d{3,}", s):
             return None
         m = re.search(r"\d+[.,]?\d*", s)
         if not m:

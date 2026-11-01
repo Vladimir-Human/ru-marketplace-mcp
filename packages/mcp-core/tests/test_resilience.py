@@ -194,6 +194,65 @@ def test_price_shapes_the_stricter_parse_must_keep(value, expected):
     assert coerce_price(value) == pytest.approx(expected)
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Рассрочка 5 751 ₽",  # an instalment plan, not the price
+        "в 1356 пунктов",  # a delivery-point count
+        "+ 1 655 бонусов",  # loyalty points
+        "кэшбэк 500 ₽",  # cashback
+    ],
+)
+def test_coerce_price_refuses_the_shared_decoy_markers(value):
+    """R-NO-FABRICATION: the non-price word guard was a second hand-written list,
+    so 'Рассрочка 5 751 ₽' parsed as 5751.0 and a delivery-point count as its
+    number. coerce_price now uses DECOY_MARKERS, the one list the DOM decoy
+    regex is generated from; every value here returns None on the new code and
+    a number on the old one."""
+    assert coerce_price(value) is None
+
+
+def test_price_from_texts_skips_a_decoy_and_takes_the_real_price():
+    """The DOM extractors feed candidates in order: a decoy marker must not win
+    just because it came first (it used to answer 1356.0 here)."""
+    assert price_from_texts("в 1356 пунктов", "58 999 ₽") == pytest.approx(58999.0)
+
+
+@pytest.mark.parametrize("value", ["12万", "1.2万", "1.2K", "15 тыс. ₽"])
+def test_a_magnitude_suffix_is_not_a_price(value):
+    """R-NO-FABRICATION: coerce_int refuses a magnitude suffix, the price path
+    ignored it — '12万' read as 12.0, '1.2K' as 1.2. The digits alone understate
+    the price, so a marker right after the number is None like the count case."""
+    assert coerce_price(value) is None
+
+
+@pytest.mark.parametrize("value", ["1 2999", "1\u00a02999"])
+def test_coerce_rating_rejects_a_grouped_count_without_its_own_separator(value):
+    """The count guard ended on a word boundary, so a run longer than three
+    digits ('1 2999', a counter missing its second separator) slipped past it
+    and came back as a fabricated in-range 1.0."""
+    assert coerce_rating(value) is None
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("1 999 ₽", 1999.0),
+        ("1 999,50 ₽", 1999.5),
+        ("от 1 999 ₽", 1999.0),
+        ("¥129", 129.0),
+        ("129.00", 129.0),
+        ("129 990 Купить", 129990.0),
+        ("5 990 KZT", 5990.0),
+    ],
+)
+def test_price_shapes_the_decoy_and_magnitude_guards_must_keep(value, expected):
+    """The stricter guards must not eat the ordinary shapes: a currency glyph,
+    a decimal comma and the "от" ("from") qualifier stay real prices, and a
+    word that only starts with a magnitude letter is not a magnitude."""
+    assert coerce_price(value) == pytest.approx(expected)
+
+
 def test_validate_offer_flags_an_ambiguous_price():
     """The audit case: an in-stock offer whose price is '1 999 2 999' used to
     report only the missing title. Once coerce_price refuses the blob, the

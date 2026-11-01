@@ -152,7 +152,7 @@ mcp = FastMCP(
         "with cian_search (filters, not free text — region ids: 1 Москва, "
         "2 Санкт-Петербург, 4593 Московская область, 4588 Ленинградская область); "
         "cian_card takes an offer id or URL. Prices are rubles and price_unit "
-        "says what one buys (total / month / day); a missing price is None, never 0."
+        "says what one buys (total / month / day); a missing price is None, never 0. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
 )

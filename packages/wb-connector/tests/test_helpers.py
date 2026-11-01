@@ -872,6 +872,37 @@ def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, t
     assert "HTTP 500" in data["meta"]["warnings"][0]
 
 
+def test_wb_search_positive_empty_survives_a_tool_error_fallback(monkeypatch):
+    """R-EMPTY-NOT-SUCCESS: the legacy path raises a plain ToolError on a
+    refusal (through raise_tool_error), which the old ``except ConnectorError``
+    did not catch — the ToolError escaped and a positively empty v9 answer died
+    instead of returning the warned no_results. The warning names the fallback's
+    own error code and message, not the raw JSON envelope."""
+
+    async def rate_limited_fallback(query, dest, page, ctx):
+        server.raise_tool_error(server.RateLimitedError("wb", retry_after_s=60.0))
+
+    async def fake_safe_get_text(client, url):
+        return 200, '{"products": [], "total": 0}', None
+
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(server, "_safe_get_text", fake_safe_get_text)
+    monkeypatch.setattr(server, "_polite_wait", no_wait)
+    monkeypatch.setattr(server, "_search_via_search_goods", rate_limited_fallback)
+
+    result = asyncio.run(server.wb_search("x"))
+
+    assert result.status == "no_results"
+    assert result.total_ids == 0
+    data = result.model_dump(mode="json")
+    assert data["meta"]["healthy"] is False
+    warning = next(w for w in data["meta"]["warnings"] if w.startswith("fallback_failed"))
+    assert "rate_limited" in warning
+    assert "wb rate-limited" in warning
+
+
 def test_wb_search_returns_no_results_when_both_paths_are_empty(monkeypatch):
     """Unrecoverable ids used to be parser_drift; with v9 primary they mean 'nothing'.
 

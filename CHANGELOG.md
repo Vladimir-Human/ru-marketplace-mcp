@@ -621,6 +621,64 @@
   one, excludes nothing, and `8/128GB` does not contradict a `128GB` query. One
   compact `identity_mismatch` warning per call reports the exclusions.
 
+- `compare_prices` больше не теряет поля восстановления из ошибки источника:
+  `SourceOutcome` несёт `retry_after_s` (сколько ждать после открытого
+  предохранителя CDP-хоста), `retryable_now`, `retry_when` и `user_action`
+  (контракт `challenge_required`), а описание `status` называет `unhealthy`.
+  Раньше через эту границу проходили только `error_code` и `retryable`, поэтому
+  «повторите» приходило без времени ожидания, а «нужно действие человека» — без
+  самого действия.
+- `compare_verify_offer` больше не подтверждает условную цену: карточка WB, у
+  которой `price_rub` — цена Wallet (`price_kind="wallet"`, DOM-транспорт),
+  получает `observed_price_rub=null`, `delta_rub=null`, `matches=null` и
+  названный `price_kind` вместо вердикта о цене, доступной только владельцу
+  Wallet.
+- `wb_search` больше не падает на честно пустом ответе v9: отказ legacy-фолбэка,
+  поднятый обычным `ToolError` (через `raise_tool_error`), теперь тоже ловится,
+  поэтому ответ остаётся `no_results` с `fallback_failed` и `healthy=false`, а
+  предупреждение называет код и сообщение фолбэка. Если v9 уже упал, ошибка
+  по-прежнему поднимается наверх.
+- `coerce_price` использует единственный список `DECOY_MARKERS` (переехал в
+  `mcp_core.resilience`, из него же генерируется decoy-regex DOM-слоя), поэтому
+  «Рассрочка 5 751 ₽» и «в 1356 пунктов» больше не становятся ценой; суффикс
+  магнитуды («12万», «1.2K») на ценовом пути отвергается, как в `coerce_int`, а
+  `coerce_rating` отвергает счётчик без своего разделителя («1 2999»).
+- Приведены в соответствие тексты: докстроки `ozon_search` (ноль позиций —
+  `no_items` и `healthy=false`) и `megamarket_search` (любое предупреждение без
+  префикса `info:` гасит `healthy`), справочник `marketplace://errors`
+  перечисляет `retryable_now`, `retry_when` и `user_action`, докстрока
+  `registered_tools` говорит, что возвращает локальные инструменты, а склейка
+  предложений в `instructions` девяти серверов получила потерянный пробел.
+
+- `compare_prices` no longer drops the recovery fields of a source error:
+  `SourceOutcome` carries `retry_after_s` (how long to wait after an open CDP
+  host breaker), `retryable_now`, `retry_when` and `user_action` (the
+  `challenge_required` contract), and the `status` description names
+  `unhealthy`. Only `error_code` and `retryable` used to cross that boundary, so
+  "retry" arrived with no clock and "a human must act" with no action.
+- `compare_verify_offer` no longer certifies a conditional price: a WB card
+  whose `price_rub` is the Wallet price (`price_kind="wallet"`, DOM transport)
+  answers `observed_price_rub=null`, `delta_rub=null`, `matches=null` and the
+  named `price_kind` instead of a verdict on a price only a Wallet holder gets.
+- `wb_search` no longer dies on a positively empty v9 answer: a legacy-fallback
+  refusal raised as a plain `ToolError` (through `raise_tool_error`) is caught
+  too, so the answer stays `no_results` with `fallback_failed` and
+  `healthy=false`, and the warning names the fallback's code and message. When
+  v9 already failed, the error is still raised as before.
+- `coerce_price` uses the one `DECOY_MARKERS` list (moved to
+  `mcp_core.resilience`, which also generates the DOM decoy regex), so
+  'Рассрочка 5 751 ₽' and 'в 1356 пунктов' are no longer read as prices; a
+  magnitude suffix ('12万', '1.2K') is refused on the price path exactly as
+  `coerce_int` refuses it, and `coerce_rating` refuses a counter missing its own
+  separator ('1 2999').
+- Texts corrected: the `ozon_search` docstring (zero parsed items means
+  `no_items` and `healthy=false`) and the `megamarket_search` docstring (any
+  warning without the `info:` prefix flips `healthy`), the
+  `marketplace://errors` reference now lists `retryable_now`, `retry_when` and
+  `user_action`, the `registered_tools` docstring says it returns local tools
+  only, and the appended sentence in nine servers' `instructions` got its
+  missing space back.
+
 ## [2.7.0] - 2026-10-30
 
 Установка и первый запуск: `install --write` с профилями и мастер `setup`, Chrome и проверка сайтов из CLI, фолбэк Wildberries на отрисованную страницу при отказе API, сгенерированный справочник инструментов и подготовка к PyPI (публикация выключена).
