@@ -109,6 +109,11 @@ def coerce_int(value: Any) -> int | None:
     fabricates a plausible-but-wrong count ('1.2K'->12, '-3'->3). Such inputs now
     return None (fail loud) rather than a fabricated integer. Pure grouped digits
     ('24 088', '1 057') still parse, because thousands separators are unambiguous.
+
+    Audit 2026-11-01 (CONFIRMED): the letter guard knew only Latin and Cyrillic,
+    so a CJK magnitude suffix ('12万') slipped through as 12, and a currency
+    glyph ('24 088₽') was stripped and read as a count. Any-script letter and a
+    currency glyph now return None instead of a fabricated count.
     """
     if value is None:
         return None
@@ -125,8 +130,11 @@ def coerce_int(value: Any) -> int | None:
     if isinstance(value, str):
         s = value.strip()
         # Reject ambiguous forms instead of fabricating: a sign, a decimal
-        # separator between digits, or a magnitude letter (K/M/тыс/k/тыс.).
-        if re.search(r"[A-Za-zА-Яа-я]", s):  # any letter → unit/suffix → ambiguous
+        # separator between digits, a magnitude letter in any script
+        # (K/M/тыс/万) or a currency glyph ('24 088₽' is a price, not a count).
+        if any(ch.isalpha() for ch in s):  # any letter → unit/suffix → ambiguous
+            return None
+        if re.search(r"[₽$€¥￥£₸₴₺₹₩]", s):
             return None
         # signed → drop-sign would lie. Must cover the unicode minus (U+2212)
         # and the en/em dashes (U+2013/U+2014) a marketplace renders ranges
@@ -157,6 +165,14 @@ def coerce_price(value: Any) -> float | None:
       * A multi-number blob / price-range ('1 999 ₽ 2 999 ₽') is AMBIGUOUS and
         returns None (fail loud) rather than the concatenated nonsense 19992999.0.
 
+    Audit 2026-11-01 (CONFIRMED): the same space that groups thousands also
+    separates two numbers, so '1 999 2 999' and '1 999 2 999 ₽' glued into
+    19992999.0, '3 983.999' (a 3-digit fraction) into 3983999.0, and a
+    neighbour figure ('от 5 751 ₽/ мес.', 'выгода 5 000 ₽', 'скидка 30%')
+    parsed as the price. All are None now: grouping is checked to be
+    consistent and a non-price qualifier is refused, while 'от' ("from") stays
+    a real price.
+
     Audit 2026-08-06 (found by property tests): a digit run past the float
     ceiling (~1.8e308) raised OverflowError, breaking totality — one poisoned
     cell aborted the whole tool. Such values are not prices; they are None.
@@ -182,13 +198,20 @@ def _parse_money_string(s: str) -> float | None:
 
     Handles RU/EU grouping (space, thin-space, NBSP, dot-as-grouping) and a
     comma/dot decimal with 1-2 fractional digits. Returns None when the string
-    contains MORE THAN ONE distinct number (a range or discount blob) so the
-    caller fails loud instead of concatenating unrelated digits.
+    names something other than the item's price (a saving, a discount, a
+    monthly instalment) or contains MORE THAN ONE number / an inconsistent
+    grouping, so the caller fails loud instead of concatenating unrelated digits.
     """
     if not s:
         return None
     # Normalize unicode spaces to plain space, drop currency/letters except sep.
     t = s.replace("\u2009", " ").replace("\u00a0", " ").replace("\u202f", " ")
+    # A display blob that names a saving, a discount or a per-month instalment is
+    # not the item's price: those figures sit beside the real price and are
+    # smaller, so a "cheapest" ranking would pick one of them. "от" ("from") is
+    # NOT such a word — a listing's "from" price is a real price.
+    if "%" in t or re.search(r"выгод|скидк|эконом|saving|discount|\bмес\b|месяц|month", t.lower()):
+        return None
     # Find number-like tokens: digits with optional grouping and one decimal tail.
     matches = list(re.finditer(r"\d[\d \.\,]*\d|\d", t))
     # A leading minus makes this a delta, not a price. Marketplaces render the
@@ -203,21 +226,38 @@ def _parse_money_string(s: str) -> float | None:
         before = t[: matches[0].start()].rstrip()
         if before.endswith(("-", "\u2212", "\u2013", "\u2014")):
             return None
-    tokens = [m.group(0) for m in matches]
-    cleaned: list[str] = []
-    for tok in tokens:
-        tok = tok.strip()
-        if tok:
-            cleaned.append(tok)
-    if len(cleaned) != 1:
+    tokens = [m.group(0).strip() for m in matches]
+    tokens = [tok for tok in tokens if tok]
+    if len(tokens) != 1:
         return None  # zero or multiple numbers → ambiguous → fail loud
-    tok = cleaned[0]
+    return _parse_money_token(tokens[0])
+
+
+def _parse_money_token(tok: str) -> float | None:
+    """Parse one digit run, or None when its grouping is inconsistent.
+
+    The space is both the Russian thousands separator and the gap between two
+    numbers ('1 999 2 999'), so a run is one number only when its groups follow
+    the grouping rule: a 1-3 digit first group and 3-digit later groups, or a
+    single ungrouped run, with an optional 1-2 digit decimal tail. Mixing
+    separators ('3 983.999') or leaving a short non-final group is ambiguous —
+    a second number glued on — and returns None instead of concatenating digits.
+    """
     # Decimal tail: a comma or dot followed by exactly 1-2 digits at the END.
     m = re.search(r"[.,](\d{1,2})$", tok)
     frac = 0.0
     if m:
         frac = int(m.group(1)) / (10 ** len(m.group(1)))
         tok = tok[: m.start()]
+    groups = [g for g in re.split(r"[ .,]+", tok.strip()) if g]
+    separators = set(re.findall(r"[ .,]", tok))
+    if not groups or len(separators) > 1:
+        return None  # mixed separators → cannot tell grouping from decimals
+    if len(groups) == 1:
+        if not re.fullmatch(r"\d+", groups[0]):
+            return None
+    elif not re.fullmatch(r"\d{1,3}", groups[0]) or not all(re.fullmatch(r"\d{3}", g) for g in groups[1:]):
+        return None  # a short non-final group is another number, not a separator
     intpart = re.sub(r"[^\d]", "", tok)
     if not intpart:
         return None
@@ -230,13 +270,16 @@ def _parse_money_string(s: str) -> float | None:
 
 def coerce_rating(value: Any) -> float | None:
     """Coerce a rating like '4,9' / '4.9' / 4.9 to float in 0..5. None if
-    unparseable, out of range, or carrying a non-/5 denominator.
+    unparseable, out of range, or carrying a non-5 denominator ('/10', 'из 10').
 
     Audit 2026-06-01 (CONFIRMED — latent): the old version returned the FIRST
     numeric token of any string, so a review-count ('4,500 reviews' -> 4.5) or a
     wrong-scale rating ('4.9/10' -> 4.9) silently passed as an in-range 0..5
     rating. Now: an explicit denominator other than 5 returns None, a count-like
     blob returns None, and the parsed value must be within 0..5.
+
+    Audit 2026-11-01 (CONFIRMED): the denominator was recognised only through
+    '/', so the Russian '4.5 из 10' passed as 4.5. 'из N' now joins '/N'.
 
     Audit 2026-08-07 (wave of cycles 24-30): json.loads admits
     arbitrary-precision ints, and float() raises OverflowError past the ceiling;
@@ -253,8 +296,8 @@ def coerce_rating(value: Any) -> float | None:
         return v if 0 <= v <= 5 else None
     if isinstance(value, str):
         s = value.strip()
-        # Explicit denominator: accept only /5; reject /10, /100, etc.
-        dm = re.search(r"\d[.,]?\d*\s*/\s*(\d+)", s)
+        # Explicit denominator: accept only /5 or 'из 5'; reject /10, из 10, etc.
+        dm = re.search(r"\d[.,]?\d*\s*(?:/|из)\s*(\d+)", s, re.IGNORECASE)
         if dm and dm.group(1) != "5":
             return None
         # A count-like blob ("4,500 reviews", "1 234 отзыва") is not a rating.
