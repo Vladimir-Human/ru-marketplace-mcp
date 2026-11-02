@@ -39,6 +39,12 @@ from marketplace_connector import cli
 # and is not a token, so the baseline stays token-less; the gate tests set a
 # token explicitly and restore this afterwards.
 os.environ["MPSTATS_MP_AUTH"] = ""
+# The inventory now follows the WB route (needs_cdp, effective_route), and
+# that route comes from WB_TRANSPORT / WB_DOM_FALLBACK at import. Pin the
+# documented default (API with the DOM fallback) for the same reason: a
+# developer's exported mode must not change what the suite expects.
+os.environ["WB_TRANSPORT"] = "api"
+os.environ["WB_DOM_FALLBACK"] = "1"
 
 # START_BLOCK_CLIENT_PATH_ISOLATION
 

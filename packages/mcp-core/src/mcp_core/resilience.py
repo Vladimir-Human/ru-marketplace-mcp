@@ -24,7 +24,7 @@ step, not something already in place.
 # START_MODULE_CONTRACT
 # PURPOSE: Normalize drifting upstream values and report structural health honestly.
 # SCOPE: Offline coercion, validation, shape fingerprints and tri-state canaries.
-# DEPENDS: stdlib math,re,collections.abc,typing; no network or persistence.
+# DEPENDS: stdlib math,re,collections.abc,typing; mcp_core.redact; no network or persistence.
 # LINKS: M-RESILIENCE; M-DOM; M-MODELS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -32,6 +32,7 @@ step, not something already in place.
 # first_present: Bind the first non-null alias while preserving false/empty values.
 # deep_first: Search nested dict/list payloads within a depth bound.
 # coerce_int: Parse unambiguous counts or return None.
+# coerce_count: Parse a labelled display count ("24 086 отзывов") or return None.
 # coerce_price: Accept positive finite prices and reject ambiguous display blobs.
 # coerce_rating: Normalize ratings on the 0..5 scale.
 # health_warnings: Strip informational notes; the rest decide healthy.
@@ -39,6 +40,7 @@ step, not something already in place.
 # validate_items: Aggregate per-item offer validation into systemic drift warnings.
 # validate_review_block: Check returned counts and sufficiently large text samples.
 # attach_meta: Mutate a result with source, health and warnings.
+# bound_warnings: Deliver a bounded warning list that names what it suppressed.
 # widget_prefixes: Strip volatile numeric widget suffixes.
 # shape_signature: Fingerprint bounded paths/types independently of values.
 # diff_keys: Return sorted missing and added structural keys.
@@ -55,6 +57,8 @@ import math
 import re
 from collections.abc import Iterable
 from typing import Any
+
+from mcp_core.redact import redact_error_text
 
 # A non-value sentinel distinct from None, so callers can tell "key absent"
 # from "key present but null". Most callers just want the coalesced value, but
@@ -152,6 +156,95 @@ def coerce_int(value: Any) -> int | None:
         digits = re.sub(r"[^\d]", "", s)
         return int(digits) if digits else None
     return None
+
+
+def coerce_count(value: Any) -> int | None:
+    """Coerce a display count that may carry a unit label into an int, or None.
+
+    ``coerce_int`` refuses a bare count that carries letters, because "1.2K"
+    there is ambiguous. A marketplace review counter is different: it arrives
+    as DISPLAY TEXT with a known label — Ozon renders "24 086 отзывов", the
+    older format was "(15 374)". So the label is split off first and the
+    NUMBER is then parsed strictly:
+
+    * "24 086 отзывов", "1 200", "1200", "(15 374)" -> the number;
+    * a sign ("-3", "+5", "−5"), a range ("1 000–2 000"), two numbers
+      ("1 999 2 999"), a magnitude suffix ("1.2K", "2 тыс.") or any other
+      letter -> None.
+
+    Audit 2026-11-02 (CONFIRMED — R05): the Ozon tile parser and compare's
+    count adapter both glued every digit of the display text together, so
+    "1.2K отзывов" became the plausible-but-wrong 12 and the answer stayed
+    healthy. A magnitude suffix is refused here for the same reason
+    ``coerce_int`` refuses it: the mantissa is a guess about the site's
+    rounding, and a wrong count is worse than an absent one. The grouped
+    forms keep parsing, because a thousands separator is unambiguous.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if math.isfinite(value) else None
+    if not isinstance(value, str):
+        return None
+    text = _strip_count_label(value)
+    if not text:
+        return None
+    # Any leftover letter (a magnitude suffix, a currency word, a stray
+    # symbol) means the text does not name exactly one plain number.
+    if any(ch.isalpha() for ch in text):
+        return None
+    if re.search(r"[₽$€¥￥£₸₴₺₹₩]", text):
+        return None
+    # A sign, a range dash or a tilde: dropping the sign would fabricate a
+    # count, and a range is two numbers. The unicode minus (U+2212) and the
+    # en/em dashes (U+2013/U+2014) count as signs.
+    if re.search(r"[-+−–—~]", text):
+        return None
+    return _parse_grouped_count(text)
+
+
+# The unit labels a marketplace puts in front of / behind a counter. Only
+# these are stripped; any other word stays in the text and makes it ambiguous.
+_COUNT_LABEL_RE = re.compile(r"(?i)\b(?:отзыв\w*|review(?:s)?|оценк\w*)\b")
+# Spaces a marketplace uses as a thousands separator: plain, no-break
+# (U+00A0), narrow no-break (U+202F) and thin (U+2009).
+_COUNT_SPACES = " \u00a0\u202f\u2009"
+
+
+def _strip_count_label(text: str) -> str:
+    """Remove a known review/rating label and the brackets around the number."""
+    cleaned = _COUNT_LABEL_RE.sub(" ", text)
+    cleaned = "".join(ch for ch in cleaned if ch not in "()[]{}")
+    return " ".join(cleaned.replace("\t", " ").split())
+
+
+def _parse_grouped_count(text: str) -> int | None:
+    """Parse one grouped integer, or None when the text is not exactly one.
+
+    Grouping is the same rule ``coerce_price`` uses for its integer part: a
+    first group of one to three digits followed by three-digit groups, or a
+    single ungrouped run. Anything else is two numbers glued together
+    ("1 999 2 999") or a run with a foreign separator, and is refused.
+    """
+    normalized = text
+    for space in _COUNT_SPACES:
+        normalized = normalized.replace(space, " ")
+    normalized = normalized.strip()
+    if not normalized:
+        return None
+    groups = normalized.split(" ")
+    groups = [group for group in groups if group]
+    if not groups:
+        return None
+    if len(groups) == 1:
+        if not re.fullmatch(r"\d+", groups[0]):
+            return None
+    elif not re.fullmatch(r"\d{1,3}", groups[0]) or not all(re.fullmatch(r"\d{3}", g) for g in groups[1:]):
+        return None
+    digits = re.sub(r"[^\d]", "", normalized)
+    return int(digits) if digits else None
 
 
 def coerce_price(value: Any) -> float | None:
@@ -415,6 +508,65 @@ def health_warnings(warnings: list[str]) -> list[str]:
     silently disagreeing with the connectors that go through ``attach_meta``.
     """
     return [warning for warning in warnings if not warning.startswith("info:")]
+
+
+def bound_warnings(
+    warnings: Iterable[str],
+    *,
+    limit: int = 10,
+    subject: str = "warning",
+    marker_prefix: str = "info: ",
+) -> list[str]:
+    """Deliver a bounded warning list that says what it left out.
+
+    A shortened list of diagnostics reads as a different claim than the truth:
+    ten warnings where the source reported twelve look like ten problems, not
+    like a budget. So the budget stays, but the last entry names how many
+    diagnostics were suppressed.
+
+    * every entry is redacted, single-line and at most 500 characters;
+    * duplicates collapse to their first occurrence;
+    * a diagnostic that explains an unhealthy answer is never dropped behind
+      an ``info:`` note: real warnings fill the budget first, notes take what
+      is left;
+    * the marker is itself an ``info:`` note — truncation is a fact about the
+      delivery, not a doubt about the data, so it must not flip ``healthy``.
+
+    Callers that compute ``healthy`` from the warnings they deliver should
+    compute it from the FULL list: when the real warnings alone exceed the
+    budget, the delivered list can no longer carry all of them.
+
+    Audit 2026-11-02 (CONFIRMED — R18): compare's source adapter cut a
+    twelve-warning reply to ten without a word, and the WB DOM path cut its
+    warnings with ``warnings[:10]``.
+    """
+    cleaned: list[str] = []
+    for warning in warnings:
+        if not isinstance(warning, str):
+            continue
+        text = " ".join(redact_error_text(warning).split())
+        if not text:
+            continue
+        if len(text) > 500:
+            text = text[:497] + "..."
+        if text not in cleaned:
+            cleaned.append(text)
+    if limit <= 0:
+        return []
+    if len(cleaned) <= limit:
+        return cleaned
+    budget = limit - 1
+    real = [warning for warning in cleaned if not warning.startswith("info:")]
+    notes = [warning for warning in cleaned if warning.startswith("info:")]
+    kept = real[:budget]
+    if len(kept) < budget:
+        kept.extend(notes[: budget - len(kept)])
+    suppressed = len(cleaned) - len(kept)
+    kept.append(
+        f"{marker_prefix}{subject}s_truncated: {suppressed} further {subject}(s) suppressed by the "
+        f"{limit}-{subject} budget; {len(cleaned)} in total"
+    )
+    return kept
 
 
 def validate_offer(item: dict, *, require_title: bool = True, price_key: str | None = None) -> list[str]:

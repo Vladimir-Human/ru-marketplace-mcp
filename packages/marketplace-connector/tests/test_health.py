@@ -20,6 +20,7 @@ from marketplace_connector import server
 from marketplace_connector.unblock import UNBLOCK_PAGES
 from mcp_core import transport as core_transport
 from mcp_core.transport import browser_handoff, cdp_budget, chrome_cdp
+from wb_connector import server as wb_server
 
 
 def _dead_cdp(monkeypatch) -> None:
@@ -180,6 +181,9 @@ def test_health_is_advertised_as_read_only():
 def test_needs_cdp_lists_exactly_the_browser_backed_mounted_sources():
     result = asyncio.run(server.marketplace_sources())
 
+    # Wildberries is here because the default WB mode may fall back to the
+    # operator's Chrome when WB's API refuses this address (R11): the
+    # inventory must not claim that no browser is involved.
     assert result.needs_cdp == [
         "aliexpress",
         "avito",
@@ -190,6 +194,7 @@ def test_needs_cdp_lists_exactly_the_browser_backed_mounted_sources():
         "megamarket",
         "ozon",
         "taobao",
+        "wildberries",
     ]
     # Additive field: the rest of the mounted view is unchanged.
     assert result.mounted_count == 13
@@ -203,7 +208,7 @@ def test_needs_cdp_follows_the_mounted_set(monkeypatch):
 
     result = asyncio.run(server.marketplace_sources())
 
-    assert result.needs_cdp == ["cian"]
+    assert result.needs_cdp == ["cian", "wildberries"]
 
 
 def test_needs_cdp_reads_a_mount_name_through_its_canonical_source(monkeypatch):
@@ -215,6 +220,10 @@ def test_needs_cdp_reads_a_mount_name_through_its_canonical_source(monkeypatch):
     monkeypatch.setattr(server, "_MOUNTED", ["wildberries", "yandex"])
     monkeypatch.setattr(server, "_SKIPPED", {})
     monkeypatch.setitem(server.CAPABILITIES, "yandex_market", {**server.CAPABILITIES["yandex_market"], "access": "cdp"})
+    # Wildberries is put in API-only mode so this test keeps its own focus:
+    # the alias lookup, not the WB route.
+    monkeypatch.setattr(wb_server._settings, "transport", "api")
+    monkeypatch.setattr(wb_server._settings, "dom_fallback", False)
 
     result = asyncio.run(server.marketplace_sources())
 

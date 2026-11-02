@@ -517,11 +517,14 @@ reviews have been collected yet. Once at least one page yielded reviews, a
 later-page failure degrades to a partial-success return.""",
     "ozon_search": """## Return Format
 
-OzonSearchResponse: {status, query, page, tier_used, count, items, meta} on
-success. Zero parsed items is NOT an error, but it is NOT healthy either:
-count=0 with empty items carries a `no_items` warning (meta.healthy=false),
-because an empty tile grid and a tileGrid selector that stopped matching
-look the same from here.
+OzonSearchResponse: {status, query, page, tier_used, count, parsed_count,
+truncated, items, meta} on success. count is the number of items RETURNED
+(count == len(items)); parsed_count is the number of tiles the page carried,
+and truncated says that the page was cut at 30 items (a truncation warning
+accompanies it). Zero parsed items is NOT an error, but it is NOT healthy
+either: count=0 with empty items carries a `no_items` warning
+(meta.healthy=false), because an empty tile grid and a tileGrid selector that
+stopped matching look the same from here.
 
 ## Error Format
 

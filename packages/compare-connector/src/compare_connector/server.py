@@ -101,6 +101,11 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 # a slow source must not hold the whole comparison hostage.
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
 
+# How many native diagnostics one source may contribute to a comparison. The
+# list stays bounded, and a bounded list that had to be cut says how many
+# diagnostics it suppressed (mcp_core.bound_warnings).
+SOURCE_WARNING_LIMIT = 10
+
 mcp = FastMCP(
     name="compare-connector",
     version=SERVER_VERSION,
@@ -369,27 +374,16 @@ def _as_price(value: object) -> float | None:
 def _as_count(value: object) -> int | None:
     """Coerce a rating/review count, tolerating "24 086 отзывов"-style text.
 
-    Parity with mcp_core.coerce_int where the formats overlap: non-finite
-    floats (json.loads admits NaN/Infinity by default) degrade to None instead
-    of letting int() raise and abort the whole tool, and a signed string is
-    ambiguous — dropping the sign would fabricate a plausible-but-wrong count.
-    The sign guard covers the unicode minus (U+2212) and the en/em dashes
-    (U+2013/U+2014) a marketplace renders ranges with: ASCII-only [-+] let a
-    range like '1 000–2 000' digit-concatenate into 10002000. Letters stay
-    tolerated (they are the 'отзывов' label, not ambiguity).
+    Delegates to the shared ``mcp_core.coerce_count`` — the one place that
+    knows how a marketplace writes a counter. A private duplicate lived here
+    and glued every digit of the display text together, so "1.2K отзывов"
+    became the plausible-but-wrong 12 and the comparison stayed healthy
+    (R05). The shared helper splits the known review label off and then parses
+    the number strictly: a grouped count ("1 200", "24 086 отзывов") parses,
+    while a sign, a range, two numbers or a magnitude form ("1.2K") is None
+    rather than a manufactured count.
     """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return int(value) if math.isfinite(value) else None
-    if not isinstance(value, str):
-        return None
-    if re.search(r"[-+\u2212\u2013\u2014]\s*\d", value):
-        return None
-    digits = re.sub(r"[^\d]", "", value)
-    return int(digits) if digits else None
+    return R.coerce_count(value)
 
 
 def _stock_from_label(value: object) -> bool | None:
@@ -436,18 +430,13 @@ class OfferBatch(list[MarketOffer]):
         raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
         healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
         self.native_healthy: bool | None = healthy if isinstance(healthy, bool) else None
+        # One shared bound for every caller: the list stays inside its budget,
+        # the entries stay redacted and one line long, and a list that had to
+        # be cut says so (R18). A diagnostic that explains an unhealthy
+        # answer is never dropped behind an `info:` note.
         self.warnings: list[str] = []
         if isinstance(raw, list):
-            for warning in raw:
-                if not isinstance(warning, str) or not warning.strip():
-                    continue
-                text = " ".join(_redact(warning).split())
-                if len(text) > 500:
-                    text = text[:497] + "..."
-                if text not in self.warnings:
-                    self.warnings.append(text)
-                if len(self.warnings) == 10:
-                    break
+            self.warnings = R.bound_warnings(raw, limit=SOURCE_WARNING_LIMIT)
         if healthy is False and not self.warnings:
             self.warnings.append("source_unhealthy: native validation did not pass; no diagnostic supplied")
 

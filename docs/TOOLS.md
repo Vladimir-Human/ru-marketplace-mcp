@@ -18,7 +18,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 | --- | --- | ---: | ---: | ---: |
 | compare | `compare-mcp` | 4 | 6984 | ≈1.7k |
 | decision | `decision-mcp` | 5 | 8079 | ≈2.0k |
-| full | `marketplace-mcp` | 39 | 52714 | ≈13.1k |
+| full | `marketplace-mcp` | 39 | 52821 | ≈13.1k |
 
 ## compare — `compare-mcp`
 
@@ -64,7 +64,7 @@ every error code.
 
 ## full — `marketplace-mcp`
 
-39 tools, 52714 `tools/list` bytes (≈13.1k tokens).
+39 tools, 52821 `tools/list` bytes (≈13.1k tokens).
 
 Resources (40): `guide://aliexpress/aliexpress_card`, `guide://aliexpress/aliexpress_search`, `guide://avito/avito_card`, `guide://avito/avito_search`, `guide://avito/avito_seller`, `guide://cian/cian_card`, `guide://cian/cian_search`, `guide://citilink/citilink_card`, `guide://citilink/citilink_search`, `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://detmir/detmir_card`, `guide://detmir/detmir_categories`, `guide://detmir/detmir_category`, `guide://dns/dns_card`, `guide://dns/dns_search`, `guide://lamoda/lamoda_card`, `guide://lamoda/lamoda_search`, `guide://marketplace/marketplace_health`, `guide://marketplace/marketplace_sources`, `guide://megamarket/megamarket_card`, `guide://megamarket/megamarket_search`, `guide://ozon/ozon_card`, `guide://ozon/ozon_reviews`, `guide://ozon/ozon_search`, `guide://taobao/taobao_card`, `guide://taobao/taobao_search`, `guide://wb/wb_card`, `guide://wb/wb_categories`, `guide://wb/wb_category_products`, `guide://wb/wb_questions`, `guide://wb/wb_reviews`, `guide://wb/wb_root_info`, `guide://wb/wb_search`, `guide://wb/wb_seller`, `guide://yandex/yandex_card`, `guide://yandex/yandex_search`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list
@@ -91,7 +91,7 @@ every error code.
 | Tool | Parameters | Description |
 | --- | --- | --- |
 | `cian_card` | `offer_id_or_url: string` | Read one Cian offer: price and its history, layout, building, address, metro, description, publisher. |
-| `cian_search` | `deal: string (one of "sale", "rent", "daily"), offer_type: string (one of "flat", "room", "house", "commercial") = "flat", region: string = null, rooms: array[integer] = null, price_min: integer = null, price_max: integer = null, area_min: number = null, area_max: number = null, page: integer = 1` | Search Cian offers by filters (there is no free-text search). |
+| `cian_search` | `deal: string (one of "sale", "rent", "daily"), offer_type: string (one of "flat", "room", "house", "commercial") = "flat", region: string = null, rooms: array[integer (one of 1, 2, 3, 4, 5, 6, 7, 9)] = null, price_min: integer = null, price_max: integer = null, area_min: number = null, area_max: number = null, page: integer = 1` | Search Cian offers by filters (there is no free-text search). |
 
 ### citilink — `citilink_*` (2 tools)
 

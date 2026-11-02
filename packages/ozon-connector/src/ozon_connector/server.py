@@ -30,7 +30,9 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # ozon_card: Read a validated SKU/product path with a required widgetStates object.
 # ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data.
 # ozon_search: Search and normalize composer result tiles from a required widgetStates object,
-#              plus a runtime shape-drift warning when a required key family vanishes.
+#              publish count as the number of returned items, name the parsed total
+#              separately and warn when the 30-item cap cut the page; a runtime
+#              shape-drift warning fires when a required key family vanishes.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
 # END_MODULE_MAP
 
@@ -131,6 +133,10 @@ _REVIEW_SORT_ALIASES = {
     "complaints": "score_asc",
 }
 PRODUCT_SLUG_RE = re.compile(r"^/product/(?:[^/]*-)?(\d+)/?$")
+
+# How many search tiles one answer carries. The composer page holds more, so
+# the answer names the parsed total separately and says when it cut the page.
+SEARCH_ITEM_LIMIT = 30
 
 OZON_HEADERS = {
     "Accept": "application/json, text/plain, */*",
@@ -1217,10 +1223,12 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
                 if not rating and re.match(r"^\d[.,]\d", txt):
                     rating = txt
                 # Review count: Nov-2026 format "24 086 отзывов" (no parens);
-                # older format was "(15 374)". Extract the integer either way.
+                # older format was "(15 374)". The label is split off and the
+                # number parsed strictly (mcp_core.coerce_count): a glued
+                # digit run turned "1.2K отзывов" into the plausible-but-wrong
+                # 12 and kept the answer healthy (R05).
                 elif not rating_count and ("отзыв" in txt or ("(" in txt and ")" in txt)):
-                    digits = re.sub(r"[^\d]", "", txt)
-                    rating_count = int(digits) if digits else txt
+                    rating_count = R.coerce_count(txt)
 
     out["title"] = title
     out["price"] = price_text
@@ -1391,19 +1399,33 @@ async def _ozon_search_impl(
         raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
 
     items = _search_items_from_payload(payload)
+    # The tool returns at most 30 items, so the delivered answer and the parsed
+    # page are two different numbers. `count` is the delivered one (it always
+    # equals len(items)); the parsed one travels as parsed_count and the
+    # answer says so in a truncation warning — the old code published the
+    # parsed total as `count` and called a cut page complete (R06).
+    delivered = items[:SEARCH_ITEM_LIMIT]
+    parsed_count = len(items)
 
     # The selfcheck compares this payload against the captured family
     # registry; the tool's own answer now carries the same drift signal, so
     # an agent does not need a human running doctor to learn the shape moved.
     # A tile parser that stopped reading action.link still yields titled,
     # priced tiles — but every result silently lost its url/card_input, and
-    # only this family check notices. Zero items stay out: every per-item
-    # family is vacuously absent there and the no_items warning covers it.
-    warnings = _aggregate_offer_warnings(items[:30])
-    if items:
-        drift = R.shape_drift_warning({"items": items[:30]}, SEARCH_REQUIRED_FAMILIES, source="ozon_search")
+    # only this family check notices. The health check runs on exactly the
+    # items the agent receives, never on the ones the cap dropped. Zero items
+    # stay out: every per-item family is vacuously absent there and the
+    # no_items warning covers it.
+    warnings = _aggregate_offer_warnings(delivered)
+    if delivered:
+        drift = R.shape_drift_warning({"items": delivered}, SEARCH_REQUIRED_FAMILIES, source="ozon_search")
         if drift:
             warnings.append(drift)
+    if parsed_count > len(delivered):
+        warnings.append(
+            f"info:truncated: {parsed_count} tiles parsed from the page, {len(delivered)} returned "
+            f"(this tool returns at most {SEARCH_ITEM_LIMIT} items); count is the returned number"
+        )
 
     return OzonSearchResponse(
         **R.attach_meta(
@@ -1412,8 +1434,10 @@ async def _ozon_search_impl(
                 "query": query,
                 "page": page,
                 "tier_used": tier,
-                "count": len(items),
-                "items": items[:30],
+                "count": len(delivered),
+                "parsed_count": parsed_count,
+                "truncated": parsed_count > len(delivered),
+                "items": delivered,
             },
             warnings,
             source="ozon_search",

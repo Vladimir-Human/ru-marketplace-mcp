@@ -13,13 +13,21 @@
 websocket собирается одинаково для IPv4 и IPv6, команда CDP имеет абсолютный
 дедлайн, диагностика в успешном ответе вычищается, подсказки восстановления
 следуют за способом установки, а тип ошибки коннектора доходит до вызывающего
-вместе со своими полями.
+вместе со своими полями. Данные и контракты тоже перестают вводить в
+заблуждение: счётчик отзывов не становится правдоподобным неверным числом,
+число выдачи равно числу возвращённых товаров, ограничения инструментов видны
+в его схеме, инвентарь источников учитывает настроенный режим, а обрезанные
+предупреждения сообщают, сколько их потеряно.
 
 The transport and the errors no longer lose what the operator and the agent
 need: the websocket URL is built the same way for IPv4 and IPv6, a CDP command
 has an absolute deadline, a diagnostic inside a success answer is scrubbed, the
 recovery hints follow the install mode, and a connector's error reaches the
-caller with its own fields.
+caller with its own fields. The data and the contracts no longer mislead
+either: a review counter is not a plausible-but-wrong number, the number of
+results equals the number of items returned, a tool's limits are visible in its
+schema, the source inventory follows the configured mode, and cut warnings say
+how many were lost.
 
 ### Fixed
 
@@ -131,6 +139,77 @@ caller with its own fields.
   contract snapshot rather than captures. An exception covers one defect only,
   and a resolved exception says so, so its entry can be deleted. The 31
   correct pins stay correct under any line-ending convention.
+- Счётчик отзывов больше не превращается в правдоподобное неверное число.
+  Ozon отдаёт его текстом («1.2K отзывов»), и разбор склеивал все цифры подряд:
+  «1.2K отзывов» становилось двенадцатью — и ответ оставался здоровым. Теперь
+  метка отзывов отделяется, а число разбирается строго: «1 200 отзывов» и «1200»
+  дают 1200, а знак, диапазон, два числа и форма с множителем («1.2K») не
+  называют одного счётчика и дают пусто. Правило одно и то же для исходного
+  инструмента и для сравнения источников, поэтому счётчик не может быть
+  правильным с одной стороны и неверным с другой.
+- Число найденного в `ozon_search` теперь равно числу возвращённых товаров.
+  Страница из сорока плиток отвечала `count=40`, а `items` содержал первые
+  тридцать, и обрезка не была сказана вслух. Теперь `count` равен
+  `len(items)`, разобранное число приходит отдельным полем `parsed_count`, флаг
+  `truncated` и предупреждение называют обрезку, а проверка здоровья
+  смотрит ровно на те товары, которые получил агент. Полная короткая выдача
+  остаётся полной и здоровой.
+- Ограничения партий и закрытые перечисления переехали из описания в схему
+  инструмента. `wb_card` больше не принимает по объявленной схеме пустой
+  список, ноль или 101 идентификатор: границы партии, положительность
+  элементов и закрытые наборы значений (площадка MPStats, число комнат у
+  Cian) видны в `tools/list`, и такой вызов отвергается схемой до запроса к
+  сети. Серверные проверки и их понятные ошибки остались, а граничные
+  значения, которые схема принимает, по-прежнему выполняются.
+- Инвентарь источников теперь учитывает настроенный режим Wildberries.
+  При `WB_TRANSPORT=dom` (и при обычном режиме API с включённым откатом в DOM)
+  `marketplace_sources` больше не говорит, что браузер не нужен, — а именно
+  так выглядел инвентарь, когда `wb_search` уходил в CDP. Три вопроса
+  разделены: нужен ли браузер обязательно, может ли он понадобиться и какой
+  маршрут выбран сейчас; ответы следуют за настройками источника и не открывают
+  браузер.
+- Диагностические предупреждения больше не режутся молча. Двенадцать
+  предупреждений типизированного ответа источника приходили десятью — без
+  единого слова об обрезке, и предупреждение, объясняющее нездоровый ответ,
+  могло исчезнуть за информационными заметками. Список остаётся ограниченным,
+  но последняя запись называет число подавленных предупреждений — и в исходном
+  инструменте, и в сравнении источников; настоящие предупреждения
+  заполняют бюджет первыми, а вердикт о здоровье считается по полному списку.
+
+- A review counter no longer becomes a plausible-but-wrong number. Ozon renders
+  it as display text ("1.2K отзывов") and the parser used to glue every digit
+  together, so "1.2K отзывов" became twelve and the answer stayed healthy. The
+  review label is now split off and the number is parsed strictly: "1 200
+  отзывов" and "1200" give 1200, while a sign, a range, two numbers and a
+  magnitude form ("1.2K") name no single counter and give nothing. The rule is
+  the same for the native tool and for the source comparison, so a counter
+  cannot be right on one side and wrong on the other.
+- The number found by `ozon_search` is now the number of items returned. A page
+  of forty tiles answered `count=40` while `items` carried the first thirty,
+  and the cut was never said out loud. `count` now equals `len(items)`, the
+  parsed total arrives in its own `parsed_count` field, and a `truncated` flag
+  and a warning name the cut; the health check runs on exactly the items the
+  agent receives. A complete short answer stays complete and healthy.
+- Batch limits and closed enumerations moved from prose into the tool schema.
+  `wb_card` no longer accepts an empty list, a zero or 101 ids as its declared
+  schema: the batch bounds, the positivity of the items and the closed value
+  sets (the MPStats marketplace, the Cian room counts) are visible in
+  `tools/list`, and such a call is refused by the schema before any request
+  goes out. The server-side checks and their clear errors stay, and the
+  boundary values the schema accepts still run.
+- The source inventory now follows the configured Wildberries mode. With
+  `WB_TRANSPORT=dom` — and in the ordinary API mode with the DOM fallback on —
+  `marketplace_sources` no longer claims that no browser is involved, which is
+  exactly what it used to say while `wb_search` went through CDP. Three
+  questions are separated: is the browser unavoidable, may it be used, and
+  which route is taken now; the answers follow the source's own settings and
+  open no browser.
+- Diagnostic warnings are no longer cut silently. Twelve warnings of a typed
+  source reply arrived as ten, without a word about the cut, and a warning that
+  explains an unhealthy answer could disappear behind informational notes. The
+  list stays bounded, but the last entry names the number of suppressed
+  warnings — in the native tool and in the source comparison — real warnings
+  fill the budget first, and the health verdict is computed from the full list.
 
 ## [2.8.0] - 2026-11-01
 

@@ -222,4 +222,19 @@
   <requirement id="R-ERROR-PASSTHROUGH" source="Outside-in study 2026-11-02, remaining-check R20: a HandoffBusyError became a generic transport_down without its fields">
     A generic failure handler passes a ConnectorError through unchanged, so the machine fields a caller acts on survive: a busy browser handoff keeps status_code 409 and its retry_after_s, a full retained-page registry keeps its own reason, a deadline keeps the timeout code and its provider. Every connector's search, card, review and selfcheck handler uses the shared path (raise_tool_error_from), and the fields reach the caller both through the native source tool and through compare's per-source outcome. An unexpected failure stays the redacted transport_down it always was: it invents no taxonomy and leaks no credential.
   </requirement>
+  <requirement id="R-COUNT-PARSE" source="Outside-in study 2026-11-02, remaining-check R05: a display text became a plausible-but-wrong count">
+    A counter that a marketplace renders as display text is parsed once, in one shared place: the known review label is split off and the NUMBER is then parsed strictly. A grouped count ("1 200", "1200", "24 086 отзывов") keeps its real value. A sign, a range, two numbers and a magnitude form ("1.2K", "2 тыс.") name no single count and are refused — None, never a manufactured integer. The native parser and the comparison adapter use the same helper, so a count cannot be right on one side and wrong on the other.
+  </requirement>
+  <requirement id="R-SEARCH-COUNT-HONEST" source="Outside-in study 2026-11-02, remaining-check R06: count was the parsed total while items carried the first thirty">
+    A search answer publishes count as the number of items it returns (count == len(items)), and names the parsed total separately (parsed_count) with a truncated flag. More parsed than returned is said out loud: the answer carries a truncation warning, and the health check runs on exactly the items the agent receives. A complete short answer is complete: no truncation warning and no damage.
+  </requirement>
+  <requirement id="R-SCHEMA-LIMITS" source="Outside-in study 2026-11-02, remaining-check R10: batch bounds and closed enums were prose only">
+    A limit a tool enforces is a limit its schema states: the batch size, the positivity of the batch items and a closed set of values live in the tool signature, so tools/list carries them and a call that breaks them is refused by the schema before any request goes out. The server-side checks and their clear errors stay, and the valid boundary values still run.
+  </requirement>
+  <requirement id="R-CDP-CAPABILITY-TRUTH" source="Outside-in study 2026-11-02, remaining-check R11: the inventory did not list WB while wb_search used CDP">
+    The source inventory separates three questions: does a source REQUIRE the browser, MAY it use one, and which route will it take now. The answers follow the source's configured mode, so Wildberries in DOM mode and Wildberries with the DOM fallback on are listed as browser-backed, while Wildberries in API-only mode is not. Answering them opens no browser and spends no navigation.
+  </requirement>
+  <requirement id="R-WARNING-BUDGET" source="Outside-in study 2026-11-02, remaining-check R18: twelve diagnostics arrived as ten without a word">
+    A bounded list of diagnostics stays bounded and says what it left out: the delivery names the number of suppressed diagnostics, through the native tool and through the comparison. A diagnostic that explains an unhealthy answer is never dropped behind an informational note, and the health verdict is computed from the full list, so a cut list cannot turn an unhealthy answer into a healthy one.
+  </requirement>
 </requirements>
