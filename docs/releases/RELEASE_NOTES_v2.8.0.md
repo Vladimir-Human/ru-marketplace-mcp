@@ -1,6 +1,6 @@
 # v2.8.0 — 2026-11-01
 
-Ответы серверов стали честнее: `meta.healthy` везде значит одно и то же, предупреждения показывают поломку вёрстки и цен, а условные цены и товар с другим объёмом памяти не выигрывают сравнение. Справочник форматов переехал в MCP-ресурсы, поэтому запросы тратят меньше токенов. Появился инструмент `marketplace_health`, о паузах площадок и проверках агент узнаёт, когда повторить и что сделать человеку, а секреты в ошибках и логах скрываются сами.
+Ответы серверов стали честнее: `meta.healthy` везде значит одно и то же, предупреждения показывают поломку вёрстки и цен, а условные цены и товар с другим объёмом памяти не выигрывают сравнение. Справочник форматов переехал в MCP-ресурсы, поэтому запросы тратят меньше токенов. Появился инструмент `marketplace_health`. Если площадка на паузе или просит пройти проверку, агент узнаёт, когда повторить запрос и что сделать человеку, а секреты в ошибках и логах скрываются сами.
 
 ## Что нового
 
@@ -52,7 +52,7 @@
 
 ## Для мейнтейнеров
 
-Все метаданные площадок теперь хранятся в одном реестре источников, а общая сборка коннекторов вынесена в общий набор (`dns` и `citilink` делят одну реализацию) (#172). Гейт стоимости схем в `scripts/mcp_wire.py` считает не только `wire_tokens`, но и `instructions_tokens` и `model_tokens`, а также держит потолки профилей `ceilings` в `work/performance/wire-baseline.json` (#167, #174). Публикация на PyPI включена, установка без клонирования репозитория идёт через `uvx ru-marketplace-mcp setup` (#155).
+Все метаданные площадок теперь хранятся в одном реестре источников, а сборка коннекторов вынесена в общий набор (`dns` и `citilink` делят одну реализацию) (#172). Гейт стоимости схем в `scripts/mcp_wire.py` считает не только `wire_tokens`, но и `instructions_tokens` и `model_tokens`, а также держит потолки профилей `ceilings` в `work/performance/wire-baseline.json` (#167, #174). Публикация на PyPI включена, установка без клонирования репозитория идёт через `uvx ru-marketplace-mcp setup` (#155).
 
 ## Состав
 
@@ -60,7 +60,7 @@
 
 ## English
 
-Server answers are more honest in this release: `meta.healthy` means the same thing everywhere, warnings report layout changes and missing prices, and conditional prices or a different storage size never win a comparison. The format reference moved into MCP resources, so requests cost fewer tokens. A new `marketplace_health` tool shows browser and host state, site pauses and checks tell the agent when to retry and what a person must do, and secrets in errors and logs are scrubbed automatically.
+Server answers are more honest in this release: `meta.healthy` means the same thing everywhere, warnings report layout changes and missing prices, and conditional prices or a different storage size never win a comparison. The format reference moved into MCP resources, so requests cost fewer tokens. A new `marketplace_health` tool shows browser and host state. When a site is paused or asks for a check, the agent learns when to retry and what a person must do, and secrets in errors and logs are scrubbed automatically.
 
 ### What's new
 
@@ -112,7 +112,7 @@ Server answers are more honest in this release: `meta.healthy` means the same th
 
 ### For maintainers
 
-All marketplace metadata now lives in one source registry, and shared connector plumbing lives in a shared kit (with `dns` and `citilink` sharing one implementation) (#172). The wire gate in `scripts/mcp_wire.py` also counts `instructions_tokens` and `model_tokens` alongside `wire_tokens` and has per-profile `ceilings` in `work/performance/wire-baseline.json` (#167, #174). PyPI publishing is on, and checkout-free installation runs via `uvx ru-marketplace-mcp setup` (#155).
+All marketplace metadata now lives in one source registry, and the common connector code moved into one kit (`dns` and `citilink` now use one implementation) (#172). The wire gate in `scripts/mcp_wire.py` also counts `instructions_tokens` and `model_tokens` alongside `wire_tokens` and has per-profile `ceilings` in `work/performance/wire-baseline.json` (#167, #174). PyPI publishing is on, and checkout-free installation runs via `uvx ru-marketplace-mcp setup` (#155).
 
 ### Contents
 
