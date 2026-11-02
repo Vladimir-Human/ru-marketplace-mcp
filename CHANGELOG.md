@@ -9,6 +9,53 @@
 
 ## [Unreleased]
 
+### Fixed
+- Проверка wire-бюджета больше не пропускает бесконечные лимиты. Бюджет
+  baseline из `1e999` превращался в `inf`, проверка «положительное число» его
+  принимала, а дельта роста становилась `nan` — сравнение `nan > лимит` всегда
+  ложно, — поэтому гейт в режиме проверки пропускал инструмент, выросший
+  примерно на миллион токенов. Теперь любой бюджет, потолок и порог
+  (`--max-token-regression-percent`, `--max-latency-ms`, `--timeout`) читаются
+  как конечное число больше нуля: `bool`, `NaN`, `inf` и строка отвергаются с
+  понятным сообщением и кодом возврата 1, и проверяется весь файл baseline, а
+  не только профили текущего прогона. Обычный замер, явное создание baseline
+  и штатная проверка против `work/performance/wire-baseline.json` работают как
+  прежде.
+- The wire-budget check no longer accepts infinite limits. A baseline budget of
+  `1e999` became `inf`, the positive-number check accepted it, and the growth
+  delta became `nan` — `nan > limit` is always false — so check mode passed a
+  tool that had grown by about a million tokens. Every budget, ceiling and
+  threshold (`--max-token-regression-percent`, `--max-latency-ms`, `--timeout`)
+  is now read as a finite number above zero: a boolean, `NaN`, `inf` and a
+  string are refused with a clear message and exit code 1, and the whole
+  baseline file is checked, not only the profiles of the current run. The
+  ordinary measurement, the explicit baseline creation and the check against
+  the committed `work/performance/wire-baseline.json` keep working.
+- Гейт provenance теперь проверяет и полноту набора, а не только те пины,
+  которые сумел прочитать. Sidecar без `sha256`, с битым JSON или без парной
+  фикстуры — и фикстура без sidecar — раньше давали «checked 0: ok» и код 0.
+  Теперь каждый sidecar обязан разбираться, нести пригодный pin SHA-256 и
+  описывать ровно одну существующую фикстуру, а каждая фикстура в
+  `packages/*/tests/fixtures` — иметь свой sidecar; иначе проверка падает с
+  кодом 1. Открытые пробелы перечислены в датированном списке исключений с
+  причиной: восемь sidecar без pin («pin missing since capture» — происхождение
+  съёмки не выдумывается) и пять фикстур, которые не съёмки, а ручные модели
+  или сгенерированный снимок контракта. Исключение закрывает ровно один
+  дефект, а закрытое исключение сообщает о себе, чтобы его удалили. Корректные
+  31 pin остаются корректными при любых переводах строк.
+- The provenance gate now checks the completeness of the set, not only the pins
+  it could read. A sidecar without a `sha256`, a broken JSON, an orphan sidecar
+  and a fixture without a sidecar all used to give "checked 0: ok" and exit 0.
+  Now every sidecar must parse, carry a usable SHA-256 pin and describe exactly
+  one fixture that exists, and every fixture under `packages/*/tests/fixtures`
+  must have its own sidecar — otherwise the check fails with exit 1. The open
+  gaps are listed in a dated exception list with a reason: the eight sidecars
+  without a pin ("pin missing since capture" — no capture provenance is
+  invented) and the five fixtures that are hand-modelled or a generated
+  contract snapshot rather than captures. An exception covers one defect only,
+  and a resolved exception says so, so its entry can be deleted. The 31
+  correct pins stay correct under any line-ending convention.
+
 ## [2.8.0] - 2026-11-01
 
 Честные ответы агенту: одно значение `healthy`, отказы и проверки — типизированные ошибки с подсказкой, что делать, условные цены и другие размеры не выигрывают сравнение, неоднозначный текст цены даёт `null`; дрейф виден в предупреждениях инструментов; новый `marketplace_health`; справочник инструментов в MCP-ресурсах; секреты вычищаются из ошибок и логов.
