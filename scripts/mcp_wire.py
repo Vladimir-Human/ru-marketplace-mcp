@@ -11,6 +11,14 @@ actually carries to the model -- each tool's ``name``, ``description`` and
 ``input_schema``. ``outputSchema``, ``annotations`` and the rest stay in the
 client, so without the second figure a growing description can hide behind a
 shrinking output schema.
+
+Every budget, ceiling and threshold is read as a number that can bound
+something: a finite value above zero. ``1e999`` parses as ``inf``, and an
+infinite budget bounds nothing -- the regression delta becomes ``nan``, no
+comparison exceeds the limit, and the check passes whatever grew. ``True`` is
+not a number either, although Python says it is an int, and a string is not a
+number at all. Such a value is refused with a clear message and a failing
+exit code instead of quietly switching the gate off.
 """
 
 from __future__ import annotations
@@ -18,6 +26,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -25,6 +34,9 @@ from pathlib import Path
 from stdio_probe import ProbeError, StdioProbe
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
+
+# The relative budget the gate uses when the caller names none.
+DEFAULT_MAX_TOKEN_REGRESSION_PERCENT = 10.0
 
 
 def estimate_tokens(text: str) -> int:
@@ -132,6 +144,98 @@ def _load_baseline(path: Path) -> dict[str, object]:
     return value
 
 
+def _finite_number(value: object) -> float | None:
+    """The value as a finite float, or None when it cannot serve as a limit.
+
+    A budget is only a budget when it is a number that bounds something.
+    ``True`` is not one (Python says it is an int), ``inf`` bounds nothing and
+    ``nan`` compares false against everything, and a string is not a number at
+    all. ``1e999`` parses as ``inf``, which is how an unbounded baseline once
+    slipped through the old ``> 0`` check.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        number = float(value)
+    except (OverflowError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _positive_limit(value: object) -> float | None:
+    """The value as a limit: a finite number above zero, or None."""
+    number = _finite_number(value)
+    if number is None or number <= 0:
+        return None
+    return number
+
+
+def _describe(value: object) -> str:
+    """A short name for a rejected limit, for the error message."""
+    if isinstance(value, bool):
+        return "a boolean"
+    if isinstance(value, str):
+        return f"the string {value!r}"
+    if isinstance(value, float) and math.isnan(value):
+        return "nan"
+    if isinstance(value, float) and math.isinf(value):
+        return "inf" if value > 0 else "-inf"
+    return repr(value)
+
+
+def _threshold(raw: str | float | None, label: str, default: float | None) -> float | None:
+    """One threshold option: a finite number above zero, or its default.
+
+    ``nan`` and ``inf`` reach argparse's ``float``, and a comparison against
+    them never fires: the gate would pass every snapshot. They are refused
+    here, with the option named.
+    """
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"{label} must be a finite positive number, got {raw!r}") from None
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError(f"{label} must be a finite positive number, got {raw!r}")
+    return value
+
+
+def _invalid_baseline_limits(baseline: dict[str, object]) -> list[str]:
+    """Every budget and ceiling in a baseline that is not a finite positive number."""
+    problems: list[str] = []
+    profiles = baseline.get("profiles", {})
+    if isinstance(profiles, dict):
+        for script, entry in profiles.items():
+            if not isinstance(entry, dict):
+                problems.append(f"profile {script}: not an object")
+                continue
+            for measure in ("wire_tokens", "model_tokens"):
+                value = entry.get(measure)
+                if value is None:
+                    continue
+                if _positive_limit(value) is None:
+                    problems.append(f"{measure} budget of {script}: {_describe(value)} is not a finite positive number")
+    ceilings = baseline.get("ceilings", {})
+    if isinstance(ceilings, dict):
+        for script, value in ceilings.items():
+            if value is None:
+                continue
+            if _positive_limit(value) is None:
+                problems.append(f"ceiling of {script}: {_describe(value)} is not a finite positive number")
+    return problems
+
+
+def _ceiling_for(baseline: dict[str, object], script: str) -> object:
+    """The raw ceiling a baseline declares for a profile, or None."""
+    ceilings = baseline.get("ceilings")
+    if not isinstance(ceilings, dict):
+        return None
+    return ceilings.get(script)
+
+
 def _ceiling_failure(snapshot: dict[str, object], baseline: dict[str, object]) -> str | None:
     """Compare one profile's whole cost with its absolute ceiling, if it has one.
 
@@ -139,12 +243,11 @@ def _ceiling_failure(snapshot: dict[str, object], baseline: dict[str, object]) -
     that baseline is rewritten by hand with ``--update-baseline``: a profile can
     grow by just under the limit every release and never trip it. The ceiling is
     the part that does not move on its own. A ceiling that is absent or not a
-    positive number fails closed in gate mode, where the caller checks the
-    baseline shape; here it simply does not constrain.
+    finite positive number fails closed in gate mode, where the caller checks
+    the baseline shape; here it simply does not constrain.
     """
-    ceilings = baseline.get("ceilings")
-    ceiling = ceilings.get(snapshot["script"]) if isinstance(ceilings, dict) else None
-    if not (isinstance(ceiling, (int, float)) and ceiling > 0):
+    ceiling = _positive_limit(_ceiling_for(baseline, str(snapshot["script"])))
+    if ceiling is None:
         return None
     total = total_tokens(snapshot)
     if total > ceiling:
@@ -164,8 +267,12 @@ def _check_gate(
     ``gate`` is the CI check mode (``--baseline`` without ``--update-baseline``).
     There a missing profile, a missing ``wire_tokens`` or ``model_tokens``
     budget or a missing per-profile ceiling is a failure: a gate that compares
-    against nothing passes any snapshot, however large. Measurement runs and
-    baseline creation keep the permissive reading.
+    against nothing passes any snapshot, however large. A budget that is there
+    but cannot bound anything -- a boolean, a string, ``nan``, ``inf`` -- is a
+    failure too, under its own name: an infinite budget turns the regression
+    delta into ``nan``, which never exceeds the limit, and the check would pass
+    a tool that grew by a million tokens. Measurement runs and baseline
+    creation keep the permissive reading.
     """
     profiles = baseline.get("profiles", {})
     entry = profiles.get(snapshot["script"]) if isinstance(profiles, dict) else None
@@ -178,27 +285,33 @@ def _check_gate(
             failures.append(f"missing_baseline_profile:{snapshot['script']}")
         else:
             budget = old.get("wire_tokens")
-            if not (isinstance(budget, (int, float)) and budget > 0):
+            if budget is None:
                 failures.append(f"missing_token_budget:{snapshot['script']}")
+            elif _positive_limit(budget) is None:
+                failures.append(f"invalid_token_budget:{snapshot['script']}:{_describe(budget)}")
             model_budget = old.get("model_tokens")
-            if not (isinstance(model_budget, (int, float)) and model_budget > 0):
+            if model_budget is None:
                 failures.append(f"missing_model_token_budget:{snapshot['script']}")
-            ceilings = baseline.get("ceilings")
-            ceiling = ceilings.get(snapshot["script"]) if isinstance(ceilings, dict) else None
-            if not (isinstance(ceiling, (int, float)) and ceiling > 0):
+            elif _positive_limit(model_budget) is None:
+                failures.append(f"invalid_model_token_budget:{snapshot['script']}:{_describe(model_budget)}")
+            ceiling = _ceiling_for(baseline, str(snapshot["script"]))
+            if ceiling is None:
                 failures.append(f"missing_ceiling:{snapshot['script']}")
+            elif _positive_limit(ceiling) is None:
+                failures.append(f"invalid_ceiling:{snapshot['script']}:{_describe(ceiling)}")
     if isinstance(old, dict):
         # Each measure is compared with its own baseline value: the whole wire
-        # can stay flat while the part the model pays for grows.
+        # can stay flat while the part the model pays for grows. Only a finite
+        # positive baseline value is a limit; anything else is reported above.
         for measure in ("wire_tokens", "model_tokens"):
-            previous = old.get(measure)
-            if isinstance(previous, (int, float)) and previous > 0:
+            previous = _positive_limit(old.get(measure))
+            if previous is not None:
                 delta = (snapshot[measure] - previous) / previous * 100
                 deltas[measure] = delta
                 if delta > max_regression:
                     failures.append(f"{measure}_regression:{delta:.2f}%>{max_regression:.2f}%")
-        previous_latency = old.get("latency_ms")
-        if isinstance(previous_latency, (int, float)) and previous_latency > 0:
+        previous_latency = _finite_number(old.get("latency_ms"))
+        if previous_latency is not None and previous_latency > 0:
             latency_delta = snapshot["latency_ms"] - previous_latency
     ceiling_failure = _ceiling_failure(snapshot, baseline)
     if ceiling_failure is not None:
@@ -225,9 +338,27 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--baseline", type=Path, default=None, help="stored JSON baseline")
     parser.add_argument("--update-baseline", action="store_true", help="write measured values as baseline")
     parser.add_argument("--json-out", type=Path, default=None, help="write machine-readable report")
-    parser.add_argument("--max-token-regression-percent", type=float, default=10.0)
-    parser.add_argument("--max-latency-ms", type=float, default=None)
+    parser.add_argument(
+        "--max-token-regression-percent",
+        default=None,
+        help=f"relative token growth the gate tolerates, in percent (default: {DEFAULT_MAX_TOKEN_REGRESSION_PERCENT:g})",
+    )
+    parser.add_argument("--max-latency-ms", default=None, help="absolute latency the gate tolerates, in milliseconds")
     args = parser.parse_args(argv[1:])
+    # A threshold that cannot bound anything would switch the gate off without
+    # saying so: `nan` and `inf` reach argparse's float, and a comparison
+    # against them never fires. They are refused here, with the option named.
+    try:
+        max_regression = _threshold(
+            args.max_token_regression_percent,
+            "--max-token-regression-percent",
+            DEFAULT_MAX_TOKEN_REGRESSION_PERCENT,
+        )
+        max_latency_ms = _threshold(args.max_latency_ms, "--max-latency-ms", None)
+        timeout = _threshold(args.timeout, "--timeout", 180.0)
+    except ValueError as exc:
+        print(f"invalid option: {exc}", file=sys.stderr)
+        return 1
     root = Path(args.directory) if args.directory else DEFAULT_ROOT
     scripts = args.scripts or ["compare-mcp", "marketplace-mcp"]
     # Gate mode is a baseline comparison without --update-baseline: the run is
@@ -246,19 +377,30 @@ def main(argv: list[str]) -> int:
         except (OSError, ValueError) as exc:
             print(f"cannot read baseline file {args.baseline}: {exc}", file=sys.stderr)
             return 1
+        # A budget or ceiling that is not a finite positive number is not a
+        # limit: an infinite one compares against nothing and the delta
+        # becomes nan, which never exceeds the limit. The whole file is
+        # checked, not only the profiles this run measures, because a broken
+        # limit is a broken limit whichever profile carries it.
+        invalid = _invalid_baseline_limits(baseline)
+        if invalid:
+            print(
+                f"baseline file {args.baseline} carries a limit that is not a finite positive number:", file=sys.stderr
+            )
+            for line in invalid:
+                print(f"  {line}", file=sys.stderr)
+            return 1
     snapshots: list[dict[str, object]] = []
     gates: dict[str, object] = {}
     for script in scripts:
-        tools, instructions, elapsed = fetch_profile(root, script, args.timeout)
+        tools, instructions, elapsed = fetch_profile(root, script, timeout)
         if tools is None:
             print(f"{script}: did not answer within {elapsed:.1f}s")
             gates[script] = {"ok": False, "failures": ["no_tools_response"], "latency_ms": round(elapsed * 1000, 1)}
             continue
         snapshot = _snapshot(script, tools, elapsed, instructions)
         snapshots.append(snapshot)
-        gates[script] = _check_gate(
-            snapshot, baseline, args.max_token_regression_percent, args.max_latency_ms, gate=gate_mode
-        )
+        gates[script] = _check_gate(snapshot, baseline, max_regression, max_latency_ms, gate=gate_mode)
         print("=" * 72)
         print(f"{script}: {len(tools)} tools, warm start to tools/list {elapsed:.1f}s")
         print("=" * 72)
