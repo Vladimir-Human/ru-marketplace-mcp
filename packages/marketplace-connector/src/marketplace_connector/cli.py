@@ -363,7 +363,9 @@ def _hint_drift(mode: str, source: str, *, probeable: bool) -> str:
     if probeable:
         # The probe script is not in the package, but its source is published
         # with the release: the link is pinned to this version's tag.
-        text += f" The drift probe is {_doc_link('scripts/diagnose_drift.py')}."
+        # The link ends the text: a period right after it becomes part of the
+        # URL for many terminals and linkifiers, and that file does not exist.
+        text += f" Drift probe: {_doc_link('scripts/diagnose_drift.py')}"
     return text
 
 
