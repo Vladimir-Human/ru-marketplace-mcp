@@ -34,6 +34,12 @@
   источник ответившим и завершённым (`complete: true`, ноль предложений).
   Пострадавшая пустая страница по-прежнему нездорова и оставляет сравнение
   неполным; проверка дрейфа для страницы без баннера не отключена.
+- Сравнение больше не отбрасывает товар как аксессуар или б/у из-за случайной
+  подстроки в названии (`Suitcase`, `стеклокерамика`, `unused`). Маркеры читаются
+  по границам слов и фраз без учёта регистра; комплектный аксессуар и явно
+  отрицанное состояние (`не б/у`) не мешают товару стать `cheapest_comparable`.
+  Настоящие незапрошенные чехлы и б/у по-прежнему исключаются из этого выбора,
+  но остаются в общем списке предложений.
 
 - Yandex no longer quotes a made-up price. A string like `1 999 2 999` — two
   numbers glued by the thousands-separator space — used to read as 19992999.0, a
@@ -58,6 +64,12 @@
   comparison counts the source as answered and complete (`complete: true`, zero
   offers). A damaged empty answer stays unhealthy and leaves the comparison
   incomplete; the drift check for a page without the banner is not weakened.
+- Comparison no longer drops a product as an accessory or used item because of
+  an accidental title substring (`Suitcase`, `стеклокерамика`, `unused`). Markers
+  now match word/phrase boundaries case-insensitively; a bundled accessory or an
+  explicitly negated condition (`не б/у`) does not disqualify the product from
+  `cheapest_comparable`. Genuine unrequested cases and used items still lose that
+  slot, but remain in the full offer list.
 
 ## [2.8.0] - 2026-11-01
 
