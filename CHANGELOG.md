@@ -10,6 +10,19 @@
 ## [Unreleased]
 
 ### Fixed
+- MCP-гайды теперь совпадают с ответами инструментов: списки типизированных полей
+  строятся из моделей сериализации, включая реальные алиасы и обёртку `result`.
+  Описаны `cheapest_comparable`, проверка цены, пагинация отзывов Ozon, DOM-поля
+  WB и площади/типы Cian. Уточнены условные цены Wallet/Plus, неизвестные значения
+  и частичные ответы; челлендж AliExpress обозначен как `challenge_required`,
+  а метаданные — как `_meta` у самостоятельных карточек и `card.meta` у инспекторов.
+- MCP guides now match tool replies: typed field lists come from serialization
+  models, including actual aliases and the `result` envelope. They cover
+  `cheapest_comparable`, price verification, Ozon review pagination, WB DOM fields
+  and Cian areas/types. Wallet/Plus conditions, unknown values and partial replies
+  are explicit; AliExpress challenges use `challenge_required`, and metadata is
+  `_meta` on standalone aliased cards but `card.meta` in inspectors.
+
 - `marketplace-mcp doctor` больше не прячет поломку своей же проверки под «не удалось проверить». Упавшая selfcheck-обёртка, неизвестный статус, неизвестный источник и ошибка вызова теперь дают код 4 (жёсткий сбой), и ночной drift-алерт на нём краснеет. Код 2 по-прежнему означает признанную блокировку источника и тревоги не поднимает, дрейф остаётся кодом 1, а отказ live-бюджета показывается как `budget_refused`, а не как здоровье.
 - `marketplace-mcp doctor` no longer hides a broken check of its own behind "could not be judged". A crashed selfcheck wrapper, an unknown status, an unknown source and a usage error now exit 4 (hard failure), and the nightly drift alarm turns red on it. Exit 2 still means an acknowledged blocked source and raises no alarm, drift stays exit 1, and a live-budget refusal is shown as `budget_refused`, never as healthy.
 
