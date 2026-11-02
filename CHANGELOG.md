@@ -86,7 +86,6 @@ caller with its own fields.
   the provider now reach the caller — both through the native source tool and
   through the source comparison. An unexpected failure stays the ordinary
   `transport_down`: no invented taxonomy, no leaked credentials.
-### Fixed
 - Проверка wire-бюджета больше не пропускает бесконечные лимиты. Бюджет
   baseline из `1e999` превращался в `inf`, проверка «положительное число» его
   принимала, а дельта роста становилась `nan` — сравнение `nan > лимит` всегда
