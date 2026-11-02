@@ -377,10 +377,11 @@ jobs:
         # healthy, 1 a parser drifted (the alarm this job exists to raise),
         # 2 nothing drifted but sources could not be judged (blocked, no CDP,
         # wrong country — the expected nightly result from GitHub's datacenter
-        # IPs), 3 the budget or the status file failed, 4 live_check could not
-        # start (its own usage/setup failure — a broken alarm, not a source).
-        # A blocked source must not page anyone, same rule as the canary; only
-        # the alarm, a broken live_check and hard errors fail the job.
+        # IPs, including an unverified budget_refused check), 3 the budget or
+        # status file failed, 4 a checker, doctor invocation or live_check's
+        # setup/usage failed — a broken alarm, not a blocked source (R17).
+        # A blocked source must not page anyone, same rule as the canary;
+        # drift and hard checker/setup/usage errors fail the job.
         run: |
           set +e
           uv run python scripts/live_check.py doctor --status-file "$RUNNER_TEMP/doctor-status.json" 2>&1 | tee doctor.log
@@ -388,7 +389,7 @@ jobs:
           {
             echo "## Doctor drift alarm"
             echo ""
-            echo "Exit $code: 0 healthy, 1 drift (alarm), 2 blocked/inconclusive, 3 budget or status-file failure, 4 live_check setup/usage failure."
+            echo "Exit $code: 0 healthy, 1 drift (alarm), 2 blocked/inconclusive (including budget_refused), 3 budget or status-file failure, 4 checker/doctor/setup/usage failure (alarm)."
             echo ""
             echo "<details><summary>doctor output</summary>"
             echo ""
@@ -401,7 +402,7 @@ jobs:
           case "$code" in
             0|2) echo "doctor exit $code: not an alarm" ;;
             1) echo "doctor reported parser drift; failing the job"; exit 1 ;;
-            4) echo "doctor never ran (exit 4: live_check usage/setup failure); failing the job"; exit 1 ;;
+            4) echo "doctor or a checker failed (exit 4: checker/doctor/setup/usage failure); failing the job"; exit 1 ;;
             *) echo "doctor did not run cleanly (exit $code); failing the job"; exit 1 ;;
           esac
 

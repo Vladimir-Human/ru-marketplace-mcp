@@ -19,7 +19,8 @@ The verbs cover the moments an operator actually needs help with:
     Run every connector's selfcheck and report per-source status. This is the
     answer to "is it broken, or is it me": a source blocked from your network
     shows as inconclusive with the reason and one fixed next step, a drifted
-    parser shows as drift.
+    parser shows as drift. Exit 4 means the checker or doctor invocation failed;
+    it is not a blocked source. A live-budget refusal remains unverified.
 
 ``marketplace-mcp browser status`` / ``marketplace-mcp browser show``
     Look at the operator's scraping Chrome and bring its window back. On
@@ -39,7 +40,7 @@ The verbs cover the moments an operator actually needs help with:
 # PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
 # SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
 # DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.sources (source registry; per-source tables derived there); mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
-# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP.
+# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP; R-DOCTOR-EXIT-CODES.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
@@ -52,7 +53,8 @@ The verbs cover the moments an operator actually needs help with:
 # detect_install_mode / cli_command: How this copy was installed and the command that runs it there.
 # _hint_cdp_down / _hint_start_chrome / _hint_browser_wall / _hint_drift / _hint_drift_issue / _hint_antibot / _hint_rate_limited: The recovery hints, spelled for the install mode.
 # next_step: One fixed next-step string for a source that is not ok.
-# _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor, unblock and setup.
+# _budget_refusal / _run_one_selfcheck: Preserve budget reasons; classify broken checkers separately.
+# _run_selfchecks / _health_steps / _health_exit_code: Shared doctor pipeline; healthy, drift, blocked, hard failure.
 # cmd_browser: browser status, browser show and browser start.
 # cmd_unblock: Open the pages a human passes, then re-check those sources.
 # _detected_clients / cmd_setup: Detect clients, write configs and walk an operator to the first answer.
@@ -127,6 +129,9 @@ SERVERS: list[tuple[str, str, str]] = list(CONFIG_SERVERS)
 
 _SELFCHECKS: list[tuple[str, str, str]] = list(SELFCHECKS)
 
+# Shared with live_check's hard setup/usage code; never a source's inconclusive 2.
+DOCTOR_FAILURE_EXIT = 4
+
 # The usage screen. Short on purpose: it is read in a terminal, and the
 # details live in docs/QUICKSTART.md.
 USAGE = """marketplace-mcp — Operator CLI and unified server for the marketplace connectors.
@@ -151,6 +156,8 @@ Examples:
   marketplace-mcp unblock ozon --dry-run
   marketplace-mcp help
 
+Doctor exits: 0 healthy, 1 drift, 2 blocked/inconclusive, 3 status-write failure,
+              4 checker/setup/usage failure.
 Read more: docs/QUICKSTART.md"""
 
 # Next-step strings. Fixed text, one per situation: the operator gets one
@@ -1072,6 +1079,9 @@ def cmd_install(argv: list[str]) -> int:
     return 0
 
 
+# START_BLOCK_DOCTOR
+
+
 def _check_detail(check: object) -> str:
     """Render one sub-check as state plus the reason it reached that state.
 
@@ -1115,24 +1125,64 @@ def _attr(obj: object, key: str, default: object = None) -> object:
     return getattr(obj, key, default)
 
 
-async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tuple[str, str, str, dict[str, Any]]:
-    """Run one connector's selfcheck.
+def _budget_refusal(exc: BaseException) -> BaseException | None:
+    """Recognize the installed live runner's refusal, including wrapped errors.
 
-    Returns (name, status, detail, checks). The per-check reasons travel with
-    the result: the next step is chosen from them, and a rendered string
-    cannot be told apart from a reason code.
+    Like the root live-test hook, inspect the already-loaded module: the
+    installed CLI does not depend on repository-only scripts or install hooks.
+    """
+    budget_module = sys.modules.get("live_budget")
+    if budget_module is None:
+        return None
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, budget_module.BudgetExhausted):
+            return current
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return None
+
+
+async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tuple[str, str, str, dict[str, Any]]:
+    """Run one connector's selfcheck without confusing failure with a block.
+
+    Returns (name, status, detail, checks). Invalid output or an unexpected
+    exception is error (hard failure). A budget refusal stays inconclusive,
+    with its own reason, even if the checker swallowed it and claimed success.
+    Existing drift takes precedence over a refused subcheck.
     """
     try:
+        budget_module = sys.modules.get("live_budget")
+        budget = budget_module.installed_budget() if budget_module is not None else None
+        refused_before = len(budget.refused) if budget is not None else 0
         module = __import__(module_path, fromlist=[tool_name])
         tool = getattr(module, tool_name)
         result = await tool()
         status = str(_attr(result, "status", "unknown"))
-        checks = _attr(result, "checks", {}) or {}
-        if not isinstance(checks, dict):
+        if status not in {"success", "drift_detected", "inconclusive"}:
+            raise ValueError(f"unknown selfcheck status {status!r}")
+        checks = _attr(result, "checks", {})
+        if checks is None:
+            checks = {}
+        if not isinstance(checks, Mapping):
             raise TypeError("selfcheck checks must be a mapping")
+        checks = dict(checks)
+        if budget is not None and len(budget.refused) > refused_before:
+            checks["budget"] = {"state": "inconclusive", "reason": "budget_refused"}
+            if status == "success":
+                status = "inconclusive"
         detail = ", ".join(f"{k}:{_check_detail(v)}" for k, v in checks.items()) or status
-        return name, status, detail, dict(checks)
+        return name, status, detail, checks
     except Exception as exc:
+        refusal = _budget_refusal(exc)
+        if refusal is not None:
+            return (
+                name,
+                "inconclusive",
+                f"budget_refused: {str(refusal)[:120]}",
+                {"budget": {"state": "inconclusive", "reason": "budget_refused"}},
+            )
         # The detail is an answer, not a log line: it is printed and can be
         # written to a status file, so the exception text is scrubbed first.
         return name, "error", redact_error_text(f"{type(exc).__name__}: {str(exc)[:120]}"), {}
@@ -1193,6 +1243,11 @@ def next_step(
 
     if status == "drift_detected" or "drift" in states:
         return _hint_drift(mode, source, probeable=source in DIAGNOSE_DRIFT_SOURCES)
+    if "budget_refused" in reasons:
+        return (
+            "The live budget refused this check; this says nothing about the source. "
+            "Start a new bounded run with `python scripts/live_check.py reset`."
+        )
     if "auth_missing" in reasons:
         return NEXT_STEP_MPSTATS_AUTH
     if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
@@ -1238,27 +1293,29 @@ def _probe_cdp() -> tuple[bool | None, str]:
 def _print_health_rows(
     results: list[tuple[str, str, str, dict[str, Any]]],
     steps: Mapping[str, str | None],
-) -> tuple[int, int, int]:
-    """Print the doctor rows and summary; return (healthy, blocked, drifted).
+) -> tuple[int, int, int, int]:
+    """Print doctor rows; return (healthy, blocked, drifted, failed).
 
     Shared with ``unblock``'s re-check so the two commands cannot drift apart
     in what an operator reads.
     """
-    healthy = blocked = drifted = 0
+    healthy = blocked = drifted = failed = 0
     for name, status, detail, _ in results:
         marker = {"success": "ok ", "drift_detected": "DRF", "inconclusive": "blk"}.get(status, "err")
         if status == "success":
             healthy += 1
         elif status == "drift_detected":
             drifted += 1
-        else:
+        elif status == "inconclusive":
             blocked += 1
+        else:
+            failed += 1
         print(f"  {marker} {name:<14} {status:<15} {detail}")
         step = steps.get(name)
         if step:
             print(f"      next: {step}")
-    print(f"\n  {healthy} healthy, {blocked} blocked/inconclusive, {drifted} drifted.")
-    return healthy, blocked, drifted
+    print(f"\n  {healthy} healthy, {blocked} blocked/inconclusive, {drifted} drifted, {failed} failed.")
+    return healthy, blocked, drifted, failed
 
 
 def _run_selfchecks(only: set[str] | None) -> list[tuple[str, str, str, dict[str, Any]]]:
@@ -1294,17 +1351,16 @@ def _health_steps(results: list[tuple[str, str, str, dict[str, Any]]]) -> tuple[
     return steps, cdp_note
 
 
-def _health_exit_code(blocked: int, drifted: int) -> int:
-    """The doctor exit code for a checked set of sources.
+def _health_exit_code(blocked: int, drifted: int, failed: int) -> int:
+    """Return the shared doctor/re-check verdict, hard failures first.
 
-    Exit codes are what a cron job or CI step actually reads, so they have to
-    separate the three outcomes an operator responds to differently:
-      0 — everything that could be checked is healthy.
-      1 — a parser drifted. Someone has to go look; this is the alarm.
-      2 — nothing drifted but a source could not be judged (blocked, no CDP,
-          wrong country). Not an alarm, not a clean bill of health either.
-    Collapsing 2 into 0 is how "all good" starts meaning "we checked nothing".
+    0: all selected checkers succeeded; 1: parser drift; 2: acknowledged
+    blocked/inconclusive (including budget refusal); 4: a checker failed.
+    Doctor also uses 4 for setup/usage failures and 3 for a status-write failure.
+    Neither 2 nor 4 is health, but nightly must alarm on 4, not on 2.
     """
+    if failed:
+        return DOCTOR_FAILURE_EXIT
     if drifted:
         return 1
     if blocked:
@@ -1328,14 +1384,14 @@ def cmd_doctor(argv: list[str]) -> int:
         if arg == "--status-file":
             if status_file is not None:
                 print("--status-file may only be supplied once", file=sys.stderr)
-                return 2
+                return DOCTOR_FAILURE_EXIT
             status_file = next(it, None)
             if not status_file or status_file.startswith("-"):
                 print("--status-file requires a path", file=sys.stderr)
-                return 2
+                return DOCTOR_FAILURE_EXIT
         elif arg.startswith("-"):
             print(f"unknown doctor option {arg!r}", file=sys.stderr)
-            return 2
+            return DOCTOR_FAILURE_EXIT
         else:
             sources.append(canonical(arg))
     only = set(sources) if sources else None
@@ -1346,12 +1402,12 @@ def cmd_doctor(argv: list[str]) -> int:
             f"unknown source(s): {', '.join(sorted(unknown))}; expected one of {', '.join(sorted(known_sources))}",
             file=sys.stderr,
         )
-        return 2
+        return DOCTOR_FAILURE_EXIT
     results = _run_selfchecks(only)
     steps, cdp_note = _health_steps(results)
 
     print("Marketplace connector health (selfcheck):")
-    healthy, blocked, drifted = _print_health_rows(results, steps)
+    healthy, blocked, drifted, failed = _print_health_rows(results, steps)
     print("  Every blocked row carries its own next step; 'inconclusive' means the source")
     print("  could not be judged — the parser was never proven broken.")
 
@@ -1363,6 +1419,7 @@ def cmd_doctor(argv: list[str]) -> int:
             "healthy": healthy,
             "blocked": blocked,
             "drifted": drifted,
+            "failed": failed,
             "sources": {
                 name: {"status": status, "detail": detail, "next_step": steps.get(name)}
                 for name, status, detail, _ in results
@@ -1381,7 +1438,10 @@ def cmd_doctor(argv: list[str]) -> int:
             print(f"\n  could not write status file {target}: {exc}", file=sys.stderr)
             return 3
 
-    return _health_exit_code(blocked, drifted)
+    return _health_exit_code(blocked, drifted, failed)
+
+
+# END_BLOCK_DOCTOR
 
 
 def cmd_browser(argv: list[str]) -> int:
@@ -1491,12 +1551,16 @@ def _blocked_sources(results: list[tuple[str, str, str, dict[str, Any]]]) -> lis
     return blocked
 
 
+# START_BLOCK_UNBLOCK
+
+
 def cmd_unblock(argv: list[str]) -> int:
     """Open the right page per browser-walled source, wait, then re-check it.
 
     This command never solves or automates a site's check: it opens a page in
     the operator's scraping Chrome, waits while the human passes the check or
     logs in, and runs the same selfchecks ``doctor`` runs for those sources.
+    A checker failure in discovery or re-check is exit 4, not a remaining wall.
     Ctrl-C at the Enter prompt cancels with exit 130 before the re-check.
     """
     named: list[str] = []
@@ -1553,7 +1617,14 @@ def cmd_unblock(argv: list[str]) -> int:
         )
         return 2
     else:
-        sources = _blocked_sources(_run_selfchecks(set(browser_sources)))
+        discovery = _run_selfchecks(set(browser_sources))
+        if any(status == "error" for _, status, _, _ in discovery):
+            steps, cdp_note = _health_steps(discovery)
+            print("Cannot choose unblock pages: a selfcheck failed.")
+            _, blocked, drifted, failed = _print_health_rows(discovery, steps)
+            print(f"\n  {cdp_note}")
+            return _health_exit_code(blocked, drifted, failed)
+        sources = _blocked_sources(discovery)
         if not sources:
             print("No browser source reports a wall right now; nothing to unblock.")
             return 0
@@ -1606,9 +1677,12 @@ def cmd_unblock(argv: list[str]) -> int:
     results = _run_selfchecks(set(sources))
     steps, cdp_note = _health_steps(results)
     print("\nRe-check after the manual step:")
-    _, blocked, drifted = _print_health_rows(results, steps)
+    _, blocked, drifted, failed = _print_health_rows(results, steps)
     print(f"\n  {cdp_note}")
-    return _health_exit_code(blocked, drifted)
+    return _health_exit_code(blocked, drifted, failed)
+
+
+# END_BLOCK_UNBLOCK
 
 
 def _join_labels(clients: list[str]) -> str:
@@ -1631,6 +1705,9 @@ def _detected_clients() -> list[str]:
     return found
 
 
+# START_BLOCK_SETUP
+
+
 def cmd_setup(argv: list[str]) -> int:
     """From zero to the first answer: detect a client, wire it, check the sources.
 
@@ -1640,7 +1717,8 @@ def cmd_setup(argv: list[str]) -> int:
     through ``cmd_unblock``. ``--dry-run`` prints the steps and files and
     writes, starts and requests nothing. For Claude Code alone, the closing
     line tells the operator to run the printed add command before restarting.
-    Ctrl-C at the unblock offer cancels with exit 130 without opening pages.
+    Config success still decides the exit unless a health checker or unblock
+    re-check fails (exit 4). Ctrl-C at the offer cancels with exit 130.
     """
     dry_run = no_browser = no_doctor = False
     selected: list[str] = []
@@ -1761,6 +1839,7 @@ def cmd_setup(argv: list[str]) -> int:
             print(f"   started Chrome with CDP on {started.get('host', '?')}:{started.get('port', '?')}.")
 
     results: list[tuple[str, str, str, dict[str, Any]]] = []
+    health_code = 0
     if no_doctor:
         print("4. Health: skipped (--no-doctor).")
     elif dry_run:
@@ -1770,7 +1849,8 @@ def cmd_setup(argv: list[str]) -> int:
         results = _run_selfchecks(None)
         steps, cdp_note = _health_steps(results)
         print("\nMarketplace connector health (selfcheck):")
-        _print_health_rows(results, steps)
+        _, blocked_count, drifted, failed = _print_health_rows(results, steps)
+        health_code = _health_exit_code(blocked_count, drifted, failed)
         print(f"\n  {cdp_note}")
 
     print("5. Unblock:")
@@ -1790,7 +1870,8 @@ def cmd_setup(argv: list[str]) -> int:
             print("cancelled", file=sys.stderr)
             return 130
         if answer.strip().lower() in {"y", "yes"}:
-            cmd_unblock(blocked)
+            if cmd_unblock(blocked) == DOCTOR_FAILURE_EXIT:
+                health_code = DOCTOR_FAILURE_EXIT
         else:
             print(f"   skipped; run: marketplace-mcp unblock {' '.join(blocked)}")
     else:
@@ -1805,7 +1886,12 @@ def cmd_setup(argv: list[str]) -> int:
     else:
         print(f"Once a client is wired, restart it, then ask: {ask}")
 
+    if health_code == DOCTOR_FAILURE_EXIT:
+        return DOCTOR_FAILURE_EXIT
     return 0 if configured else 1
+
+
+# END_BLOCK_SETUP
 
 
 def _usage(mode: str) -> str:

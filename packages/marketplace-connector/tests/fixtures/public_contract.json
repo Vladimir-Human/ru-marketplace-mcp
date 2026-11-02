@@ -1321,7 +1321,11 @@
       "properties": {
         "result": {}
       },
-      "type": "object"
+      "required": [
+        "result"
+      ],
+      "type": "object",
+      "x-fastmcp-wrap-result": true
     },
     "parameters": {
       "additionalProperties": false,
