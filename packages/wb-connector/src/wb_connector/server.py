@@ -78,6 +78,7 @@ from mcp_core.errors import (
     RateLimitedError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
@@ -1024,7 +1025,7 @@ async def wb_card(
                 raise_tool_error(ParserDriftError(str(exc), provider="wb"))
         except httpx.HTTPError as exc:
             log_event("wb_card.network_error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-            raise_tool_error(TransportDownError(str(exc), provider="wb"))
+            raise_tool_error_from(exc, str(exc), provider="wb")
 
         data, shape_error = _expect_json_object(data, "wb_card response")
         data = _require_object(data, "wb_card response")
@@ -1053,7 +1054,7 @@ async def wb_card(
         raise
     except Exception as exc:
         log_event("wb_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 @mcp.tool(
@@ -1118,7 +1119,7 @@ async def wb_root_info(
                 raise_tool_error(ParserDriftError(f"{exc} [url={url}]", provider="wb"))
         except httpx.HTTPError as exc:
             log_event("wb_root_info.network_error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-            raise_tool_error(TransportDownError(f"{exc} [url={url}]", provider="wb"))
+            raise_tool_error_from(exc, f"{exc} [url={url}]", provider="wb")
 
         data, shape_error = _expect_json_object(data, "wb_root_info response")
         data = _require_object(data, "wb_root_info response")
@@ -1157,7 +1158,7 @@ async def wb_root_info(
         raise
     except Exception as exc:
         log_event("wb_root_info.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 def _aggregate_offer_warnings(items: list[dict]) -> list[str]:
@@ -1368,7 +1369,7 @@ async def wb_reviews(
         raise
     except Exception as exc:
         log_event("wb_reviews.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 @mcp.tool(
@@ -1571,7 +1572,7 @@ async def wb_questions(
         raise
     except Exception as exc:
         log_event("wb_questions.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 def _fallback_failure_text(exc: Exception) -> str:
@@ -1851,7 +1852,7 @@ async def wb_search(
         raise
     except Exception as exc:
         log_event("wb_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 def _recover_search_ids(ids: Any) -> list[int]:
@@ -2499,7 +2500,7 @@ async def wb_category_products(
         raise
     except Exception as exc:
         log_event("wb_category_products.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(str(exc)), provider="wb"))
+        raise_tool_error_from(exc, _redact(str(exc)), provider="wb")
 
 
 # START_BLOCK_SELFCHECK

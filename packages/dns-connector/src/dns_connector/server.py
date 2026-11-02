@@ -56,6 +56,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import host_checked_id, polite_wait, render_json
 from mcp_core.logging import log_event
@@ -439,7 +440,7 @@ async def dns_search(
         raise
     except Exception as exc:
         log_event("dns_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"dns_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"dns_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -531,7 +532,7 @@ async def dns_card(
         raise
     except Exception as exc:
         log_event("dns_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"dns_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"dns_card failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls dns_selfcheck()
@@ -565,7 +566,7 @@ async def dns_selfcheck(ctx: Context | None = None) -> DnsSelfcheckResponse:
         raise
     except Exception as exc:
         log_event("dns_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"dns_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"dns_selfcheck failed: {exc}"))
 
 
 async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:

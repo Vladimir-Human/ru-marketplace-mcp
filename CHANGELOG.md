@@ -95,6 +95,126 @@
   remain MCP errors. Schema compaction no longer disables that envelope, so
   `tools/list` and `tools/call` agree on the response shape. Tools without SDK
   wrapping keep their existing shape.
+Транспорт и ошибки больше не теряют то, что знает оператор и агент: адрес
+websocket собирается одинаково для IPv4 и IPv6, команда CDP имеет абсолютный
+дедлайн, диагностика в успешном ответе вычищается, подсказки восстановления
+следуют за способом установки, а тип ошибки коннектора доходит до вызывающего
+вместе со своими полями.
+
+The transport and the errors no longer lose what the operator and the agent
+need: the websocket URL is built the same way for IPv4 and IPv6, a CDP command
+has an absolute deadline, a diagnostic inside a success answer is scrubbed, the
+recovery hints follow the install mode, and a connector's error reaches the
+caller with its own fields.
+
+- «Сырой» CDP-фолбэк больше не строит невалидный адрес для IPv6: хост `::1`
+  даёт `ws://[::1]:9222/...`, а не `ws://::1:9222/...`, который вообще не
+  разбирается. Один сборщик netloc обслуживает и сокет браузера, и сокет
+  страницы; IPv4, `host.docker.internal`, обычное имя хоста и удалённый CDP
+  сохраняют прежний вид, и своя вкладка по-прежнему закрывается при любой
+  неудаче подключения и при отмене.
+- У команды CDP теперь абсолютный дедлайн, а не лимит ожидания ответа. Chrome
+  шлёт события всем подключённым клиентам, поэтому прежний таймаут, который
+  перезапускался на каждом чужом событии, превращал 80 мс в несколько минут:
+  поток посторонних событий больше не продлевает ожидание. Правило действует и
+  для команд подключения (`Target.createTarget`, `Page.enable`,
+  `Network.enable`, `Runtime.enable`), и для закрытия своей вкладки, а не
+  только для `evaluate`; ответы команд и события с URL фрейма по-прежнему
+  сопоставляются как раньше.
+- Диагностика внутри успешного ответа вычищается до того, как её сохранить или
+  вернуть. Причина пропуска источника в `marketplace_sources`, статус CDP и
+  окна браузера и подробность в отчёте doctor больше не выдают наружу текст
+  исключения с токеном или с учётными данными прокси — раньше лог это чистил, а
+  ответ нет. Класс исключения, имя источника и безопасная часть сообщения
+  остаются читаемыми: диагностика не теряется, секрет не утекает.
+- Подсказки восстановления следуют за способом установки. В checkout они
+  называют локальные `scripts/` и `docs/`, установленный пакет — консольную
+  команду, которую он действительно ставит, а запуск через `uvx` — закреплённый
+  релиз `uvx ru-marketplace-mcp@<версия>`. Ссылки в подсказках закреплены на
+  теге релиза и ведут на файлы именно этого релиза: пакет из PyPI больше не
+  отправляет оператора к файлу, которого в пакете нет.
+- Тип ошибки коннектора больше не теряется в общем обработчике. «Занято» (409)
+  и пауза `retry_after_s`, полный реестр удерживаемых страниц, истёкший
+  дедлайн и провайдер доходят до вызывающего — и через исходный инструмент, и
+  через сравнение источников. Неожиданная ошибка остаётся обычным
+  `transport_down`: без выдуманного кода и без утечки учётных данных.
+
+- The raw CDP fallback no longer builds an invalid URL for an IPv6 host: `::1`
+  now gives `ws://[::1]:9222/...` instead of `ws://::1:9222/...`, which cannot
+  be parsed at all. One netloc builder serves both the browser socket and the
+  page socket; IPv4, `host.docker.internal`, a plain host name and a remote CDP
+  endpoint keep the spelling they had, and the owned tab is still closed after
+  every attach failure and after a cancellation.
+- A CDP command now has an absolute deadline instead of an inactivity limit.
+  Chrome broadcasts its events to every attached client, so the old timeout,
+  which restarted on each foreign event, turned 80 ms into minutes: a stream of
+  unrelated events no longer extends the wait. The rule covers the attach
+  commands (`Target.createTarget`, `Page.enable`, `Network.enable`,
+  `Runtime.enable`) and the owned-target cleanup, not only `evaluate`; matching
+  responses and frame URL events still correlate exactly as before.
+- A diagnostic inside a success answer is scrubbed before it is stored or
+  returned. The reason a source was skipped in `marketplace_sources`, the CDP
+  and browser-window status answers and the doctor's per-source detail no
+  longer carry the text of an exception with a token or proxy credentials in it
+  — the log path scrubbed that text, the answer path did not. The exception
+  class, the source name and the harmless part of the message stay readable:
+  the diagnosis survives, the secret does not.
+- The recovery hints follow the install mode. In a checkout they name the local
+  `scripts/` and `docs/`; an installed package names the console script it
+  really ships, and a `uvx` run names the pinned `uvx ru-marketplace-mcp@<version>`
+  release. Every link a hint carries is pinned to the release's tag and points at
+  a file of that release, so the PyPI package no longer sends the operator after
+  a file it does not contain.
+- A connector's error type no longer gets lost in a generic handler. "Busy"
+  (409) with its `retry_after_s`, a full retained-page registry, a deadline and
+  the provider now reach the caller — both through the native source tool and
+  through the source comparison. An unexpected failure stays the ordinary
+  `transport_down`: no invented taxonomy, no leaked credentials.
+- Проверка wire-бюджета больше не пропускает бесконечные лимиты. Бюджет
+  baseline из `1e999` превращался в `inf`, проверка «положительное число» его
+  принимала, а дельта роста становилась `nan` — сравнение `nan > лимит` всегда
+  ложно, — поэтому гейт в режиме проверки пропускал инструмент, выросший
+  примерно на миллион токенов. Теперь любой бюджет, потолок и порог
+  (`--max-token-regression-percent`, `--max-latency-ms`, `--timeout`) читаются
+  как конечное число больше нуля: `bool`, `NaN`, `inf` и строка отвергаются с
+  понятным сообщением и кодом возврата 1, и проверяется весь файл baseline, а
+  не только профили текущего прогона. Обычный замер, явное создание baseline
+  и штатная проверка против `work/performance/wire-baseline.json` работают как
+  прежде.
+- The wire-budget check no longer accepts infinite limits. A baseline budget of
+  `1e999` became `inf`, the positive-number check accepted it, and the growth
+  delta became `nan` — `nan > limit` is always false — so check mode passed a
+  tool that had grown by about a million tokens. Every budget, ceiling and
+  threshold (`--max-token-regression-percent`, `--max-latency-ms`, `--timeout`)
+  is now read as a finite number above zero: a boolean, `NaN`, `inf` and a
+  string are refused with a clear message and exit code 1, and the whole
+  baseline file is checked, not only the profiles of the current run. The
+  ordinary measurement, the explicit baseline creation and the check against
+  the committed `work/performance/wire-baseline.json` keep working.
+- Гейт provenance теперь проверяет и полноту набора, а не только те пины,
+  которые сумел прочитать. Sidecar без `sha256`, с битым JSON или без парной
+  фикстуры — и фикстура без sidecar — раньше давали «checked 0: ok» и код 0.
+  Теперь каждый sidecar обязан разбираться, нести пригодный pin SHA-256 и
+  описывать ровно одну существующую фикстуру, а каждая фикстура в
+  `packages/*/tests/fixtures` — иметь свой sidecar; иначе проверка падает с
+  кодом 1. Открытые пробелы перечислены в датированном списке исключений с
+  причиной: восемь sidecar без pin («pin missing since capture» — происхождение
+  съёмки не выдумывается) и пять фикстур, которые не съёмки, а ручные модели
+  или сгенерированный снимок контракта. Исключение закрывает ровно один
+  дефект, а закрытое исключение сообщает о себе, чтобы его удалили. Корректные
+  31 pin остаются корректными при любых переводах строк.
+- The provenance gate now checks the completeness of the set, not only the pins
+  it could read. A sidecar without a `sha256`, a broken JSON, an orphan sidecar
+  and a fixture without a sidecar all used to give "checked 0: ok" and exit 0.
+  Now every sidecar must parse, carry a usable SHA-256 pin and describe exactly
+  one fixture that exists, and every fixture under `packages/*/tests/fixtures`
+  must have its own sidecar — otherwise the check fails with exit 1. The open
+  gaps are listed in a dated exception list with a reason: the eight sidecars
+  without a pin ("pin missing since capture" — no capture provenance is
+  invented) and the five fixtures that are hand-modelled or a generated
+  contract snapshot rather than captures. An exception covers one defect only,
+  and a resolved exception says so, so its entry can be deleted. The 31
+  correct pins stay correct under any line-ending convention.
 
 ## [2.8.0] - 2026-11-01
 

@@ -57,6 +57,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import host_checked_id, polite_wait, render_json
 from mcp_core.logging import log_event
@@ -392,7 +393,7 @@ async def citilink_search(
         raise
     except Exception as exc:
         log_event("citilink_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"citilink_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"citilink_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -483,7 +484,7 @@ async def citilink_card(
         raise
     except Exception as exc:
         log_event("citilink_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"citilink_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"citilink_card failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls citilink_selfcheck()
@@ -517,7 +518,7 @@ async def citilink_selfcheck(ctx: Context | None = None) -> CitilinkSelfcheckRes
         raise
     except Exception as exc:
         log_event("citilink_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"citilink_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"citilink_selfcheck failed: {exc}"))
 
 
 async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResponse:
