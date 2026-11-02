@@ -18,6 +18,7 @@
 # PermissionDeniedError: Represent forbidden access with status 403.
 # ChallengeRequiredError: Add retry timing, user action, challenge and optional handoff metadata.
 # raise_tool_error: Redact and raise a FastMCP ToolError from a serialized connector error.
+# raise_tool_error_from: Raise the ToolError for any exception, keeping a ConnectorError's fields.
 # END_MODULE_MAP
 from __future__ import annotations
 
@@ -208,3 +209,24 @@ class ChallengeRequiredError(ConnectorError):
 
 def raise_tool_error(err: ConnectorError) -> NoReturn:
     raise ToolError(json.dumps(redact_value(err.to_dict()), ensure_ascii=False))
+
+
+def raise_tool_error_from(exc: Exception, message: str | None = None, *, provider: str | None = None) -> NoReturn:
+    """Raise the ToolError for any exception, keeping a ConnectorError's fields.
+
+    A generic handler that wraps every exception in a fresh TransportDownError
+    throws away what the error already knew: a busy browser handoff carries
+    409 and retry_after_s, a registry that is full carries its own reason, a
+    deadline carries the timeout code, and the provider names the source.
+    Those machine fields are what a caller acts on, so a ConnectorError is
+    passed through unchanged. Anything else becomes the redacted transport_down
+    it always was — an unexpected failure must not invent a taxonomy.
+
+    The handler's provider fills in a missing one, so a connector's own name
+    still reaches the answer.
+    """
+    if isinstance(exc, ConnectorError):
+        if provider and not exc.provider:
+            exc.provider = provider
+        raise_tool_error(exc)
+    raise_tool_error(TransportDownError(message or f"{type(exc).__name__}: {exc}", provider=provider))

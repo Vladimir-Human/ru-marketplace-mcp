@@ -63,6 +63,7 @@ from mcp_core.errors import (
     ParserDriftError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import polite_wait, sync_curl_get
 from mcp_core.logging import log_event
@@ -692,7 +693,7 @@ async def ozon_card(
         raise
     except Exception as exc:
         log_event("ozon_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"ozon_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"ozon_card failed: {exc}"))
 
 
 def _ts_to_iso(ts: Any) -> str | None:
@@ -845,7 +846,7 @@ async def ozon_reviews(
         raise
     except Exception as exc:
         log_event("ozon_reviews.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"ozon_reviews failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"ozon_reviews failed: {exc}"))
 
 
 async def _ozon_reviews_impl(
@@ -1299,7 +1300,7 @@ async def ozon_search(
         raise
     except Exception as exc:
         log_event("ozon_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"ozon_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"ozon_search failed: {exc}"))
 
 
 def _search_items_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1459,7 +1460,7 @@ async def ozon_selfcheck(ctx: Context | None = None) -> OzonSelfcheckResponse:
         raise
     except Exception as exc:
         log_event("ozon_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"ozon_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"ozon_selfcheck failed: {exc}"))
 
 
 async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:

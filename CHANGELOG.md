@@ -9,6 +9,84 @@
 
 ## [Unreleased]
 
+Транспорт и ошибки больше не теряют то, что знает оператор и агент: адрес
+websocket собирается одинаково для IPv4 и IPv6, команда CDP имеет абсолютный
+дедлайн, диагностика в успешном ответе вычищается, подсказки восстановления
+следуют за способом установки, а тип ошибки коннектора доходит до вызывающего
+вместе со своими полями.
+
+The transport and the errors no longer lose what the operator and the agent
+need: the websocket URL is built the same way for IPv4 and IPv6, a CDP command
+has an absolute deadline, a diagnostic inside a success answer is scrubbed, the
+recovery hints follow the install mode, and a connector's error reaches the
+caller with its own fields.
+
+### Fixed
+
+- «Сырой» CDP-фолбэк больше не строит невалидный адрес для IPv6: хост `::1`
+  даёт `ws://[::1]:9222/...`, а не `ws://::1:9222/...`, который вообще не
+  разбирается. Один сборщик netloc обслуживает и сокет браузера, и сокет
+  страницы; IPv4, `host.docker.internal`, обычное имя хоста и удалённый CDP
+  сохраняют прежний вид, и своя вкладка по-прежнему закрывается при любой
+  неудаче подключения и при отмене.
+- У команды CDP теперь абсолютный дедлайн, а не лимит ожидания ответа. Chrome
+  шлёт события всем подключённым клиентам, поэтому прежний таймаут, который
+  перезапускался на каждом чужом событии, превращал 80 мс в несколько минут:
+  поток посторонних событий больше не продлевает ожидание. Правило действует и
+  для команд подключения (`Target.createTarget`, `Page.enable`,
+  `Network.enable`, `Runtime.enable`), и для закрытия своей вкладки, а не
+  только для `evaluate`; ответы команд и события с URL фрейма по-прежнему
+  сопоставляются как раньше.
+- Диагностика внутри успешного ответа вычищается до того, как её сохранить или
+  вернуть. Причина пропуска источника в `marketplace_sources`, статус CDP и
+  окна браузера и подробность в отчёте doctor больше не выдают наружу текст
+  исключения с токеном или с учётными данными прокси — раньше лог это чистил, а
+  ответ нет. Класс исключения, имя источника и безопасная часть сообщения
+  остаются читаемыми: диагностика не теряется, секрет не утекает.
+- Подсказки восстановления следуют за способом установки. В checkout они
+  называют локальные `scripts/` и `docs/`, установленный пакет — консольную
+  команду, которую он действительно ставит, а запуск через `uvx` — закреплённый
+  релиз `uvx ru-marketplace-mcp@<версия>`. Ссылки в подсказках закреплены на
+  теге релиза и ведут на файлы именно этого релиза: пакет из PyPI больше не
+  отправляет оператора к файлу, которого в пакете нет.
+- Тип ошибки коннектора больше не теряется в общем обработчике. «Занято» (409)
+  и пауза `retry_after_s`, полный реестр удерживаемых страниц, истёкший
+  дедлайн и провайдер доходят до вызывающего — и через исходный инструмент, и
+  через сравнение источников. Неожиданная ошибка остаётся обычным
+  `transport_down`: без выдуманного кода и без утечки учётных данных.
+
+- The raw CDP fallback no longer builds an invalid URL for an IPv6 host: `::1`
+  now gives `ws://[::1]:9222/...` instead of `ws://::1:9222/...`, which cannot
+  be parsed at all. One netloc builder serves both the browser socket and the
+  page socket; IPv4, `host.docker.internal`, a plain host name and a remote CDP
+  endpoint keep the spelling they had, and the owned tab is still closed after
+  every attach failure and after a cancellation.
+- A CDP command now has an absolute deadline instead of an inactivity limit.
+  Chrome broadcasts its events to every attached client, so the old timeout,
+  which restarted on each foreign event, turned 80 ms into minutes: a stream of
+  unrelated events no longer extends the wait. The rule covers the attach
+  commands (`Target.createTarget`, `Page.enable`, `Network.enable`,
+  `Runtime.enable`) and the owned-target cleanup, not only `evaluate`; matching
+  responses and frame URL events still correlate exactly as before.
+- A diagnostic inside a success answer is scrubbed before it is stored or
+  returned. The reason a source was skipped in `marketplace_sources`, the CDP
+  and browser-window status answers and the doctor's per-source detail no
+  longer carry the text of an exception with a token or proxy credentials in it
+  — the log path scrubbed that text, the answer path did not. The exception
+  class, the source name and the harmless part of the message stay readable:
+  the diagnosis survives, the secret does not.
+- The recovery hints follow the install mode. In a checkout they name the local
+  `scripts/` and `docs/`; an installed package names the console script it
+  really ships, and a `uvx` run names the pinned `uvx ru-marketplace-mcp@<version>`
+  release. Every link a hint carries is pinned to the release's tag and points at
+  a file of that release, so the PyPI package no longer sends the operator after
+  a file it does not contain.
+- A connector's error type no longer gets lost in a generic handler. "Busy"
+  (409) with its `retry_after_s`, a full retained-page registry, a deadline and
+  the provider now reach the caller — both through the native source tool and
+  through the source comparison. An unexpected failure stays the ordinary
+  `transport_down`: no invented taxonomy, no leaked credentials.
+
 ## [2.8.0] - 2026-11-01
 
 Честные ответы агенту: одно значение `healthy`, отказы и проверки — типизированные ошибки с подсказкой, что делать, условные цены и другие размеры не выигрывают сравнение, неоднозначный текст цены даёт `null`; дрейф виден в предупреждениях инструментов; новый `marketplace_health`; справочник инструментов в MCP-ресурсах; секреты вычищаются из ошибок и логов.

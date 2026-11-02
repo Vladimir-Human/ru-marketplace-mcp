@@ -42,7 +42,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _cdp_health: Probe the CDP endpoint read-only; a missing optional Playwright is part of the answer.
 # _budget_health: Snapshot the shared navigation budget, imported lazily with the browser tier.
 # _handoff_health: Diagnose the retained-challenge registry, imported lazily with the browser tier.
-# marketplace_sources: Report mounts, skip reasons, capabilities, CDP-needing sources and server version.
+# marketplace_sources: Report mounts, skip reasons, capabilities, CDP-needing sources and server version; the reasons are redacted.
 # marketplace_health: Report transport health without navigating, autostarting or opening a tab.
 # apply_compact_output_schemas: Compact advertised schemas after mounting.
 # mount_child: Mount a connector while keeping one owner of the shared error URI.
@@ -60,6 +60,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
+from mcp_core.redact import redact_error_text
 from mcp_core.resources import mount_child, register_reference_resources
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
@@ -215,8 +216,8 @@ def _mount_all() -> None:
             module = __import__(module_path, fromlist=["mcp"])
             unavailable = _mount_unavailable_reason(module)
             if unavailable is not None:
-                _SKIPPED[name] = unavailable
-                log_event("marketplace.mount_skipped", source=name, error=unavailable[:120])
+                _SKIPPED[name] = redact_error_text(unavailable, 200)
+                log_event("marketplace.mount_skipped", source=name, error=redact_error_text(unavailable, 120))
                 continue
             # mount_child, not mount: every connector registers the shared
             # `marketplace://errors` for its own standalone server, and this
@@ -225,9 +226,14 @@ def _mount_all() -> None:
             mount_child(mcp, module.mcp)
             _MOUNTED.append(name)
         except Exception as exc:
-            detail = f"{type(exc).__name__}: {exc}"
-            _SKIPPED[name] = detail[:200]
-            log_event("marketplace.mount_skipped", source=name, error=detail[:120])
+            # The import error is a *success* field of marketplace_sources, not
+            # a log line: it is stored in `skipped` and handed to the client.
+            # An exception message can carry a token or a proxy credential, so
+            # it is scrubbed with the same helper the error and log paths use,
+            # before it is stored.
+            detail = redact_error_text(f"{type(exc).__name__}: {exc}", 200)
+            _SKIPPED[name] = detail
+            log_event("marketplace.mount_skipped", source=name, error=redact_error_text(detail, 120))
     log_event("marketplace.mounted", sources=_MOUNTED)
 
 
@@ -325,7 +331,10 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
     """
     return MarketplaceSourcesResponse(
         mounted=sorted(_MOUNTED),
-        skipped=dict(sorted(_SKIPPED.items())),
+        # Scrubbed again on the way out: `skipped` is a success answer, and a
+        # reason recorded elsewhere must not become a leak just because it
+        # reached this dict without the helper.
+        skipped={name: redact_error_text(reason, 200) for name, reason in sorted(_SKIPPED.items())},
         mounted_count=len(_MOUNTED),
         skipped_count=len(_SKIPPED),
         capabilities={

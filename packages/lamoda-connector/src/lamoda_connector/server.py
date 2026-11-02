@@ -61,6 +61,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
@@ -559,7 +560,7 @@ async def lamoda_search(
         raise
     except Exception as exc:
         log_event("lamoda_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"lamoda_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"lamoda_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -616,7 +617,7 @@ async def lamoda_card(
         raise
     except Exception as exc:
         log_event("lamoda_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"lamoda_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"lamoda_card failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls lamoda_selfcheck()
@@ -650,7 +651,7 @@ async def lamoda_selfcheck(ctx: Context | None = None) -> LamodaSelfcheckRespons
         raise
     except Exception as exc:
         log_event("lamoda_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"lamoda_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"lamoda_selfcheck failed: {exc}"))
 
 
 async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse:
