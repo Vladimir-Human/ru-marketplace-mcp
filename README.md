@@ -307,8 +307,11 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 </details>
 
 После подключения перезапустите клиент и прогоните `marketplace-mcp doctor`. Он
-запускает канарейку каждого коннектора и отвечает `success`, `drift_detected` или
-`inconclusive`.
+запускает канарейку каждого коннектора: код `0` — все выбранные проверки здоровы,
+`1` — дрейф парсера, `2` — признанный блок или непроверенный источник, `3` — не
+удалось записать status-файл, `4` — сломалась самопроверка или вызов doctor
+(включая ошибку аргументов). Nightly поднимает тревогу на `1` и `4`, но не на `2`.
+Отказ бюджета получает причину `budget_refused`, а не статус здоровой проверки.
 
 ## Инструменты
 
@@ -944,8 +947,11 @@ recommended price-comparison profile, ≈2.0k for the decision profile and
 <!-- tools-cost:end -->
 [dsh/README.md](dsh/README.md) covers enabling it and the full mode.
 
-After connecting, run `marketplace-mcp doctor`. It runs every connector's canary and
-reports `success`, `drift_detected`, or `inconclusive` for each.
+After connecting, run `marketplace-mcp doctor`. Its exits are `0` all selected
+checks healthy, `1` parser drift, `2` acknowledged block or unverified source,
+`3` status-file write failure, and `4` checker or doctor setup/usage failure
+(including an unknown source). Nightly alarms on `1` and `4`, not `2`. A budget
+refusal carries `budget_refused` and never counts as a healthy check.
 
 ## The tools
 

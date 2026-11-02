@@ -603,7 +603,8 @@
     <test file="scripts/test_live_budget.py" requirements="R-LIVE-BUDGET" title="test_reset_archives_the_ledger_and_the_next_request_starts_a_new_run" checks="An exhausted run says how to start a new one; live_check reset renames the ledger to .live-budget-&lt;time&gt;.json byte for byte, and the next request is the first of a new run." />
     <note>Offline fake transports and a fake clock; no marketplace request was made. The same cases were also exercised by an ad hoc script and scripts/live_check.py ledger ran with total 0/40.</note>
   </entry>
-  <entry id="V-M-LIVE-CHECK" module="M-LIVE-CHECK" file="scripts/live_check.py" direct-tests="none">
+  <entry id="V-M-LIVE-CHECK" module="M-LIVE-CHECK" file="scripts/live_check.py">
+    <test file="scripts/test_doctor_exit_codes.py" requirements="R-DOCTOR-EXIT-CODES" title="doctor and live_check exit codes" coverage="offline; executed 2026-11-02" checks="Through cli.main doctor and live_check doctor with fake selfcheck modules: a selfcheck that raises, returns an unknown or missing status, or non-mapping checks exits 4 (hard failure) and wins over drift and blocks; an unknown doctor source exits 4 without querying a source; drift exits 1; an acknowledged block exits 2; a live-budget refusal (raised, wrapped or swallowed behind success) is reported as budget_refused and never exits 0; a failed doctor invocation inside live_check is 4. With cli.py and live_check.py from the pre-R17 tree (file copies), 59 tests failed (new suite plus the changed test_cli expectations) and 122 passed; fixed copies restored and verified by diff stat." />
     <note>Selfcheck/call paths are operator-only and send marketplace requests, so they were not run; `python scripts/live_check.py ledger` returned total 0/40 and an unknown source exited 2, both with the budget installed.</note>
   </entry>
   <entry id="V-M-LIVE-CONFTEST" module="M-LIVE-CONFTEST" file="conftest.py">

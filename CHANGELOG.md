@@ -10,6 +10,8 @@
 ## [Unreleased]
 
 ### Fixed
+- `marketplace-mcp doctor` больше не прячет поломку своей же проверки под «не удалось проверить». Упавшая selfcheck-обёртка, неизвестный статус, неизвестный источник и ошибка вызова теперь дают код 4 (жёсткий сбой), и ночной drift-алерт на нём краснеет. Код 2 по-прежнему означает признанную блокировку источника и тревоги не поднимает, дрейф остаётся кодом 1, а отказ live-бюджета показывается как `budget_refused`, а не как здоровье.
+- `marketplace-mcp doctor` no longer hides a broken check of its own behind "could not be judged". A crashed selfcheck wrapper, an unknown status, an unknown source and a usage error now exit 4 (hard failure), and the nightly drift alarm turns red on it. Exit 2 still means an acknowledged blocked source and raises no alarm, drift stays exit 1, and a live-budget refusal is shown as `budget_refused`, never as healthy.
 
 - Яндекс больше не выдаёт выдуманную цену. Строка вроде `1 999 2 999` — это два
   числа, склеенные пробелом-разделителем тысяч, — раньше читалась как 19992999.0:

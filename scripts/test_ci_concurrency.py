@@ -240,16 +240,18 @@ def test_the_doctor_alarm_runs_before_the_canary_on_one_ledger() -> None:
 
 
 def test_a_broken_live_check_fails_the_alarm() -> None:
-    """Exit 4 is live_check's own usage/setup failure, not a blocked source.
+    """R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure.
 
-    The step keeps 2 green because a blocked marketplace must not page anyone.
-    A live_check that never ran is different: no selfcheck was judged, so a
-    green job would hide a broken alarm.
+    The step keeps 2 non-alarm because a blocked marketplace must not page
+    anyone. A failed checker or doctor invocation is a broken alarm instead.
+    This inspects workflow text only; it does not execute the nightly job.
     """
     step = _section("      - name: Doctor drift alarm")
 
-    assert re.search(r"^\s*4\).*exit 1", step, re.M), "exit 4 (live_check setup/usage failure) must fail the job"
+    assert re.search(r"^\s*4\).*exit 1", step, re.M), "exit 4 (checker/doctor/setup/usage failure) must fail the job"
     assert "exit 4" in step, "the step summary must name what exit 4 means"
+    assert "checker/doctor/setup/usage failure (alarm)" in step
+    assert "doctor never ran" not in step, "exit 4 also covers a checker that ran and failed"
 
 
 def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> None:
