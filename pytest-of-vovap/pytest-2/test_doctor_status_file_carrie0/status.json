@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-02T09:31:19.803563Z",
+  "healthy": 0,
+  "blocked": 1,
+  "drifted": 0,
+  "sources": {
+    "yandex_market": {
+      "status": "inconclusive",
+      "detail": "search:inconclusive (rate_limited http 429)",
+      "next_step": "The site rate-limited this address; wait 10-15 minutes, then rerun `marketplace-mcp doctor yandex_market`."
+    }
+  }
+}

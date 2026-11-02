@@ -1,0 +1,30 @@
+[project]
+name = "mcp-core"
+version = "2.8.0"
+description = "Shared runtime for ru-marketplace-mcp connectors — error taxonomy, transports, tolerant-reader helpers"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Vladimir-Human", email = "39053957+Vladimir-Human@users.noreply.github.com" }]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.2",
+    "fastmcp>=4.1.4,<5",
+    "mcp-types>=2.3,<3",
+]
+
+[project.optional-dependencies]
+# transport/chrome_cdp.py drives Chrome through Playwright's connect_over_cdp.
+# Chrome >= 151 stops answering that handshake, so the transport also carries a
+# raw-CDP fallback that speaks the websocket protocol directly — that path
+# needs `websockets` (already present transitively via fastmcp, declared here
+# so the fallback never depends on an undeclared transitive).
+cdp = ["playwright>=1.47", "websockets>=17.0.1"]
+impersonate = ["curl-cffi>=0.8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_core"]

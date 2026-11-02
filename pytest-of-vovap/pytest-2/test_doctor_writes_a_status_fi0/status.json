@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-02T09:31:19.159704Z",
+  "healthy": 1,
+  "blocked": 0,
+  "drifted": 0,
+  "sources": {
+    "wildberries": {
+      "status": "success",
+      "detail": "ok",
+      "next_step": null
+    }
+  }
+}

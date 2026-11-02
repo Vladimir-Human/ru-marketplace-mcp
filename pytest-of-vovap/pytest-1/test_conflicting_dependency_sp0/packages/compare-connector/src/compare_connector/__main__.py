@@ -1,0 +1,40 @@
+"""Entry point for the cross-marketplace comparison MCP server.
+
+Exposed as the ``compare-mcp`` console script, so MCP client configs can spawn the
+server without knowing where the package lives on disk:
+
+    uv run --frozen --directory /path/to/ru-marketplace-mcp compare-mcp
+
+stdio is the default transport because that is what MCP clients speak. Set
+``MCP_TRANSPORT=http`` (with optional
+``MCP_HTTP_HOST``/``MCP_HTTP_PORT``/``MCP_HTTP_PATH``) to run it over HTTP for
+remote deployment instead — see docs/DEPLOYMENT.md. Transport selection lives in
+``mcp_core.runtime`` and writes any diagnostics to stderr; nothing here may write
+to stdout, which the JSON-RPC stream owns.
+"""
+
+from __future__ import annotations
+
+import sys
+
+
+def main() -> int:
+    """Run the server on the transport selected by the environment (stdio default)."""
+    from mcp_core.runtime import run_server
+
+    from compare_connector.server import mcp
+
+    return run_server(mcp, server_name="compare")
+
+
+def decision_main() -> int:
+    """Run the middle comparison-plus-card DSH profile."""
+    from mcp_core.runtime import run_server
+
+    from compare_connector.decision_server import mcp
+
+    return run_server(mcp, server_name="decision")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

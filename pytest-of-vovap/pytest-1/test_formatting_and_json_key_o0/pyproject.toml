@@ -1,0 +1,4 @@
+[project]
+# keep this comment
+name = "root"  # and this one
+version    =  "1.3.0"   # bump only me

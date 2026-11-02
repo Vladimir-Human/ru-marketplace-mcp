@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "C:\\Users\\vovap\\Projects\\ru-marketplace-mcp\\.claude\\worktrees\\fix-gates\\pytest-of-vovap\\pytest-2\\test_install_uvx_writes_the_pi2\\Program Files\\uv.exe",
+      "args": [
+        "tool",
+        "run",
+        "--from",
+        "ru-marketplace-mcp==2.8.0",
+        "marketplace-mcp"
+      ]
+    }
+  }
+}

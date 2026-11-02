@@ -1,0 +1,10 @@
+{
+    "$schema": "x",
+    "version": "1.3.0",
+    "packages": [
+        {
+            "identifier": "ghcr.io/x/ru-marketplace-mcp:1.3.0",
+            "version": "0.0.1"
+        }
+    ]
+}

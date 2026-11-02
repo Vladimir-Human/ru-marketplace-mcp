@@ -1,0 +1,369 @@
+"""Transport selection shared by all connector entry points.
+
+Every connector is launched the same way — ``mcp.run(...)`` — and every
+connector must default to stdio, because that is the transport MCP clients
+speak and the only one the existing client configs know about. Rather than
+copy the env-var parsing into every ``__main__.py`` file, it lives here once.
+
+Two rules this module exists to enforce, both protocol- or security-critical:
+
+1. **stdio owns stdout.** A stdio MCP server's stdout *is* the JSON-RPC stream;
+   one stray byte there corrupts the protocol and surfaces as a baffling
+   client-side parse error. So every diagnostic here goes to stderr via
+   ``log_event`` — never ``print``, never ``sys.stdout``. ``scripts/check_no_print``
+   guards this, and this module is in its scan path.
+
+2. **HTTP binds to loopback by default.** Non-loopback binds require a bearer
+   token and static tenant id before the server can start. They also log an
+   exposure warning: authentication does not supply TLS or isolate browser
+   profiles between tenants. Each tenant needs its own process and profile.
+"""
+# START_MODULE_CONTRACT
+# PURPOSE: Resolve and launch stdio or authenticated HTTP-family MCP servers.
+# SCOPE: Environment parsing, launch diagnostics, per-era client scope and graceful handoff cleanup.
+# DEPENDS: FastMCP; mcp_types protocol versions; mcp_core.logging; loaded browser_handoff at shutdown; stdlib.
+# LINKS: M-RUNTIME; M-LOGGING; M-BROWSER-HANDOFF.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# STDIO_CLIENT_SCOPE: Stand in for the one stdio client on sessionless connections.
+# current_client_scope: Resolve the calling client per protocol era, or None.
+# browser_handoff_lifespan: Close already-loaded handoffs on server shutdown.
+# TransportConfig: Hold transport and loopback/default endpoint configuration.
+# BearerAuthMiddleware: Compare bearer token and optional static tenant identity.
+# ToolErrorRedactionMiddleware: Redact credentials FastMCP leaves in an unexpected ToolError.
+# _parse_transport: Reject unsupported transport names; blank defaults to stdio.
+# _parse_port: Validate configured TCP port bounds.
+# _parse_host: Trim the bind host or select loopback.
+# _parse_path: Normalize the HTTP endpoint's leading slash.
+# resolve_transport: Build configuration without launching or logging.
+# run_server: Require exposure credentials, add middleware and dispatch FastMCP.
+# _warn_if_exposed: Emit stderr warning for a non-loopback HTTP bind.
+# END_MODULE_MAP
+
+from __future__ import annotations
+
+import logging
+import os
+import secrets
+import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal
+
+from fastmcp.exceptions import ToolError
+from fastmcp.server.dependencies import get_context, get_http_request
+from fastmcp.server.middleware import Middleware
+from mcp_types.version import MODERN_PROTOCOL_VERSIONS
+
+from mcp_core.logging import log_event
+from mcp_core.redact import redact_error_text
+
+if TYPE_CHECKING:
+    from fastmcp import Context, FastMCP
+
+
+# One stdio process serves exactly one client, the one holding its pipes, so on
+# a sessionless connection the process stands in for that client's session.
+STDIO_CLIENT_SCOPE = "stdio-process"
+
+
+def current_client_scope(ctx: Context | None = None) -> str | None:
+    """Identify the client a tool call belongs to, or None when nothing does.
+
+    FastMCP 4 serves two protocol eras. A handshake-era connection (2025-11-25
+    and older) has a session whose id stays the same across calls. A 2026-07-28
+    connection has no session: FastMCP mints a new ``session_id`` per request,
+    so it cannot tie a retry to the call that opened a challenge tab. There a
+    stdio server uses the process scope; HTTP and in-memory servers get None,
+    because nothing names the caller from one request to the next. CLI probes
+    run outside any request and also get None.
+    """
+    try:
+        context = ctx or get_context()
+        request = context.request_context
+        if request is None:
+            return None
+        if request.protocol_version not in MODERN_PROTOCOL_VERSIONS:
+            return context.session_id
+    except RuntimeError:
+        return None
+    return STDIO_CLIENT_SCOPE if context.transport == "stdio" else None
+
+
+@asynccontextmanager
+async def browser_handoff_lifespan(server: FastMCP) -> AsyncIterator[dict]:
+    """Release loaded CDP leases without requiring the optional browser extra."""
+    try:
+        yield {}
+    finally:
+        handoff = sys.modules.get("mcp_core.transport.browser_handoff")
+        if handoff is not None:
+            await handoff.close_handoffs()
+
+
+# The transport strings FastMCP 4.x accepts for these servers. "stdio" is the
+# default and the only one existing client configs rely on. "http" is the
+# modern streamable-HTTP transport; "streamable-http" is its explicit alias and
+# "sse" is the older Server-Sent-Events transport, both kept so operators who
+# know FastMCP's own vocabulary are not surprised. Verified against the installed
+# FastMCP via inspect.signature(FastMCP.run) rather than assumed.
+Transport = Literal["stdio", "http", "streamable-http", "sse"]
+
+_VALID_TRANSPORTS: tuple[Transport, ...] = ("stdio", "http", "streamable-http", "sse")
+_HTTP_TRANSPORTS: frozenset[str] = frozenset({"http", "streamable-http", "sse"})
+
+DEFAULT_TRANSPORT: Transport = "stdio"
+DEFAULT_HTTP_HOST = "127.0.0.1"
+DEFAULT_HTTP_PORT = 8000
+DEFAULT_HTTP_PATH = "/mcp"
+
+ENV_TRANSPORT = "MCP_TRANSPORT"
+ENV_HTTP_HOST = "MCP_HTTP_HOST"
+ENV_HTTP_PORT = "MCP_HTTP_PORT"
+ENV_HTTP_PATH = "MCP_HTTP_PATH"
+ENV_HTTP_AUTH_TOKEN = "MCP_HTTP_AUTH_TOKEN"
+ENV_HTTP_TENANT_ID = "MCP_HTTP_TENANT_ID"
+
+# Hosts that keep the server reachable only from the machine it runs on. Any
+# other value exposes it to the network and earns a warning.
+_LOOPBACK_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+@dataclass(frozen=True)
+class TransportConfig:
+    """Resolved transport selection for one server launch.
+
+    ``host``/``port``/``path`` are only meaningful when ``transport`` is an
+    HTTP-family transport; for stdio they are left at their defaults and unused.
+    """
+
+    transport: Transport
+    host: str = DEFAULT_HTTP_HOST
+    port: int = DEFAULT_HTTP_PORT
+    path: str = DEFAULT_HTTP_PATH
+
+    @property
+    def is_http(self) -> bool:
+        """True when this selection runs over the network rather than stdio."""
+        return self.transport in _HTTP_TRANSPORTS
+
+    @property
+    def is_loopback(self) -> bool:
+        """True when the HTTP bind host is reachable only from this machine."""
+        return self.host in _LOOPBACK_HOSTS
+
+
+class BearerAuthMiddleware(Middleware):
+    """Require one configured bearer token for HTTP requests.
+
+    The process remains single-tenant: authenticated callers share the same
+    connector and browser profile. Separate tenants require separate processes.
+    """
+
+    def __init__(self, token: str, tenant_id: str | None = None) -> None:
+        self._token = token
+        self._tenant_id = tenant_id
+
+    async def __call__(self, context, call_next):
+        request = get_http_request()
+        supplied = request.headers.get("authorization", "")
+        if not secrets.compare_digest(supplied, f"Bearer {self._token}"):
+            from fastmcp.exceptions import AuthorizationError
+
+            raise AuthorizationError("HTTP bearer authentication required")
+        if self._tenant_id is not None:
+            supplied_tenant = request.headers.get("x-mcp-tenant", "")
+            if not secrets.compare_digest(supplied_tenant, self._tenant_id):
+                from fastmcp.exceptions import AuthorizationError
+
+                raise AuthorizationError("HTTP tenant identity mismatch")
+        return await call_next(context)
+
+
+class ToolErrorRedactionMiddleware(Middleware):
+    """Redact credentials FastMCP's own error boundary leaves in a ToolError.
+
+    FastMCP answers any non-FastMCP exception raised by a tool with
+    ``ToolError(f"Error calling tool {name!r}: {e}")`` built from the raw
+    exception text, and that happens outside every tool's own error handling: a
+    ``ValueError`` carrying a proxy URL or a token reaches the client before any
+    connector code can redact it. This is the one place that closes the hole for
+    every server and every transport. Errors this project raises itself go
+    through ``raise_tool_error``, which already redacts, so their text does not
+    change under the same rules and they pass through untouched
+    (R-SECRET-REDACTION).
+    """
+
+    async def on_call_tool(self, context, call_next):
+        try:
+            return await call_next(context)
+        except ToolError as exc:
+            text = str(exc)
+            # No bound: this middleware redacts, it does not truncate. Cutting a
+            # structured JSON error at redact_error_text's default 500
+            # characters would hand the agent unparseable JSON, and even the
+            # text's own length can cut it, because a secret shorter than
+            # "<redacted>" grows the text.
+            redacted = redact_error_text(text, max_len=sys.maxsize)
+            if redacted == text:
+                raise
+            # __cause__ keeps the original ToolError for a traceback; only the
+            # text the client reads changes.
+            raise ToolError(redacted) from exc
+
+
+def _parse_transport(raw: str | None) -> Transport:
+    """Map the ``MCP_TRANSPORT`` value to a supported transport.
+
+    Empty or unset means stdio — the backward-compatible default. An unknown
+    value is a configuration error worth failing on loudly rather than silently
+    falling back, because a typo like ``MCP_TRANSPORT=htpt`` would otherwise
+    start a stdio server the operator did not ask for.
+    """
+    if raw is None or raw.strip() == "":
+        return DEFAULT_TRANSPORT
+
+    value = raw.strip().lower()
+    if value not in _VALID_TRANSPORTS:
+        supported = ", ".join(_VALID_TRANSPORTS)
+        raise ValueError(f"{ENV_TRANSPORT}={raw!r} is not a supported transport; use one of: {supported}")
+    # mypy: membership in _VALID_TRANSPORTS narrows to the Literal at runtime,
+    # but the checker cannot see that, so assert the shape it needs.
+    assert value in _VALID_TRANSPORTS
+    return value  # type: ignore[return-value]
+
+
+def _parse_port(raw: str | None) -> int:
+    """Parse ``MCP_HTTP_PORT`` into a valid TCP port.
+
+    A non-numeric or out-of-range value is rejected rather than coerced, so a
+    bad port fails at startup instead of surfacing as an obscure bind error.
+    """
+    if raw is None or raw.strip() == "":
+        return DEFAULT_HTTP_PORT
+    try:
+        port = int(raw.strip())
+    except ValueError:
+        raise ValueError(f"{ENV_HTTP_PORT}={raw!r} is not an integer") from None
+    if not (1 <= port <= 65535):
+        raise ValueError(f"{ENV_HTTP_PORT}={raw!r} is out of range; must be 1-65535")
+    return port
+
+
+def _parse_host(raw: str | None) -> str:
+    if raw is None or raw.strip() == "":
+        return DEFAULT_HTTP_HOST
+    return raw.strip()
+
+
+def _parse_path(raw: str | None) -> str:
+    """Normalise ``MCP_HTTP_PATH`` to a leading-slash endpoint path."""
+    if raw is None or raw.strip() == "":
+        return DEFAULT_HTTP_PATH
+    path = raw.strip()
+    if not path.startswith("/"):
+        path = "/" + path
+    return path
+
+
+def resolve_transport(env: dict[str, str] | None = None) -> TransportConfig:
+    """Resolve the transport selection from the environment.
+
+    Pure and side-effect-free (no sockets, no logging) so it can be unit-tested
+    by passing a plain dict; ``run_server`` layers logging and the actual launch
+    on top. Defaults reproduce today's behaviour exactly: no env vars set means
+    stdio, which is why every existing client config keeps working untouched.
+    """
+    source = os.environ if env is None else env
+
+    transport = _parse_transport(source.get(ENV_TRANSPORT))
+    if transport == "stdio":
+        # Host/port/path are irrelevant to stdio; do not parse them, so a stray
+        # MCP_HTTP_PORT typo cannot fail a stdio launch that never uses it.
+        return TransportConfig(transport=transport)
+
+    return TransportConfig(
+        transport=transport,
+        host=_parse_host(source.get(ENV_HTTP_HOST)),
+        port=_parse_port(source.get(ENV_HTTP_PORT)),
+        path=_parse_path(source.get(ENV_HTTP_PATH)),
+    )
+
+
+def run_server(mcp: FastMCP, *, server_name: str) -> int:
+    """Run ``mcp`` on the transport selected by the environment.
+
+    Returns a process exit code so callers can ``sys.exit(run_server(...))``.
+    ``KeyboardInterrupt`` and ``BrokenPipeError`` are treated as normal
+    shutdowns — a client disconnecting mid-write on stdio is expected, not an
+    error worth a traceback.
+
+    Diagnostics go to stderr only; on stdio nothing is emitted before handing
+    stdout to the JSON-RPC stream.
+    """
+    config = resolve_transport()
+
+    # Installed before anything can run, on every transport: this is the only
+    # boundary that sees the ToolError FastMCP builds from an unexpected
+    # exception, which carries the raw exception text (R-SECRET-REDACTION).
+    mcp.add_middleware(ToolErrorRedactionMiddleware())
+
+    try:
+        if config.is_http:
+            auth_token = os.environ.get(ENV_HTTP_AUTH_TOKEN, "").strip()
+            tenant_id = os.environ.get(ENV_HTTP_TENANT_ID, "").strip() or None
+            if not config.is_loopback and not auth_token:
+                raise ValueError(
+                    f"{ENV_HTTP_AUTH_TOKEN} must be set when {ENV_HTTP_HOST}={config.host!r} is not loopback"
+                )
+            if not config.is_loopback and tenant_id is None:
+                raise ValueError(
+                    f"{ENV_HTTP_TENANT_ID} must be set when {ENV_HTTP_HOST}={config.host!r} is not loopback"
+                )
+            if auth_token:
+                mcp.add_middleware(BearerAuthMiddleware(auth_token, tenant_id))
+            _warn_if_exposed(config, server_name=server_name)
+            log_event(
+                "server_start",
+                server=server_name,
+                transport=config.transport,
+                host=config.host,
+                port=config.port,
+                path=config.path,
+            )
+            # host/port/path flow through FastMCP.run(**transport_kwargs) into
+            # run_http_async; verified against the installed signature.
+            mcp.run(transport=config.transport, host=config.host, port=config.port, path=config.path)
+        else:
+            # stdio: emit nothing here — stdout is the JSON-RPC stream and even
+            # a stderr line is unnecessary noise for the common path.
+            mcp.run(transport="stdio")
+    except KeyboardInterrupt:
+        return 130
+    except BrokenPipeError:
+        # The client went away mid-write; a normal shutdown for stdio.
+        return 0
+    return 0
+
+
+def _warn_if_exposed(config: TransportConfig, *, server_name: str) -> None:
+    """Log a loud warning when an HTTP server binds beyond loopback.
+
+    ``run_server`` has already required bearer auth and a static tenant id.
+    A non-loopback bind still needs a protected network path, since the server
+    does not terminate TLS or separate multiple tenants' browser profiles.
+    """
+    if config.is_loopback:
+        return
+    log_event(
+        "http_bind_exposed",
+        level=logging.WARNING,
+        server=server_name,
+        host=config.host,
+        port=config.port,
+        message=(
+            "HTTP transport is bound beyond loopback with bearer authentication and a static tenant id. "
+            "Use TLS for remote access and a separate process/browser profile per tenant."
+        ),
+    )

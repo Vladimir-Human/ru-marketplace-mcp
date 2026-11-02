@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "ceilings": {
+    "compare-mcp": 9
+  },
+  "profiles": {
+    "compare-mcp": {
+      "script": "compare-mcp",
+      "tool_count": 1,
+      "wire_tokens": 8,
+      "model_tokens": 12,
+      "instructions_tokens": 0,
+      "latency_ms": 10.0,
+      "schema_sha256": "166fe8f76aefbf5054eb7c93cbb2faaf33412c3714981130126a8f52eb3abe33",
+      "tools": [
+        {
+          "name": "tool",
+          "tokens": 8,
+          "model_tokens": 12
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "C:\\Users\\vovap\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\uv.EXE",
+      "args": [
+        "run",
+        "--directory",
+        "C:\\Users\\vovap\\Projects\\ru-marketplace-mcp\\.claude\\worktrees\\fix-gates",
+        "compare-mcp"
+      ]
+    }
+  }
+}

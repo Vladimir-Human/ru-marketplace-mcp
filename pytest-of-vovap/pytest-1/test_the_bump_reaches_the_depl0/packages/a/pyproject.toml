@@ -1,0 +1,6 @@
+[project]
+name = "a"
+version = "1.3.0"
+dependencies = [
+    "mcp-core==1.3.0",
+]

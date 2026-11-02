@@ -1,0 +1,1735 @@
+"""Authenticated transport: drive the operator's own Chrome over CDP.
+
+Several Russian marketplaces reject datacenter TLS fingerprints outright — Ozon
+answers ``composer-api.bx`` with an endless 307 ``__rr`` redirect loop, and
+others gate catalog reads behind a session cookie. The reliable answer is not a
+better fingerprint: it is to run the fetch *inside* a real browser the operator
+already trusts. This module connects to a Chrome started with
+``--remote-debugging-port`` and reuses that live session.
+
+=== THREAT MODEL — READ BEFORE USING ===
+
+CDP hands any local caller full control of the profile it is attached to,
+including every logged-in session in it. The mitigations, in order of value:
+
+1. **Dedicated profile.** ``CHROME_SCRAPING_PROFILE`` defaults to a scraping-only
+   directory, never the operator's daily profile. Log into marketplaces there
+   and nothing else — banking and email stay out of blast radius.
+2. **Localhost binding.** Chrome is launched with
+   ``--remote-debugging-address=127.0.0.1``; the port is never exposed to a LAN.
+3. **Scheme guard.** ``open_page`` refuses anything but http(s), so an
+   authenticated browser can never be aimed at ``file:///``.
+4. **Caller-side host allowlists.** Each connector validates its own URLs before
+   they reach this module — that is what stops a crafted SKU from turning into a
+   request for ``/api/personal/orders``.
+
+No credentials are ever stored, read, or transmitted by this code: the operator
+logs in by hand, in a browser they control.
+
+Cross-platform: Chrome binaries and profile locations are resolved per platform
+(Windows / macOS / Linux). Window-hiding stealth exists on Windows (window parked
+off-screen) and macOS (tabs opened in the background, app kept hidden); on Linux
+the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
+"""
+# START_MODULE_CONTRACT
+# PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
+# SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
+# DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# PageLike: Specify the evaluate/url surface shared by both page implementations.
+# _start_chrome_with_cdp: Spawn a dedicated-profile Chrome on loopback, off-screen only when asked.
+# _wait_for_cdp_port: Bounded wait for a spawned Chrome to bind the CDP port.
+# _ensure_cdp_running: Serialize loopback-only autostart, bounded readiness wait and a short negative cache.
+# _remembered_autostart_failure: Age-hinted message of a recent failed autostart, or None.
+# start_browser: Operator launch, visible by default, with a report instead of an exception.
+# _hide_chrome_windows: Hide confirmed profile windows unless handoff guards exist.
+# _windows_profile_match_expr: PowerShell regex for our --user-data-dir, quoted or bare, never a sibling.
+# _CdpConnectTimeout: Preserve raw fallback while reporting a transport-down attach timeout.
+# get_browser: Attach Playwright, diagnose timeout tab counts and bound detach without shutdown.
+# _cdp_http_json: Fetch and parse one CDP HTTP endpoint.
+# _page_target_count: Count HTTP page targets or report an unavailable list.
+# _page_targets: The page targets of a /json/list answer, in Chrome's order.
+# get_context: Yield the attached browser's existing default context.
+# NavBlocked: Carry rejected main-document status and final URL.
+# probe_session: Return CDP reachability and raw-fallback diagnostics.
+# _RawCdpPage: Correlate raw commands/events and expose evaluate/navigation.
+# capture_owned_viewport: Capture bounded JPEG pixels without DOM reads or disk writes.
+# current_page_url: Refresh raw main-frame URL without extracting document content.
+# reveal_owned_page: Best-effort foreground activation of only the owned target.
+# _move_window_on_screen: Un-minimize a window and park it on-screen (shared with browser show).
+# cdp_endpoint_status: Read /json/version and the page count without starting or driving Chrome.
+# browser_status: Report CDP reachability, Chrome version, page count and window state.
+# show_browser_window: Move the scraping Chrome window on-screen and activate the first or named target.
+# open_tabs: Open pages in new tabs over browser-level CDP; never navigates or closes an existing tab.
+# _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
+# _new_tab: Claim a created target ID and close it if cancellation prevents handback.
+# _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
+# NavigationPolicyError: Report a final URL outside the caller's policy.
+# open_page: Budget navigation, select transport and yield an owned page until cleanup.
+# END_MODULE_MAP
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import binascii
+import http.client
+import json
+import math
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
+from contextlib import AsyncExitStack, asynccontextmanager
+from pathlib import Path
+from typing import Any, Protocol
+from urllib.parse import urlsplit, urlunsplit
+
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
+
+from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
+from mcp_core.transport.cdp_budget import HostRefusingError, navigation_budget
+
+# websockets ships with the cdp extra; stay importable without it (the raw-CDP
+# fallback raises a clear error instead).
+_websockets: Any = None
+try:
+    import websockets as _websockets_module
+
+    _websockets = _websockets_module
+except ImportError:  # pragma: no cover - exercised only without the cdp extra
+    _websockets = None
+
+
+class PageLike(Protocol):
+    """What the connectors actually use from an opened tab.
+
+    Both a Playwright ``Page`` and the raw-CDP fallback page satisfy it, which
+    is what lets ``open_page`` fall back transparently.
+    """
+
+    @property
+    def url(self) -> str: ...
+
+    async def evaluate(self, expression: str, arg: object = None) -> Any: ...
+
+
+def _port_from_env() -> int:
+    raw = os.environ.get("CHROME_CDP_PORT", "9222")
+    try:
+        port = int(raw)
+    except (TypeError, ValueError):
+        return 9222
+    return port if 1 <= port <= 65535 else 9222
+
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _host_from_env() -> str:
+    """Where the CDP client dials. Defaults to loopback.
+
+    ``CHROME_CDP_HOST`` exists for containers and remote-Chrome setups: a
+    container's own 127.0.0.1 never holds the operator's browser, so pointing
+    at ``host.docker.internal`` or a Chrome sidecar is what makes tier 2 work
+    there. Values are trimmed and must look like a hostname or IP — a malformed
+    one falls back to loopback rather than crashing Playwright with a cryptic
+    URL error.
+    """
+    raw = os.environ.get("CHROME_CDP_HOST", "127.0.0.1").strip()
+    if not raw:
+        return "127.0.0.1"
+    # Reject anything that is clearly not a bare host: schemes, paths,
+    # credentials. "host:9222" is a common mistake — the port is separate.
+    if any(ch in raw for ch in ("/", "@", " ")):
+        return "127.0.0.1"
+    if ":" in raw:
+        # Colons are only legitimate in IPv6 literals: bare (::1) or bracketed.
+        # Keep the bare form, which the socket dialer and the loopback test
+        # need; _url_host adds the brackets a URL needs.
+        if raw.startswith("[") and raw.endswith("]"):
+            raw = raw[1:-1]
+        if raw.count(":") > 1 and "[" not in raw and "]" not in raw:
+            return raw
+        return "127.0.0.1"
+    return raw
+
+
+def _url_host(host: str) -> str:
+    """The host as a URL needs it: an IPv6 literal goes in brackets."""
+    return f"[{host}]" if ":" in host else host
+
+
+CDP_PORT = _port_from_env()
+CDP_HOST = _host_from_env()
+CDP_URL = f"http://{_url_host(CDP_HOST)}:{CDP_PORT}"
+CDP_IS_LOOPBACK = CDP_HOST in _LOOPBACK_HOSTS
+
+
+def _default_profile_dir() -> Path:
+    """Platform-appropriate location for the dedicated scraping profile."""
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
+        return base / "Chrome-Scraping"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Chrome-Scraping"
+    base = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")))
+    return base / "chrome-scraping"
+
+
+SCRAPING_PROFILE = os.environ.get("CHROME_SCRAPING_PROFILE", str(_default_profile_dir()))
+
+# Keep the scraping window out of the operator's way without going headless:
+# Windows parks it off-screen, macOS opens tabs in the background and hides the
+# app (⌘H) so it never takes focus or drags the desktop to its Space. A real
+# (non-headless) window keeps Chrome's renderer fingerprint intact, which is the
+# whole point of using CDP instead of a headless scraper.
+STEALTH = os.environ.get("CHROME_STEALTH", "1") != "0"
+
+# Opt-in headless mode for Linux hosts with no display. Anti-bot systems detect
+# headless Chrome readily, so this stays off by default.
+HEADLESS = os.environ.get("CHROME_HEADLESS", "0") == "1"
+
+# Owned challenge workers hold a guard throughout their lifecycle. Other reads
+# must not hide a profile window while the operator is using a retained tab.
+_HANDOFF_VISIBILITY_GUARDS: set[object] = set()
+
+
+def _chrome_candidates() -> list[str]:
+    """Chrome/Chromium executables to try, most preferred first."""
+    override = os.environ.get("CHROME_BINARY")
+    found: list[str] = [override] if override else []
+
+    if sys.platform == "win32":
+        # Windows env keys are case-insensitive, and "PROGRAMFILES(X86)" does not
+        # exist in the upper-cased form ruff's SIM112 suggests — keep the real names.
+        program_files = os.environ.get("ProgramFiles", r"C:\Program Files")  # noqa: SIM112
+        program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")  # noqa: SIM112
+        local_app_data = os.environ.get("LOCALAPPDATA", "")
+        found += [
+            rf"{program_files}\Google\Chrome\Application\chrome.exe",
+            rf"{program_files_x86}\Google\Chrome\Application\chrome.exe",
+            rf"{program_files}\Microsoft\Edge\Application\msedge.exe",
+        ]
+        if local_app_data:
+            found.append(rf"{local_app_data}\Google\Chrome\Application\chrome.exe")
+    elif sys.platform == "darwin":
+        found += [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            str(Path.home() / "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        ]
+    else:
+        for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge"):
+            resolved = shutil.which(name)
+            if resolved:
+                found.append(resolved)
+        found += ["/usr/bin/google-chrome", "/usr/bin/chromium", "/snap/bin/chromium"]
+    return [p for p in found if p]
+
+
+_AUTOSTART_LOCK = asyncio.Lock()
+
+# A failed autostart is remembered for this long. Without it, a fan-out over the
+# CDP sources (compare_prices queries several of them at once) queues each
+# caller on _AUTOSTART_LOCK and pays the full bounded readiness wait again, so a
+# dead Chrome turns one slow failure into minutes of them. The window is short
+# on purpose: the operator may start Chrome by hand, and the cheap loopback
+# probe still wins over a remembered failure.
+_AUTOSTART_FAILURE_TTL_S = 45.0
+_autostart_failure: tuple[float, str] | None = None
+
+
+def _clear_autostart_failure() -> None:
+    """Forget a remembered autostart failure; every success does this."""
+    global _autostart_failure
+    _autostart_failure = None
+
+
+def _remember_autostart_failure(msg: str) -> None:
+    """Remember one failed autostart attempt together with its time."""
+    global _autostart_failure
+    _autostart_failure = (time.monotonic(), msg)
+
+
+def _recent_autostart_failure() -> tuple[int, str] | None:
+    """Age in whole seconds and message of a fresh failure, else ``None``."""
+    if _autostart_failure is None:
+        return None
+    at, msg = _autostart_failure
+    age = time.monotonic() - at
+    if age >= _AUTOSTART_FAILURE_TTL_S:
+        _clear_autostart_failure()
+        return None
+    return int(age), msg
+
+
+def _remembered_autostart_failure() -> str | None:
+    """The remembered failure with a path-free age hint, or ``None``."""
+    recent = _recent_autostart_failure()
+    if recent is None:
+        return None
+    age, msg = recent
+    return f"{msg} — remembered autostart failure {age}s ago (retry window {int(_AUTOSTART_FAILURE_TTL_S)}s)"
+
+
+def _autostart_failure_hint() -> str | None:
+    """Only the age hint, so a masked error string can still name the memory."""
+    recent = _recent_autostart_failure()
+    if recent is None:
+        return None
+    age, _msg = recent
+    return f"remembered autostart failure {age}s ago (retry window {int(_AUTOSTART_FAILURE_TTL_S)}s)"
+
+
+def _cdp_port_open() -> bool:
+    """Quick TCP probe: is something already listening on the CDP endpoint?"""
+    try:
+        with socket.create_connection((CDP_HOST, CDP_PORT), timeout=0.5):
+            return True
+    except (ConnectionRefusedError, TimeoutError, OSError):
+        return False
+
+
+def _find_chrome() -> str | None:
+    for candidate in _chrome_candidates():
+        if Path(candidate).exists():
+            return candidate
+    return None
+
+
+def _running_as_root() -> bool:
+    geteuid = getattr(os, "geteuid", None)
+    return bool(geteuid and geteuid() == 0)
+
+
+def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
+    """Spawn Chrome with remote debugging enabled. Returns ``(ok, detail)``.
+
+    ``stealth`` controls the Windows off-screen arguments; the connector
+    autostart keeps them on, while ``start_browser(visible=True)`` passes
+    ``False`` so the manual launch is on-screen. Idempotent by contract:
+    callers check ``_cdp_port_open()`` first. Chrome enforces
+    ``--user-data-dir`` exclusivity, so a lost startup race simply means the
+    second process exits on its own.
+    """
+    chrome = _find_chrome()
+    if not chrome:
+        return False, "Chrome/Chromium not found — set CHROME_BINARY to its full path"
+
+    try:
+        profile_dir = Path(SCRAPING_PROFILE)
+        profile_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return False, f"unusable scraping profile {SCRAPING_PROFILE!r}: {exc}"
+
+    args = [
+        chrome,
+        f"--remote-debugging-port={CDP_PORT}",
+        "--remote-debugging-address=127.0.0.1",
+        f"--user-data-dir={profile_dir}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-features=Translate",
+    ]
+    if HEADLESS:
+        args += ["--headless=new", "--disable-gpu"]
+    elif stealth and sys.platform == "win32":
+        args += ["--window-position=-32000,-32000", "--window-size=1280,720", "--start-minimized"]
+
+    if sys.platform.startswith("linux") and _running_as_root():
+        # Chrome refuses to run its sandbox as root, and containers routinely are.
+        args.append("--no-sandbox")
+
+    # Anchor to about:blank so Chrome survives the connector closing its last
+    # tab — otherwise every call pays the full spawn + CDP-bind wait again.
+    args.append("about:blank")
+
+    try:
+        if sys.platform == "win32":
+            # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: outlive this server.
+            subprocess.Popen(args, creationflags=0x00000008 | 0x00000200, close_fds=True)
+        else:
+            subprocess.Popen(
+                args,
+                start_new_session=True,
+                close_fds=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    except Exception as exc:
+        return False, f"failed to spawn chrome: {exc}"
+    return True, f"started chrome with profile {profile_dir}"
+
+
+async def _wait_for_cdp_port(timeout_s: float) -> bool:
+    """Wait until the freshly spawned Chrome binds the CDP port.
+
+    A bind is followed by a short grace period: the page launcher lags the
+    socket, and a request sent in that window would look like a dead browser.
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        await asyncio.sleep(0.4)
+        if _cdp_port_open():
+            await asyncio.sleep(0.6)  # grace: the page launcher lags the socket
+            return True
+    return False
+
+
+async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
+    """Make sure Chrome is listening on the CDP endpoint, auto-starting if needed.
+
+    Autostart only makes sense on loopback: a remote ``CHROME_CDP_HOST`` means
+    the operator runs Chrome elsewhere (a sidecar, the host's browser), and
+    spawning a local one would connect to the wrong profile.
+
+    A failed attempt is remembered for ``_AUTOSTART_FAILURE_TTL_S`` seconds, so
+    callers arriving, or already waiting on the lock, during that window get the
+    same failure with an age hint at once instead of repeating the bounded
+    readiness wait. Any success clears the memory.
+    """
+    async with _AUTOSTART_LOCK:
+        if _cdp_port_open():
+            _clear_autostart_failure()
+            return True, "already running"
+
+        if not CDP_IS_LOOPBACK:
+            return False, f"Chrome not reachable on {CDP_HOST}:{CDP_PORT} (remote host — autostart is loopback-only)"
+
+        remembered = _remembered_autostart_failure()
+        if remembered is not None:
+            return False, remembered
+
+        ok, msg = await asyncio.to_thread(_start_chrome_with_cdp)
+        if not ok:
+            _remember_autostart_failure(msg)
+            return False, msg
+
+        if not await _wait_for_cdp_port(timeout_s):
+            msg = f"chrome started but CDP did not bind within {timeout_s}s"
+            _remember_autostart_failure(msg)
+            return False, msg
+        if STEALTH and sys.platform == "win32":
+            await asyncio.to_thread(_hide_chrome_windows)
+        _clear_autostart_failure()
+        return True, msg
+
+
+async def start_browser(*, visible: bool = True) -> dict[str, Any]:
+    """Start the scraping Chrome for a human, on-screen by default.
+
+    Unlike :func:`_ensure_cdp_running`, this is an operator action: the
+    window is not parked off-screen unless ``visible`` is false, and nothing
+    is hidden afterwards. It never raises; a refused or failed start is a
+    report with ``reason`` set. When the CDP endpoint already answers,
+    ``already_running`` is true and no process is spawned.
+    """
+    report: dict[str, Any] = {
+        "ok": False,
+        "started": False,
+        "already_running": False,
+        "visible": visible,
+        "off_screen": False,
+        "host": CDP_HOST,
+        "port": CDP_PORT,
+        "profile": SCRAPING_PROFILE,
+        "reason": None,
+    }
+    async with _AUTOSTART_LOCK:
+        if _cdp_port_open():
+            _clear_autostart_failure()
+            report.update(ok=True, already_running=True)
+            return report
+
+        if not CDP_IS_LOOPBACK:
+            report["reason"] = (
+                f"Chrome not reachable on {CDP_HOST}:{CDP_PORT} (remote host — autostart is loopback-only)"
+            )
+            return report
+
+        # An explicit start ignores the remembered autostart failure on purpose:
+        # the operator asked for a real attempt, and only a success clears it.
+        # Hidden means exactly the connector's autostart: off-screen only while
+        # CHROME_STEALTH is on, so the two paths cannot disagree.
+        ok, msg = await asyncio.to_thread(_start_chrome_with_cdp, stealth=STEALTH and not visible)
+        if not ok:
+            report["reason"] = msg
+            return report
+
+        if not await _wait_for_cdp_port(12.0):
+            report["reason"] = (
+                f"Chrome started but CDP did not bind within 12s; another Chrome may hold the profile "
+                f"{SCRAPING_PROFILE} without remote debugging"
+            )
+            return report
+
+        # Only the Windows stealth launch parks the window; elsewhere --hidden
+        # changes nothing, and the report must not claim otherwise.
+        off_screen = not visible and STEALTH and sys.platform == "win32"
+        if off_screen:
+            await asyncio.to_thread(_hide_chrome_windows)
+        report.update(ok=True, started=True, off_screen=off_screen and not HEADLESS)
+        _clear_autostart_failure()
+        return report
+
+
+def _windows_profile_match_expr(profile_marker: str) -> str:
+    """PowerShell expression: the regex for our profile's --user-data-dir switch.
+
+    The switch may be quoted (subprocess quotes a path with a space) and is
+    anchored on a closing quote, a space or the end, so a sibling profile such
+    as "Chrome-Scraping-2" is not matched. ``\\x22`` is the double quote, kept
+    out of the command line PowerShell has to parse. The match stays inside
+    PowerShell: a path with Cyrillic letters never crosses a console encoding.
+    """
+    escaped = profile_marker.replace("'", "''")
+    return "('--user-data-dir=\\x22?' + [regex]::Escape('" + escaped + "') + '(\\x22|\\s|$)')"
+
+
+def _scraping_profile_pids() -> set[int]:
+    """PIDs of Chrome processes bound to *our* scraping profile (Windows, macOS).
+
+    Any failure returns an empty set, which makes the caller hide nothing —
+    leaving a scraping window visible beats hiding the operator's real browser.
+    """
+    # Keep the configured spelling on macOS. ``Path`` uses the host OS rules,
+    # so converting a POSIX profile path while running the offline Windows
+    # test suite would turn ``/Users/...`` into backslashes and miss the PID.
+    profile_marker = SCRAPING_PROFILE if sys.platform == "darwin" else str(Path(SCRAPING_PROFILE))
+    if sys.platform == "darwin":
+        # Only the main browser process owns the app in System Events; the
+        # renderer/GPU helpers carry the same --user-data-dir but no windows.
+        try:
+            proc = subprocess.run(
+                ["ps", "-axo", "pid=,command="],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if proc.returncode != 0:
+                return set()
+            # Anchor the profile path on a following space or end of line so
+            # a sibling profile such as "Chrome-Scraping-2" is not matched.
+            marker = re.compile(rf"--user-data-dir={re.escape(profile_marker)}(?:\s|$)")
+            pids: set[int] = set()
+            for line in proc.stdout.splitlines():
+                if not marker.search(line) or "Helper" in line:
+                    continue
+                pid_str = line.strip().split(None, 1)[0]
+                if pid_str.isdigit():
+                    pids.add(int(pid_str))
+            return pids
+        except Exception:
+            return set()
+    if sys.platform != "win32":
+        return set()
+    try:
+        # Edge is a valid scraping browser too (_chrome_candidates).
+        ps_cmd = (
+            "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe' OR Name='msedge.exe'\" "
+            "| Where-Object { $_.CommandLine -match "
+            + _windows_profile_match_expr(profile_marker)
+            + " } | Select-Object -ExpandProperty ProcessId"
+        )
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return set()
+        return {int(line.strip()) for line in proc.stdout.splitlines() if line.strip().isdigit()}
+    except Exception:
+        return set()
+
+
+def _hide_chrome_windows() -> None:
+    """Hide scraping-profile Chrome windows (Windows and macOS, best-effort).
+
+    Only windows whose PID is confirmed to belong to the scraping profile are
+    touched; ambiguity means do nothing.
+
+    On macOS a new tab (even one created with ``background: true``) and a
+    navigation both un-hide the app, so this runs after each of them. It hides
+    the app the way ⌘H does — the window keeps its Space and never takes focus,
+    which is what stops the desktop from switching mid-call.
+    """
+    if _HANDOFF_VISIBILITY_GUARDS:
+        return
+    if sys.platform == "darwin":
+        for pid in _scraping_profile_pids():
+            try:
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        'tell application "System Events" to set visible of '
+                        f"(first process whose unix id is {pid}) to false",
+                    ],
+                    capture_output=True,
+                    timeout=5,
+                    check=False,
+                )
+            except Exception:
+                continue
+        return
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        target_pids = _scraping_profile_pids()
+        if not target_pids:
+            return
+
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        sw_hide = 0
+        enum_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+        def callback(hwnd, _lparam):  # pragma: no cover - Windows-only path
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value in target_pids:
+                user32.ShowWindow(hwnd, sw_hide)
+            return True
+
+        user32.EnumWindows(enum_proc(callback), 0)
+    except Exception:
+        return
+
+
+def cdp_setup_hint() -> str:
+    """Platform-appropriate one-liner for getting CDP running."""
+    if sys.platform == "win32":
+        return "run scripts/start_chrome_cdp.ps1 (PowerShell)"
+    return "run scripts/start_chrome_cdp.sh"
+
+
+class _CdpConnectTimeout(TransportDownError, RuntimeError):
+    """Playwright's attach timed out; callers may still try raw CDP.
+
+    Attaching waits for existing pages to initialize, so numerous or stalled
+    tabs can exhaust the attach budget even when plain CDP commands work.
+    """
+
+
+@asynccontextmanager
+async def get_browser() -> AsyncIterator[Browser]:
+    """Connect to the operator's Chrome over CDP, auto-starting it if needed."""
+    if not _cdp_port_open():
+        ok, _msg = await _ensure_cdp_running()
+        if not ok:
+            # The raw detail can contain an absolute profile path (and thus the
+            # OS username), so it never reaches a tool-visible error string. The
+            # remembered-failure age is safe and tells the caller that a fresh
+            # attempt is not coming yet.
+            hint = _autostart_failure_hint()
+            suffix = f"; {hint}" if hint else ""
+            raise RuntimeError(
+                f"CDP autostart failed (Chrome not reachable on {CDP_HOST}:{CDP_PORT} — {cdp_setup_hint()}){suffix}"
+            )
+
+    async with async_playwright() as p:
+        try:
+            browser = await p.chromium.connect_over_cdp(CDP_URL, timeout=10_000)
+        except _PlaywrightTimeoutError as exc:
+            tabs = None
+            try:
+                async with asyncio.timeout(2.0):
+                    tabs = await asyncio.to_thread(_page_target_count, path="/json/list", timeout_s=2.0)
+            except Exception:
+                pass
+            detail = (
+                f"{tabs} tabs are open in the scraping Chrome"
+                if tabs is not None
+                else "the open tab count could not be obtained"
+            )
+            raise _CdpConnectTimeout(
+                f"Playwright attach to Chrome on {CDP_HOST}:{CDP_PORT} timed out after 10 s; {detail}. "
+                "Close tabs it does not need and retry."
+            ) from exc
+        try:
+            yield browser
+        finally:
+            # Detach, never close: this is the operator's browser. Bounded so a
+            # wedged transport cannot hang teardown.
+            try:
+                await asyncio.wait_for(browser.close(), timeout=10.0)
+            except Exception:
+                pass
+
+
+@asynccontextmanager
+async def get_context() -> AsyncIterator[BrowserContext]:
+    """Yield the profile's default context, cookies and all."""
+    async with get_browser() as browser:
+        contexts = browser.contexts
+        if not contexts:
+            raise RuntimeError(f"No browser contexts on CDP {CDP_URL}. Is Chrome running with --remote-debugging-port?")
+        yield contexts[0]
+
+
+# Main-document statuses that mean the navigation failed. Playwright resolves
+# goto() for these instead of raising, so we must refuse to hand a block page or
+# login wall to a parser as though it were data.
+_NAV_FAIL_STATUSES = frozenset({401, 403, 407, 429, 500, 502, 503, 504})
+# Ozon answers the first request with 403 and a JS check that reloads the page
+# by itself; only a 403 that survives this window is a block.
+_ANTIBOT_RECHECK_S = 10.0
+_TAB_OP_TIMEOUT_S = 25.0
+
+
+class NavBlocked(RuntimeError):
+    """A block/auth/error status came back for the main document.
+
+    Carries status and final URL so connectors can surface a clean
+    ``transport_down`` / ``rate_limited`` error instead of parsing a login wall.
+    """
+
+    def __init__(self, status: int | None, final_url: str = "") -> None:
+        self.status = status
+        self.final_url = final_url
+        super().__init__(f"navigation blocked: HTTP {status}")
+
+
+async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
+    """Health-check the CDP session itself, for operator-facing diagnostics.
+
+    Answers the questions a ``doctor`` command or a connector's blocked error
+    wants answered before it blames the marketplace: is Chrome reachable, does
+    it have a live context, and which host/port were dialed. Never raises — a
+    failed probe is the answer, returned as ``reachable: False`` with a reason.
+
+    The default ceiling is deliberately above Playwright's 10 s attach timeout:
+    on a Chrome that Playwright cannot handshake, the attach must fail first so
+    the raw-CDP reachability verdict can be reported instead of a bare timeout.
+    """
+    result: dict[str, object] = {"host": CDP_HOST, "port": CDP_PORT, "is_loopback": CDP_IS_LOOPBACK}
+    if not _cdp_port_open():
+        result["reachable"] = False
+        result["reason"] = f"nothing listening on {CDP_HOST}:{CDP_PORT}" + (
+            " — autostart is loopback-only" if not CDP_IS_LOOPBACK else f" ({cdp_setup_hint()})"
+        )
+        return result
+    try:
+        async with asyncio.timeout(timeout_s):
+            async with get_browser() as browser:
+                result["reachable"] = True
+                result["contexts"] = len(browser.contexts)
+                result["reason"] = None
+    except _CdpConnectTimeout:
+        # Playwright cannot attach, but Chrome answers plain CDP — the session
+        # is usable through the raw path, say so instead of claiming it is down.
+        pages = _raw_page_count()
+        result["reachable"] = True
+        result["contexts"] = pages
+        result["reason"] = (
+            f"playwright attach timed out with {pages} tabs open; raw CDP answers. "
+            "Close the tabs the scraping Chrome does not need."
+        )
+    except Exception as exc:
+        result["reachable"] = False
+        result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Raw-CDP fallback
+#
+# Playwright can time out while initializing existing tabs during its attach,
+# even when the same browser still answers plain CDP over the websocket.
+# Everything below drives one tab over that raw protocol, exposing exactly the
+# two things the connectors use from a Playwright Page: ``evaluate`` and
+# ``url``. It only ever runs when the Playwright attach timed out.
+# ---------------------------------------------------------------------------
+
+_RAW_CONNECT_TIMEOUT_S = 8.0
+_RAW_NAV_TIMEOUT_S = 20.0
+_RAW_MAX_FRAME_BYTES = max(
+    64 * 1024, min(int(os.environ.get("CHROME_CDP_MAX_FRAME_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024)
+)
+
+
+# What a CDP HTTP read can raise: no answer (OSError, including URLError and
+# timeouts), a broken HTTP exchange (HTTPException, e.g. IncompleteRead) or a
+# body that is not JSON (ValueError).
+_CDP_HTTP_ERRORS = (OSError, http.client.HTTPException, ValueError)
+
+
+def _cdp_http_json(path: str, *, timeout_s: float = 5.0) -> Any:
+    """GET one CDP HTTP endpoint and parse its JSON body.
+
+    Raises one of ``_CDP_HTTP_ERRORS``; the caller decides what an unreachable
+    endpoint means.
+    """
+    import urllib.request
+
+    with urllib.request.urlopen(f"{CDP_URL}{path}", timeout=timeout_s) as resp:
+        return json.loads(resp.read())
+
+
+def _page_target_count(*, path: str, timeout_s: float) -> int | None:
+    """Count HTTP-discovered page targets, distinguishing failure from zero tabs."""
+    try:
+        targets = _cdp_http_json(path, timeout_s=timeout_s)
+    except _CDP_HTTP_ERRORS:
+        return None
+    if not isinstance(targets, list):
+        return None
+    return len(_page_targets(targets))
+
+
+def _page_targets(targets: Any) -> list[dict[str, Any]]:
+    """The page targets of a ``/json/list`` answer, in the order Chrome lists them."""
+    if not isinstance(targets, list):
+        return []
+    return [target for target in targets if isinstance(target, dict) and target.get("type") == "page"]
+
+
+def _raw_page_count() -> int:
+    """Count page targets via the CDP HTTP endpoint (no websocket needed)."""
+    return _page_target_count(path="/json", timeout_s=3) or 0
+
+
+def _browser_ws_url() -> str | None:
+    """The browser websocket URL, rewritten to the host we actually dial."""
+    try:
+        data = _cdp_http_json("/json/version", timeout_s=3)
+    except _CDP_HTTP_ERRORS:
+        return None
+    if not isinstance(data, dict):
+        return None
+    ws = data.get("webSocketDebuggerUrl")
+    if not isinstance(ws, str) or not ws.startswith("ws"):
+        return None
+    # The endpoint advertises its own loopback address even when we reached it
+    # through CHROME_CDP_HOST — redial the host we know answers.
+    parts = urlsplit(ws)
+    return urlunsplit(parts._replace(netloc=f"{_url_host(CDP_HOST)}:{CDP_PORT}"))
+
+
+def _evaluate_expression(expression: str, arg: object) -> str:
+    """Wrap an expression the way Playwright's evaluate would run it.
+
+    A string that parses to a function is invoked with ``arg``; anything else
+    is evaluated as-is. The wrapper returns a promise either way, so the CDP
+    call always runs with ``awaitPromise``.
+    """
+    arg_literal = json.dumps(arg, ensure_ascii=False) if arg is not None else "undefined"
+    return (
+        "(async () => { const __pw_fn = (" + expression + "); "
+        "return typeof __pw_fn === 'function' ? await __pw_fn(" + arg_literal + ") : __pw_fn; })()"
+    )
+
+
+class _WsLike(Protocol):
+    """The slice of a websockets client connection the raw page drives."""
+
+    async def send(self, message: str) -> None: ...
+
+    async def recv(self) -> str: ...
+
+
+class _RawCdpPage:
+    """A Playwright-Page-alike over one raw CDP websocket."""
+
+    def __init__(self, ws: _WsLike, target_id: str) -> None:
+        self._ws = ws
+        self._target_id = target_id
+        self._next_id = 0
+        self._url = "about:blank"
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    async def _send(self, method: str, params: dict | None = None, timeout: float = 30.0) -> dict:
+        self._next_id += 1
+        msg_id = self._next_id
+        await self._ws.send(json.dumps({"id": msg_id, "method": method, "params": params or {}}))
+        while True:
+            raw = await asyncio.wait_for(self._ws.recv(), timeout=timeout)
+            msg = json.loads(raw)
+            if msg.get("id") != msg_id:
+                self._note_event(msg)
+                continue
+            if "error" in msg:
+                raise RuntimeError(f"CDP {method}: {msg['error']}")
+            return msg.get("result") or {}
+
+    def _note_event(self, msg: dict) -> None:
+        if msg.get("method") == "Page.frameNavigated":
+            frame = msg.get("params", {}).get("frame", {})
+            if isinstance(frame, dict) and not frame.get("parentId"):
+                self._url = frame.get("url") or self._url
+
+    async def evaluate(self, expression: str, arg: object = None) -> Any:
+        result = await self._send(
+            "Runtime.evaluate",
+            {
+                "expression": _evaluate_expression(expression, arg),
+                "awaitPromise": True,
+                "returnByValue": True,
+            },
+            timeout=60.0,
+        )
+        if result.get("exceptionDetails"):
+            detail = result["exceptionDetails"]
+            text = (detail.get("exception") or {}).get("description") or detail.get("text") or "JS error"
+            raise RuntimeError(f"page.evaluate failed: {str(text)[:300]}")
+        return (result.get("result") or {}).get("value")
+
+    async def goto_and_status(self, url: str) -> int | None:
+        """Navigate and return the last main-document HTTP status seen."""
+        self._next_id += 1
+        msg_id = self._next_id
+        await self._ws.send(json.dumps({"id": msg_id, "method": "Page.navigate", "params": {"url": url}}))
+        statuses: list[int] = []
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _RAW_NAV_TIMEOUT_S
+        nav_error: object = None
+        main_frame: object = None
+        rechecking = False
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
+            try:
+                raw = await asyncio.wait_for(self._ws.recv(), timeout=remaining)
+            except TimeoutError:
+                break
+            msg = json.loads(raw)
+            if msg.get("id") == msg_id:
+                if "error" in msg:
+                    nav_error = msg["error"]
+                main_frame = main_frame or (msg.get("result") or {}).get("frameId")
+            method = msg.get("method", "")
+            params = msg.get("params", {})
+            if method == "Network.responseReceived" and params.get("type") == "Document":
+                # iframes report Document responses too. Only the main frame's
+                # decides the verdict and the URL: a 200 iframe on a 403 block page
+                # must not turn the block into data. The first document is the
+                # main frame's, since an iframe needs a parent document to exist.
+                frame_id = params.get("frameId")
+                main_frame = main_frame or frame_id
+                response = params.get("response", {})
+                status = response.get("status")
+                if isinstance(status, int) and (frame_id is None or frame_id == main_frame):
+                    statuses.append(status)
+                    self._url = response.get("url") or self._url
+            elif method == "Page.frameNavigated":
+                self._note_event(msg)
+            elif method == "Page.loadEventFired":
+                if statuses and statuses[-1] == 403 and not rechecking:
+                    rechecking = True
+                    deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
+                    continue
+                break
+        if nav_error is not None:
+            raise RuntimeError(f"CDP Page.navigate: {nav_error}")
+        return statuses[-1] if statuses else None
+
+    async def close(self) -> None:
+        try:
+            await self._send("Target.closeTarget", {"targetId": self._target_id}, timeout=10.0)
+        except Exception:
+            pass
+
+
+_MAX_HANDOFF_IMAGE_BYTES = 2 * 1024 * 1024
+
+
+def _handoff_jpeg(encoded: Any) -> tuple[int, int]:
+    """Read the encoded image dimensions, not CSS dimensions (which ignore DPR)."""
+    encoded_limit = 4 * ((_MAX_HANDOFF_IMAGE_BYTES + 2) // 3)
+    if not isinstance(encoded, str) or len(encoded) > encoded_limit:
+        raise RuntimeError("CDP screenshot returned no image data within the size limit")
+    try:
+        data = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise RuntimeError("CDP screenshot returned invalid base64") from exc
+    if not data or len(data) > _MAX_HANDOFF_IMAGE_BYTES:
+        raise RuntimeError("CDP screenshot exceeds the bounded image size")
+    if not data.startswith(b"\xff\xd8\xff") or not data.endswith(b"\xff\xd9"):
+        raise RuntimeError("CDP screenshot returned invalid JPEG data")
+    offset = 2
+    while offset < len(data) - 2:
+        if data[offset] != 0xFF:
+            break
+        while offset < len(data) and data[offset] == 0xFF:
+            offset += 1
+        if offset >= len(data):
+            break
+        marker = data[offset]
+        offset += 1
+        # Stop before compressed image data; it cannot contain a frame header.
+        if marker in (0xDA, 0xD9) or offset + 2 > len(data):
+            break
+        length = int.from_bytes(data[offset : offset + 2], "big")
+        if length < 2 or offset + length > len(data) - 2:
+            break
+        # SOF markers exclude DHT (C4), JPG (C8), and DAC (CC).
+        if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+            if length < 8:
+                break
+            height = int.from_bytes(data[offset + 3 : offset + 5], "big")
+            width = int.from_bytes(data[offset + 5 : offset + 7], "big")
+            components = data[offset + 7]
+            if width > 0 and height > 0 and components > 0 and length == 8 + 3 * components:
+                return width, height
+            break
+        offset += length
+    raise RuntimeError("CDP screenshot returned invalid JPEG dimensions")
+
+
+# START_CONTRACT: capture_owned_viewport
+# PURPOSE: Capture a bounded current viewport from an already-owned browser page.
+# INPUTS: Playwright or raw-CDP page; current finite viewport geometry.
+# OUTPUTS: JPEG base64, MIME and real pixel dimensions; rejects invalid/oversized data.
+# SIDE_EFFECTS: CDP metrics/screenshot commands and bounded session detach; no disk/DOM reads.
+# END_CONTRACT: capture_owned_viewport
+async def capture_owned_viewport(page: PageLike) -> dict[str, Any]:
+    """Capture only the current owned viewport through CDP.
+
+    This deliberately avoids DOM/content extraction and never writes the image
+    to disk.  A bounded JPEG makes the result safe to pass to a vision model.
+    """
+    session: Any = None
+    try:
+        # One budget covers attach, metrics and capture, including event-heavy
+        # raw-CDP streams whose individual recv timeout can otherwise restart.
+        async with asyncio.timeout(_RAW_CONNECT_TIMEOUT_S):
+            if isinstance(page, _RawCdpPage):
+                send = page._send
+            elif isinstance(page, Page):
+                session = await page.context.new_cdp_session(page)
+                send = session.send
+            else:
+                raise TypeError("unsupported page implementation")
+            metrics = await send("Page.getLayoutMetrics")
+            viewport = metrics.get("cssVisualViewport") or metrics.get("cssLayoutViewport") or {}
+            dimensions = [viewport.get("clientWidth"), viewport.get("clientHeight")]
+            offsets = [viewport.get("pageX", 0), viewport.get("pageY", 0)]
+            if any(
+                not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)
+                for value in dimensions + offsets
+            ):
+                raise RuntimeError("CDP returned invalid viewport geometry")
+            width, height = viewport["clientWidth"], viewport["clientHeight"]
+            x, y = offsets
+            if not (0 < width <= 10000 and 0 < height <= 10000 and x >= 0 and y >= 0):
+                raise RuntimeError("CDP returned invalid viewport geometry")
+            scale = min(1.0, 1440 / width, 900 / height)
+            for _attempt in range(2):
+                result = await send(
+                    "Page.captureScreenshot",
+                    {
+                        "format": "jpeg",
+                        "quality": 70,
+                        "fromSurface": True,
+                        "captureBeyondViewport": False,
+                        "clip": {"x": x, "y": y, "width": width, "height": height, "scale": scale},
+                    },
+                )
+                encoded = result.get("data")
+                image_width, image_height = _handoff_jpeg(encoded)
+                if image_width <= 1440 and image_height <= 900:
+                    return {
+                        "image_data": encoded,
+                        "mime_type": "image/jpeg",
+                        "width": image_width,
+                        "height": image_height,
+                    }
+                # CDP may multiply CSS clip dimensions by device pixel ratio.
+                # Correct once using the real frame size, never guessed CSS DPR.
+                scale *= min(1440 / image_width, 900 / image_height)
+            raise RuntimeError("CDP screenshot exceeds the bounded pixel dimensions")
+    finally:
+        if session is not None:
+            try:
+                await asyncio.wait_for(session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+            except Exception:
+                pass
+
+
+async def current_page_url(page: PageLike) -> str:
+    """Refresh raw-CDP navigation state without reading document content."""
+    if isinstance(page, _RawCdpPage):
+        result = await page._send("Page.getFrameTree")
+        url = result.get("frameTree", {}).get("frame", {}).get("url")
+        if not isinstance(url, str) or not url:
+            raise RuntimeError("CDP returned no current main frame URL")
+        page._url = url
+        return url
+    return page.url
+
+
+# The Windows stealth launcher parks the window far off-screen (left/top
+# -32000). A window at or beyond this offset is parked, not merely behind
+# another window, and no human can reach it.
+_OFFSCREEN_LIMIT = -10000
+
+# Where `browser show` puts the window, and how small a window may stay: a
+# window too small to work in is resized to a usable one instead.
+_SHOW_LEFT = 80
+_SHOW_TOP = 40
+_SHOW_MIN_WIDTH = 800
+_SHOW_MIN_HEIGHT = 600
+_SHOW_FALLBACK_WIDTH = 1280
+_SHOW_FALLBACK_HEIGHT = 900
+
+
+def _is_off_screen(bounds: Mapping[str, Any]) -> bool:
+    """True when the window sits at the off-screen position the launcher uses."""
+    left = bounds.get("left")
+    top = bounds.get("top")
+    if not isinstance(left, (int, float)) or isinstance(left, bool):
+        left = 0
+    if not isinstance(top, (int, float)) or isinstance(top, bool):
+        top = 0
+    return left <= _OFFSCREEN_LIMIT or top <= _OFFSCREEN_LIMIT
+
+
+def _window_state(bounds: Mapping[str, Any]) -> str:
+    """Name the window state an operator can act on: visible, off-screen, minimized."""
+    if bounds.get("windowState") == "minimized":
+        return "minimized"
+    if _is_off_screen(bounds):
+        return "off-screen"
+    return "visible"
+
+
+async def _move_window_on_screen(
+    send: Callable[[str, dict[str, Any] | None], Awaitable[Any]],
+    window_id: int,
+    bounds: Mapping[str, Any],
+    on_screen: Mapping[str, int],
+    *,
+    force: bool = False,
+) -> bool:
+    """Bring a browser window back where a human can see it.
+
+    The window is un-minimized first: a minimized window reports no usable
+    bounds and cannot be moved. Then it is parked at ``on_screen`` when it sits
+    off-screen — the position the Windows stealth launcher uses.
+    ``force`` moves a window that is already on screen as well, which is what
+    an explicit "show this window" asks for.
+
+    Returns True when the window was moved.
+    """
+    await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "normal"}})
+    if force or _is_off_screen(bounds):
+        await send("Browser.setWindowBounds", {"windowId": window_id, "bounds": dict(on_screen)})
+        return True
+    return False
+
+
+async def reveal_owned_page(page: PageLike) -> bool:
+    """Best-effort reveal of the owned target's window, never all profile windows."""
+    session: Any = None
+    try:
+        async with asyncio.timeout(_RAW_CONNECT_TIMEOUT_S):
+            if isinstance(page, _RawCdpPage):
+                send = page._send
+                target_id = page._target_id
+            elif isinstance(page, Page):
+                session = await page.context.new_cdp_session(page)
+                send = session.send
+                target_id = (await send("Target.getTargetInfo"))["targetInfo"]["targetId"]
+            else:
+                return False
+            info = await send("Browser.getWindowForTarget", {"targetId": target_id})
+            window_id = info["windowId"]
+            await _move_window_on_screen(send, window_id, info.get("bounds", {}), {"left": 80, "top": 80})
+            if isinstance(page, Page):
+                await page.bring_to_front()
+            else:
+                await send("Page.bringToFront")
+            return True
+    except Exception:
+        return False
+    finally:
+        if session is not None:
+            try:
+                await asyncio.wait_for(session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+            except Exception:
+                pass
+
+
+@asynccontextmanager
+async def _browser_cdp_channel() -> AsyncIterator[_RawCdpPage]:
+    """A browser-level CDP channel: commands that need no owned page.
+
+    The same raw-CDP machinery the tab fallback uses, pointed at the browser's
+    own websocket. No target is created, no tab is opened and no page is
+    navigated: only browser-level commands are sent over it.
+    """
+    if _websockets is None:
+        raise RuntimeError("the browser-level CDP commands need the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+    async with _websockets.connect(
+        browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+    ) as bws:
+        yield _RawCdpPage(bws, "")
+
+
+def cdp_endpoint_status(*, timeout_s: float = 2.0) -> dict[str, Any]:
+    """Read whether the scraping Chrome answers on the CDP endpoint, and its version.
+
+    Read-only by construction, unlike :func:`probe_session`: it opens no tab,
+    closes none, navigates nowhere and never autostarts Chrome — it only GETs
+    the ``/json/version`` and ``/json/list`` endpoints a running Chrome already
+    serves, each bounded by ``timeout_s``. ``browser_status`` would answer too,
+    but it pays a websocket round trip for the window state nobody planning a
+    fan-out needs.
+
+    Never raises for a dead endpoint: unreachable is the answer, with a short
+    reason naming only the exception class, since an exception message can carry
+    a URL or a profile path.
+    """
+    report: dict[str, Any] = {
+        "reachable": False,
+        "host": CDP_HOST,
+        "port": CDP_PORT,
+        "version": None,
+        "page_targets": None,
+        "reason": None,
+    }
+    try:
+        version_info = _cdp_http_json("/json/version", timeout_s=timeout_s)
+    except _CDP_HTTP_ERRORS as exc:
+        report["reason"] = f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})"
+        return report
+    report["reachable"] = True
+    if isinstance(version_info, dict) and isinstance(version_info.get("Browser"), str):
+        report["version"] = version_info["Browser"]
+    report["page_targets"] = _page_target_count(path="/json/list", timeout_s=timeout_s)
+    if report["page_targets"] is None:
+        report["reason"] = "the target list could not be read; the version above is live"
+    return report
+
+
+async def browser_status() -> dict[str, Any]:
+    """Report what the operator's scraping Chrome looks like right now.
+
+    Answers the questions an operator asks about a window they cannot see: is
+    the CDP endpoint reachable, which Chrome answers there, how many page
+    targets it holds, and whether the window is visible, parked off-screen or
+    minimized. Never raises: an unreachable endpoint is the answer, not an
+    exception.
+    """
+    report: dict[str, Any] = {
+        "reachable": False,
+        "host": CDP_HOST,
+        "port": CDP_PORT,
+        "version": None,
+        "page_targets": 0,
+        "window": "unknown",
+        "reason": None,
+    }
+    try:
+        version_info = _cdp_http_json("/json/version", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        report["reason"] = f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})"
+        return report
+    report["reachable"] = True
+    if isinstance(version_info, dict):
+        report["version"] = version_info.get("Browser")
+
+    try:
+        targets = _cdp_http_json("/json/list", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        # The endpoint answered, so the browser is up; only the tab list is
+        # missing, and that must not hide the version we already have.
+        report["page_targets"] = None
+        report["reason"] = f"the target list could not be read ({type(exc).__name__})"
+        return report
+    pages = _page_targets(targets)
+    report["page_targets"] = len(pages)
+    if not pages:
+        report["window"] = "no page target"
+        return report
+
+    try:
+        async with _browser_cdp_channel() as channel:
+            info = await channel._send("Browser.getWindowForTarget", {"targetId": pages[0].get("id")})
+    except Exception as exc:
+        # The facts above stand; only the window state is missing, and the
+        # reason says so instead of pretending the window is fine.
+        report["window"] = "unknown"
+        report["reason"] = f"the window state could not be read ({type(exc).__name__}: {str(exc)[:80]})"
+        return report
+    bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
+    report["window"] = _window_state(bounds)
+    report["bounds"] = bounds
+    return report
+
+
+def _show_bounds(bounds: Mapping[str, Any]) -> dict[str, int]:
+    """The on-screen bounds for ``browser show``.
+
+    A window that is already big enough keeps its size; a smaller one is
+    resized to a size a human can log in with.
+    """
+    width = bounds.get("width")
+    height = bounds.get("height")
+    if (
+        isinstance(width, int)
+        and not isinstance(width, bool)
+        and isinstance(height, int)
+        and not isinstance(height, bool)
+        and width >= _SHOW_MIN_WIDTH
+        and height >= _SHOW_MIN_HEIGHT
+    ):
+        return {"left": _SHOW_LEFT, "top": _SHOW_TOP, "width": width, "height": height}
+    return {
+        "left": _SHOW_LEFT,
+        "top": _SHOW_TOP,
+        "width": _SHOW_FALLBACK_WIDTH,
+        "height": _SHOW_FALLBACK_HEIGHT,
+    }
+
+
+async def show_browser_window(target_id: str | None = None) -> dict[str, Any]:
+    """Bring the scraping Chrome window on-screen and activate a page target.
+
+    Without ``target_id`` the first page target is shown; ``unblock`` passes
+    the target of the tab it just opened so the human lands on that page.
+    The window is un-minimized, moved on-screen (keeping its size when it is
+    big enough to work in) and the target activated. No page is opened and no
+    website is requested: only browser-level CDP commands are sent.
+    """
+    try:
+        _cdp_http_json("/json/version", timeout_s=3.0)
+    except _CDP_HTTP_ERRORS as exc:
+        return {
+            "ok": False,
+            "reachable": False,
+            "reason": f"nothing answers on {CDP_HOST}:{CDP_PORT} ({type(exc).__name__})",
+        }
+    if target_id is None:
+        try:
+            targets = _cdp_http_json("/json/list", timeout_s=3.0)
+        except _CDP_HTTP_ERRORS as exc:
+            return {
+                "ok": False,
+                "reachable": True,
+                "reason": f"the target list could not be read ({type(exc).__name__})",
+            }
+        pages = _page_targets(targets)
+        if not pages:
+            return {
+                "ok": False,
+                "reachable": True,
+                "reason": "the scraping Chrome has no page target to show",
+            }
+        target_id = pages[0].get("id")
+
+    try:
+        async with _browser_cdp_channel() as channel:
+            info = await channel._send("Browser.getWindowForTarget", {"targetId": target_id})
+            window_id = info["windowId"]
+            bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
+            on_screen = _show_bounds(bounds)
+            # Windows does not let a background process raise a window that is
+            # already open behind others: moving and activating it leaves it
+            # hidden. Restoring a minimized window does bring it up (seen live
+            # on 2026-10-30), so an open window is minimized first.
+            if bounds.get("windowState") != "minimized":
+                await channel._send(
+                    "Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": "minimized"}}
+                )
+            await _move_window_on_screen(channel._send, window_id, bounds, on_screen, force=True)
+            await channel._send("Target.activateTarget", {"targetId": target_id})
+    except Exception as exc:
+        # The browser answered but the window could not be moved: say why
+        # instead of failing with a traceback in front of the operator.
+        return {
+            "ok": False,
+            "reachable": True,
+            "reason": f"the window could not be moved ({type(exc).__name__}: {str(exc)[:80]})",
+        }
+    return {
+        "ok": True,
+        "reachable": True,
+        "target_id": target_id,
+        "window_id": window_id,
+        "bounds": on_screen,
+    }
+
+
+async def open_tabs(urls: list[str]) -> dict[str, Any]:
+    """Open each URL in a new tab of the scraping Chrome, in order.
+
+    Browser-level ``Target.createTarget`` only: no existing tab is navigated
+    and none is closed, so whatever the operator had open stays as it was.
+    A non-http(s) URL is refused outright (scheme guard), before any tab is
+    opened, so an authenticated browser is never aimed at ``file:///``. Any
+    other failure is a report that says how many tabs were opened before it,
+    because those tabs stay open for the human.
+    """
+    for url in urls:
+        low = (url or "").strip().lower()
+        if not (low.startswith("http://") or low.startswith("https://")):
+            raise ValueError("open_tabs refuses a non-http(s) URL (scheme guard)")
+    target_ids: list[str] = []
+    try:
+        async with _browser_cdp_channel() as channel:
+            for url in urls:
+                created = await channel._send("Target.createTarget", {"url": url})
+                target_id = created.get("targetId") if isinstance(created, dict) else None
+                if not isinstance(target_id, str) or not target_id:
+                    raise RuntimeError(f"Target.createTarget returned no target id for {url}")
+                target_ids.append(target_id)
+    except Exception as exc:
+        # Same contract as show_browser_window: the operator reads a reason,
+        # not a traceback.
+        return {
+            "ok": False,
+            "target_ids": target_ids,
+            "reason": (
+                f"opened {len(target_ids)} of {len(urls)} tab(s), then failed ({type(exc).__name__}: {str(exc)[:80]})"
+            ),
+        }
+    return {"ok": True, "target_ids": target_ids, "reason": None}
+
+
+@asynccontextmanager
+async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
+    """Open a tab over raw CDP, mirroring open_page's guarantees."""
+    if _websockets is None:
+        raise RuntimeError("the raw-CDP fallback needs the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+
+    async with _websockets.connect(
+        browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+    ) as bws:
+        # ``background`` keeps the new tab from activating the window: without
+        # it Chrome comes to the front on every call (and macOS follows it to
+        # its Space). Chrome-only parameter, and this path is Chrome-only.
+        create_params: dict[str, Any] = {"url": "about:blank"}
+        if STEALTH:
+            create_params["background"] = True
+        browser = _RawCdpPage(bws, "")
+        created = await browser._send("Target.createTarget", create_params, timeout=_RAW_CONNECT_TIMEOUT_S)
+        target_id = created.get("targetId")
+        if not isinstance(target_id, str) or not target_id:
+            raise RuntimeError("CDP Target.createTarget returned no targetId")
+
+        # Keep the browser connection alive until the owned target is closed.
+        # Discovery and page attachment may fail before there is a page socket
+        # through which to clean up, so ownership starts at createTarget.
+        try:
+            import urllib.request
+
+            try:
+                with urllib.request.urlopen(f"{CDP_URL}/json", timeout=3) as resp:
+                    targets = json.loads(resp.read())
+            except Exception as exc:
+                raise RuntimeError(f"CDP target list unavailable: {exc}") from exc
+            page_ws = next(
+                (t.get("webSocketDebuggerUrl") for t in targets if isinstance(t, dict) and t.get("id") == target_id),
+                None,
+            )
+            if not isinstance(page_ws, str) or not page_ws.startswith("ws"):
+                raise RuntimeError("CDP target has no websocket URL")
+            parts = urlsplit(page_ws)
+            page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+
+            async with _websockets.connect(
+                page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+            ) as pws:
+                page = _RawCdpPage(pws, target_id)
+                await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                status = await page.goto_and_status(url)
+                if status in _NAV_FAIL_STATUSES:
+                    raise NavBlocked(status, page.url)
+                if wait_ms > 0:
+                    await asyncio.sleep(wait_ms / 1000)
+                if STEALTH and sys.platform in ("win32", "darwin"):
+                    await asyncio.to_thread(_hide_chrome_windows)
+                yield page
+        finally:
+            try:
+                await asyncio.wait_for(
+                    browser._send("Target.closeTarget", {"targetId": target_id}, timeout=_RAW_CONNECT_TIMEOUT_S),
+                    timeout=_TAB_OP_TIMEOUT_S,
+                )
+            except Exception:
+                pass
+            # Closing the tab un-hides the app again; tuck it away between calls.
+            if STEALTH and sys.platform in ("win32", "darwin"):
+                await asyncio.to_thread(_hide_chrome_windows)
+
+
+async def _new_tab(ctx: BrowserContext) -> Page:
+    """Open a tab in ``ctx`` — in the background when stealth is on.
+
+    ``BrowserContext.new_page`` creates its target in the foreground, which
+    activates the Chrome window on every call (and drags macOS along to the
+    Space that window lives on). With stealth on, create the target over a
+    browser-level CDP session with ``background: true`` and pick up the Page
+    Playwright attaches for that exact target id. Page events are broadcast
+    to every CDP client, so accepting the first event can claim another
+    connector's tab. If the CDP session itself cannot be opened,
+    fall back to the plain call: a visible tab beats no tab.
+    """
+    browser = ctx.browser
+    if not STEALTH or browser is None:
+        return await ctx.new_page()
+    try:
+        cdp = await browser.new_browser_cdp_session()
+    except Exception:
+        return await ctx.new_page()
+    target_id: str | None = None
+    claimed_page: Page | None = None
+
+    async def close_owned_target() -> None:
+        try:
+            # The browser CDP session may already be disposed during detach.
+            close = (
+                claimed_page.close()
+                if claimed_page is not None
+                else cdp.send("Target.closeTarget", {"targetId": target_id})
+            )
+            await asyncio.wait_for(close, timeout=_RAW_CONNECT_TIMEOUT_S)
+        except Exception:
+            pass
+
+    try:
+        async with asyncio.timeout(_TAB_OP_TIMEOUT_S):
+            created = await cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+            created_id = created.get("targetId")
+            if not isinstance(created_id, str) or not created_id:
+                raise RuntimeError("CDP Target.createTarget returned no targetId")
+            target_id = created_id
+            while True:
+                # BrowserContext emits pages to every connected Playwright
+                # client. Correlate against the CDP target id returned above
+                # instead of accepting the first broadcast event.
+                for page in tuple(ctx.pages):
+                    try:
+                        page_cdp = await ctx.new_cdp_session(page)
+                        try:
+                            info = await page_cdp.send("Target.getTargetInfo")
+                        finally:
+                            try:
+                                await asyncio.wait_for(page_cdp.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+                            except Exception:
+                                pass
+                    except Exception:
+                        continue
+                    if info.get("targetInfo", {}).get("targetId") == target_id:
+                        claimed_page = page
+                        return page
+                await asyncio.sleep(0.01)
+    finally:
+        if target_id is not None and claimed_page is None:
+            await close_owned_target()
+        try:
+            await asyncio.wait_for(cdp.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+        except asyncio.CancelledError:
+            # A claimed page is not handed back until this detach completes.
+            if claimed_page is not None:
+                await asyncio.shield(close_owned_target())
+            raise
+        except Exception:
+            pass
+
+
+@asynccontextmanager
+async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
+    async with get_context() as ctx:
+        page = await asyncio.wait_for(_new_tab(ctx), timeout=_TAB_OP_TIMEOUT_S)
+        try:
+            resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
+            status = resp.status if resp is not None else None
+            if status == 403:
+                # Wait for the main frame's next navigation to land, not just for a
+                # response: page.url must be the new document's before the host
+                # check, and a redirect must resolve to its final status. None (a
+                # History API change) proves nothing, so the 403 stands.
+                try:
+                    async with page.expect_navigation(
+                        wait_until="domcontentloaded", timeout=_ANTIBOT_RECHECK_S * 1000
+                    ) as navigation:
+                        pass
+                    reloaded = await navigation.value
+                    if reloaded is not None:
+                        status = reloaded.status
+                except _PlaywrightTimeoutError:
+                    pass
+            if status in _NAV_FAIL_STATUSES:
+                final = ""
+                try:
+                    final = page.url
+                except Exception:
+                    pass
+                raise NavBlocked(status, final)
+            if wait_ms > 0:
+                await page.wait_for_timeout(wait_ms)
+            if STEALTH and sys.platform in ("win32", "darwin"):
+                await asyncio.to_thread(_hide_chrome_windows)
+            yield page
+        finally:
+            try:
+                await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
+            except Exception:
+                pass
+            # Closing the tab un-hides the app again; tuck it away between calls.
+            if STEALTH and sys.platform in ("win32", "darwin"):
+                await asyncio.to_thread(_hide_chrome_windows)
+
+
+def _check_final_host(url: str, allowed_hosts: Collection[str]) -> None:
+    """Reject a navigation that escaped the caller's host policy."""
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    allowed = {str(item).lower().rstrip(".") for item in allowed_hosts}
+    # A leading dot (".cian.ru") admits any subdomain of that host — for sites
+    # that geo-redirect www to regional subdomains (rostov.cian.ru, spb.cian.ru).
+    suffixes = tuple(item for item in allowed if item.startswith("."))
+    in_policy = host in allowed or (bool(suffixes) and host.endswith(suffixes))
+    if parsed.scheme not in {"http", "https"} or not host or not in_policy:
+        raise NavigationPolicyError(url, allowed)
+
+
+class NavigationPolicyError(RuntimeError):
+    """The final navigation host was outside the caller's explicit policy."""
+
+    def __init__(self, final_url: str, allowed_hosts: Collection[str]) -> None:
+        self.final_url = final_url
+        self.allowed_hosts = frozenset(allowed_hosts)
+        super().__init__("CDP navigation left the allowed host policy")
+
+
+@asynccontextmanager
+# START_CONTRACT: open_page
+# PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
+# INPUTS: HTTP(S) URL, settle delay and optional allowed-host set; default origin host.
+# OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
+# SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
+# END_CONTRACT: open_page
+async def open_page(
+    url: str,
+    wait_ms: int = 5000,
+    *,
+    allowed_hosts: Collection[str] | None = None,
+) -> AsyncIterator[PageLike]:
+    """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
+
+    Guarantees:
+      * non-http(s) schemes are refused outright (scheme guard);
+      * a block/auth/5xx main document raises ``NavBlocked`` rather than
+        yielding a page that only looks like content;
+      * a host whose breaker is open raises ``rate_limited`` with the remaining
+        pause in ``retry_after_s`` (R-CDP-HOST-PAUSE), so an agent waits out the
+        cooldown instead of retrying at once;
+      * tab creation, navigation and teardown are individually bounded, so a
+        wedged CDP session cannot hang a tool call indefinitely;
+      * when Playwright times out initializing existing tabs during attach,
+        the same tab lifecycle runs over raw CDP instead.
+
+    Host allowlisting stays the caller's responsibility — each connector knows
+    which paths are legitimate for its marketplace.
+
+    Concurrency is bounded here rather than by each connector: a fan-out over
+    several CDP sources used to drive every tab through one Chrome at once and
+    crash the lot (2026-09-11), so navigations take a permit from
+    ``mcp_core.transport.cdp_budget`` — bounded globally, serialized per host,
+    with a breaker that drops a host which keeps answering 4xx.
+
+    The permit covers the navigation, not the page: it is released as soon as
+    the document is up, because a caller may hold the yielded page for minutes
+    (a retained challenge page waits for a human). Holding a host's slot for
+    that long would queue every other navigation behind it.
+    """
+    low = (url or "").strip().lower()
+    if not (low.startswith("http://") or low.startswith("https://")):
+        raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
+    # Default to the origin host. Callers may list a small explicit set for
+    # marketplace aliases (for example www + bare host), but redirects to an
+    # arbitrary host are never allowed to drive the authenticated profile.
+    initial_host = urlsplit(url).hostname
+    host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
+
+    budget = navigation_budget()
+    try:
+        permit = await budget.acquire(initial_host or "")
+    except HostRefusingError as refusing:
+        # R-CDP-HOST-PAUSE: an open breaker is a timed refusal by the site, and
+        # the agent must act on the remaining pause, not on a generic retryable
+        # transport failure. The shared taxonomy answer is rate_limited with
+        # retry_after_s set to the remaining cooldown; raising it as a ToolError
+        # here is the one mapping every CDP connector shares, because their broad
+        # "except Exception" fetch guards pass ToolError through untouched.
+        raise_tool_error(
+            ConnectorError(
+                ErrorCode.RATE_LIMITED,
+                f"CDP navigation to {refusing.host} paused for {refusing.retry_after_s:g} s "
+                f"after {refusing.refusals} refusals",
+                provider=refusing.host,
+                retry_after_s=refusing.retry_after_s,
+            )
+        )
+    stack = AsyncExitStack()
+    page: PageLike
+    try:
+        try:
+            page = await stack.enter_async_context(_playwright_page(url, wait_ms))
+        except _CdpConnectTimeout as attach_exc:
+            try:
+                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+            except (NavBlocked, NavigationPolicyError):
+                raise
+            except Exception as raw_exc:
+                # Keep the attach diagnosis (open tab count) in what the
+                # operator sees; the raw error alone hides the likely cause.
+                raise TransportDownError(
+                    f"{attach_exc} The raw-CDP fallback failed too: {type(raw_exc).__name__}: {str(raw_exc)[:160]}"
+                ) from raw_exc
+        _check_final_host(page.url, host_policy)
+        permit.ok()
+    except NavBlocked as exc:
+        # The host actively refused the main document: that is the signal the
+        # breaker counts.
+        permit.refused(exc.status)
+        await stack.aclose()
+        raise
+    except NavigationPolicyError:
+        # We refused the navigation, not the host: neither blame it (refused) nor
+        # credit it (ok — which would wipe its refusal record and close an open
+        # breaker on an event we caused).
+        permit.neutral()
+        await stack.aclose()
+        raise
+    except BaseException:
+        await stack.aclose()
+        raise
+    finally:
+        permit.release()
+    try:
+        yield page
+    finally:
+        await stack.aclose()
