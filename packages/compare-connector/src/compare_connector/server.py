@@ -1316,6 +1316,18 @@ async def compare_verify_offer(
     if expected_price_rub is not None:
         price_field = "price" if name == "ozon" else "price_rub"
         price_kind = record.get("price_kind")
+        if not isinstance(price_kind, str):
+            price_kind = ""
+        # A Yandex card without an everyday price carries only the subscriber
+        # (Plus) amount: certifying it would confirm a price most buyers cannot
+        # get, so the kind is reported instead of the comparison being made.
+        if (
+            not price_kind
+            and name == "yandex_market"
+            and record.get("price_rub") is None
+            and record.get("price_with_plus") is not None
+        ):
+            price_kind = "subscription"
         if isinstance(price_kind, str) and price_kind and price_kind != "regular":
             # A conditional amount (WB Wallet, subscription) is not the everyday
             # price, so certifying it against expected_price_rub would confirm a

@@ -9,6 +9,56 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Яндекс больше не выдаёт выдуманную цену. Строка вроде `1 999 2 999` — это два
+  числа, склеенные пробелом-разделителем тысяч, — раньше читалась как 19992999.0:
+  сумма, которой нет, ещё и выигрывала сравнение как самая дешёвая. Теперь все
+  денежные поля Яндекса читаются общим безопасным парсером, неоднозначная сумма
+  даёт `price_rub: null` и предупреждение `price_unparseable` с текстом, который
+  не удалось прочитать, а обычные группировки (`3 983`) и дробные цены
+  (`1 999,50`) остаются ценами.
+- Карточка Яндекса больше не выдаёт цену подписки за обычную цену. Обычная цена
+  (`price_rub`) берётся только из явно заданной regular-цены; карточка без неё
+  честно говорит, что обычная цена неизвестна (`price_rub: null` и
+  предупреждение `no_everyday_price`), вместо того чтобы одолжить сумму «с
+  Плюсом». `compare_verify_offer` такую карточку не подтверждает: сумма по
+  подписке не выдаётся за обычную цену, а дельта считается от явно заданной
+  regular-цены.
+- Страница с капчей больше не попадает в кэш. Ответ с HTTP 200, который оказался
+  челленджем (или страницей, которую парсер не понял), выбрасывается из кэша, и
+  следующий вызов инструмента снова идёт к Яндексу, а не повторяет стену до конца
+  срока жизни записи. Обычные страницы кэшируются как раньше.
+- Пустой результат Яндекса с явным баннером «ничего не найдено» — честный ответ,
+  а не проблема с данными. `meta.healthy` остаётся `true`, сравнение считает
+  источник ответившим и завершённым (`complete: true`, ноль предложений).
+  Пострадавшая пустая страница по-прежнему нездорова и оставляет сравнение
+  неполным; проверка дрейфа для страницы без баннера не отключена.
+
+- Yandex no longer quotes a made-up price. A string like `1 999 2 999` — two
+  numbers glued by the thousands-separator space — used to read as 19992999.0, a
+  sum nobody charges that also won comparisons as the cheapest offer. Every
+  Yandex money field is now read with the shared safe parser: an ambiguous
+  amount gives `price_rub: null` plus a `price_unparseable` warning naming the
+  text it could not read, while ordinary groupings (`3 983`) and fractional
+  prices (`1 999,50`) stay prices.
+- A Yandex card no longer passes the subscriber price off as the everyday one.
+  The everyday price (`price_rub`) comes from the explicit regular price only; a
+  card without one says the everyday price is unknown (`price_rub: null` and a
+  `no_everyday_price` warning) instead of borrowing the Plus amount.
+  `compare_verify_offer` refuses to certify such a card: a Plus amount is never
+  confirmed as the everyday price, and the delta is measured against the
+  explicit regular price.
+- A captcha page is no longer cached. An HTTP-200 answer that turned out to be a
+  challenge (or a page the parser could not read) is dropped from the cache, so
+  the next tool call reaches Yandex again instead of replaying the same wall for
+  the whole TTL. Normal pages are still cached.
+- An empty Yandex result with an explicit "nothing found" banner is an honest
+  answer, not a doubt about the data. `meta.healthy` stays `true`, and the
+  comparison counts the source as answered and complete (`complete: true`, zero
+  offers). A damaged empty answer stays unhealthy and leaves the comparison
+  incomplete; the drift check for a page without the banner is not weakened.
+
 ## [2.8.0] - 2026-11-01
 
 Честные ответы агенту: одно значение `healthy`, отказы и проверки — типизированные ошибки с подсказкой, что делать, условные цены и другие размеры не выигрывают сравнение, неоднозначный текст цены даёт `null`; дрейф виден в предупреждениях инструментов; новый `marketplace_health`; справочник инструментов в MCP-ресурсах; секреты вычищаются из ошибок и логов.

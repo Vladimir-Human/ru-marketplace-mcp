@@ -143,13 +143,23 @@ async def test_search_percent_encodes_cyrillic_queries(monkeypatch):
     assert "%D1%81" in seen[-1]
 
 
-async def test_search_warns_on_empty_results(monkeypatch):
+async def test_search_reports_an_explicit_empty_result_as_healthy(monkeypatch):
+    """R04 (owner study 2026-11-02): the page's own "nothing found" banner.
+
+    The banner is the marketplace's answer, not a doubt about the data: the
+    empty result is healthy and the note is informational. A page that is
+    NEITHER products nor a banner is a different case and still raises
+    parser_drift (test_search_raises_drift_when_the_page_is_unrecognisable).
+
+    Renamed from test_search_warns_on_empty_results, which asserted the old
+    behaviour (healthy false for an honest empty answer).
+    """
     stub_html(monkeypatch, {"/search": load("search_empty.html")})
 
     result = await server.yandex_search(query="йцукенгшщз")
 
     assert result.returned == 0
-    assert result.meta.healthy is False
+    assert result.meta.healthy is True
     assert any("no_results" in w for w in result.meta.warnings)
 
 
@@ -478,6 +488,53 @@ async def test_fetch_html_caches_within_the_ttl(monkeypatch):
     await server._fetch_html("https://market.yandex.ru/search?text=a", "test", None)
 
     assert len(calls) == 1
+
+
+async def test_a_challenge_page_is_never_cached(monkeypatch):
+    """R03 (owner study 2026-11-02): only verified content is cached.
+
+    The captcha page arrived as a successful HTTP answer and was cached like
+    any other page, so the NEXT tool call replayed the wall for the whole TTL
+    — even after upstream had started answering normally. The page is dropped
+    from the cache instead, and the next call reaches upstream again.
+    """
+    calls = 0
+
+    async def fake_get(client, url, **kwargs):
+        nonlocal calls
+        calls += 1
+        challenge = '<html><body><div id="SmartCaptcha"></div></body></html>'
+        return 200, (challenge if calls == 1 else load("search_washer.html"))
+
+    monkeypatch.setattr(server, "get_text_with_retries", fake_get)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.yandex_search(query="стиральная машина")
+    assert error_payload(excinfo.value)["error"] == "rate_limited"
+
+    result = await server.yandex_search(query="стиральная машина")
+
+    assert calls == 2, "the second call must reach upstream again, not replay the cached challenge"
+    assert result.returned == 3
+    assert result.items[0].price_rub == 16724.0
+
+
+async def test_a_normal_page_is_still_cached(monkeypatch):
+    """R03 positive control: verified content keeps its cache entry."""
+    calls = 0
+
+    async def fake_get(client, url, **kwargs):
+        nonlocal calls
+        calls += 1
+        return 200, load("search_washer.html")
+
+    monkeypatch.setattr(server, "get_text_with_retries", fake_get)
+
+    first = await server.yandex_search(query="стиральная машина")
+    second = await server.yandex_search(query="стиральная машина")
+
+    assert calls == 1
+    assert first.items[0].price_rub == second.items[0].price_rub == 16724.0
 
 
 async def test_fetch_html_rejects_an_empty_body(monkeypatch):

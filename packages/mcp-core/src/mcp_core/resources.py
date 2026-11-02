@@ -698,8 +698,9 @@ message describing the error code and whether it is retryable.""",
 YandexCardResponse: {product_id, sku_id, title, brand, seller,
 description, image, price_rub, price_with_plus, price_before_discount_rub,
 discount_percent, currency, offers_count, rating, rating_count,
-review_count, rating_stars, reviews, url, meta}. price_rub is None when
-the page has no usable price — never 0. Review items carry author,
+review_count, rating_stars, reviews, url, meta}. price_rub is the explicit
+everyday price — None when the card names only a subscriber (Plus) price,
+never 0. Review items carry author,
 rating, date, pros, cons, comment, votes_up, votes_down, photos.
 
 ## Error Format
@@ -713,7 +714,8 @@ has_next_page, returned, items, meta}. Items carry product_id, sku_id,
 title, brand, seller, price_rub (everyday — None when absent, never 0),
 price_with_plus, price_old_rub (struck-through reference), currency,
 rating, rating_count, in_stock, is_express, url, image. Zero results is
-NOT an error — it is reported via meta.warnings. meta.extraction names the
+NOT an error — the page's own empty-result banner is reported via
+meta.warnings and the answer stays healthy. meta.extraction names the
 path: 'ssr' (full widget state), 'zone' (first-screen snippet payloads —
 both prices, no brand) or 'ld+json' (degraded, Plus price only).
 
