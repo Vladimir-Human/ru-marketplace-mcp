@@ -1,8 +1,0 @@
-{
-  "version": "1.2.3",
-  "packages": [
-    {
-      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"
-    }
-  ]
-}

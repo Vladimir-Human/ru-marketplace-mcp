@@ -1,6 +1,0 @@
-[project]
-name = "a"
-version = "1.2.3"
-dependencies = [
-    "mcp-core==1.2.3",
-]

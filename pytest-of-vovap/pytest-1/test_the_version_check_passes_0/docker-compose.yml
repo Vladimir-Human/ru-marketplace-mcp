@@ -1,3 +1,0 @@
-services:
-  a:
-    image: ru-marketplace-mcp:1.2.3

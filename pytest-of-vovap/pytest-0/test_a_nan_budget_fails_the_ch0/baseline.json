@@ -1,1 +1,0 @@
-{"version": 1, "profiles": {"compare-mcp": {"script": "compare-mcp", "wire_tokens": NaN, "model_tokens": NaN, "latency_ms": 1}}, "ceilings": {"compare-mcp": NaN}}

@@ -1,1 +1,0 @@
-{"version": 1, "profiles": {"compare-mcp": {"script": "compare-mcp", "wire_tokens": 10000000, "model_tokens": 10000000, "latency_ms": 1}}, "ceilings": {"compare-mcp": Infinity}}
