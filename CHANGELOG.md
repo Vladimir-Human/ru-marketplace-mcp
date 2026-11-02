@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-11-01
+
+Честные ответы агенту: одно значение `healthy`, отказы и проверки — типизированные ошибки с подсказкой, что делать, условные цены и другие размеры не выигрывают сравнение, неоднозначный текст цены даёт `null`; дрейф виден в предупреждениях инструментов; новый `marketplace_health`; справочник инструментов в MCP-ресурсах; секреты вычищаются из ошибок и логов.
+
+Honest answers for the agent: one meaning of `healthy`, refusals and challenges as typed errors with a next step, conditional prices and other sizes never win a comparison, ambiguous price text becomes `null`; drift shows in the tools' own warnings; a new `marketplace_health`; the tool reference moves into MCP resources; secrets are redacted in errors and logs.
+
 ### Added
 
 - Справочная половина описаний инструментов переехала из `tools/list` в MCP

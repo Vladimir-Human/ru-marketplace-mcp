@@ -84,7 +84,7 @@ from cian_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_req
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.7.0"
+SERVER_VERSION = "2.8.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.cian.ru"
