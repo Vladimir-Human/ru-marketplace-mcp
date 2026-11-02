@@ -27,14 +27,16 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
-# SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance boundaries with scoped bundles/negations; identity.
-# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-NO-FABRICATION.
+# SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
+# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Import connectors defensively and report missing installations.
 # _dedupe: Merge duplicate offers while preserving source identity.
+# _has_bundle_phrase_prefix: Recognize up to three local modifiers between an explicit bundle cue and this accessory.
+# _has_bundle_phrase_suffix: Recognize bounded lexical noun/modifier tails without crossing accessory clauses.
 # _has_unrequested_marker: Match Unicode words/phrases after occurrence-local bundle/negation checks.
 # _looks_like_an_accessory/_looks_like_another_condition: Share relevance rules for warnings and comparability.
 # OfferBatch: Carry normalized offers plus source warnings and health evidence.
@@ -264,9 +266,73 @@ _NEGATION_PREFIX = re.compile(r"(?<!\w)(?:не|not)\s+$", re.IGNORECASE)
 _BUNDLE_PREFIX = re.compile(r"(?<!\w)(?:в\s+комплекте|with(?:\s+(?:a|an))?)\s*[:—-]?\s*$", re.IGNORECASE)
 _BUNDLE_SUFFIX = re.compile(r"\s*(?:[:—-]\s*)?в\s+комплекте(?!\w)", re.IGNORECASE)
 
+# Complete an adjective-only accessory head or a known functional noun phrase.
+# These are lexical categories, not product-title or query exceptions.
+_BUNDLE_NOUN_COMPLEMENTS = {
+    "зарядное": ("устройство", "приспособление"),
+    "кабель": ("питания",),
+    "адаптер": ("питания",),
+}
+_BUNDLE_PHRASE_WORD = re.compile(r"[^\S\r\n]+(?P<word>\w+(?:-\w+)*)(?![\w-])")
+_BUNDLE_PHRASE_PREFIX_WORD = re.compile(r"(?<![\w-])(?P<word>\w+(?:-\w+)*)[^\S\r\n]+\Z")
+_BUNDLE_MODIFIER = re.compile(
+    r"(?:(?:силиконов|кожан|пластиков|резинов|металлическ|нейлонов|тканев|"
+    r"прозрачн|защитн|сетев|беспроводн|оригинальн|универсальн|компактн|"
+    r"магнитн|черн|чёрн|бел|красн|син|зелён|зелен|сер)"
+    r"(?:ый|ий|ой|ая|яя|ое|ее|ые|ие)|"
+    r"usb(?:-[abc])?|type-[abc]|micro-usb|hdmi|lightning|displayport|thunderbolt|"
+    r"silicone|leather|plastic|rubber|metal|nylon|transparent|protective|"
+    r"wireless|original|universal|compact|magnetic|black|white|red|blue|green|grey)",
+    re.IGNORECASE,
+)
+
+
+def _has_bundle_phrase_prefix(text: str, match: re.Match[str], pattern: re.Pattern[str]) -> bool:
+    """R-COMPARE-BUNDLE-NOUN-PHRASES: admit at most three preceding modifiers.
+
+    Walk backwards from this accessory only through adjacent recognized words,
+    then require the original explicit bundle cue. Unknown words, punctuation,
+    relation words and another accessory cannot connect it to an earlier cue.
+    """
+    position = match.start()
+    for _ in range(3):
+        word_match = _BUNDLE_PHRASE_PREFIX_WORD.search(text, 0, position)
+        if word_match is None or pattern.match(text, word_match.start("word")):
+            return False
+        if not _BUNDLE_MODIFIER.fullmatch(word_match.group("word")):
+            return False
+        position = word_match.start("word")
+        if _BUNDLE_PREFIX.search(text, 0, position):
+            return True
+    return False
+
+
+def _has_bundle_phrase_suffix(text: str, match: re.Match[str], pattern: re.Pattern[str]) -> bool:
+    """R-COMPARE-BUNDLE-NOUN-PHRASES: admit at most three known phrase words.
+
+    A noun complement belongs to its accessory head and can occur only once.
+    Unknown words, punctuation, relation words and another accessory stop the
+    extension; they must not borrow a later clause's 'в комплекте'.
+    """
+    position = match.end()
+    noun_complements = _BUNDLE_NOUN_COMPLEMENTS.get(match.group().casefold(), ())
+    for _ in range(3):
+        word_match = _BUNDLE_PHRASE_WORD.match(text, position)
+        if word_match is None or pattern.match(text, word_match.start("word")):
+            return False
+        word = word_match.group("word").casefold()
+        if word in noun_complements:
+            noun_complements = ()
+        elif not _BUNDLE_MODIFIER.fullmatch(word):
+            return False
+        position = word_match.end()
+        if _BUNDLE_SUFFIX.match(text, position):
+            return True
+    return False
+
 
 def _positive_marker_text(text: str, pattern: re.Pattern[str], *, bundles: bool) -> str:
-    """Mask only explicitly negated or directly bundled marker occurrences.
+    """Mask only explicitly negated or locally bundled marker occurrences.
 
     Longer phrases match first, so a bundled 'защитное стекло' also masks its
     nested 'стекло'. Another positive marker in the same title stays evidence.
@@ -274,15 +340,20 @@ def _positive_marker_text(text: str, pattern: re.Pattern[str], *, bundles: bool)
 
     def replace(match: re.Match[str]) -> str:
         negated = _NEGATION_PREFIX.search(text, 0, match.start())
-        bundled = bundles and (_BUNDLE_PREFIX.search(text, 0, match.start()) or _BUNDLE_SUFFIX.match(text, match.end()))
+        bundled = bundles and (
+            _BUNDLE_PREFIX.search(text, 0, match.start())
+            or _has_bundle_phrase_prefix(text, match, pattern)
+            or _BUNDLE_SUFFIX.match(text, match.end())
+            or _has_bundle_phrase_suffix(text, match, pattern)
+        )
         return " " * len(match.group()) if negated or bundled else match.group()
 
     return pattern.sub(replace, text)
 
 
 # START_CONTRACT: _has_unrequested_marker
-# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES: detect positive, unrequested words/phrases, never substrings.
-# INPUTS: Untrusted title/query, fixed markers; bundles applies only to accessory markers.
+# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES: detect positive unrequested markers.
+# INPUTS: Untrusted title/query, fixed markers; accessory bundles admit up to three known prefix modifiers or suffix noun/modifier words.
 # OUTPUTS: True only when an unmasked title marker is absent from the equally checked query.
 # SIDE_EFFECTS: None; no source I/O, title exceptions or ranking mutations.
 def _has_unrequested_marker(title: str, query: str, markers: tuple[str, ...], *, bundles: bool = False) -> bool:
@@ -312,9 +383,12 @@ def _looks_like_an_accessory(title: str, query: str) -> bool:
     """Detect an unrequested accessory, not a substring or an explicit bundle.
 
     'with [a/an] <accessory>', 'в комплекте: <accessory>' and '<accessory> в
-    комплекте' describe a bundled accessory, not the listing itself. These rules
-    are occurrence-local and apply to queries too, rather than exempting a whole
-    title or treating a requested bundle as a request for a standalone accessory.
+    комплекте' describe a bundled accessory, not the listing itself. Up to three
+    known modifiers may follow a bundle prefix; up to three known noun complements
+    and modifiers may precede the bundle suffix. The extensions stop at punctuation,
+    unknown words and other accessories; direct cue separators remain allowed.
+    These rules also apply to queries, without exempting whole titles or treating
+    a bundled accessory as a standalone-accessory request.
     """
     return _has_unrequested_marker(title, query, _ACCESSORY_MARKERS, bundles=True)
 
