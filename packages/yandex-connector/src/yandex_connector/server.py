@@ -306,7 +306,11 @@ def _refused_price_warnings(offers: list[dict[str, Any]]) -> list[str]:
     different promises to the caller.
     """
     out: list[str] = []
-    for role, key in (("everyday price", "price_text"), ("Plus price", "price_with_plus_text")):
+    for role, key in (
+        ("everyday price", "price_text"),
+        ("Plus price", "price_with_plus_text"),
+        ("struck-through reference price", "price_old_text"),
+    ):
         refused = [str(offer[key]) for offer in offers if offer.get(key)]
         if refused:
             out.append(
@@ -591,7 +595,9 @@ async def yandex_card(
             "no_rating: this card's default offer has no ratings "
             "(common for resale/clearance offers) — search results usually carry one"
         )
-    if parsed.get("price_rub") is None:
+    # A refused everyday price is explained by price_unparseable below; the card
+    # did carry one, so "only a Plus price" or "no price" would be wrong.
+    if parsed.get("price_rub") is None and not parsed.get("price_text"):
         if parsed.get("price_with_plus") is not None:
             # The card carried only the subscriber price. The everyday price is
             # unknown, and saying so is the point: a comparison must not certify

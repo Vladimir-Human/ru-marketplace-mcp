@@ -86,6 +86,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import wb_route
 from mcp_core.transport import get_text_budgeted, proxy_from_env
 from pydantic import Field
 
@@ -137,6 +138,18 @@ WB_TIMEOUT = httpx.Timeout(_settings.timeout, connect=5.0)
 WB_WALL_TIMEOUT = _settings.wall_timeout
 WB_DEFAULT_DEST = _settings.default_dest  # Moscow
 MAX_BODY_BYTES = _settings.max_body_bytes  # 50 MB hard cap (CDN compromise / MITM defense)
+# How many diagnostics one answer may carry. The list stays bounded, and a
+# bounded list that had to be cut says how many diagnostics it suppressed
+# (mcp_core.bound_warnings) instead of looking like the whole truth.
+WARNING_LIMIT = 10
+# The batch ceiling of the WB v4 card endpoint. It is enforced before the
+# request AND advertised in the tool schema, so a client sees the limit
+# instead of learning it from a runtime error.
+MAX_CARD_IDS = 100
+# A WB product id is a positive integer: the schema refuses 0 and negatives
+# before the request, and the server-side check still refuses them (a bool is
+# an int in Python, and only the runtime check can refuse it).
+NmId = Annotated[int, Field(gt=0)]
 _SELFCHECK_NM = 5535522  # DEFENDER filter — golden-fixture baseline SKU
 _SELFCHECK_IMT = 1002173489  # its imt_id (review pool baseline)
 WB_REVIEW_HOSTS = ("feedbacks2.wb.ru", "feedbacks1.wb.ru")
@@ -252,6 +265,19 @@ def _page_fingerprint(products: list[Any]) -> str | None:
 def _proxy() -> str | None:
     """Resolve WB's proxy: explicit ``WB_PROXY`` first, then the standard vars."""
     return (_settings.proxy.get_secret_value() or "").strip() or proxy_from_env("WB_PROXY")
+
+
+def effective_route() -> str:
+    """The route wb_search / wb_card take with the loaded settings.
+
+    ``dom`` reads WB through the operator's scraping Chrome, ``api`` uses the
+    public JSON hosts only, and ``api_then_dom`` tries the API first and falls
+    back to the browser when WB refuses this address. The unified server reads
+    this so its source inventory follows the mode the tool will really use
+    (R11) — the settings may come from a .env file, which the environment
+    alone does not show.
+    """
+    return wb_route(_settings.transport, _settings.dom_fallback)
 
 
 def _wb_client() -> httpx.AsyncClient:
@@ -849,7 +875,15 @@ async def _wb_card_dom(
         dest=dest,
         count=len(items),
         items=items,
-        meta=MetaOut(source="wb_card", healthy=not R.health_warnings(warnings), warnings=warnings[:10]),
+        # The list stays inside its budget, and a list that had to be cut says
+        # how many diagnostics it suppressed (mcp_core.bound_warnings). The
+        # health verdict is computed from the FULL list, so a cut list cannot
+        # turn an unhealthy answer into a healthy one.
+        meta=MetaOut(
+            source="wb_card",
+            healthy=not R.health_warnings(warnings),
+            warnings=R.bound_warnings(warnings, limit=WARNING_LIMIT),
+        ),
     )
 
 
@@ -899,7 +933,11 @@ async def _wb_search_dom(
         # An empty page still carries its warnings, and healthy follows them: the
         # region note is `info:`, so an honest empty answer stays healthy, while
         # page_end_unverified flips it.
-        empty_meta = MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings[:10])
+        empty_meta = MetaOut(
+            source="wb_search",
+            healthy=not R.health_warnings(warnings),
+            warnings=R.bound_warnings(warnings, limit=WARNING_LIMIT),
+        )
         return WbNoResultsResponse(query=query, page=page, total_ids=0, meta=empty_meta if warnings else None)
     log_event("wb_search.done", transport="dom", items=len(items), page=page)
     return WbSearchResponse(
@@ -912,7 +950,11 @@ async def _wb_search_dom(
         # warning names it). WbCardItem.in_stock is True only with a usable price,
         # so that tile is not in stock here; it must never fail the whole page.
         items=[WbCardItem(**{**item, "in_stock": item["in_stock"] is True}) for item in items],
-        meta=MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings[:10]),
+        meta=MetaOut(
+            source="wb_search",
+            healthy=not R.health_warnings(warnings),
+            warnings=R.bound_warnings(warnings, limit=WARNING_LIMIT),
+        ),
     )
 
 
@@ -928,8 +970,10 @@ async def _wb_search_dom(
 )
 async def wb_card(
     nm_ids: Annotated[
-        list[int],
+        list[NmId],
         Field(
+            min_length=1,
+            max_length=MAX_CARD_IDS,
             description="1..100 nmId integers (positive). Batch product cards from WB v4 API.",
         ),
     ],
@@ -959,9 +1003,9 @@ async def wb_card(
     if not nm_ids:
         log_event("wb_card.validation_failed", reason="empty_nm_ids")
         raise_tool_error(BadRequestError("nm_ids empty"))
-    if len(nm_ids) > 100:
+    if len(nm_ids) > MAX_CARD_IDS:
         log_event("wb_card.validation_failed", reason="too_many_nm_ids", count=len(nm_ids))
-        raise_tool_error(BadRequestError(f"max 100 nm_ids, got {len(nm_ids)}"))
+        raise_tool_error(BadRequestError(f"max {MAX_CARD_IDS} nm_ids, got {len(nm_ids)}"))
     if any(isinstance(n, bool) or not isinstance(n, int) or n <= 0 for n in nm_ids):
         log_event("wb_card.validation_failed", reason="non_positive_nm_ids")
         raise_tool_error(BadRequestError("nm_ids must be positive integers"))
@@ -2522,7 +2566,9 @@ async def _wb_dom_selfcheck(want: str) -> dict:
             if want == "card":
                 payload = await dom_transport.render(dom_transport.card_url(nm), dom_transport.CARD_EXTRACT_JS, "card")
                 item, warnings = dom_transport.parse_card_page(payload, nm)
-                notes = [_redact(note)[:200] for note in warnings[:9]]
+                notes = R.bound_warnings(
+                    (_redact(note)[:200] for note in warnings), limit=9, subject="note", marker_prefix=""
+                )
                 price = R.coerce_price(item.get("price_rub")) if item is not None else None
                 if item is None or not item.get("name"):
                     return R.selfcheck_entry(
@@ -2548,7 +2594,9 @@ async def _wb_dom_selfcheck(want: str) -> dict:
                 dom_transport.search_url(baseline, 1), dom_transport.SEARCH_EXTRACT_JS, "search"
             )
             items, warnings = dom_transport.parse_search_page(payload)
-            notes = [_redact(note)[:200] for note in warnings[:9]]
+            notes = R.bound_warnings(
+                (_redact(note)[:200] for note in warnings), limit=9, subject="note", marker_prefix=""
+            )
             if not items:
                 empty = bool(payload.get("page_says_empty"))
                 return R.selfcheck_entry(

@@ -46,7 +46,8 @@ import asyncio
 import datetime
 import json
 import re
-from typing import Annotated, Any, Literal
+from collections.abc import Sequence
+from typing import Annotated, Any, Literal, get_args
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
@@ -132,7 +133,10 @@ _QUERY_TYPE: dict[tuple[str, str], str] = {
 }
 # 1..6 rooms; Cian's own codes for a free layout (7) and a studio (9) —
 # verified live 2026-09-09: room=[9] returns flatType studio, room=[7] openPlan.
-_ROOM_CHOICES = frozenset({1, 2, 3, 4, 5, 6, 7, 9})
+# The closed set is in the tool signature as well, so the advertised schema
+# refuses an unknown room count instead of describing the rule in prose only.
+RoomCount = Literal[1, 2, 3, 4, 5, 6, 7, 9]
+_ROOM_CHOICES = frozenset(get_args(RoomCount))
 _REGION_RE = re.compile(r"^\d{1,7}$")
 _OFFER_ID_RE = re.compile(r"cian\.ru/(?:sale|rent)/[a-z-]+/(\d{6,})(?:[/?#]|$)")
 _WAF_MARKER = "cian_waf_block"
@@ -682,7 +686,7 @@ def _build_json_query(
     deal: str,
     offer_type: str,
     region: str,
-    rooms: list[int] | None,
+    rooms: Sequence[int] | None,
     price_min: int | None,
     price_max: int | None,
     area_min: float | None,
@@ -764,7 +768,7 @@ async def cian_search(
         ),
     ] = None,
     rooms: Annotated[
-        list[int] | None,
+        list[RoomCount] | None,
         Field(
             description=(
                 "Flats only: room counts to include, any of 1..6; 7 = свободная планировка, 9 = студия. "

@@ -26,8 +26,9 @@ shipping.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Declare every shipped source once and derive the tables its callers read.
-# SCOPE: Static data only — names, packages, scripts, access metadata, URLs, counts; no imports of connectors.
-# DEPENDS: stdlib dataclasses,typing.
+# SCOPE: Static data (names, packages, scripts, access metadata, URLs, counts) plus the
+#        configuration-aware route of a source; no imports of connectors.
+# DEPENDS: stdlib dataclasses,os,typing.
 # LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -37,6 +38,8 @@ shipping.
 # MOUNTS: (mount name, module path) rows the unified server mounts.
 # MOUNTABLE: Canonical names MARKETPLACE_SOURCES may select.
 # CAPABILITIES: Per-source access tier, CDP/login needs, currency and text search.
+# source_route: The route a source takes now, following its configuration.
+# wb_route: The route WB takes with a given transport and fallback setting.
 # ALIASES: Accepted spellings mapped to canonical source names.
 # SELFCHECKS: (name, module path, selfcheck function) rows the operator CLI runs.
 # CONFIG_SERVERS: (config key, console script, note) rows the per-source client config uses.
@@ -51,6 +54,8 @@ shipping.
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -71,6 +76,8 @@ __all__ = [
     "SOURCES",
     "UNBLOCK_PAGES",
     "SourceSpec",
+    "source_route",
+    "wb_route",
 ]
 
 
@@ -111,7 +118,9 @@ class SourceSpec:
     tools: int = 0
     # Access metadata, present for kind="marketplace" only.
     access: str = ""
+    # The browser is unavoidable for this source: it cannot answer without it.
     requires_cdp: bool = False
+
     requires_login: bool = False
     currency: str = ""
     text_search: bool = False
@@ -142,6 +151,9 @@ SOURCES: tuple[SourceSpec, ...] = (
         access="anonymous_http",
         currency="rub",
         text_search=True,
+        # WB's route is CONFIGURABLE (WB_TRANSPORT / WB_DOM_FALLBACK): the
+        # browser is not part of its static tier, so the inventory follows the
+        # mode instead of this column (source_route).
         note="anonymous HTTP — availability depends on your network",
     ),
     SourceSpec(
@@ -483,6 +495,58 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
     for spec in SOURCES
     if spec.kind == "marketplace"
 }
+# The static table above says what a source's TIER is. Whether the browser is
+# actually involved is a configuration question, so it lives in the effective
+# capability fields and not here.
+
+
+# The route a source takes. Every source but Wildberries has a fixed one;
+# WB's is configured, because its API hosts refuse some addresses and the
+# connector then reads the same pages through the operator's Chrome.
+ROUTE_API = "api"
+ROUTE_CDP = "cdp"
+ROUTE_DOM = "dom"
+ROUTE_API_THEN_DOM = "api_then_dom"
+
+
+def wb_route(transport: str, dom_fallback: bool) -> str:
+    """The route WB takes with this transport and fallback setting.
+
+    One implementation for the connector and for the inventory, so the two
+    cannot disagree: ``dom`` reads WB through the scraping Chrome, ``api``
+    uses the public JSON hosts only, and ``api_then_dom`` tries the API first
+    and falls back to the browser when WB refuses this address.
+    """
+    if (transport or "").strip().lower() == ROUTE_DOM:
+        return ROUTE_DOM
+    return ROUTE_API_THEN_DOM if dom_fallback else ROUTE_API
+
+
+def source_route(name: str, *, env: Mapping[str, str] | None = None) -> str:
+    """The route a source takes now, following its configuration.
+
+    The environment is read here rather than in the connector so that a
+    caller can ask the question without importing anything (the operator CLI
+    must not mount the connectors). A caller that HAS the source's own
+    settings — the WB connector, which may read them from a .env file —
+    passes them through ``wb_route`` instead.
+    """
+    environ = os.environ if env is None else env
+    if name == "wildberries":
+        transport = (environ.get("WB_TRANSPORT") or ROUTE_API).strip().lower()
+        fallback = (environ.get("WB_DOM_FALLBACK") or "1").strip().lower() not in {"0", "false", "no", "off"}
+        return wb_route(transport, fallback)
+    spec = BY_NAME.get(name)
+    if spec is None:
+        return "unknown"
+    if spec.access == "cdp":
+        return ROUTE_CDP
+    if spec.access == "http_or_cdp":
+        return "http_then_cdp"
+    if spec.access == "graphql_or_cdp":
+        return "graphql_then_cdp"
+    return ROUTE_API
+
 
 ALIASES: dict[str, str] = {alias: spec.name for spec in SOURCES for alias in spec.aliases}
 

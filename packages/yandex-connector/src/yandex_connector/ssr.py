@@ -471,6 +471,10 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
         price_old = (
             base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
         )
+        # With a withDiscount entry the base price is the struck-through
+        # reference; its refusal is reported, not dropped. Without one the
+        # base price is the everyday price and _first_price reports it.
+        old_refused = _refused(base_raw, base_price) if with_discount_raw is not None else None
         plus_raw = _additional_price(payload, "yaBank")
         price_with_plus = _to_money(plus_raw)
 
@@ -504,6 +508,8 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
         plus_refused = _refused(plus_raw, price_with_plus)
         if plus_refused:
             row["price_with_plus_text"] = plus_refused
+        if old_refused:
+            row["price_old_text"] = old_refused
         items.append(row)
     return items
 
@@ -520,18 +526,6 @@ def _amount_price_value(node: Any) -> Any:
     if not isinstance(amount, dict):
         return None
     return amount.get("intPart")
-
-
-def _amount_price(node: Any) -> float | None:
-    """Read a price out of the presentational ``amount.intPart`` shape.
-
-    This is the most fragile path in the file — prices arrive as display strings
-    with non-breaking spaces — which is why the structural ``offer.price.value``
-    is always preferred when available. The string is read with the shared
-    money parser, so a display value the parser refuses becomes None instead of
-    a concatenated number.
-    """
-    return _to_money(_amount_price_value(node))
 
 
 def _cart_price_value(cart_button: Any) -> Any:
@@ -825,13 +819,26 @@ def parse_search(html: str) -> dict[str, Any]:
         # when present, else the baobab base price — but only while it actually
         # sits above the everyday price. On undiscounted rows the baobab price
         # IS the everyday price and nothing is struck through.
-        price_old = _amount_price(price_node.get("oldPrice"))
+        # A refused candidate is reported only when no candidate parsed, so a
+        # reference that ends null because of bad money is never quiet.
+        old_refused = None
+        price_old = None
+        for old_raw in (
+            _amount_price_value(price_node.get("oldPrice")),
+            _amount_price_value(price_node.get("initialPrice")),
+        ):
+            price_old = _to_money(old_raw)
+            old_refused = old_refused or _refused(old_raw, price_old)
+            if price_old is not None:
+                break
         if price_old is None:
-            price_old = _amount_price(price_node.get("initialPrice"))
-        if price_old is None:
-            baobab_price = _to_money(baobab.get("price"))
+            baobab_raw = baobab.get("price")
+            baobab_price = _to_money(baobab_raw)
+            old_refused = old_refused or _refused(baobab_raw, baobab_price)
             if baobab_price is not None and price_rub is not None and baobab_price > price_rub:
                 price_old = baobab_price
+        if price_old is not None:
+            old_refused = None
 
         rating_node = _as_dict(payload.get("rating"))
         delivery = _as_dict(offer.get("delivery"))
@@ -875,6 +882,8 @@ def parse_search(html: str) -> dict[str, Any]:
             row["price_text"] = everyday_refused
         if plus_refused:
             row["price_with_plus_text"] = plus_refused
+        if old_refused:
+            row["price_old_text"] = old_refused
         result["items"].append(row)
 
     if not result["items"]:
@@ -1002,7 +1011,7 @@ def parse_card(html: str) -> dict[str, Any]:
         plus_refused = plus_refused or _refused(fallback_raw, price_with_plus)
 
     price_regular = price_before_discount = None
-    everyday_refused = None
+    everyday_refused = old_refused = None
     for old_price in price_node.get("oldPrices") or []:
         if not isinstance(old_price, dict):
             continue
@@ -1013,6 +1022,7 @@ def parse_card(html: str) -> dict[str, Any]:
             everyday_refused = _refused(raw, value)
         elif old_price.get("type") == "withoutDiscount":
             price_before_discount = value
+            old_refused = _refused(raw, value)
 
     rating_node = _rating_from_snippets(merged)
     reviews_collection = _as_dict(merged.get("reviews"))
@@ -1065,6 +1075,8 @@ def parse_card(html: str) -> dict[str, Any]:
         result["price_text"] = everyday_refused
     if plus_refused:
         result["price_with_plus_text"] = plus_refused
+    if old_refused:
+        result["price_old_text"] = old_refused
     if (
         not result["title"]
         and result["price_rub"] is None

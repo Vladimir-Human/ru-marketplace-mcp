@@ -65,7 +65,7 @@ from mcp_core.resources import mount_child, register_reference_resources
 from mcp_core.source_selection import ENV_VAR, canonical, selected, wanted
 from pydantic import BaseModel, Field
 
-from marketplace_connector.capabilities import CAPABILITIES, browser_backed
+from marketplace_connector.capabilities import CAPABILITIES, effective_capabilities
 from marketplace_connector.unblock import UNBLOCK_PAGES
 
 
@@ -146,6 +146,11 @@ mcp = FastMCP(
 
 _MOUNTED: list[str] = []
 _SKIPPED: dict[str, str] = {}
+# The mounted connector modules, by mount name. A mounted source may know its
+# own effective route better than the environment does (WB reads its settings
+# from a .env file too), and the inventory must follow the mode the tool will
+# really use (R11).
+_MOUNTED_MODULES: dict[str, object] = {}
 
 # Routing metadata is deliberately static and cheap: it tells a model which
 # tool path to attempt before spending a request on a blocked source. It is
@@ -225,6 +230,7 @@ def _mount_all() -> None:
             # (R-TOOL-RESOURCES).
             mount_child(mcp, module.mcp)
             _MOUNTED.append(name)
+            _MOUNTED_MODULES[name] = module
         except Exception as exc:
             # The import error is a *success* field of marketplace_sources, not
             # a log line: it is stored in `skipped` and handed to the client.
@@ -303,6 +309,28 @@ def _handoff_health() -> dict[str, Any]:
 # END_BLOCK_HEALTH
 
 
+def _effective_capabilities(name: str) -> dict[str, Any]:
+    """The capability fields of one source, following the mode it runs in.
+
+    A mounted connector knows its own route better than the environment does
+    — WB reads ``WB_TRANSPORT``/``WB_DOM_FALLBACK`` through its settings,
+    which also come from a .env file — so its answer wins. Without a mounted
+    connector the environment decides, which is what the operator CLI does
+    too. Nothing here opens a browser or touches the network.
+    """
+    canonical_name = canonical(name)
+    module = _MOUNTED_MODULES.get(name) or _MOUNTED_MODULES.get(canonical_name)
+    probe = getattr(module, "effective_route", None)
+    route = ""
+    if callable(probe):
+        try:
+            value = probe()
+        except Exception:
+            value = ""
+        route = value if isinstance(value, str) else ""
+    return effective_capabilities(canonical_name, route=route or None)
+
+
 @mcp.tool(
     name="marketplace_sources",
     annotations=ToolAnnotations(
@@ -338,10 +366,15 @@ async def marketplace_sources() -> MarketplaceSourcesResponse:
         mounted_count=len(_MOUNTED),
         skipped_count=len(_SKIPPED),
         capabilities={
-            name: {**metadata, "mounted": name in {canonical(m) for m in _MOUNTED}}
+            name: {**metadata, **_effective_capabilities(name), "mounted": name in {canonical(m) for m in _MOUNTED}}
             for name, metadata in CAPABILITIES.items()
         },
-        needs_cdp=sorted(name for name in _MOUNTED if browser_backed(CAPABILITIES.get(canonical(name)))),
+        # The browser is involved for every mounted source whose effective
+        # route uses it — including Wildberries in DOM mode and in the default
+        # API mode with the DOM fallback on. The old list was built from the
+        # static tier only, so a configured WB said "no browser needed" right
+        # before wb_search went through CDP (R11).
+        needs_cdp=sorted(name for name in _MOUNTED if _effective_capabilities(name).get("may_use_cdp") is True),
         server_version=SERVER_VERSION,
     )
 

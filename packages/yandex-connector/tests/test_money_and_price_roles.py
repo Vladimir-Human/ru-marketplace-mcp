@@ -140,6 +140,115 @@ async def test_card_refuses_an_ambiguous_regular_price(monkeypatch):
     refused = [w for w in card.meta.warnings if w.startswith("price_unparseable")]
     assert refused, card.meta.warnings
     assert "1 999 2 999" in refused[0]
+    # The card did carry an everyday price, so it is not a Plus-only card.
+    assert not [w for w in card.meta.warnings if w.startswith(("no_everyday_price", "no_price"))]
+
+
+def _card_with_reference(without_discount: str) -> str:
+    """A card whose everyday (1200) and Plus (900) prices are fine and whose
+    pre-discount reference is ``without_discount``."""
+    collections = {
+        "price": {
+            "p": {
+                "mainPrice": {"price": {"value": 900, "currency": "RUR"}},
+                "oldPrices": [
+                    {"type": "regular", "price": {"value": 1200, "currency": "RUR"}},
+                    {"type": "withoutDiscount", "price": {"value": without_discount, "currency": "RUR"}},
+                ],
+            }
+        },
+        "titleV2": {"t": {"title": "ACME X100"}},
+        "allPrices": {"a": {"baobab": {"productId": "123456", "skuId": "sku1"}}},
+    }
+    return '<html><noframes data-apiary="patch">' + json.dumps({"collections": collections}) + "</noframes></html>"
+
+
+def _reference_refusals(warnings: list[str]) -> list[str]:
+    return [w for w in warnings if w.startswith("price_unparseable") and "reference" in w]
+
+
+async def test_card_reports_an_ambiguous_struck_through_price(monkeypatch):
+    """R01: the pre-discount reference is money too, and refusing it is never quiet.
+
+    With good everyday and Plus prices, a glued withoutDiscount figure used to
+    become null with no warning, so a broken field looked like an absent one.
+    """
+    _serve(monkeypatch, _card_with_reference("1 999 2 999"))
+
+    card = await server.yandex_card(product_id="123456", include_reviews=False)
+
+    assert card.price_rub == 1200.0
+    assert card.price_before_discount_rub is None
+    refused = _reference_refusals(card.meta.warnings)
+    assert refused, card.meta.warnings
+    assert "1 999 2 999" in refused[0]
+
+
+async def test_card_keeps_a_readable_struck_through_price(monkeypatch):
+    """R01 positive control: a readable reference is kept and draws no warning."""
+    _serve(monkeypatch, _card_with_reference("1 499"))
+
+    card = await server.yandex_card(product_id="123456", include_reviews=False)
+
+    assert card.price_before_discount_rub == 1499.0
+    assert not [w for w in card.meta.warnings if w.startswith("price_unparseable")]
+
+
+async def test_zone_search_reports_an_ambiguous_struck_through_price(monkeypatch):
+    """R01 on the first-screen snippet: with a withDiscount entry the base
+    price is the struck-through reference, and its refusal is reported."""
+    item = {
+        "type": "offer",
+        "oskuId": "123456",
+        "marketSku": "sku1",
+        "title": "ACME X100",
+        "price": "1 999 2 999",
+        "additionalPrices": [{"priceType": "withDiscount", "priceValue": "900"}],
+        "isAvailable": True,
+        "rating": {"rating": 4.8, "gradesCount": 10},
+    }
+    data = html.escape(json.dumps(item, ensure_ascii=False), quote=True)
+    _serve(monkeypatch, '<html><div data-zone-name="productSnippet" data-zone-data="' + data + '"></div></html>')
+
+    result = await server.yandex_search(query="ACME X100")
+
+    assert result.items[0].price_rub == 900.0
+    assert result.items[0].price_old_rub is None
+    refused = _reference_refusals(result.meta.warnings)
+    assert refused, result.meta.warnings
+    assert "1 999 2 999" in refused[0]
+
+
+async def test_ssr_search_reports_an_ambiguous_struck_through_price(monkeypatch):
+    """R01 on the SSR state: an unreadable oldPrice ends null with a warning."""
+    collections = {
+        "productShowPlace": {"sp1": {"id": "sp1", "productId": 123456, "productSnippetId": "s1"}},
+        "productSnippet": {
+            "s1": {
+                "productPayload": {
+                    "title": {"value": "ACME X100"},
+                    "price": {
+                        "actualPrice": {"amount": {"intPart": "900"}},
+                        "oldPrice": {"amount": {"intPart": "1 999 2 999"}},
+                    },
+                },
+                "baobabPayload": {"additionalPrices": [{"priceType": "withDiscount", "priceValue": "900"}]},
+            }
+        },
+        "product": {"123456": {"titles": {"raw": "ACME X100"}}},
+    }
+    # The search widget ships its bundle under a per-render path key.
+    patch = {"widgets": {"@search/Results": {"/content/results": {"options": {"collections": collections}}}}}
+    page = '<html><noframes data-apiary="patch">' + json.dumps(patch) + "</noframes></html>"
+    _serve(monkeypatch, page)
+
+    result = await server.yandex_search(query="ACME X100")
+
+    assert result.items[0].price_rub == 900.0
+    assert result.items[0].price_old_rub is None
+    refused = _reference_refusals(result.meta.warnings)
+    assert refused, result.meta.warnings
+    assert "1 999 2 999" in refused[0]
 
 
 # ------------------------------------------------------------------- R02 ------

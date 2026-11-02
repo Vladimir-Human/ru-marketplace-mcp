@@ -340,6 +340,16 @@
           "anyOf": [
             {
               "items": {
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  9
+                ],
                 "type": "integer"
               },
               "type": "array"
@@ -1009,9 +1019,11 @@
         "count": {},
         "items": {},
         "page": {},
+        "parsed_count": {},
         "query": {},
         "status": {},
-        "tier_used": {}
+        "tier_used": {},
+        "truncated": {}
       },
       "type": "object"
     },
@@ -1116,8 +1128,11 @@
         },
         "nm_ids": {
           "items": {
+            "exclusiveMinimum": 0,
             "type": "integer"
           },
+          "maxItems": 100,
+          "minItems": 1,
           "type": "array"
         }
       },

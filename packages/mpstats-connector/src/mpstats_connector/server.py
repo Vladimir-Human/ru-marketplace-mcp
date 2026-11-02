@@ -57,7 +57,7 @@ import datetime
 import json
 import os
 import time
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal, get_args
 
 import httpx
 from fastmcp import Context, FastMCP
@@ -133,12 +133,18 @@ MPSTATS_URL = f"https://{MPSTATS_HOST}/pluginapi"
 # per-day graphs; wildberries uses the same RPC shape (entry [6] in the source
 # HAR is a wb utm metric, confirming wb is a first-class Place). ozFBS is an
 # Ozon-specific flag (Fulfilled-by-Seller mode) — harmless to send for wb.
-PLACES = frozenset({"ozon", "wildberries"})
+# The tool signature carries the same closed set, so the advertised schema
+# refuses an unknown marketplace instead of describing the rule in prose only.
+Place = Literal["ozon", "wildberries"]
+PLACES = frozenset(get_args(Place))
 # Batch analytics accepts up to 100 SKUs per call — the same ceiling WB v4 uses,
 # and the source HAR's batch entry [7] sent 25 without complaint. Beyond 100 the
 # endpoint has not been verified and the politeness argument against bulk also
-# grows, so the cap is enforced client-side.
+# grows, so the cap is enforced client-side AND advertised in the schema.
 MAX_SKUS = 100
+# A SKU is a positive integer; the schema says so, so an invalid batch is
+# refused before the request instead of after it.
+Sku = Annotated[int, Field(gt=0)]
 _SELFCHECK_SKU = 5107857210  # Ozon SKU verified live Jul 2026 to return analytics
 
 _min_gap = _settings.min_gap
@@ -568,11 +574,15 @@ def _validate_skus(skus: list[int], label: str) -> None:
 )
 async def mpstats_item(
     skus: Annotated[
-        list[int],
-        Field(description="1..100 SKU integers (positive). Per-SKU 30-day sales/price/stock analytics from MPStats."),
+        list[Sku],
+        Field(
+            min_length=1,
+            max_length=MAX_SKUS,
+            description="1..100 SKU integers (positive). Per-SKU 30-day sales/price/stock analytics from MPStats.",
+        ),
     ],
     place: Annotated[
-        str,
+        Place,
         Field(
             description="Marketplace: 'ozon' or 'wildberries'. Determines which MPStats dataset the SKUs resolve against.",
         ),
@@ -669,11 +679,15 @@ async def mpstats_item(
 )
 async def mpstats_warehouses(
     skus: Annotated[
-        list[int],
-        Field(description="1..100 SKU integers (positive). Per-SKU warehouse stock split from MPStats."),
+        list[Sku],
+        Field(
+            min_length=1,
+            max_length=MAX_SKUS,
+            description="1..100 SKU integers (positive). Per-SKU warehouse stock split from MPStats.",
+        ),
     ],
     place: Annotated[
-        str,
+        Place,
         Field(
             description="Marketplace: 'ozon' or 'wildberries'. Determines which MPStats dataset the SKUs resolve against.",
         ),
