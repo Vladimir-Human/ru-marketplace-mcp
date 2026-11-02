@@ -40,6 +40,11 @@
   отрицанное состояние (`не б/у`) не мешают товару стать `cheapest_comparable`.
   Настоящие незапрошенные чехлы и б/у по-прежнему исключаются из этого выбора,
   но остаются в общем списке предложений.
+- Ответ MCP для `wb_search` теперь совпадает с объявленной схемой: найденные
+  товары и `no_results` приходят в SDK-обёртке `result`, а типизированные отказы
+  остаются ошибками MCP. Компактер схем больше не выключает обёртку, поэтому
+  `tools/list` и `tools/call` не показывают разные формы ответа. Инструменты без
+  обёртки сохраняют прежнюю форму.
 
 - Yandex no longer quotes a made-up price. A string like `1 999 2 999` — two
   numbers glued by the thousands-separator space — used to read as 19992999.0, a
@@ -70,6 +75,11 @@
   explicitly negated condition (`не б/у`) does not disqualify the product from
   `cheapest_comparable`. Genuine unrequested cases and used items still lose that
   slot, but remain in the full offer list.
+- The MCP reply for `wb_search` now matches its advertised schema: found items
+  and `no_results` arrive in the SDK's `result` envelope, while typed refusals
+  remain MCP errors. Schema compaction no longer disables that envelope, so
+  `tools/list` and `tools/call` agree on the response shape. Tools without SDK
+  wrapping keep their existing shape.
 
 ## [2.8.0] - 2026-11-01
 

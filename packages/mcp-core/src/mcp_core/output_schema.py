@@ -13,16 +13,19 @@ permissive (each property accepts any JSON value) while preserving rename
 detection through ``public_contract.json``, which pins the property name set.
 
 The compact form keeps no ``$defs``, no per-field descriptions, defaults or
-nested types — that is deliberate, and a test guards it.
+nested types — that is deliberate, and a test guards it. SDK-wrapped returns
+retain ``x-fastmcp-wrap-result`` and require their ``result`` envelope: FastMCP
+uses that flag to build ``structuredContent``, not just to describe it. Tool
+errors remain MCP ``isError`` replies without successful structured output.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Reduce advertised MCP output schemas to top-level property names.
-# SCOPE: Schema compaction and registered local Tool mutation; not result parsing.
+# PURPOSE: Reduce advertised MCP output schemas while preserving SDK result envelopes.
+# SCOPE: Schema compaction and local Tool mutation; preserve wrapping, not domain validation or error parsing.
 # DEPENDS: FastMCP and fastmcp.tools.Tool; stdlib typing.
-# LINKS: M-OUTPUT-SCHEMA; M-MODELS.
+# LINKS: M-OUTPUT-SCHEMA; M-MODELS; R-OUTPUT-SCHEMA-WRAPPING; R-TOOL-SCHEMA.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# compact_output_schema: Keep object property names with permissive value schemas.
+# compact_output_schema: Keep permissive property names plus the SDK's required result wrapper.
 # registered_tools: Read the Tool objects this server answers tools/list with.
 # apply_compact_output_schemas: Rewrite local Tool schemas and count rewritten tools.
 # END_MODULE_MAP
@@ -34,27 +37,35 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.tools import Tool
 
-# One shared empty-object schema. All MCP-visible tools in this repo return an
-# object; if a future tool does not, it is wrapped in a permissive object schema
-# rather than leaving the raw MCP schema behind.
+# START_BLOCK_SCHEMA_COMPACTION
+# One shared empty-object schema for missing or unknown object schemas.
+# FastMCP's non-object/union schemas already carry a result wrapper; keep it.
 EMPTY_OBJECT_SCHEMA: dict[str, Any] = {"type": "object"}
 
 
 def compact_output_schema(schema: Any) -> dict[str, Any]:
     """Reduce a FastMCP-generated output schema to top-level field names.
 
-    ``{}`` as a property schema is JSON Schema for "any value", so clients
-    that validate ``structuredContent`` accept every shape the models actually
-    produce without carrying the nested type machinery.
+    ``{}`` as a property schema accepts any JSON value without nested types.
+    Keep the SDK's wrapping flag and require ``result`` for wrapped returns;
+    otherwise FastMCP serializes the raw value under a fictitious wrapper schema.
     """
     if not isinstance(schema, dict):
         return EMPTY_OBJECT_SCHEMA
     properties = schema.get("properties")
     if schema.get("type") != "object" or not isinstance(properties, dict):
         return EMPTY_OBJECT_SCHEMA
-    return {"type": "object", "properties": {name: {} for name in properties}}
+    compact: dict[str, Any] = {"type": "object", "properties": {name: {} for name in properties}}
+    if schema.get("x-fastmcp-wrap-result"):
+        compact["x-fastmcp-wrap-result"] = True
+        compact["required"] = ["result"]
+    return compact
 
 
+# END_BLOCK_SCHEMA_COMPACTION
+
+
+# START_BLOCK_REGISTERED_TOOL_COMPACTION
 def registered_tools(mcp: FastMCP) -> tuple[Tool, ...]:
     """Every Tool on this server's local provider, in registration order.
 
@@ -85,3 +96,6 @@ def apply_compact_output_schemas(mcp: FastMCP) -> int:
         component.output_schema = compact_output_schema(component.output_schema)
         rewritten += 1
     return rewritten
+
+
+# END_BLOCK_REGISTERED_TOOL_COMPACTION
