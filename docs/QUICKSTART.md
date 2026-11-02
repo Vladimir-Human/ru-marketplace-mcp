@@ -120,9 +120,16 @@ and is never solved or retried. WB's other probes still use HTTP; see
 | --- | --- | --- |
 | `success`, exit 0 | Selected selfchecks passed | Try the request below |
 | `drift_detected`, exit 1 | A response no longer matched the parser checks | Report the affected source and diagnostic output |
-| `inconclusive` or `error`, exit 2 | Access or execution prevented a verdict | Follow the next step printed under the row |
-| Argument error, exit 2 | Unknown source, option, or missing argument | Correct the command; no source was queried |
+| `inconclusive`, exit 2 | Acknowledged block or unavailable probe; `budget_refused` means the live budget prevented verification | Follow the next step; this is not verified health or an alarm |
 | Status-file write failure, exit 3 | The report could not be saved | Check the output path and permissions |
+| `error`, exit 4 | A selfcheck raised or returned invalid output | Report the checker failure; this is a hard-failure alarm, not a source block |
+| Argument/setup error, exit 4 | Unknown source, option, missing argument, or doctor could not run | Correct the command or setup; no successful verdict was produced |
+
+A failed checker takes precedence over drift, and drift over an inconclusive
+source. Nightly alarms on 1 and 4, not 2. A budget refusal never counts as a
+healthy check. `unblock` discovery/re-check uses the same hard-failure code;
+`setup` also returns 4 if its health check or unblock re-check fails, otherwise
+its exit still describes whether a client was configured.
 
 For machine-readable results:
 

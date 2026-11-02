@@ -27,14 +27,16 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
-# SCOPE: Read-only concurrent sources; everyday RUB ranking; conditional/native prices and identity evidence.
-# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION.
+# SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance boundaries with scoped bundles/negations; identity.
+# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Import connectors defensively and report missing installations.
 # _dedupe: Merge duplicate offers while preserving source identity.
+# _has_unrequested_marker: Match Unicode words/phrases after occurrence-local bundle/negation checks.
+# _looks_like_an_accessory/_looks_like_another_condition: Share relevance rules for warnings and comparability.
 # OfferBatch: Carry normalized offers plus source warnings and health evidence.
 # _run_source: Bound each source query; report native price counts and structured partial failures.
 # _call_card_tool: Dispatch validated source-native card arguments.
@@ -192,6 +194,7 @@ def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
     return out
 
 
+# START_BLOCK_RELEVANCE_POLICY
 # Words that mark a listing as something you buy *for* a product rather than
 # the product itself. A search for "iphone 15" matches a case, a screen
 # protector and a cable, all of them cheaper than the phone, and whichever is
@@ -249,26 +252,71 @@ _CONDITION_MARKERS = (
 )
 
 
-def _looks_like_another_condition(title: str, query: str) -> bool:
-    """Whether a title advertises a used, refurbished or display unit.
+def _marker_pattern(markers: tuple[str, ...]) -> re.Pattern[str]:
+    """Unicode word boundaries and flexible whitespace inside marker phrases."""
+    phrases = [
+        r"\s+".join(re.escape(word) for word in marker.split()) for marker in sorted(markers, key=len, reverse=True)
+    ]
+    return re.compile(r"(?<!\w)(?:" + "|".join(phrases) + r")(?!\w)", re.IGNORECASE)
 
-    A query that asks for one of these is answered correctly by them, so a
-    marker present in the query itself never counts.
+
+_NEGATION_PREFIX = re.compile(r"(?<!\w)(?:не|not)\s+$", re.IGNORECASE)
+_BUNDLE_PREFIX = re.compile(r"(?<!\w)(?:в\s+комплекте|with(?:\s+(?:a|an))?)\s*[:—-]?\s*$", re.IGNORECASE)
+_BUNDLE_SUFFIX = re.compile(r"\s*(?:[:—-]\s*)?в\s+комплекте(?!\w)", re.IGNORECASE)
+
+
+def _positive_marker_text(text: str, pattern: re.Pattern[str], *, bundles: bool) -> str:
+    """Mask only explicitly negated or directly bundled marker occurrences.
+
+    Longer phrases match first, so a bundled 'защитное стекло' also masks its
+    nested 'стекло'. Another positive marker in the same title stays evidence.
     """
-    low_title = title.lower()
-    low_query = query.lower()
-    return any(m in low_title and m not in low_query for m in _CONDITION_MARKERS)
+
+    def replace(match: re.Match[str]) -> str:
+        negated = _NEGATION_PREFIX.search(text, 0, match.start())
+        bundled = bundles and (_BUNDLE_PREFIX.search(text, 0, match.start()) or _BUNDLE_SUFFIX.match(text, match.end()))
+        return " " * len(match.group()) if negated or bundled else match.group()
+
+    return pattern.sub(replace, text)
+
+
+# START_CONTRACT: _has_unrequested_marker
+# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES: detect positive, unrequested words/phrases, never substrings.
+# INPUTS: Untrusted title/query, fixed markers; bundles applies only to accessory markers.
+# OUTPUTS: True only when an unmasked title marker is absent from the equally checked query.
+# SIDE_EFFECTS: None; no source I/O, title exceptions or ranking mutations.
+def _has_unrequested_marker(title: str, query: str, markers: tuple[str, ...], *, bundles: bool = False) -> bool:
+    pattern = _marker_pattern(markers)
+    title = _positive_marker_text(title, pattern, bundles=bundles)
+    query = _positive_marker_text(query, pattern, bundles=bundles)
+    for marker in markers:
+        word_pattern = _marker_pattern((marker,))
+        if word_pattern.search(title) and not word_pattern.search(query):
+            return True
+    return False
+
+
+# END_CONTRACT: _has_unrequested_marker
+
+
+def _looks_like_another_condition(title: str, query: str) -> bool:
+    """Detect an unrequested used/refurbished/display condition on word boundaries.
+
+    Direct 'не'/'not' negation is not condition evidence, including in a query:
+    asking for 'не б/у' must not make a genuinely used listing comparable.
+    """
+    return _has_unrequested_marker(title, query, _CONDITION_MARKERS)
 
 
 def _looks_like_an_accessory(title: str, query: str) -> bool:
-    """Whether a title reads as an accessory the query did not ask for.
+    """Detect an unrequested accessory, not a substring or an explicit bundle.
 
-    Asking for a case and getting cases is correct, so a marker present in the
-    query itself never counts.
+    'with [a/an] <accessory>', 'в комплекте: <accessory>' and '<accessory> в
+    комплекте' describe a bundled accessory, not the listing itself. These rules
+    are occurrence-local and apply to queries too, rather than exempting a whole
+    title or treating a requested bundle as a request for a standalone accessory.
     """
-    low_title = title.lower()
-    low_query = query.lower()
-    return any(m in low_title and m not in low_query for m in _ACCESSORY_MARKERS)
+    return _has_unrequested_marker(title, query, _ACCESSORY_MARKERS, bundles=True)
 
 
 def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: frozenset[str]) -> str:
@@ -281,10 +329,10 @@ def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: 
 def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
     """Flag a cheapest offer that probably answers a different question.
 
-    Deliberately warnings, never filtering. Dropping a row on a heuristic would
-    hide a real bargain, and no threshold tuned without live data deserves that
-    power. Saying "this looks like an accessory, check it" costs the caller
-    nothing and is the difference between a wrong answer and a checked one.
+    Warnings never remove an offer or change raw cheapest. The same bounded
+    accessory/condition checks steer cheapest_comparable; an explicit bundle or
+    negation is not positive evidence. The median check only warns, because an
+    uncalibrated price threshold must never hide a real bargain.
     """
     if not priced:
         return []
@@ -317,6 +365,9 @@ def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
                 f"{len(priced)} offers — check it is the same product and configuration"
             )
     return warnings
+
+
+# END_BLOCK_RELEVANCE_POLICY
 
 
 # START_BLOCK_PRICE_POLICY
@@ -1305,6 +1356,18 @@ async def compare_verify_offer(
     if expected_price_rub is not None:
         price_field = "price" if name == "ozon" else "price_rub"
         price_kind = record.get("price_kind")
+        if not isinstance(price_kind, str):
+            price_kind = ""
+        # A Yandex card without an everyday price carries only the subscriber
+        # (Plus) amount: certifying it would confirm a price most buyers cannot
+        # get, so the kind is reported instead of the comparison being made.
+        if (
+            not price_kind
+            and name == "yandex_market"
+            and record.get("price_rub") is None
+            and record.get("price_with_plus") is not None
+        ):
+            price_kind = "subscription"
         if isinstance(price_kind, str) and price_kind and price_kind != "regular":
             # A conditional amount (WB Wallet, subscription) is not the everyday
             # price, so certifying it against expected_price_rub would confirm a

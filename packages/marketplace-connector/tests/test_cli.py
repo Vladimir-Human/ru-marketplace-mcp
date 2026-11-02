@@ -159,6 +159,8 @@ def test_doctor_exits_nonzero_on_drift(monkeypatch, capsys):
 
 
 def test_doctor_survives_a_selfcheck_that_raises(monkeypatch, capsys):
+    """R-DOCTOR-EXIT-CODES: a checker error is hard failure, not a source block."""
+
     async def fake_selfcheck(name, module_path, tool_name):
         return name, "error", "RuntimeError: boom", {}
 
@@ -170,7 +172,7 @@ def test_doctor_survives_a_selfcheck_that_raises(monkeypatch, capsys):
     assert "avito" in out
     # A crashed selfcheck is not an anti-bot wall: the advice says so.
     assert cli.NEXT_STEP_SELFCHECK_ERROR in out
-    assert rc == 2  # unjudgeable, not healthy
+    assert rc == 4  # a broken checker must alarm, unlike an acknowledged block
 
 
 def test_main_routes_subcommands_and_rejects_unknown(capsys):
@@ -228,6 +230,7 @@ def test_install_rejects_extra_arguments_and_unknown_flags(argv, capsys):
     ],
 )
 def test_invalid_doctor_arguments_fail_before_any_checks(argv, message, monkeypatch, capsys):
+    """R-DOCTOR-EXIT-CODES: usage failure is 4 and never queries a source."""
     from mcp_core.transport import chrome_cdp
 
     def unexpected_call(*args):
@@ -236,7 +239,7 @@ def test_invalid_doctor_arguments_fail_before_any_checks(argv, message, monkeypa
     monkeypatch.setattr(cli, "_run_one_selfcheck", unexpected_call)
     monkeypatch.setattr(chrome_cdp, "probe_session", unexpected_call)
 
-    assert cli.cmd_doctor(argv) == 2
+    assert cli.cmd_doctor(argv) == 4
     captured = capsys.readouterr()
     assert message in captured.err
     assert not captured.out

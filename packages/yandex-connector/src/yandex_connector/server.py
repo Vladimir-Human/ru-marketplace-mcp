@@ -37,6 +37,28 @@ same id defaults to another (REDMOND: snippet KM243 sku 4668084807, card
 default KM245). The connector reports the SERP faithfully; search rows and
 cards reconcile by ``sku_id``, never by product URL alone.
 
+**The price role travels with the price.** On a card, ``mainPrice`` is the
+SUBSCRIBER amount (the live capture shows it with subtype ``ya-card``) and the
+everyday price is the explicit ``oldPrices`` entry of type ``regular``. The
+everyday price is therefore read from that entry alone; a card without one has
+an UNKNOWN everyday price and says so instead of borrowing the subscriber
+amount — a comparison would then certify a price most buyers cannot get.
+
+**One money parser.** Every price is read with the shared safe parser, so an
+ambiguous display string ('1 999 2 999' — two numbers glued by the grouping
+space) is refused instead of being concatenated into a fabricated price. The
+refused text travels with the parsed row and is reported as
+``price_unparseable``; counts and ratings keep their own, looser parsing.
+
+**Only verified content is cached.** A challenge page and a page the parser
+could not understand are dropped from the response cache, so the first call
+after the block is gone reaches upstream again instead of replaying the same
+wall for the whole TTL.
+
+**An explicit "nothing found" banner is an honest answer.** It is reported as
+an informational note and the empty result stays healthy; a page that is
+neither products nor a banner is a different case and raises parser_drift.
+
 **Reviews come from the card, not /reviews.** The dedicated reviews URL renders
 zero reviews server-side (they load over XHR), while the product page ships the
 first ~13 complete with pros/cons/dates/votes.
@@ -59,8 +81,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch_html: Retry bounded page reads and classify HTTP/transport refusals.
+# _fetch_parsed: Fetch, parse and keep unusable pages out of the response cache.
 # _guard_parse_status: Distinguish captcha, empty product shell and parser drift.
 # _guard_values_drift: Reject implausible parsed field values.
+# _refused_price_warnings: Report money the parser refused, in the shared vocabulary.
 # _to_product: Adapt SSR fields to the public product model.
 # yandex_search: Return SSR/zone/fallback offers with explicit price and SKU identity.
 # yandex_card: Read product details and the card's embedded review sample.
@@ -72,6 +96,7 @@ from __future__ import annotations
 import datetime
 import os
 import urllib.parse
+from collections.abc import Callable
 from typing import Annotated, Any
 
 import httpx
@@ -192,6 +217,42 @@ async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
     return await _cache.get_or_fetch(url, fetch)
 
 
+def _is_usable_page(status: str) -> bool:
+    """True when a parsed page is content the cache may keep.
+
+    A challenge page and a page the parser could not understand are not
+    content: caching them replays the same wall for the whole TTL, so the
+    first tool call after the block is gone still answers with it. A page that
+    parsed — including an explicit "nothing found" banner — is content and
+    stays cached.
+    """
+    return status not in (
+        ssr.ParseStatus.CAPTCHA,
+        ssr.ParseStatus.NO_PRODUCTS_FOUND,
+        ssr.ParseStatus.EMPTY_PRODUCT_SHELL,
+    )
+
+
+async def _fetch_parsed(
+    url: str,
+    label: str,
+    ctx: Context | None,
+    parse: Callable[[str], dict[str, Any]],
+) -> dict[str, Any]:
+    """Fetch a page, parse it, and keep unusable pages out of the cache.
+
+    Only verified content is cached: a captcha page and a page the parser
+    could not understand are dropped from the cache, so the next tool call
+    reaches upstream again instead of replaying the same wall for the whole
+    TTL. A normal page stays cached, so repeated reads still cost one fetch.
+    """
+    html = await _fetch_html(url, label, ctx)
+    parsed = parse(html)
+    if not _is_usable_page(str(parsed.get("status") or "")):
+        _cache.invalidate(url)
+    return parsed
+
+
 def _guard_parse_status(status: str, label: str) -> None:
     """Turn a parse status into the right error, or return for usable results."""
     if status == ssr.ParseStatus.CAPTCHA:
@@ -232,6 +293,31 @@ def _guard_values_drift(parsed: dict[str, Any], label: str) -> None:
                 provider="yandex",
             )
         )
+
+
+def _refused_price_warnings(offers: list[dict[str, Any]]) -> list[str]:
+    """Report the money the SSR parser refused, in the shared warning vocabulary.
+
+    ``price_unparseable`` is the code the shared validator emits for a price
+    text it cannot read (``mcp_core.resilience.validate_offer``); the SSR
+    parser keeps the raw text of the money it refused, so an ambiguous blob
+    ('1 999 2 999') is reported here instead of quietly becoming ``None``.
+    The role is named, because an everyday price and a subscriber price are
+    different promises to the caller.
+    """
+    out: list[str] = []
+    for role, key in (
+        ("everyday price", "price_text"),
+        ("Plus price", "price_with_plus_text"),
+        ("struck-through reference price", "price_old_text"),
+    ):
+        refused = [str(offer[key]) for offer in offers if offer.get(key)]
+        if refused:
+            out.append(
+                f"price_unparseable: {len(refused)}/{len(offers)} items affected "
+                f"(the {role} did not parse to a number, e.g. {refused[0]!r})"
+            )
+    return out
 
 
 def _to_product(raw: dict[str, Any]) -> YandexProduct:
@@ -300,7 +386,7 @@ async def yandex_search(
     Note `rating_count` counts star ratings, not written reviews; the written
     count is available per product via `yandex_card`.
 
-    price_rub is None when absent — never 0; zero results is NOT an error, it is reported via meta.warnings.
+    price_rub is None when absent — never 0; zero results is NOT an error: the page's own "nothing found" banner makes the empty answer healthy, and meta.warnings says so.
 
     Full field list and error codes: `guide://yandex/yandex_search`.
     """
@@ -317,8 +403,7 @@ async def yandex_search(
         params["page"] = str(page)
     url = f"{SITE_BASE}/search?{urllib.parse.urlencode(params)}"
 
-    html = await _fetch_html(url, "yandex_search", ctx)
-    parsed = ssr.parse_search(html)
+    parsed = await _fetch_parsed(url, "yandex_search", ctx, ssr.parse_search)
     _guard_parse_status(parsed["status"], "yandex_search")
     _guard_values_drift(parsed, "yandex_search")
 
@@ -331,6 +416,7 @@ async def yandex_search(
     # Order is preserved: Yandex's ranking is the product of the search, and
     # re-sorting it would discard information the caller asked for.
     items: list[YandexProduct] = []
+    raw_items: list[dict[str, Any]] = []
     duplicates_dropped = 0
     seen_variants: set[tuple[str, str]] = set()
     for raw in parsed["items"]:
@@ -347,6 +433,7 @@ async def yandex_search(
                 continue
             seen_variants.add(key)
         items.append(product)
+        raw_items.append(raw)
 
     warnings: list[str] = []
     extraction = "ssr"
@@ -354,6 +441,9 @@ async def yandex_search(
     # shared drift alarm; without this the connector's own all-None guards below
     # were the only value check, and a fabricated price passed as a plain field.
     warnings.extend(R.validate_items([p.model_dump() for p in items], require_title=True))
+    # Money the parser refused: the price is null, and the reason is named
+    # instead of the null travelling alone.
+    warnings.extend(_refused_price_warnings(raw_items))
 
     # Drift guard: a page where every product lost both its price and its title
     # is the SSR shape quietly moving under the parser, not a catalog full of
@@ -383,7 +473,12 @@ async def yandex_search(
             "(no seller/brand, price is the subscription price)"
         )
     if parsed["status"] == ssr.ParseStatus.EMPTY:
-        warnings.append(f"no_results: Yandex Market found nothing for {text!r}")
+        # An explicit "nothing found" banner is the marketplace's own answer,
+        # not a doubt about the data: the note is informational and the empty
+        # result stays healthy. A page that is NEITHER products nor a banner is
+        # a different case — it raises parser_drift above and never reaches
+        # this line.
+        warnings.append(f"info:no_results: Yandex Market found nothing for {text!r}")
 
     log_event(
         "yandex_search.done",
@@ -441,7 +536,7 @@ async def yandex_card(
     Reviews are capped at the ~13 Yandex renders server-side; the remainder load
     through an API this connector deliberately does not touch.
 
-    price_rub is None when the page has no usable price — never 0; price_with_plus requires a subscription and never ranks.
+    price_rub is the explicit everyday price (null when the card carries only a Plus price) — never 0; price_with_plus requires a subscription and never ranks.
 
     Full field list and error codes: `guide://yandex/yandex_card`.
     """
@@ -460,8 +555,7 @@ async def yandex_card(
         await ctx.info(f"yandex_card: product_id={pid}")
 
     url = ssr.card_url(pid)
-    html = await _fetch_html(url, "yandex_card", ctx)
-    parsed = ssr.parse_card(html)
+    parsed = await _fetch_parsed(url, "yandex_card", ctx, ssr.parse_card)
     if parsed["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL:
         # Tri-state doctrine (precedent: taobao's login-wall handling): the page
         # arrived but carries no product at all — the known field families did
@@ -501,8 +595,21 @@ async def yandex_card(
             "no_rating: this card's default offer has no ratings "
             "(common for resale/clearance offers) — search results usually carry one"
         )
-    if parsed.get("price_rub") is None:
-        warnings.append("no_price: no usable price on the page (item may be unavailable)")
+    # A refused everyday price is explained by price_unparseable below; the card
+    # did carry one, so "only a Plus price" or "no price" would be wrong.
+    if parsed.get("price_rub") is None and not parsed.get("price_text"):
+        if parsed.get("price_with_plus") is not None:
+            # The card carried only the subscriber price. The everyday price is
+            # unknown, and saying so is the point: a comparison must not certify
+            # the Plus amount as the price anyone pays.
+            warnings.append(
+                "no_everyday_price: this card carries only a Yandex Plus price — the everyday "
+                "price is unknown (price_rub is null, not the subscriber amount)"
+            )
+        else:
+            warnings.append("no_price: no usable price on the page (item may be unavailable)")
+    # Money the parser refused: the price is null, and the reason is named.
+    warnings.extend(_refused_price_warnings([parsed]))
 
     reviews = [YandexReview(**review) for review in parsed.get("reviews", [])] if include_reviews else []
 

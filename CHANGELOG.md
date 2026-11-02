@@ -9,6 +9,99 @@
 
 ## [Unreleased]
 
+### Fixed
+- MCP-гайды теперь совпадают с ответами инструментов: списки типизированных полей
+  строятся из моделей сериализации, включая реальные алиасы и обёртку `result`.
+  Описаны `cheapest_comparable`, проверка цены, пагинация отзывов Ozon, DOM-поля
+  WB и площади/типы Cian. Уточнены условные цены Wallet/Plus, неизвестные значения
+  и частичные ответы; челлендж AliExpress обозначен как `challenge_required`,
+  а метаданные — как `_meta` у самостоятельных карточек и `card.meta` у инспекторов.
+- MCP guides now match tool replies: typed field lists come from serialization
+  models, including actual aliases and the `result` envelope. They cover
+  `cheapest_comparable`, price verification, Ozon review pagination, WB DOM fields
+  and Cian areas/types. Wallet/Plus conditions, unknown values and partial replies
+  are explicit; AliExpress challenges use `challenge_required`, and metadata is
+  `_meta` on standalone aliased cards but `card.meta` in inspectors.
+
+- `marketplace-mcp doctor` больше не прячет поломку своей же проверки под «не удалось проверить». Упавшая selfcheck-обёртка, неизвестный статус, неизвестный источник и ошибка вызова теперь дают код 4 (жёсткий сбой), и ночной drift-алерт на нём краснеет. Код 2 по-прежнему означает признанную блокировку источника и тревоги не поднимает, дрейф остаётся кодом 1, а отказ live-бюджета показывается как `budget_refused`, а не как здоровье.
+- `marketplace-mcp doctor` no longer hides a broken check of its own behind "could not be judged". A crashed selfcheck wrapper, an unknown status, an unknown source and a usage error now exit 4 (hard failure), and the nightly drift alarm turns red on it. Exit 2 still means an acknowledged blocked source and raises no alarm, drift stays exit 1, and a live-budget refusal is shown as `budget_refused`, never as healthy.
+
+- Яндекс больше не выдаёт выдуманную цену. Строка вроде `1 999 2 999` — это два
+  числа, склеенные пробелом-разделителем тысяч, — раньше читалась как 19992999.0:
+  сумма, которой нет, ещё и выигрывала сравнение как самая дешёвая. Теперь все
+  денежные поля Яндекса читаются общим безопасным парсером, неоднозначная сумма
+  даёт `price_rub: null` и предупреждение `price_unparseable` с текстом, который
+  не удалось прочитать, а обычные группировки (`3 983`) и дробные цены
+  (`1 999,50`) остаются ценами. Так же читается и зачёркнутая цена до скидки
+  (`price_old_rub`, `price_before_discount_rub`): если её не удалось прочитать,
+  поле пустое, а предупреждение называет эту цену и её текст. Карточку с
+  нечитаемой обычной ценой Яндекс больше не называет карточкой только с ценой Plus.
+- Карточка Яндекса больше не выдаёт цену подписки за обычную цену. Обычная цена
+  (`price_rub`) берётся только из явно заданной regular-цены; карточка без неё
+  честно говорит, что обычная цена неизвестна (`price_rub: null` и
+  предупреждение `no_everyday_price`), вместо того чтобы одолжить сумму «с
+  Плюсом». `compare_verify_offer` такую карточку не подтверждает: сумма по
+  подписке не выдаётся за обычную цену, а дельта считается от явно заданной
+  regular-цены.
+- Страница с капчей больше не попадает в кэш. Ответ с HTTP 200, который оказался
+  челленджем (или страницей, которую парсер не понял), выбрасывается из кэша, и
+  следующий вызов инструмента снова идёт к Яндексу, а не повторяет стену до конца
+  срока жизни записи. Обычные страницы кэшируются как раньше.
+- Пустой результат Яндекса с явным баннером «ничего не найдено» — честный ответ,
+  а не проблема с данными. `meta.healthy` остаётся `true`, сравнение считает
+  источник ответившим и завершённым (`complete: true`, ноль предложений).
+  Пострадавшая пустая страница по-прежнему нездорова и оставляет сравнение
+  неполным; проверка дрейфа для страницы без баннера не отключена.
+- Сравнение больше не отбрасывает товар как аксессуар или б/у из-за случайной
+  подстроки в названии (`Suitcase`, `стеклокерамика`, `unused`). Маркеры читаются
+  по границам слов и фраз без учёта регистра; комплектный аксессуар и явно
+  отрицанное состояние (`не б/у`) не мешают товару стать `cheapest_comparable`.
+  Настоящие незапрошенные чехлы и б/у по-прежнему исключаются из этого выбора,
+  но остаются в общем списке предложений.
+- Ответ MCP для `wb_search` теперь совпадает с объявленной схемой: найденные
+  товары и `no_results` приходят в SDK-обёртке `result`, а типизированные отказы
+  остаются ошибками MCP. Компактер схем больше не выключает обёртку, поэтому
+  `tools/list` и `tools/call` не показывают разные формы ответа. Инструменты без
+  обёртки сохраняют прежнюю форму.
+
+- Yandex no longer quotes a made-up price. A string like `1 999 2 999` — two
+  numbers glued by the thousands-separator space — used to read as 19992999.0, a
+  sum nobody charges that also won comparisons as the cheapest offer. Every
+  Yandex money field is now read with the shared safe parser: an ambiguous
+  amount gives `price_rub: null` plus a `price_unparseable` warning naming the
+  text it could not read, while ordinary groupings (`3 983`) and fractional
+  prices (`1 999,50`) stay prices. The struck-through pre-discount price
+  (`price_old_rub`, `price_before_discount_rub`) is read the same way: when it
+  cannot be read, the field is null and the warning names that price and its
+  text. A card whose everyday price cannot be read is no longer called a
+  Plus-only card.
+- A Yandex card no longer passes the subscriber price off as the everyday one.
+  The everyday price (`price_rub`) comes from the explicit regular price only; a
+  card without one says the everyday price is unknown (`price_rub: null` and a
+  `no_everyday_price` warning) instead of borrowing the Plus amount.
+  `compare_verify_offer` refuses to certify such a card: a Plus amount is never
+  confirmed as the everyday price, and the delta is measured against the
+  explicit regular price.
+- A captcha page is no longer cached. An HTTP-200 answer that turned out to be a
+  challenge (or a page the parser could not read) is dropped from the cache, so
+  the next tool call reaches Yandex again instead of replaying the same wall for
+  the whole TTL. Normal pages are still cached.
+- An empty Yandex result with an explicit "nothing found" banner is an honest
+  answer, not a doubt about the data. `meta.healthy` stays `true`, and the
+  comparison counts the source as answered and complete (`complete: true`, zero
+  offers). A damaged empty answer stays unhealthy and leaves the comparison
+  incomplete; the drift check for a page without the banner is not weakened.
+- Comparison no longer drops a product as an accessory or used item because of
+  an accidental title substring (`Suitcase`, `стеклокерамика`, `unused`). Markers
+  now match word/phrase boundaries case-insensitively; a bundled accessory or an
+  explicitly negated condition (`не б/у`) does not disqualify the product from
+  `cheapest_comparable`. Genuine unrequested cases and used items still lose that
+  slot, but remain in the full offer list.
+- The MCP reply for `wb_search` now matches its advertised schema: found items
+  and `no_results` arrive in the SDK's `result` envelope, while typed refusals
+  remain MCP errors. Schema compaction no longer disables that envelope, so
+  `tools/list` and `tools/call` agree on the response shape. Tools without SDK
+  wrapping keep their existing shape.
 Транспорт и ошибки больше не теряют то, что знает оператор и агент: адрес
 websocket собирается одинаково для IPv4 и IPv6, команда CDP имеет абсолютный
 дедлайн, диагностика в успешном ответе вычищается, подсказки восстановления
@@ -28,8 +121,6 @@ either: a review counter is not a plausible-but-wrong number, the number of
 results equals the number of items returned, a tool's limits are visible in its
 schema, the source inventory follows the configured mode, and cut warnings say
 how many were lost.
-
-### Fixed
 
 - «Сырой» CDP-фолбэк больше не строит невалидный адрес для IPv6: хост `::1`
   даёт `ws://[::1]:9222/...`, а не `ws://::1:9222/...`, который вообще не

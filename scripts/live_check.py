@@ -18,19 +18,18 @@ under the same budget as the other commands, so the release checklist's doctor
 round cannot pass the caps.
 
 Exit codes, and why 4 is separate: 0 the command ran (for doctor, everything
-healthy), 1 doctor's own alarm (a parser drifted), 2 doctor's own
-blocked/inconclusive verdict (nothing could be judged), 3 the live budget
-refused a request, 4 this script could not start or was called wrongly (usage
-error, or the budget hooks could not be installed). The CI drift alarm keeps
-exit 2 green - correctly, a blocked source must not page anyone - so a broken
-live_check has to be told apart from a blocked source instead of hiding in the
-same code (2026-11-01 audit).
+healthy), 1 doctor's drift alarm, 2 doctor's acknowledged blocked/inconclusive
+verdict (including budget_refused), 3 a budget refusal outside doctor or a
+failed doctor status-file write, 4 a checker, doctor invocation or this script's
+setup/usage failed (including an unknown doctor source). The CI alarm keeps 2
+non-alarm, but fails on 1 and 4: a broken checker or alarm must not hide behind
+a blocked source. Doctor preserves budget refusal as unverified, never health.
 
 START_MODULE_CONTRACT
-PURPOSE: Run one marketplace selfcheck or tool call under the shared live budget.
-SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, doctor round, result and ledger output.
+PURPOSE: Run marketplace checks under the shared live budget without masking checker/doctor failure as a blocked source.
+SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, doctor verdict propagation (0/1/2/3/4), result and ledger output.
 DEPENDS: scripts/live_budget.py; marketplace_connector.cli._SELFCHECKS and its doctor command; connector modules loaded by name.
-LINKS: M-LIVE-CHECK, R-LIVE-BUDGET.
+LINKS: M-LIVE-CHECK, R-LIVE-BUDGET, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
   _dump                JSON-shaped result for a model, structured content or plain value
   _reset               archive the ledger under a timestamped name to start a new run
@@ -55,9 +54,8 @@ import live_budget
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# live_check's OWN usage/setup failures, kept out of the doctor's 2: the CI
-# drift alarm treats 2 as "blocked/inconclusive, stay green", so a script that
-# never reached a marketplace would otherwise leave the alarm silently green.
+# Hard checker/doctor and live_check setup/usage failures share 4, never the
+# doctor's non-alarm 2. Unknown doctor sources are CLI usage failures too.
 USAGE_EXIT = 4
 
 
@@ -104,18 +102,31 @@ def _reset(budget: live_budget.Budget) -> int:
     return 0
 
 
+# START_BLOCK_DOCTOR
+
+
 async def _doctor(argv: list[str], budget: live_budget.Budget) -> int:
-    """Run the marketplace CLI's doctor round under the budget.
+    """Run doctor; preserve hard failure 4, drift 1 and acknowledged block 2.
 
-    The CLI runs its own event loop for the selfchecks, so it is called from
-    a worker thread instead of from inside this one. Its exit code is the
-    doctor's own; the ledger summary follows it.
+    The CLI owns its selfcheck event loop, so call it from a worker thread.
+    Unknown-source/option usage failures come from that same CLI path. If the
+    doctor invocation itself fails, report hard failure 4; budget refusal
+    outside a selfcheck keeps the runner's 3. The ledger summary follows.
     """
-    from marketplace_connector.cli import main as doctor_main
+    try:
+        from marketplace_connector.cli import main as doctor_main
 
-    code = await asyncio.to_thread(doctor_main, ["doctor", *argv])
+        code = await asyncio.to_thread(doctor_main, ["doctor", *argv])
+    except live_budget.BudgetExhausted:
+        raise
+    except Exception as exc:
+        print(f"doctor failed: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+        code = USAGE_EXIT
     _ledger_report(budget)
     return code
+
+
+# END_BLOCK_DOCTOR
 
 
 async def _run(argv: list[str], budget: live_budget.Budget) -> int:

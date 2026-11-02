@@ -21,8 +21,11 @@ which are merged. The merge must not let a later empty value clobber an earlier
 populated one; that single rule is the difference between reading 13 reviews and
 reading none.
 
-Pure standard library on purpose — an HTML parser dependency would buy nothing
-here, since the payload is JSON once located.
+No HTML parser on purpose — the payload is JSON once located, so a parsing
+dependency would buy nothing here. The one non-stdlib import is the shared
+money parser (``mcp_core.resilience.coerce_price``): every price this module
+reads goes through it, so an ambiguous display string ('1 999 2 999') is
+refused instead of being concatenated into a fabricated price.
 
 Verified against live pages Jul 2026 (search, cards across categories, empty
 results, pagination, A/B duplicates) and re-verified live Sep 2026 (search
@@ -58,6 +61,8 @@ import math
 import re
 from collections.abc import Iterator
 from typing import Any
+
+from mcp_core.resilience import coerce_price
 
 # One state fragment. Yandex emits ~150 of these per search page, ~200 per card.
 _PATCH_RE = re.compile(r'<noframes data-apiary="patch">(.*?)</noframes>', re.S)
@@ -262,7 +267,12 @@ def ldjson_product(html: str) -> dict[str, Any]:
 
 
 def ldjson_item_list(html: str) -> list[dict[str, Any]]:
-    """schema.org ``ItemList`` from a search page (first screen only)."""
+    """schema.org ``ItemList`` from a search page (first screen only).
+
+    The schema.org list carries the SUBSCRIBER price only, so the amount is
+    the Plus role; it is read with the shared money parser like every other
+    price, and an unreadable amount is reported instead of guessed.
+    """
     items: list[dict[str, Any]] = []
     for obj in _iter_ldjson(html):
         if obj.get("@type") != "ItemList":
@@ -274,25 +284,29 @@ def ldjson_item_list(html: str) -> list[dict[str, Any]]:
             offers = _as_dict(item.get("offers"))
             rating = _as_dict(item.get("aggregateRating"))
             url = str(item.get("url") or "")
-            items.append(
-                {
-                    "product_id": url.rstrip("/").split("/")[-1] if url else None,
-                    "title": item.get("name"),
-                    "url": url,
-                    "image": item.get("image"),
-                    "sku_id": item.get("sku"),
-                    "price_with_plus": _to_number(offers.get("price")),
-                    "rating": _to_number(rating.get("ratingValue")),
-                    "rating_count": _to_int(rating.get("ratingCount")),
-                    "source": "ld+json",
-                }
-            )
+            raw_price = offers.get("price")
+            plus_price = _to_money(raw_price)
+            row = {
+                "product_id": url.rstrip("/").split("/")[-1] if url else None,
+                "title": item.get("name"),
+                "url": url,
+                "image": item.get("image"),
+                "sku_id": item.get("sku"),
+                "price_with_plus": plus_price,
+                "rating": _to_number(rating.get("ratingValue")),
+                "rating_count": _to_int(rating.get("ratingCount")),
+                "source": "ld+json",
+            }
+            refused = _refused(raw_price, plus_price)
+            if refused:
+                row["price_with_plus_text"] = refused
+            items.append(row)
     return items
 
 
 def _to_number(value: Any) -> float | None:
-    """Coerce to a positive finite float, or None. Never 0 as a stand-in for
-    missing, never a non-finite value.
+    """Coerce a COUNT or a RATING to a positive finite float, or None. Never 0
+    as a stand-in for missing, never a non-finite value.
 
     Rounded to two decimals because Yandex serialises some values as float32,
     which surfaces as ``4.900000095367432`` for a rating of 4.9 — accurate but
@@ -300,6 +314,11 @@ def _to_number(value: Any) -> float | None:
     doctrine: json.loads admits NaN/Infinity and float() inflates huge
     magnitudes to inf; either would corrupt a price or let ``_to_int`` crash
     on int(inf), so a poisoned cell degrades to no-data instead.
+
+    NOT for money. A price is a different kind of number and goes through
+    ``_to_money``; this helper also reads counts and ratings, and the money
+    rules (ambiguous grouping, decoy words, magnitude suffixes) would ruin
+    both of those.
     """
     if value is None or isinstance(value, bool):
         return None
@@ -310,6 +329,55 @@ def _to_number(value: Any) -> float | None:
     if number <= 0 or not math.isfinite(number):
         return None
     return round(number, 2)
+
+
+def _to_money(value: Any) -> float | None:
+    """Read a money field with the shared safe price parser.
+
+    Every price this connector reports comes through here. The local coercion
+    this replaced stripped the spaces and float()ed the rest, so two numbers
+    glued by the thousands separator ('1 999 2 999') became ONE fabricated
+    price (19992999.0) that then ranked as the cheapest offer; the shared
+    parser refuses an ambiguous blob, keeps ordinary groupings ('3 983') and
+    decimal prices, and never turns a missing price into 0.
+    """
+    return coerce_price(value)
+
+
+def _refused(value: Any, parsed: float | None) -> str | None:
+    """The raw text of a money value the shared parser refused.
+
+    Kept so the connector can REPORT the field instead of dropping it
+    silently: an ambiguous price must become null together with a diagnostic,
+    never null and quiet. ``None`` when the value parsed (or when there is no
+    text to quote — a number that failed the parser has no wording).
+    """
+    if parsed is not None or not isinstance(value, str) or not value.strip():
+        return None
+    return value
+
+
+def _first_price(*candidates: Any) -> tuple[float | None, str | None]:
+    """The price of the first candidate that is present, and the refused text.
+
+    The candidates are the sources of ONE price role, in decreasing order of
+    trust. A candidate that is simply absent does not stop the chain; a
+    candidate that is PRESENT but unreadable does: the sources below it are
+    less trustworthy (on a discounted row the offer's own price is the
+    struck-through figure), so falling through would quote another role's
+    number as this role's price. The refused text is returned so the
+    connector can report the field instead of dropping it silently.
+    """
+    for raw in candidates:
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            continue
+        price = _to_money(raw)
+        if price is not None:
+            return price, None
+        refused = _refused(raw, price)
+        if refused:
+            return None, refused
+    return None, None
 
 
 def _to_int(value: Any) -> int | None:
@@ -391,86 +459,109 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
             continue
         seen.add(key)
 
-        base_price = _to_number(payload.get("price"))
-        with_discount = _additional_price(payload, "withDiscount")
-        price_rub = with_discount if with_discount is not None else base_price
+        base_raw = payload.get("price")
+        base_price = _to_money(base_raw)
+        with_discount_raw = _additional_price(payload, "withDiscount")
+        # The everyday price is the discounted one; on an undiscounted row the
+        # entry is absent and the base price IS the everyday price. A present
+        # but unreadable entry stops the chain: the base price of a discounted
+        # row is the struck-through figure, so falling through would quote
+        # another role's number as the everyday price.
+        price_rub, everyday_refused = _first_price(with_discount_raw, base_raw)
         price_old = (
             base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
         )
+        # With a withDiscount entry the base price is the struck-through
+        # reference; its refusal is reported, not dropped. Without one the
+        # base price is the everyday price and _first_price reports it.
+        old_refused = _refused(base_raw, base_price) if with_discount_raw is not None else None
+        plus_raw = _additional_price(payload, "yaBank")
+        price_with_plus = _to_money(plus_raw)
 
         rating_node = _as_dict(payload.get("rating"))
         is_available = payload.get("isAvailable")
         ld = ldjson_by_id.get(product_id, {})
 
-        items.append(
-            {
-                "product_id": product_id or None,
-                "sku_id": str(payload.get("marketSku") or ""),
-                "title": str(payload.get("title") or ld.get("title") or ""),
-                "brand": "",
-                "seller": _zone_shop_name(payload),
-                "price_rub": price_rub,
-                "price_with_plus": _additional_price(payload, "yaBank"),
-                "price_old_rub": price_old,
-                "currency": "RUR",
-                "rating": _to_number(rating_node.get("rating")) or ld.get("rating"),
-                "rating_count": _to_int(rating_node.get("gradesCount")) or ld.get("rating_count"),
-                "in_stock": is_available if isinstance(is_available, bool) else None,
-                "is_express": bool(payload.get("isExpress")),
-                "url": str(ld.get("url") or "") or _absolute_url(None, product_id or None),
-                "image": str(ld.get("image") or ""),
-                "source": "zone",
-            }
-        )
+        row = {
+            "product_id": product_id or None,
+            "sku_id": str(payload.get("marketSku") or ""),
+            "title": str(payload.get("title") or ld.get("title") or ""),
+            "brand": "",
+            "seller": _zone_shop_name(payload),
+            "price_rub": price_rub,
+            "price_with_plus": price_with_plus,
+            "price_old_rub": price_old,
+            "currency": "RUR",
+            "rating": _to_number(rating_node.get("rating")) or ld.get("rating"),
+            "rating_count": _to_int(rating_node.get("gradesCount")) or ld.get("rating_count"),
+            "in_stock": is_available if isinstance(is_available, bool) else None,
+            "is_express": bool(payload.get("isExpress")),
+            "url": str(ld.get("url") or "") or _absolute_url(None, product_id or None),
+            "image": str(ld.get("image") or ""),
+            "source": "zone",
+        }
+        # The raw text of money the shared parser refused, so the connector can
+        # report the field instead of dropping it silently. Present only when
+        # something was actually refused.
+        if everyday_refused:
+            row["price_text"] = everyday_refused
+        plus_refused = _refused(plus_raw, price_with_plus)
+        if plus_refused:
+            row["price_with_plus_text"] = plus_refused
+        if old_refused:
+            row["price_old_text"] = old_refused
+        items.append(row)
     return items
 
 
-def _amount_int(node: Any) -> float | None:
-    """Read a price out of the presentational ``amount.intPart`` shape.
+def _amount_price_value(node: Any) -> Any:
+    """The RAW ``amount.intPart`` string of the presentational price shape.
 
-    This is the most fragile path in the file — prices arrive as display strings
-    with non-breaking spaces — which is why the structural ``offer.price.value``
-    is always preferred when available.
+    Returned raw so the caller can read it with the shared money parser and
+    keep the text when that parser refuses it.
     """
     if not isinstance(node, dict):
         return None
     amount = node.get("amount")
     if not isinstance(amount, dict):
         return None
-    return _to_number(amount.get("intPart"))
+    return amount.get("intPart")
 
 
-def _cart_price(cart_button: Any) -> float | None:
-    """The price the snippet's cart button would actually charge.
+def _cart_price_value(cart_button: Any) -> Any:
+    """The RAW display price the snippet's cart button would charge.
 
     ``productPayload.cartButton.price`` carries the everyday price the SERP
     displays big: ``valueFmt`` in roubles, ``value`` in 1e-7 units. Verified live
     2026-09-11 row by row against the product card for the same offer (Tuvio
     TKP2117S: cart 2293 == card ``prices.price``) and against the baobab's
     ``withDiscount`` additional price, which it equalled on every row. This is
-    the number any buyer pays, subscription or not.
+    the number any buyer pays, subscription or not. Returned raw so the caller
+    can read it with the shared money parser.
     """
     if not isinstance(cart_button, dict):
         return None
     price = cart_button.get("price")
     if not isinstance(price, dict):
         return None
-    return _to_number(price.get("valueFmt"))
+    return price.get("valueFmt")
 
 
-def _additional_price(baobab: Any, price_type: str) -> float | None:
-    """One named price out of ``baobabPayload.additionalPrices``.
+def _additional_price(baobab: Any, price_type: str) -> Any:
+    """The RAW value of one named price out of ``baobabPayload.additionalPrices``.
 
     The SERP snippet ships its price breakdown there: ``withDiscount`` is the
     discounted everyday price any buyer pays, ``yaBank`` is the green Yandex
     Plus price. Both verified live 2026-09-11 to equal the product card's
-    ``prices.price`` / ``greenPrice`` for the same offer.
+    ``prices.price`` / ``greenPrice`` for the same offer. The raw value is
+    returned so the caller can read it with the shared money parser and keep
+    the text when that parser refuses it.
     """
     if not isinstance(baobab, dict):
         return None
     for entry in _as_list(baobab.get("additionalPrices")):
         if isinstance(entry, dict) and entry.get("priceType") == price_type:
-            return _to_number(entry.get("priceValue"))
+            return entry.get("priceValue")
     return None
 
 
@@ -708,26 +799,46 @@ def parse_search(html: str) -> dict[str, Any]:
         # on discounted rows — quoting offer.price.value as the everyday price
         # was the pre-fix bug (Tuvio TKP2117S: 3698 instead of 2293, live
         # check 2026-09-11).
-        cart_price = _cart_price(payload.get("cartButton"))
-        with_discount = _additional_price(baobab, "withDiscount")
-        offer_price = _to_number((_as_dict(offer.get("price"))).get("value"))
-        price_rub = next((price for price in (cart_price, with_discount, offer_price) if price is not None), None)
+        cart_raw = _cart_price_value(payload.get("cartButton"))
+        with_discount_raw = _additional_price(baobab, "withDiscount")
+        offer_raw = (_as_dict(offer.get("price"))).get("value")
+        price_rub, everyday_refused = _first_price(cart_raw, with_discount_raw, offer_raw)
 
-        price_with_plus = _amount_int(price_node.get("actualPrice"))
+        # The subscriber price: the display node's own actualPrice, else the
+        # baobab's yaBank figure. Both are the Plus role, so an unreadable one
+        # may fall through to the other — but the refused text is still kept.
+        actual_raw = _amount_price_value(price_node.get("actualPrice"))
+        ya_bank_raw = _additional_price(baobab, "yaBank")
+        price_with_plus = _to_money(actual_raw)
+        plus_refused = _refused(actual_raw, price_with_plus)
         if price_with_plus is None:
-            price_with_plus = _additional_price(baobab, "yaBank")
+            price_with_plus = _to_money(ya_bank_raw)
+            plus_refused = plus_refused or _refused(ya_bank_raw, price_with_plus)
 
         # Struck-through reference: the display node's own old/initial price
         # when present, else the baobab base price — but only while it actually
         # sits above the everyday price. On undiscounted rows the baobab price
         # IS the everyday price and nothing is struck through.
-        price_old = _amount_int(price_node.get("oldPrice"))
+        # A refused candidate is reported only when no candidate parsed, so a
+        # reference that ends null because of bad money is never quiet.
+        old_refused = None
+        price_old = None
+        for old_raw in (
+            _amount_price_value(price_node.get("oldPrice")),
+            _amount_price_value(price_node.get("initialPrice")),
+        ):
+            price_old = _to_money(old_raw)
+            old_refused = old_refused or _refused(old_raw, price_old)
+            if price_old is not None:
+                break
         if price_old is None:
-            price_old = _amount_int(price_node.get("initialPrice"))
-        if price_old is None:
-            baobab_price = _to_number(baobab.get("price"))
+            baobab_raw = baobab.get("price")
+            baobab_price = _to_money(baobab_raw)
+            old_refused = old_refused or _refused(baobab_raw, baobab_price)
             if baobab_price is not None and price_rub is not None and baobab_price > price_rub:
                 price_old = baobab_price
+        if price_old is not None:
+            old_refused = None
 
         rating_node = _as_dict(payload.get("rating"))
         delivery = _as_dict(offer.get("delivery"))
@@ -743,29 +854,37 @@ def parse_search(html: str) -> dict[str, Any]:
         gallery = _as_dict(payload.get("gallery"))
         media = _as_list(gallery.get("mediaItems"))
 
-        result["items"].append(
-            {
-                "product_id": str(product_id) if product_id is not None else None,
-                "sku_id": offer.get("skuId"),
-                "title": title_node.get("value") or titles.get("raw") or offer_titles.get("raw") or "",
-                "brand": (vendor or {}).get("name") or "",
-                "seller": (shop or {}).get("name") or "",
-                # Cart price first: it is what the page displays and charges;
-                # offer.price.value is structural but carries the strike-through
-                # on discounted rows, so it is only a last-resort fallback.
-                "price_rub": price_rub,
-                "price_with_plus": price_with_plus,
-                "price_old_rub": price_old,
-                "currency": (_as_dict(offer.get("price"))).get("currency") or "RUR",
-                "rating": _to_number(rating_node.get("ratingValue")),
-                "rating_count": _to_int(rating_node.get("ratingCount")),
-                "in_stock": delivery.get("inStock") if isinstance(delivery.get("inStock"), bool) else None,
-                "is_express": bool(delivery.get("isExpress")),
-                "url": _absolute_url((_as_dict(place.get("urls"))).get("direct"), product_id, product.get("slug")),
-                "image": _picture_url((media[0] or {}).get("picture") if media else None),
-                "source": "ssr",
-            }
-        )
+        row = {
+            "product_id": str(product_id) if product_id is not None else None,
+            "sku_id": offer.get("skuId"),
+            "title": title_node.get("value") or titles.get("raw") or offer_titles.get("raw") or "",
+            "brand": (vendor or {}).get("name") or "",
+            "seller": (shop or {}).get("name") or "",
+            # Cart price first: it is what the page displays and charges;
+            # offer.price.value is structural but carries the strike-through
+            # on discounted rows, so it is only a last-resort fallback.
+            "price_rub": price_rub,
+            "price_with_plus": price_with_plus,
+            "price_old_rub": price_old,
+            "currency": (_as_dict(offer.get("price"))).get("currency") or "RUR",
+            "rating": _to_number(rating_node.get("ratingValue")),
+            "rating_count": _to_int(rating_node.get("ratingCount")),
+            "in_stock": delivery.get("inStock") if isinstance(delivery.get("inStock"), bool) else None,
+            "is_express": bool(delivery.get("isExpress")),
+            "url": _absolute_url((_as_dict(place.get("urls"))).get("direct"), product_id, product.get("slug")),
+            "image": _picture_url((media[0] or {}).get("picture") if media else None),
+            "source": "ssr",
+        }
+        # The raw text of money the shared parser refused, so the connector can
+        # report the field instead of dropping it silently. Present only when
+        # something was actually refused.
+        if everyday_refused:
+            row["price_text"] = everyday_refused
+        if plus_refused:
+            row["price_with_plus_text"] = plus_refused
+        if old_refused:
+            row["price_old_text"] = old_refused
+        result["items"].append(row)
 
     if not result["items"]:
         result["status"] = ParseStatus.EMPTY if EMPTY_RESULT_MARKER in html else ParseStatus.NO_PRODUCTS_FOUND
@@ -854,6 +973,15 @@ def parse_card(html: str) -> dict[str, Any]:
     Three prices are surfaced because Yandex shows three: the subscriber price
     (``price_with_plus``), the current everyday price (``price_rub``), and the
     pre-discount reference (``price_before_discount_rub``).
+
+    The everyday price comes from ONE place only: the card's explicit
+    ``oldPrices`` entry of type ``regular``. ``mainPrice`` is the SUBSCRIBER
+    (Yandex Plus) price — the card shows it big and keeps the everyday price in
+    the regular entry (live capture: mainPrice 18796 with subtype ``ya-card``,
+    regular 19377) — so it is never promoted to ``price_rub``. A card with no
+    regular entry therefore has an UNKNOWN everyday price: it stays ``None``
+    instead of borrowing the subscriber amount, which would make a comparison
+    certify a price most buyers cannot get.
     """
     if looks_like_captcha(html):
         return {"status": ParseStatus.CAPTCHA, "reviews": []}
@@ -874,17 +1002,27 @@ def parse_card(html: str) -> dict[str, Any]:
 
     price_node = _first_dict(merged.get("price"))
     main_price = _as_dict(price_node.get("mainPrice"))
-    price_with_plus = _to_number((_as_dict(main_price.get("price"))).get("value")) or _to_number(fallback.get("price"))
+    main_raw = (_as_dict(main_price.get("price"))).get("value")
+    fallback_raw = fallback.get("price")
+    price_with_plus = _to_money(main_raw)
+    plus_refused = _refused(main_raw, price_with_plus)
+    if price_with_plus is None:
+        price_with_plus = _to_money(fallback_raw)
+        plus_refused = plus_refused or _refused(fallback_raw, price_with_plus)
 
     price_regular = price_before_discount = None
+    everyday_refused = old_refused = None
     for old_price in price_node.get("oldPrices") or []:
         if not isinstance(old_price, dict):
             continue
-        value = _to_number((_as_dict(old_price.get("price"))).get("value"))
+        raw = (_as_dict(old_price.get("price"))).get("value")
+        value = _to_money(raw)
         if old_price.get("type") == "regular":
             price_regular = value
+            everyday_refused = _refused(raw, value)
         elif old_price.get("type") == "withoutDiscount":
             price_before_discount = value
+            old_refused = _refused(raw, value)
 
     rating_node = _rating_from_snippets(merged)
     reviews_collection = _as_dict(merged.get("reviews"))
@@ -916,7 +1054,9 @@ def parse_card(html: str) -> dict[str, Any]:
         "description": str(fallback.get("description") or ""),
         "image": str(fallback.get("image") or ""),
         "seller": str(shop_info.get("shopName") or shop_info.get("name") or business_stats.get("shopName") or ""),
-        "price_rub": price_regular if price_regular is not None else price_with_plus,
+        # The everyday price is the explicit regular price, never the
+        # subscriber amount: a card without one has an unknown everyday price.
+        "price_rub": price_regular,
         "price_with_plus": price_with_plus,
         "price_before_discount_rub": price_before_discount,
         "discount_percent": _to_int(price_node.get("discountPercent")),
@@ -928,6 +1068,15 @@ def parse_card(html: str) -> dict[str, Any]:
         "rating_stars": stars,
         "reviews": parse_reviews(merged),
     }
+    # The raw text of money the shared parser refused, so the connector can
+    # report the field instead of dropping it silently. Present only when
+    # something was actually refused.
+    if everyday_refused:
+        result["price_text"] = everyday_refused
+    if plus_refused:
+        result["price_with_plus_text"] = plus_refused
+    if old_refused:
+        result["price_old_text"] = old_refused
     if (
         not result["title"]
         and result["price_rub"] is None
