@@ -49,6 +49,8 @@ The verbs cover the moments an operator actually needs help with:
 # _write_client_config: Merge entries into mcpServers; refuse malformed or conflicting files.
 # _read_config_text: Read a client config as UTF-8, tolerating a byte-order mark.
 # _backup_path: A backup name that no earlier backup has taken.
+# detect_install_mode / cli_command: How this copy was installed and the command that runs it there.
+# _hint_cdp_down / _hint_start_chrome / _hint_browser_wall / _hint_drift / _hint_drift_issue / _hint_antibot / _hint_rate_limited: The recovery hints, spelled for the install mode.
 # next_step: One fixed next-step string for a source that is not ok.
 # _run_selfchecks / _health_steps / _health_exit_code: The doctor pipeline, shared by doctor, unblock and setup.
 # cmd_browser: browser status, browser show and browser start.
@@ -73,6 +75,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from mcp_core.logging import log_event
+from mcp_core.redact import redact_error_text
 from mcp_core.source_selection import canonical
 from mcp_core.sources import CONFIG_SERVERS, DRIFT_PROBE_SOURCES, LOGIN_UNBLOCK_SOURCES, SELFCHECKS
 
@@ -153,12 +156,17 @@ Read more: docs/QUICKSTART.md"""
 # Next-step strings. Fixed text, one per situation: the operator gets one
 # instruction, not a menu of possibilities, and never advice about captcha
 # solvers, stealth/fingerprint tooling, proxy pools or retry loops.
+#
+# These are the CHECKOUT texts: the root scripts and docs exist only in a
+# source checkout. An installed package has neither, so its hints name the
+# command the package really ships and links pinned to this release's tag
+# (see ``_hint_*`` below and ``detect_install_mode``).
 NEXT_STEP_CDP_DOWN = (
     "Start the scraping Chrome: `scripts/start_chrome_cdp.ps1` (Windows) or "
     "`scripts/start_chrome_cdp.sh`, or let the connector start it on its first browser call."
 )
 NEXT_STEP_BROWSER_WALL = (
-    "Run `marketplace-mcp unblock {source}`: it opens the page in the scraping Chrome, "
+    "Run `uv run marketplace-mcp unblock {source}`: it opens the page in the scraping Chrome, "
     "you pass the check or log in, and it re-checks."
 )
 # The one instruction that starts the operator's Chrome. Fixed text: the
@@ -183,14 +191,14 @@ NEXT_STEP_DRIFT = (
 # to a command that fails before it starts. Those sources get the issue
 # advice instead — the drift report is what the issue needs.
 NEXT_STEP_DRIFT_ISSUE = (
-    "Parser drift: rerun `marketplace-mcp doctor {source} --status-file drift.json` and open an issue at "
+    "Parser drift: rerun `uv run marketplace-mcp doctor {source} --status-file drift.json` and open an issue at "
     "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues with that file."
 )
 NEXT_STEP_ANTIBOT = "See `docs/ANTI_BOT.md` for this source."
 # A rate limit is not a wall: the site asked us to slow down, and the fix is
 # to wait it out — a browser cannot do that for the operator.
 NEXT_STEP_RATE_LIMITED = (
-    "The site rate-limited this address; wait 10-15 minutes, then rerun `marketplace-mcp doctor {source}`."
+    "The site rate-limited this address; wait 10-15 minutes, then rerun `uv run marketplace-mcp doctor {source}`."
 )
 # The selfcheck raised: the site never got to answer, so the advice cannot be
 # about the site. The error above is what the issue needs.
@@ -243,6 +251,154 @@ def _workspace_root() -> pathlib.Path | None:
         except OSError:
             continue
     return None
+
+
+# START_BLOCK_INSTALL_MODE
+
+# The project on GitHub, and the tag every link a hint carries is pinned to.
+# An unpinned "main" link changes under the operator's feet; a local path does
+# not exist in an installed package at all.
+REPO_URL = "https://github.com/Vladimir-Human/ru-marketplace-mcp"
+ISSUES_URL = f"{REPO_URL}/issues"
+DOC_TAG = f"v{__version__}"
+
+# How this copy of the CLI was installed. A checkout has the root scripts and
+# docs the recovery hints may name; an installed package has neither, so its
+# hints must name commands the package really ships and links that exist.
+INSTALL_CHECKOUT = "checkout"
+INSTALL_WHEEL = "wheel"
+INSTALL_UVX = "uvx"
+
+
+def _doc_link(relative: str) -> str:
+    """A link to one file of this release, pinned to the release's tag."""
+    return f"{REPO_URL}/blob/{DOC_TAG}/{relative}"
+
+
+def _uv_cache_dir() -> pathlib.Path:
+    """uv's cache directory, found without running uv.
+
+    The environment variable wins; otherwise the platform default. Reading it
+    from disk keeps the install-mode detection free of subprocesses — the
+    doctor must not shell out to learn how it was installed.
+    """
+    raw = os.environ.get("UV_CACHE_DIR")
+    if raw:
+        return pathlib.Path(raw).expanduser()
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(pathlib.Path.home() / "AppData" / "Local")
+        return pathlib.Path(base) / "uv" / "cache"
+    return pathlib.Path.home() / ".cache" / "uv"
+
+
+def detect_install_mode() -> str:
+    """How this copy of the CLI was installed: checkout, wheel or uvx.
+
+    A checkout has the root scripts and docs, so its hints may name them. A
+    wheel install has the console script on PATH. A uvx run lives inside uv's
+    deletable tool cache and has no console script on the operator's PATH, so
+    its hints must spell the command the way uvx does.
+    """
+    if _workspace_root() is not None:
+        return INSTALL_CHECKOUT
+    try:
+        if pathlib.Path(sys.prefix).resolve().is_relative_to(_uv_cache_dir().resolve()):
+            return INSTALL_UVX
+    except (OSError, ValueError):
+        pass
+    return INSTALL_WHEEL
+
+
+def cli_command(mode: str, *args: str) -> str:
+    """The command that runs this CLI in the given install mode.
+
+    One spelling per mode, and it is the spelling the project's own docs use
+    for that mode: ``uv run marketplace-mcp`` in a checkout, the console script
+    for a wheel install, and the pinned uvx release for a uvx run.
+    """
+    if mode == INSTALL_CHECKOUT:
+        prefix = "uv run marketplace-mcp"
+    elif mode == INSTALL_UVX:
+        prefix = f"uvx ru-marketplace-mcp@{__version__}"
+    else:
+        prefix = "marketplace-mcp"
+    return " ".join((prefix, *args))
+
+
+def _hint_cdp_down(mode: str) -> str:
+    """How to start the scraping Chrome, in the way this install can."""
+    if mode == INSTALL_CHECKOUT:
+        return NEXT_STEP_CDP_DOWN
+    return (
+        f"Start the scraping Chrome: `{cli_command(mode, 'browser start')}`, "
+        "or let the connector start it on its first browser call."
+    )
+
+
+def _hint_start_chrome(mode: str) -> str:
+    """The one instruction that starts the operator's Chrome."""
+    if mode == INSTALL_CHECKOUT:
+        return START_CHROME_HINT
+    return f"Start the scraping Chrome: `{cli_command(mode, 'browser start')}`."
+
+
+def _hint_browser_wall(mode: str, source: str) -> str:
+    """How the operator passes a site's check."""
+    if mode == INSTALL_CHECKOUT:
+        return NEXT_STEP_BROWSER_WALL.format(source=source)
+    return (
+        f"Run `{cli_command(mode, 'unblock', source)}`: it opens the page in the scraping Chrome, "
+        "you pass the check or log in, and it re-checks."
+    )
+
+
+def _hint_drift(mode: str, source: str, *, probeable: bool) -> str:
+    """How to diagnose a parser drift, in the way this install can."""
+    if mode == INSTALL_CHECKOUT:
+        return NEXT_STEP_DRIFT.format(source=source) if probeable else NEXT_STEP_DRIFT_ISSUE.format(source=source)
+    text = (
+        f"Parser drift: rerun `{cli_command(mode, 'doctor', source, '--status-file', 'drift.json')}` "
+        f"and open an issue at {ISSUES_URL} with that file."
+    )
+    if probeable:
+        # The probe script is not in the package, but its source is published
+        # with the release: the link is pinned to this version's tag.
+        # The link ends the text: a period right after it becomes part of the
+        # URL for many terminals and linkifiers, and that file does not exist.
+        text += f" Drift probe: {_doc_link('scripts/diagnose_drift.py')}"
+    return text
+
+
+def _hint_drift_issue(mode: str, source: str) -> str:
+    """Drift advice for a source the probe script cannot check."""
+    return _hint_drift(mode, source, probeable=False)
+
+
+def _hint_antibot(mode: str) -> str:
+    """Where the anti-bot notes live, in the way this install can reach them."""
+    if mode == INSTALL_CHECKOUT:
+        return NEXT_STEP_ANTIBOT
+    return f"See {_doc_link('docs/ANTI_BOT.md')} for this source."
+
+
+def _cdp_setup_pointer(mode: str | None = None) -> str:
+    """Where the CDP setup notes live, in the way this install can reach them."""
+    resolved = detect_install_mode() if mode is None else mode
+    if resolved == INSTALL_CHECKOUT:
+        return "docs/CDP_SETUP.md"
+    return _doc_link("docs/CDP_SETUP.md")
+
+
+def _hint_rate_limited(mode: str, source: str) -> str:
+    """How to come back after a rate limit."""
+    if mode == INSTALL_CHECKOUT:
+        return NEXT_STEP_RATE_LIMITED.format(source=source)
+    return (
+        f"The site rate-limited this address; wait 10-15 minutes, then rerun `{cli_command(mode, 'doctor', source)}`."
+    )
+
+
+# END_BLOCK_INSTALL_MODE
 
 
 def _config_block() -> tuple[dict[str, Any], str]:
@@ -908,7 +1064,7 @@ def cmd_install(argv: list[str]) -> int:
         print("# Or wire one entry: the unified 'marketplace-mcp' server mounts every source.")
     else:
         print(f"#   - Profile {chosen_profile}: {PROFILE_DETAILS[chosen_profile]}.")
-        print("#   - Some sources need your Chrome (CDP) — see docs/CDP_SETUP.md.")
+        print(f"#   - Some sources need your Chrome (CDP) — see {_cdp_setup_pointer()}.")
         print("#   - mpstats is optional paid analytics — requires MPSTATS_MP_AUTH in the server environment.")
         print()
         print("# Need one entry per source instead? Add --per-source.")
@@ -942,6 +1098,10 @@ def _check_detail(check: object) -> str:
     if not reason:
         return str(state)
     reason = " ".join(str(reason).split())
+    # The notes a connector records can quote an upstream exception, and this
+    # string is printed and written to the status file: scrub it here, once,
+    # for every connector.
+    reason = redact_error_text(reason)
     if len(reason) > 240:
         reason = reason[:237] + "..."
     suffix = f" http {code}" if code else ""
@@ -973,7 +1133,9 @@ async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tup
         detail = ", ".join(f"{k}:{_check_detail(v)}" for k, v in checks.items()) or status
         return name, status, detail, dict(checks)
     except Exception as exc:
-        return name, "error", f"{type(exc).__name__}: {str(exc)[:120]}", {}
+        # The detail is an answer, not a log line: it is printed and can be
+        # written to a status file, so the exception text is scrubbed first.
+        return name, "error", redact_error_text(f"{type(exc).__name__}: {str(exc)[:120]}"), {}
 
 
 def _wb_api_check_failed(checks: Mapping[str, Any] | None) -> bool:
@@ -993,19 +1155,26 @@ def next_step(
     cdp_reachable: bool | None = None,
     wb_transport: str = "api",
     wb_dom_fallback: str = "1",
+    install_mode: str | None = None,
 ) -> str | None:
     """One fixed next step for a source that is not ok; None when it is ok.
 
     Pure on purpose: the same selfcheck result always yields the same advice,
     so the mapping can be tested offline and cannot change with the run. The
     inputs are the source's own verdict (status plus per-check reasons), the
-    static capability table, the CDP probe result and the WB transport and
-    DOM-fallback settings.
+    static capability table, the CDP probe result, the WB transport and
+    DOM-fallback settings, and the install mode.
+
+    The install mode decides how the advice spells its command and where it
+    points: a checkout may name the root scripts and docs, an installed
+    package must not — it has neither — so it names the command the package
+    ships and a link pinned to the release's tag.
 
     The advice is always one of a fixed set of strings. It never suggests a
     captcha solver, stealth or fingerprint tooling, a proxy pool or a retry
     loop: this project reads public pages and asks the operator to act.
     """
+    mode = install_mode or detect_install_mode()
     if status == "success":
         return None
     if status == "error":
@@ -1023,9 +1192,7 @@ def next_step(
     uses_browser = browser_backed(capability) or (source == "wildberries" and wb_transport == "dom")
 
     if status == "drift_detected" or "drift" in states:
-        if source in DIAGNOSE_DRIFT_SOURCES:
-            return NEXT_STEP_DRIFT.format(source=source)
-        return NEXT_STEP_DRIFT_ISSUE.format(source=source)
+        return _hint_drift(mode, source, probeable=source in DIAGNOSE_DRIFT_SOURCES)
     if "auth_missing" in reasons:
         return NEXT_STEP_MPSTATS_AUTH
     if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
@@ -1038,12 +1205,12 @@ def next_step(
     # browser is not what failed: it comes before the CDP and wall cases,
     # and the fix is to wait.
     if "rate_limited" in reasons:
-        return NEXT_STEP_RATE_LIMITED.format(source=source)
+        return _hint_rate_limited(mode, source)
     if uses_browser and cdp_reachable is False:
-        return NEXT_STEP_CDP_DOWN
+        return _hint_cdp_down(mode)
     if uses_browser and reasons & WALL_REASONS:
-        return NEXT_STEP_BROWSER_WALL.format(source=source)
-    return NEXT_STEP_ANTIBOT
+        return _hint_browser_wall(mode, source)
+    return _hint_antibot(mode)
 
 
 def _probe_cdp() -> tuple[bool | None, str]:
@@ -1262,7 +1429,7 @@ def _browser_status() -> int:
     endpoint = f"{report.get('host', '?')}:{report.get('port', '?')}"
     if not report.get("reachable"):
         print(f"CDP endpoint: not reachable on {endpoint}")
-        print(START_CHROME_HINT)
+        print(_hint_start_chrome(detect_install_mode()))
         return 1
     pages = report.get("page_targets")
     print(f"CDP endpoint: reachable on {endpoint}")
@@ -1282,7 +1449,7 @@ def _browser_show() -> int:
     if not result.get("ok"):
         print(f"could not show the scraping Chrome window: {result.get('reason', 'unknown reason')}", file=sys.stderr)
         if not result.get("reachable"):
-            print(START_CHROME_HINT, file=sys.stderr)
+            print(_hint_start_chrome(detect_install_mode()), file=sys.stderr)
         return 1
     bounds = result.get("bounds", {})
     print(
@@ -1641,16 +1808,28 @@ def cmd_setup(argv: list[str]) -> int:
     return 0 if configured else 1
 
 
+def _usage(mode: str) -> str:
+    """The usage screen, with the read-more pointer this install can reach.
+
+    A checkout has docs/QUICKSTART.md; an installed package does not ship the
+    root docs, so it points at the pinned file in the release instead.
+    """
+    if mode == INSTALL_CHECKOUT:
+        return USAGE
+    return USAGE.replace("Read more: docs/QUICKSTART.md", f"Read more: {_doc_link('docs/QUICKSTART.md')}")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    usage = _usage(detect_install_mode())
     if args and args[0] in ("-h", "--help", "help"):
-        print(USAGE)
+        print(usage)
         return 0
     if not args:
         # The console script starts the server for a bare `marketplace-mcp`
         # (see __main__.py); reaching the CLI with no verb means the operator
         # asked for help.
-        print(USAGE)
+        print(usage)
         return 0
     command, rest = args[0], args[1:]
     if command == "setup":
@@ -1664,7 +1843,7 @@ def main(argv: list[str] | None = None) -> int:
     if command == "unblock":
         return cmd_unblock(rest)
     print(f"unknown command {command!r}; expected setup, install, doctor, browser or unblock", file=sys.stderr)
-    print(USAGE, file=sys.stderr)
+    print(usage, file=sys.stderr)
     log_event("marketplace.cli.unknown", command=command)
     return 2
 

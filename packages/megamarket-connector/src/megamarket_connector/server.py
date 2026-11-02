@@ -60,6 +60,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import blocked_error, polite_wait
 from mcp_core.logging import log_event
@@ -808,7 +809,7 @@ async def megamarket_search(
         raise
     except Exception as exc:
         log_event("megamarket_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"megamarket_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"megamarket_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -880,7 +881,7 @@ async def megamarket_card(
         raise
     except Exception as exc:
         log_event("megamarket_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"megamarket_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"megamarket_card failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls megamarket_selfcheck()
@@ -915,7 +916,7 @@ async def megamarket_selfcheck(ctx: Context | None = None) -> MegamarketSelfchec
         raise
     except Exception as exc:
         log_event("megamarket_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"megamarket_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"megamarket_selfcheck failed: {exc}"))
 
 
 async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheckResponse:

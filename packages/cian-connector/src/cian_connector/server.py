@@ -59,6 +59,7 @@ from mcp_core.errors import (
     ParserDriftError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import blocked_error, polite_wait
 from mcp_core.logging import log_event
@@ -883,7 +884,7 @@ async def cian_search(
         raise
     except Exception as exc:
         log_event("cian_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"cian_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"cian_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -973,7 +974,7 @@ async def cian_card(
         raise
     except Exception as exc:
         log_event("cian_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"cian_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"cian_card failed: {exc}"))
 
 
 # ------------------------------------------------------------ selfcheck ----
@@ -1007,7 +1008,7 @@ async def cian_selfcheck(ctx: Context | None = None) -> CianSelfcheckResponse:
         raise
     except Exception as exc:
         log_event("cian_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"cian_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"cian_selfcheck failed: {exc}"))
 
 
 async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:

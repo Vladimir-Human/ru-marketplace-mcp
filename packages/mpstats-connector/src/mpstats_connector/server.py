@@ -73,6 +73,7 @@ from mcp_core.errors import (
     RateLimitedError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
@@ -358,7 +359,7 @@ async def _call(body: dict[str, Any], *, label: str) -> dict[str, Any]:
             # to the model and into the client's transcript. Every other
             # connector redacts here; this is the only one holding a secret.
             log_event(f"{label}.network_error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-            raise_tool_error(TransportDownError(_redact(str(exc)), provider="mpstats"))
+            raise_tool_error_from(exc, _redact(str(exc)), provider="mpstats")
 
         if err:
             log_event(f"{label}.network_error", error=_redact(err))

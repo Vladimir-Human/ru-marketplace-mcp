@@ -72,6 +72,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import polite_wait
 from mcp_core.logging import log_event
@@ -675,7 +676,7 @@ async def aliexpress_search(
         raise
     except Exception as exc:
         log_event("aliexpress_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"aliexpress_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"aliexpress_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -781,7 +782,7 @@ async def aliexpress_card(
         raise
     except Exception as exc:
         log_event("aliexpress_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"aliexpress_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"aliexpress_card failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls
@@ -816,7 +817,7 @@ async def aliexpress_selfcheck(ctx: Context | None = None) -> AliSelfcheckRespon
         raise
     except Exception as exc:
         log_event("aliexpress_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"aliexpress_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"aliexpress_selfcheck failed: {exc}"))
 
 
 async def _aliexpress_selfcheck_impl(ctx: Context | None) -> AliSelfcheckResponse:

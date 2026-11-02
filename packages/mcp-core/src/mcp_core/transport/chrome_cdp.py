@@ -54,7 +54,8 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # get_context: Yield the attached browser's existing default context.
 # NavBlocked: Carry rejected main-document status and final URL.
 # probe_session: Return CDP reachability and raw-fallback diagnostics.
-# _RawCdpPage: Correlate raw commands/events and expose evaluate/navigation.
+# _RawCdpPage: Correlate raw commands/events and expose evaluate/navigation; one command has one absolute deadline.
+# _ws_netloc: Build the websocket netloc for one host and port, bracketing an IPv6 literal.
 # capture_owned_viewport: Capture bounded JPEG pixels without DOM reads or disk writes.
 # current_page_url: Refresh raw main-frame URL without extracting document content.
 # reveal_owned_page: Best-effort foreground activation of only the owned target.
@@ -95,6 +96,7 @@ from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
 from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
+from mcp_core.redact import redact_error_text
 from mcp_core.transport.cdp_budget import HostRefusingError, navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
@@ -165,6 +167,17 @@ def _host_from_env() -> str:
 def _url_host(host: str) -> str:
     """The host as a URL needs it: an IPv6 literal goes in brackets."""
     return f"[{host}]" if ":" in host else host
+
+
+def _ws_netloc(host: str | None = None, port: int | None = None) -> str:
+    """The netloc a CDP websocket URL needs, built for one host and port.
+
+    One builder for the browser socket and the page socket, so an IPv6 host
+    cannot produce the invalid ``ws://::1:9222/...``: the literal goes in
+    brackets on both. The host and port default to the ones this process
+    dials, read at call time so a reconfigured endpoint is honoured.
+    """
+    return f"{_url_host(CDP_HOST if host is None else host)}:{CDP_PORT if port is None else port}"
 
 
 CDP_PORT = _port_from_env()
@@ -744,7 +757,9 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
         )
     except Exception as exc:
         result["reachable"] = False
-        result["reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+        # The reason is an answer, not a log line: it reaches the operator and
+        # the agent alike, so it is scrubbed before it is stored.
+        result["reason"] = redact_error_text(f"{type(exc).__name__}: {str(exc)[:120]}")
     return result
 
 
@@ -820,7 +835,7 @@ def _browser_ws_url() -> str | None:
     # The endpoint advertises its own loopback address even when we reached it
     # through CHROME_CDP_HOST — redial the host we know answers.
     parts = urlsplit(ws)
-    return urlunsplit(parts._replace(netloc=f"{_url_host(CDP_HOST)}:{CDP_PORT}"))
+    return urlunsplit(parts._replace(netloc=_ws_netloc()))
 
 
 def _evaluate_expression(expression: str, arg: object) -> str:
@@ -859,11 +874,26 @@ class _RawCdpPage:
         return self._url
 
     async def _send(self, method: str, params: dict | None = None, timeout: float = 30.0) -> dict:
+        """Send one CDP command and wait for its answer, with a hard deadline.
+
+        The deadline is absolute: it is set once, before the command goes out,
+        and every wait uses only the time that is left. A stream of unrelated
+        events (CDP broadcasts them to every client) therefore cannot extend
+        the command's budget — a per-receive timeout would restart on each
+        foreign event and let a silent socket answer after minutes. The
+        events are still read and noted: a frame URL that arrives while we
+        wait is the page's own navigation, not noise to discard.
+        """
         self._next_id += 1
         msg_id = self._next_id
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
         await self._ws.send(json.dumps({"id": msg_id, "method": method, "params": params or {}}))
         while True:
-            raw = await asyncio.wait_for(self._ws.recv(), timeout=timeout)
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise TimeoutError(f"CDP {method}: no answer within {timeout:.3f}s")
+            raw = await asyncio.wait_for(self._ws.recv(), timeout=remaining)
             msg = json.loads(raw)
             if msg.get("id") != msg_id:
                 self._note_event(msg)
@@ -1274,7 +1304,9 @@ async def browser_status() -> dict[str, Any]:
         # The facts above stand; only the window state is missing, and the
         # reason says so instead of pretending the window is fine.
         report["window"] = "unknown"
-        report["reason"] = f"the window state could not be read ({type(exc).__name__}: {str(exc)[:80]})"
+        report["reason"] = redact_error_text(
+            f"the window state could not be read ({type(exc).__name__}: {str(exc)[:80]})"
+        )
         return report
     bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
     report["window"] = _window_state(bounds)
@@ -1364,7 +1396,7 @@ async def show_browser_window(target_id: str | None = None) -> dict[str, Any]:
         return {
             "ok": False,
             "reachable": True,
-            "reason": f"the window could not be moved ({type(exc).__name__}: {str(exc)[:80]})",
+            "reason": redact_error_text(f"the window could not be moved ({type(exc).__name__}: {str(exc)[:80]})"),
         }
     return {
         "ok": True,
@@ -1400,11 +1432,11 @@ async def open_tabs(urls: list[str]) -> dict[str, Any]:
                 target_ids.append(target_id)
     except Exception as exc:
         # Same contract as show_browser_window: the operator reads a reason,
-        # not a traceback.
+        # not a traceback — and the reason is scrubbed before it is stored.
         return {
             "ok": False,
             "target_ids": target_ids,
-            "reason": (
+            "reason": redact_error_text(
                 f"opened {len(target_ids)} of {len(urls)} tab(s), then failed ({type(exc).__name__}: {str(exc)[:80]})"
             ),
         }
@@ -1453,7 +1485,7 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
             if not isinstance(page_ws, str) or not page_ws.startswith("ws"):
                 raise RuntimeError("CDP target has no websocket URL")
             parts = urlsplit(page_ws)
-            page_ws = urlunsplit(parts._replace(netloc=f"{CDP_HOST}:{CDP_PORT}"))
+            page_ws = urlunsplit(parts._replace(netloc=_ws_netloc()))
 
             async with _websockets.connect(
                 page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S

@@ -100,6 +100,7 @@ from mcp_core.errors import (
     ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.kit import blocked_error, polite_wait, sync_curl_get
 from mcp_core.logging import log_event
@@ -1033,7 +1034,7 @@ async def avito_search(
         raise
     except Exception as exc:
         log_event("avito_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"avito_search failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"avito_search failed: {exc}"))
 
 
 @mcp.tool(
@@ -1140,7 +1141,7 @@ async def avito_card(
         raise
     except Exception as exc:
         log_event("avito_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"avito_card failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"avito_card failed: {exc}"))
 
 
 @mcp.tool(
@@ -1195,7 +1196,7 @@ async def avito_seller(
         raise
     except Exception as exc:
         log_event("avito_seller.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"avito_seller failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"avito_seller failed: {exc}"))
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls avito_selfcheck()
@@ -1233,7 +1234,7 @@ async def avito_selfcheck(ctx: Context | None = None) -> AvitoSelfcheckResponse:
         raise
     except Exception as exc:
         log_event("avito_selfcheck.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
-        raise_tool_error(TransportDownError(_redact(f"avito_selfcheck failed: {exc}")))
+        raise_tool_error_from(exc, _redact(f"avito_selfcheck failed: {exc}"))
 
 
 async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
