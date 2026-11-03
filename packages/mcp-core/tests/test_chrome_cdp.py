@@ -467,12 +467,12 @@ async def test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too(monkeyp
     from mcp_core.errors import TransportDownError
 
     @asynccontextmanager
-    async def attach_times_out(_url, _wait_ms):
+    async def attach_times_out(_url, _wait_ms, *, navigation_timeout_ms):
         raise chrome_cdp._CdpConnectTimeout("attach timed out after 10 s; 12 tabs are open in the scraping Chrome.")
         yield
 
     @asynccontextmanager
-    async def raw_fails(_url, _wait_ms):
+    async def raw_fails(_url, _wait_ms, *, navigation_timeout_ms):
         raise TimeoutError("raw navigation stalled")
         yield
 

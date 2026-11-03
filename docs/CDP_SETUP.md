@@ -170,6 +170,8 @@ payload shape and the connector needs updating.
 | Variable | Default | Purpose |
 |---|---|---|
 | `CHROME_CDP_PORT` | `9222` | Debugging port |
+| `CHROME_NAV_TIMEOUT_MS` | `20000` | Initial page-navigation timeout in milliseconds, shared by Playwright and raw CDP unless a connector supplies its own value; finite and greater than zero |
+| `ALI_TIMEOUT` | `45` | AliExpress search and card-landing navigation timeout in seconds; overrides the shared navigation setting; finite and greater than zero |
 | `CHROME_SCRAPING_PROFILE` | platform default above | Profile directory |
 | `CHROME_BINARY` | auto-detected | Explicit path to Chrome/Chromium/Edge |
 | `CHROME_STEALTH` | `1` | Windows: park the window off-screen; macOS: open tabs in the background and keep the app hidden (⌘H) so it never steals focus or switches your Space |
@@ -177,6 +179,23 @@ payload shape and the connector needs updating.
 
 Auto-detection covers Chrome, Chromium and Edge in the standard locations for all
 three platforms. On Linux it also consults `PATH`.
+
+Timeouts must remain finite and positive after unit conversion; a value too small
+to represent as raw-CDP seconds is rejected, not rounded to a disabled timeout.
+Set timeout variables in the MCP server's environment and restart the server to
+reload AliExpress settings. For example, `ALI_TIMEOUT=90` allows up to 90 seconds
+for its search or card landing to navigate; it does not remove any page checks.
+Playwright still waits for `DOMContentLoaded`. Raw CDP keeps its existing
+load-event/main-document-status behavior; changing the budget does not make a
+200 response proof that product data is ready. Other connectors keep the shared
+20-second default unless `CHROME_NAV_TIMEOUT_MS` is set.
+
+These are navigation limits, not end-to-end tool limits. CDP attachment, settling,
+extraction and teardown have separate bounds. `compare_prices` still applies
+`COMPARE_SOURCE_TIMEOUT` (45 seconds by default) to the whole source call, and
+AliExpress selfchecks keep their 90-second outer limit. A larger navigation setting
+does not override those ceilings. If a normal page needs more time, increase the
+appropriate budgets rather than blocking the site's anti-bot resources.
 
 ## How it behaves at runtime
 

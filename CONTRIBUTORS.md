@@ -23,6 +23,12 @@ from chat history.
 | [@Pegas-us](https://github.com/Pegas-us) | [#107](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/107), [#108](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/108) | Citilink search parameter fix, and the opt-in `WB_TRANSPORT=dom` Wildberries transport that reads rendered pages through the operator's Chrome. |
 | [@dont99code](https://github.com/dont99code) | [#133](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/133) | Ozon: a 403 that the site's own JS check clears on reload is no longer reported as a block, which ended intermittent `ozon_search` failures. |
 
+## Reports / Репорты
+
+| Reporter | Issue | Contribution |
+|---|---|---|
+| [@HeckfyCU](https://github.com/HeckfyCU) | [#190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190) | Timed every AliExpress navigation request from a Russian residential IP and pinpointed the page-readiness deadline that kept `aliexpress_search` from returning offers. |
+
 ## Automation / Автоматизация
 
 | Contributor | Merged PRs | Contribution |
