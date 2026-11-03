@@ -26,7 +26,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastmcp import Client
-from mcp_core.domtest import run_extractor
+from mcp_core.domtest import jsdom_available, run_extractor
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 READINESS_MS = 21_746
@@ -197,6 +197,20 @@ async def _call(server, name):
 
 
 def _assert_extracted_grid(result):
+    """Assert the captured prices — this part needs the optional DOM harness.
+
+    jsdom is an optional developer tool in this repository: without it the real
+    extractor cannot run at all, and every other DOM-level check skips. The
+    navigation contract is asserted before this helper, so it holds on any
+    machine; only the price comparison skips.
+    """
+    if not jsdom_available():
+        assert result.is_error is True, "the search must not fail before the extraction"
+        assert "jsdom not installed" in str(result.content), (
+            "without the DOM harness the only acceptable failure is the missing jsdom, "
+            f"not a navigation timeout: {result.content}"
+        )
+        pytest.skip("jsdom is not installed; the captured-price assertion needs it")
     assert result.is_error is False, str(result.content)
     data = result.structured_content
     assert data is not None
@@ -244,11 +258,13 @@ async def test_mcp_search_uses_env_timeout_past_reported_readiness(monkeypatch):
                 }
             )
         )
-        _assert_extracted_grid(result)
+        # The navigation contract comes first: it must hold on every machine,
+        # with or without the optional DOM harness.
         assert [call["timeout"] for call in context.landing.goto_calls] == [90_000]
         assert [call["wait_until"] for call in context.landing.goto_calls] == ["domcontentloaded"]
         assert context.landing.extract_calls == 1
         _assert_owned_cleanup(context)
+        _assert_extracted_grid(result)
 
 
 @pytest.mark.parametrize(
@@ -265,6 +281,11 @@ async def test_search_and_card_landing_reuse_existing_ali_timeout(monkeypatch, t
     context = _BrowserContext(0)
     with _loaded_connector(monkeypatch, context, timeout_seconds=timeout_seconds) as server:
         result = await _call(server, tool)
+        assert [call["timeout"] for call in context.landing.goto_calls] == [expected_ms]
+        assert [call["wait_until"] for call in context.landing.goto_calls] == ["domcontentloaded"]
+        # A card still navigates only its search landing, never directly to /item/.
+        assert all("/wholesale" in call["url"] for call in context.landing.goto_calls)
+        _assert_owned_cleanup(context)
         if tool == "aliexpress_search":
             _assert_extracted_grid(result)
         else:
@@ -274,11 +295,6 @@ async def test_search_and_card_landing_reuse_existing_ali_timeout(monkeypatch, t
             assert context.owned_popup.reads == 1
             assert context.owned_popup.close_calls == 1
             assert context.landing.listeners == []
-        assert [call["timeout"] for call in context.landing.goto_calls] == [expected_ms]
-        assert [call["wait_until"] for call in context.landing.goto_calls] == ["domcontentloaded"]
-        # A card still navigates only its search landing, never directly to /item/.
-        assert all("/wholesale" in call["url"] for call in context.landing.goto_calls)
-        _assert_owned_cleanup(context)
 
 
 async def test_short_source_budget_still_times_out_and_closes_owned_landing(monkeypatch):
