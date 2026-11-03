@@ -773,6 +773,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 - [@Khalmatov](https://github.com/Khalmatov) — provenance отзывов Ozon, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
 - [@fosteev](https://github.com/fosteev) — macOS CDP stealth и коннектор Циана, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
 - [@ilodezis](https://github.com/ilodezis) — выбор источников unified-сервера через `MARKETPLACE_SOURCES`, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
+- [@HeckfyCU](https://github.com/HeckfyCU) — замеры навигации AliExpress на российском IP, [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): по его замерам найден и исправлен предел ожидания страницы.
 
 ## Лицензия
 
@@ -1411,6 +1412,7 @@ credit too: the full contributor and PR index is in
 - [@Khalmatov](https://github.com/Khalmatov) — Ozon review provenance, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
 - [@fosteev](https://github.com/fosteev) — macOS CDP stealth and the Cian connector, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
 - [@ilodezis](https://github.com/ilodezis) — unified-server source selection, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
+- [@HeckfyCU](https://github.com/HeckfyCU) — AliExpress navigation timing measured on a Russian residential IP, [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): those measurements located the page-readiness deadline that has been fixed.
 
 ## License
 

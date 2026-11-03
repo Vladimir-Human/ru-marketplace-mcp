@@ -64,4 +64,4 @@ __all__ = [
     "redact_error_text",
 ]
 
-__version__ = "2.8.1"
+__version__ = "2.8.2"
