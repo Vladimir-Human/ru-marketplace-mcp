@@ -61,6 +61,8 @@
     </module>
     <module id="M-BUMP-VERSION" file="scripts/bump_version.py" purpose="Rewrite only version substrings across every declaration, then run the version gate and print the manual release steps" depends="M-VERSION-SITES; scripts/check_versions.py; stdlib sys,datetime,pathlib" exports="bump,main">
       <note>Dry run writes nothing; a malformed NEW exits 2; formatting, JSON indentation and key order are preserved byte for byte.</note>
+      <note>Owner release preparation 2026-11-03 targets 2.8.1 on release/v2.8.1: the shared site table updates all 88 declarations, uv 0.13.6 relocks the 17 workspace versions without upgrading registry packages, and V-M-BUMP-VERSION records the current version-operation evidence. Package, installed-stdio, external-regression, CI and image execution must remain attributable to the release candidate rather than an older source version.</note>
+      <file path="docs/releases/RELEASE_NOTES_v2.8.1.md" note="Versioned release body consumed by release.yml; Russian notes and English mirror, fix scope and actual check evidence." />
     </module>
     <module id="M-LIVE-BUDGET" file="scripts/live_budget.py" purpose="Owner's live-run request caps, grouped ledger, gap waits and transport/subprocess hooks" depends="stdlib asyncio,contextlib,datetime,ipaddress,json,os,sys,tempfile,threading,time,urllib.parse; httpx,curl_cffi,Playwright,chrome_cdp,ozon_connector.server at install" exports="BudgetExhausted,Ledger,Budget,source_group,is_loopback,install,uninstall,installed_budget">
       <note>install() validates every hook point before replacing any method and raises AttributeError naming a renamed one; over-cap requests raise before sending.</note>
