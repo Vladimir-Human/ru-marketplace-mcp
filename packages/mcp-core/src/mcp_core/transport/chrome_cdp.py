@@ -35,7 +35,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -55,6 +55,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # NavBlocked: Carry rejected main-document status and final URL.
 # probe_session: Return CDP reachability and raw-fallback diagnostics.
 # _RawCdpPage: Correlate raw commands/events and expose evaluate/navigation; one command has one absolute deadline.
+# _navigation_timeout_ms: Resolve a source/global initial-navigation budget; reject disabled or non-finite timeouts.
 # _ws_netloc: Build the websocket netloc for one host and port, bracketing an IPv6 literal.
 # capture_owned_viewport: Capture bounded JPEG pixels without DOM reads or disk writes.
 # current_page_url: Refresh raw main-frame URL without extracting document content.
@@ -773,8 +774,31 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 # ``url``. It only ever runs when the Playwright attach timed out.
 # ---------------------------------------------------------------------------
 
+# START_BLOCK_NAVIGATION_TIMEOUT
+_DEFAULT_NAV_TIMEOUT_MS = 20_000.0
+
+
+def _navigation_timeout_ms(value: float | None) -> float:
+    """Resolve one finite positive budget; zero would disable Playwright's timeout."""
+    name = "navigation_timeout_ms"
+    candidate: float | str
+    if value is None:
+        name = "CHROME_NAV_TIMEOUT_MS"
+        candidate = os.environ.get(name, str(_DEFAULT_NAV_TIMEOUT_MS))
+    else:
+        candidate = value
+    try:
+        timeout_ms = float(candidate)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(f"{name} must be a finite positive number of milliseconds") from None
+    if isinstance(candidate, bool) or not math.isfinite(timeout_ms) or timeout_ms <= 0 or timeout_ms / 1000 <= 0:
+        raise ValueError(f"{name} must be a finite positive number of milliseconds")
+    return timeout_ms
+
+
+# END_BLOCK_NAVIGATION_TIMEOUT
+
 _RAW_CONNECT_TIMEOUT_S = 8.0
-_RAW_NAV_TIMEOUT_S = 20.0
 _RAW_MAX_FRAME_BYTES = max(
     64 * 1024, min(int(os.environ.get("CHROME_CDP_MAX_FRAME_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024)
 )
@@ -930,14 +954,18 @@ class _RawCdpPage:
             raise RuntimeError(f"page.evaluate failed: {str(text)[:300]}")
         return (result.get("result") or {}).get("value")
 
-    async def goto_and_status(self, url: str) -> int | None:
-        """Navigate and return the last main-document HTTP status seen."""
+    async def goto_and_status(self, url: str, *, navigation_timeout_ms: float | None = None) -> int | None:
+        """Return the last main-document status within one send-and-events deadline."""
+        timeout_s = _navigation_timeout_ms(navigation_timeout_ms) / 1000
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout_s
         self._next_id += 1
         msg_id = self._next_id
-        await self._ws.send(json.dumps({"id": msg_id, "method": "Page.navigate", "params": {"url": url}}))
+        await asyncio.wait_for(
+            self._ws.send(json.dumps({"id": msg_id, "method": "Page.navigate", "params": {"url": url}})),
+            timeout=timeout_s,
+        )
         statuses: list[int] = []
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + _RAW_NAV_TIMEOUT_S
         nav_error: object = None
         main_frame: object = None
         rechecking = False
@@ -1449,9 +1477,13 @@ async def open_tabs(urls: list[str]) -> dict[str, Any]:
     return {"ok": True, "target_ids": target_ids, "reason": None}
 
 
+# START_BLOCK_OWNED_NAVIGATION
 @asynccontextmanager
-async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
+async def _raw_cdp_page(
+    url: str, wait_ms: int, *, navigation_timeout_ms: float | None = None
+) -> AsyncIterator[_RawCdpPage]:
     """Open a tab over raw CDP, mirroring open_page's guarantees."""
+    timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     if _websockets is None:
         raise RuntimeError("the raw-CDP fallback needs the 'websockets' package (cdp extra)")
     browser_ws = _browser_ws_url()
@@ -1500,7 +1532,7 @@ async def _raw_cdp_page(url: str, wait_ms: int) -> AsyncIterator[_RawCdpPage]:
                 await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
                 await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
                 await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
-                status = await page.goto_and_status(url)
+                status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms)
                 if status in _NAV_FAIL_STATUSES:
                     raise NavBlocked(status, page.url)
                 if wait_ms > 0:
@@ -1597,11 +1629,14 @@ async def _new_tab(ctx: BrowserContext) -> Page:
 
 
 @asynccontextmanager
-async def _playwright_page(url: str, wait_ms: int = 5000) -> AsyncIterator[Page]:
+async def _playwright_page(
+    url: str, wait_ms: int = 5000, *, navigation_timeout_ms: float | None = None
+) -> AsyncIterator[Page]:
+    timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     async with get_context() as ctx:
         page = await asyncio.wait_for(_new_tab(ctx), timeout=_TAB_OP_TIMEOUT_S)
         try:
-            resp = await page.goto(url, wait_until="domcontentloaded", timeout=20_000)
+            resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             status = resp.status if resp is not None else None
             if status == 403:
                 # Wait for the main frame's next navigation to land, not just for a
@@ -1665,7 +1700,8 @@ class NavigationPolicyError(RuntimeError):
 @asynccontextmanager
 # START_CONTRACT: open_page
 # PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
-# INPUTS: HTTP(S) URL, settle delay and optional allowed-host set; default origin host.
+# INPUTS: HTTP(S) URL, settle delay, optional allowed hosts and positive finite navigation timeout in ms.
+# TIMEOUT: Source override wins over CHROME_NAV_TIMEOUT_MS; absent global default is 20000ms.
 # OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
 # SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
 # END_CONTRACT: open_page
@@ -1674,8 +1710,13 @@ async def open_page(
     wait_ms: int = 5000,
     *,
     allowed_hosts: Collection[str] | None = None,
+    navigation_timeout_ms: float | None = None,
 ) -> AsyncIterator[PageLike]:
     """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
+
+    ``navigation_timeout_ms`` overrides ``CHROME_NAV_TIMEOUT_MS`` (default 20000).
+    Both transports receive this same positive finite initial-navigation budget;
+    attach, settle, recheck, extraction and teardown retain their separate bounds.
 
     Guarantees:
       * non-http(s) schemes are refused outright (scheme guard);
@@ -1712,6 +1753,7 @@ async def open_page(
     initial_host = urlsplit(url).hostname
     host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
+    timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     budget = navigation_budget()
     try:
         permit = await budget.acquire(initial_host or "")
@@ -1735,10 +1777,10 @@ async def open_page(
     page: PageLike
     try:
         try:
-            page = await stack.enter_async_context(_playwright_page(url, wait_ms))
+            page = await stack.enter_async_context(_playwright_page(url, wait_ms, navigation_timeout_ms=timeout_ms))
         except _CdpConnectTimeout as attach_exc:
             try:
-                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms))
+                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms, navigation_timeout_ms=timeout_ms))
             except (NavBlocked, NavigationPolicyError):
                 raise
             except Exception as raw_exc:
@@ -1771,3 +1813,6 @@ async def open_page(
         yield page
     finally:
         await stack.aclose()
+
+
+# END_BLOCK_OWNED_NAVIGATION

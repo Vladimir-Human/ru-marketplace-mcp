@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; packages/aliexpress-connector/tests.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; packages/aliexpress-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -104,6 +104,7 @@ SEARCH_URL = f"{SITE_BASE}/wholesale"
 # cache-friendly; measured clean across headless and two real-Chrome profiles.
 _LANDING = f"{SEARCH_URL}?SearchText={urllib.parse.quote('часы')}"
 
+# R-CDP-NAV-TIMEOUT: ALI_TIMEOUT is a navigation budget in seconds, not a tool deadline.
 TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
@@ -392,7 +393,7 @@ async def _cdp_render_search(url: str, ctx: Context | None) -> dict[str, Any]:
     """Open the search URL in the operator's Chrome and extract tiles."""
     async with _cdp_lock:
         await _polite_wait()
-        async with open_page(url, wait_ms=10000) as page:
+        async with open_page(url, wait_ms=10000, navigation_timeout_ms=TIMEOUT * 1000) as page:
             raw = await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0)
     return _unwrap_extract(raw, "search")
 
@@ -424,7 +425,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
     wants = re.compile(rf"/item/{re.escape(item_id)}(?!\d)")
     async with _cdp_lock:
         await _polite_wait()
-        async with open_page(_LANDING, wait_ms=9000) as page:
+        async with open_page(_LANDING, wait_ms=9000, navigation_timeout_ms=TIMEOUT * 1000) as page:
             # Raw CDP has no sibling-page handles: refuse before opening a popup
             # that this transport could neither identify nor clean up.
             context = getattr(page, "context", None)

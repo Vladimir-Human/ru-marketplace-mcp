@@ -9,6 +9,19 @@
 
 ## [Unreleased]
 
+### Fixed
+- AliExpress больше не игнорирует `ALI_TIMEOUT` при навигации поиска и стартовой
+  страницы карточки: вместо жёстких 20 секунд используется заданный положительный
+  конечный таймаут (по умолчанию 45 секунд). Общий `CHROME_NAV_TIMEOUT_MS` сохраняет
+  20 секунд для остальных источников и применяется к Playwright и raw CDP;
+  отправка raw `Page.navigate` входит в тот же дедлайн. Проверки страницы,
+  закрытие собственных вкладок и внешние лимиты инструментов сохранены (#190).
+- AliExpress search and card-landing navigation now honor `ALI_TIMEOUT` (45 seconds
+  by default) instead of a fixed 20-second limit. The shared `CHROME_NAV_TIMEOUT_MS`
+  keeps the 20-second default for other sources and applies to Playwright and raw
+  CDP, including raw navigation send in its deadline. Page checks, owned-tab cleanup
+  and outer tool limits remain unchanged (#190).
+
 ## [2.8.1] - 2026-11-03
 
 ### Fixed
