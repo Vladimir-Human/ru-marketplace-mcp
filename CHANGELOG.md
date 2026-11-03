@@ -10,6 +10,18 @@
 ## [Unreleased]
 
 ### Fixed
+- Сравнение больше не отбрасывает основной товар из-за составного названия
+  комплектного аксессуара: «зарядное устройство», «кабель USB-C» или
+  «чехол силиконовый» перед «в комплекте», а также определения после явного
+  `with` / «в комплекте:». Разбор ограничен тремя известными словами на
+  вхождение; другой некомплектный аксессуар, б/у, пунктуация и связи «для/с»
+  не теряют смысл. Исходный минимум цены сохраняется.
+- Comparison no longer drops the main product because a bundled accessory has
+  a noun complement or modifier, such as a charging device, USB-C cable or
+  silicone case, including modifiers following an explicit bundle prefix.
+  Each occurrence admits at most three recognized words; separate accessories,
+  used conditions, punctuation and relationship clauses remain significant.
+  Raw cheapest and offer rows are unchanged.
 - MCP-гайды теперь совпадают с ответами инструментов: списки типизированных полей
   строятся из моделей сериализации, включая реальные алиасы и обёртку `result`.
   Описаны `cheapest_comparable`, проверка цены, пагинация отзывов Ozon, DOM-поля

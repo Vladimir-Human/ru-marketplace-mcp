@@ -1,0 +1,59 @@
+{
+  "requirement": "R-COMPARE-BUNDLE-NOUN-PHRASES",
+  "checked_at_utc": "2026-11-02T17:27:14.079246+00:00",
+  "base_commit": "ca3add4163eaf98991ea1e0d5a9c682a54dd2437",
+  "source_hashes": {
+    "packages/compare-connector/src/compare_connector/server.py": "f1e59c2ab18e0c77ab094523968f09f1ab7692c383d54d87bd4f32bed3ee0fbc",
+    "packages/compare-connector/tests/test_bundle_noun_phrases.py": "f51a6b5481ddb3afa58b16842ccd708f1bd8a32a558b4a77f7d442be7433b940"
+  },
+  "checks": {
+    "offline_packages": {
+      "tests": 3166,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "scripts": {
+      "tests": 282,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "targeted": {
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "baseline_final": {
+      "tests": 39,
+      "failures": 14,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "holdout": {
+    "passed": 6,
+    "failed": 0,
+    "scope": "Lead-only native MCP synthetic replies"
+  },
+  "other_gates": [
+    "ruff lint and format (no cache)",
+    "mypy host/win32/darwin",
+    "test count3166 in7 places",
+    "versions",
+    "provenance with13 dated exceptions",
+    "stdout",
+    "lock revision",
+    "generated tools docs",
+    "XML and changed Python syntax"
+  ],
+  "artifacts": "external rmm-study/r07-fix-verification",
+  "unverified": [
+    "live marketplaces",
+    "actual Chrome/user handoff",
+    "unknown natural-language modifiers",
+    "remote CI for this local candidate"
+  ],
+  "no_claim_of_release_permission": true
+}
