@@ -1,59 +1,37 @@
 {
-  "requirement": "R-COMPARE-BUNDLE-NOUN-PHRASES",
-  "checked_at_utc": "2026-11-02T17:27:14.079246+00:00",
-  "base_commit": "ca3add4163eaf98991ea1e0d5a9c682a54dd2437",
+  "release": "2.8.1",
+  "phase": "local_validation_passed",
+  "checked_on_utc": "2026-11-03",
+  "requirements": ["R-VERSION", "R-RELEASE-BUMP", "R-LOCK-REVISION", "R-COMPARE-BUNDLE-NOUN-PHRASES", "R-PYPI-BUNDLE"],
+  "base_commit": "2dc3f15ce3a264046f83e59412d1c13457e6f186",
   "source_hashes": {
-    "packages/compare-connector/src/compare_connector/server.py": "f1e59c2ab18e0c77ab094523968f09f1ab7692c383d54d87bd4f32bed3ee0fbc",
-    "packages/compare-connector/tests/test_bundle_noun_phrases.py": "f51a6b5481ddb3afa58b16842ccd708f1bd8a32a558b4a77f7d442be7433b940"
+    "packages/compare-connector/src/compare_connector/server.py": "3167e68c342cdf0ada92149731eeeba719e83a5ce7c9a810fcd1d55d51c3aa1c",
+    "packages/compare-connector/tests/test_bundle_noun_phrases.py": "f51a6b5481ddb3afa58b16842ccd708f1bd8a32a558b4a77f7d442be7433b940",
+    "uv.lock": "f930a5055bd534476e3780ce0d87881fbf78c89a15d9b84d170453f68c49e038"
   },
   "checks": {
-    "offline_packages": {
-      "tests": 3166,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 2
-    },
-    "scripts": {
-      "tests": 282,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0
-    },
-    "targeted": {
-      "tests": 59,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0
-    },
-    "baseline_final": {
-      "tests": 39,
-      "failures": 14,
-      "errors": 0,
-      "skipped": 0
-    }
+    "offline_packages": {"tests": 3166, "failures": 0, "errors": 0, "skipped": 2, "deselected": 5},
+    "scripts": {"tests": 282, "failures": 0, "errors": 0, "skipped": 0},
+    "coverage_percent": 88.86,
+    "coverage_floor_percent": 80,
+    "R07_public_mcp_cases_passed": 59,
+    "checkout_stdio": {"sessions": 32, "passed": 32, "server_version": "2.8.1"},
+    "installed_stdio": {"sessions": 32, "passed": 32, "server_version": "2.8.1", "fastmcp": "4.1.6", "pydantic": "2.14.2"},
+    "installed_public_mcp_holdouts": {"cases": 6, "passed": 6, "baseline_failed": 2, "baseline_controls_passed": 4, "oracle_unchanged": true},
+    "workspace_artifacts": {"wheels": 16, "sdists": 16, "all_versions": "2.8.1"},
+    "pypi_bundle": {"wheels": 1, "sdists": 1, "version": "2.8.1", "plain_pip_install": "passed outside checkout"},
+    "version_declarations": 88,
+    "version_only_files_byte_checked": 53,
+    "workspace_lock_versions": 17,
+    "registry_lock_tuples_unchanged": 96,
+    "lock_revision": 5
   },
-  "holdout": {
-    "passed": 6,
-    "failed": 0,
-    "scope": "Lead-only native MCP synthetic replies"
-  },
-  "other_gates": [
-    "ruff lint and format (no cache)",
-    "mypy host/win32/darwin",
-    "test count3166 in7 places",
-    "versions",
-    "provenance with13 dated exceptions",
-    "stdout",
-    "lock revision",
-    "generated tools docs",
-    "XML and changed Python syntax"
-  ],
-  "artifacts": "external rmm-study/r07-fix-verification",
-  "unverified": [
-    "live marketplaces",
-    "actual Chrome/user handoff",
-    "unknown natural-language modifiers",
-    "remote CI for this local candidate"
-  ],
+  "other_gates": ["Ruff lint and format check", "mypy win32/darwin", "versions", "documented test count", "stdout", "fixture provenance", "lock revision", "generated tools docs"],
+  "doctor": {"exit": 2, "healthy": 2, "inconclusive": 10, "drifted": 0, "failed": 0, "budget_bookings": 34, "budget_total": 40, "per_source_limit": 8, "gap_seconds": 3, "browser_launched": false, "paid_source_excluded": "mpstats"},
+  "supply_chain_tool": {"status": "unavailable", "reason": "active Semgrep daemon required", "pass_claimed": false},
+  "source_freeze": "596 input hashes were unchanged through the package and artifact runs; subsequent edits affect release notes and GRACE bookkeeping only",
+  "next_validation": "Clean release-candidate R01-R20 Recheck and PR/main CI/Image check are recorded externally after execution",
+  "previous_evidence_preserved_at": "base commit and external release-v2.8.1-20261103/backups/.grace/evidence/latest.json",
+  "artifacts": "external rmm-study/release-v2.8.1-20261103",
   "no_claim_of_release_permission": true
 }
