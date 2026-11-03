@@ -244,10 +244,16 @@ async def _fetch_parsed(
     Only verified content is cached: a captcha page and a page the parser
     could not understand are dropped from the cache, so the next tool call
     reaches upstream again instead of replaying the same wall for the whole
-    TTL. A normal page stays cached, so repeated reads still cost one fetch.
+    TTL. Fatal value-validation and parser exceptions also evict the page.
+    A normal page stays cached, so repeated reads still cost one fetch.
     """
     html = await _fetch_html(url, label, ctx)
-    parsed = parse(html)
+    try:
+        parsed = parse(html)
+        _guard_values_drift(parsed, label)
+    except Exception:
+        _cache.invalidate(url)
+        raise
     if not _is_usable_page(str(parsed.get("status") or "")):
         _cache.invalidate(url)
     return parsed
@@ -405,7 +411,6 @@ async def yandex_search(
 
     parsed = await _fetch_parsed(url, "yandex_search", ctx, ssr.parse_search)
     _guard_parse_status(parsed["status"], "yandex_search")
-    _guard_values_drift(parsed, "yandex_search")
 
     # Dedupe repeated sellable variants BEFORE applying the limit. A product
     # family can legitimately appear with different sku_id values and prices;

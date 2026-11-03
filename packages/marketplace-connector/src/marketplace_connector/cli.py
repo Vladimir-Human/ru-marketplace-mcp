@@ -1168,6 +1168,12 @@ async def _run_one_selfcheck(name: str, module_path: str, tool_name: str) -> tup
         if not isinstance(checks, Mapping):
             raise TypeError("selfcheck checks must be a mapping")
         checks = dict(checks)
+        for check_name, check in checks.items():
+            if not isinstance(check_name, str) or not check_name:
+                raise TypeError("selfcheck check names must be non-empty strings")
+            state = _attr(check, "state", None)
+            if state not in {"healthy", "drift", "inconclusive"}:
+                raise ValueError(f"selfcheck {check_name!r} has an invalid state")
         if budget is not None and len(budget.refused) > refused_before:
             checks["budget"] = {"state": "inconclusive", "reason": "budget_refused"}
             if status == "success":

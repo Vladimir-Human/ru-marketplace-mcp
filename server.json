@@ -11,7 +11,7 @@
   },
   "_meta": {
     "io.modelcontextprotocol.registry/publisher-provided": {
-      "note": "Sixteen stdio entry points share the mcp-core runtime, including comparison, shortlist inspection, and the unified marketplace server. Install from a uv source checkout, matching GitHub Release wheels, or the OCI package below. Python packages are not published to PyPI. See README for client configuration.",
+      "note": "Sixteen stdio entry points share the mcp-core runtime, including comparison, shortlist inspection, and the unified marketplace server. Install from a uv source checkout, matching GitHub Release wheels, or the OCI package below. Individual workspace distributions are GitHub Release assets; the consolidated ru-marketplace-mcp bundle is the PyPI installation route after each release is published. See README for client configuration.",
       "install": "uv run --directory /path/to/ru-marketplace-mcp <script>",
       "servers": [
         {

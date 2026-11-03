@@ -736,3 +736,88 @@ async def test_card_requests_the_card_path_not_the_retired_product_path(monkeypa
 def test_fallback_card_url_uses_the_card_path():
     assert ssr.card_url(42) == "https://market.yandex.ru/card/x/42"
     assert ssr.card_url(42, "stiralnaya-mashina") == "https://market.yandex.ru/card/stiralnaya-mashina/42"
+
+
+# START_BLOCK_PREPUBLICATION_CACHE_CONTENT
+
+
+def _id_only_ssr_search_page() -> str:
+    """Native search collections whose item identity survived value drift."""
+    collections = {
+        "visibleSearchResult": {"v": {"text": "prepub value drift", "total": 1}},
+        "productShowPlace": {"p": {"id": "p", "productId": 123456, "productSnippetId": "s"}},
+        "product": {"123456": {}},
+        "productSnippet": {"s": {}},
+    }
+    patch = {"widgets": {"w": {"/path": {"options": {"collections": collections}}}}}
+    return '<html><noframes data-apiary="patch">' + json.dumps(patch) + "</noframes></html>"
+
+
+@pytest.mark.parametrize("shape", ["id-only-collections", "renamed-capture-values"])
+async def test_value_drift_is_evicted_before_the_next_public_search(monkeypatch, shape):
+    """R-YANDEX-CACHE-CONTENT: rejected values cannot poison the query's TTL.
+
+    Prepublication requirement, 2026-11-03: an ID-bearing nonempty native SSR
+    page raises parser_drift when all titles/prices disappear, then the next
+    same-query public call fetches the recovered source. Only GET I/O is fake.
+    """
+    bad = _id_only_ssr_search_page() if shape == "id-only-collections" else _drifted_values_search_html()
+    parsed = ssr.parse_search(bad)
+    assert parsed["status"] == ssr.ParseStatus.OK
+    assert parsed["items"] and all(item["product_id"] for item in parsed["items"])
+    assert all(
+        not item["title"] and item["price_rub"] is None and item["price_with_plus"] is None for item in parsed["items"]
+    )
+    calls = []
+
+    async def native_get(client, url, **kwargs):
+        calls.append(url)
+        return 200, bad if len(calls) == 1 else load("search_washer.html")
+
+    monkeypatch.setattr(server, "get_text_with_retries", native_get)
+    with pytest.raises(ToolError) as excinfo:
+        await server.yandex_search(query="prepub value drift")
+    assert error_payload(excinfo.value)["error"] == "parser_drift"
+    assert "without any title or price" in str(excinfo.value)
+    assert len(calls) == 1
+
+    recovered = await server.yandex_search(query="prepub value drift")
+    assert len(calls) == 2, "value drift must be evicted, not replayed from the response cache"
+    assert calls[0] == calls[1]
+    assert recovered.returned == 3
+    assert recovered.items[0].price_rub == 16724.0
+    assert recovered.meta.healthy is True
+
+    cached = await server.yandex_search(query="prepub value drift")
+    assert len(calls) == 2, "the recovered, verified page must keep its normal cache hit"
+    assert cached.items == recovered.items
+
+
+@pytest.mark.parametrize(
+    "fixture,returned",
+    [("search_washer.html", 3), ("search_empty.html", 0)],
+    ids=["healthy-products", "explicit-empty"],
+)
+async def test_verified_search_content_keeps_public_cache_hits(monkeypatch, fixture, returned):
+    """R-YANDEX-CACHE-CONTENT/R-YANDEX-HONEST-EMPTY: both honest answers cache."""
+    calls = []
+
+    async def native_get(client, url, **kwargs):
+        calls.append(url)
+        return 200, load(fixture)
+
+    monkeypatch.setattr(server, "get_text_with_retries", native_get)
+    first = await server.yandex_search(query="prepub cache control")
+    second = await server.yandex_search(query="prepub cache control")
+
+    assert len(calls) == 1
+    assert first.returned == second.returned == returned
+    assert first.meta.healthy is second.meta.healthy is True
+    assert first.items == second.items
+    if returned:
+        assert first.items[0].price_rub == 16724.0
+    else:
+        assert any(w.startswith("info:no_results") for w in second.meta.warnings)
+
+
+# END_BLOCK_PREPUBLICATION_CACHE_CONTENT

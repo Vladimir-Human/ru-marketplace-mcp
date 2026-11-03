@@ -12,6 +12,18 @@
 ## [2.8.1] - 2026-11-03
 
 ### Fixed
+- Предпубликационное ревью: некорректное значение предпочтительной цены Яндекса
+  (включая bool/неконечное число/объект) больше не подменяется справочной ценой;
+  фатально испорченная выдача удаляется из кэша и следующий вызов может восстановиться.
+  Дедлайн raw-CDP охватывает отправку команды, doctor отвергает повреждённые под-проверки.
+- Удалены рекламные tracking-параметры из сохранённой фикстуры Lamoda с честным
+  обновлением sanitization/SHA-256; сама фикстура и её ценовые проверки сохранены.
+  Уточнён PyPI-путь bundle, сокращены устаревшие машинные дневники GRACE и Docker context.
+- Prepublication review: unusable preferred Yandex money no longer falls back to
+  a reference price; fatal value-drift pages are evicted so the next call can recover.
+  The raw-CDP deadline includes outbound send and doctor rejects malformed subchecks.
+  Captured Lamoda advertising query fields were sanitized with updated provenance;
+  regression data/prices remain, install metadata and stale operational notes are clarified.
 - Сравнение больше не отбрасывает основной товар из-за составного названия
   комплектного аксессуара: «зарядное устройство», «кабель USB-C» или
   «чехол силиконовый» перед «в комплекте», а также определения после явного

@@ -260,6 +260,63 @@ def test_status_report_counts_failed_checkers(fake_selfchecks, monkeypatch):
     assert report["failed"] == 0
 
 
+@ENTRIES
+@pytest.mark.parametrize("status", ["success", "drift_detected", "inconclusive"])
+@pytest.mark.parametrize(
+    "check",
+    [pytest.param(None, id="null-subcheck"), pytest.param({"state": "invalid"}, id="invalid-state")],
+)
+def test_supplied_invalid_subcheck_is_hard_under_every_outer_status(entry, status, check, fake_selfchecks, capsys):
+    """R-DOCTOR-EXIT-CODES: supplied invalid entries cannot inherit a valid outer verdict.
+
+    Prepublication requirement, 2026-11-03: reject a present null subcheck or
+    unknown state at the real CLI/live_check entry, not a mocked validator.
+    """
+    module = fake_selfchecks("ozon", {"status": status, "checks": {"search": check}})
+
+    assert entry.main(["doctor", "ozon"]) == 4
+    out = capsys.readouterr().out
+    assert "0 healthy, 0 blocked/inconclusive, 0 drifted, 1 failed" in out
+    assert cli.NEXT_STEP_SELFCHECK_ERROR in out
+    assert module.calls == 1
+
+
+@ENTRIES
+@pytest.mark.parametrize("representation", ["empty", "dict", "model"])
+@pytest.mark.parametrize(
+    "status,state,reason,code",
+    [
+        ("success", "healthy", None, 0),
+        ("drift_detected", "drift", "schema_mismatch", 1),
+        ("inconclusive", "inconclusive", "transport_down", 2),
+    ],
+)
+def test_valid_subchecks_keep_the_existing_outer_verdict(
+    entry, representation, status, state, reason, code, fake_selfchecks, capsys
+):
+    """R-DOCTOR-EXIT-CODES: checks={} and recognized dict/model entries stay valid.
+
+    Baseline SelfCheckEntryBase and resilience.selfcheck_entry document states
+    healthy/drift/inconclusive: schema_mismatch is a drift diagnostic reason,
+    not an invented fourth state. Empty checks retain the supplied outer status.
+    """
+    from mcp_core.models import SelfCheckEntryBase
+
+    if representation == "empty":
+        checks = {}
+    elif representation == "model":
+        checks = {"search": SelfCheckEntryBase(state=state, reason=reason)}
+    else:
+        checks = {"search": {"state": state, "reason": reason}}
+    module = fake_selfchecks("ozon", {"status": status, "checks": checks})
+
+    assert entry.main(["doctor", "ozon"]) == code
+    out = capsys.readouterr().out
+    assert status in out
+    assert "0 failed" in out
+    assert module.calls == 1
+
+
 # END_BLOCK_DOCTOR_VERDICTS
 # START_BLOCK_SHARED_CALLERS
 

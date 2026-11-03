@@ -882,13 +882,19 @@ class _RawCdpPage:
         the command's budget — a per-receive timeout would restart on each
         foreign event and let a silent socket answer after minutes. The
         events are still read and noted: a frame URL that arrives while we
-        wait is the page's own navigation, not noise to discard.
+        wait is the page's own navigation, not noise to discard. The outbound
+        send uses this same budget; on timeout the owning connection context
+        aborts the operation and closes the socket.
         """
         self._next_id += 1
         msg_id = self._next_id
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
-        await self._ws.send(json.dumps({"id": msg_id, "method": method, "params": params or {}}))
+        payload = json.dumps({"id": msg_id, "method": method, "params": params or {}})
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            raise TimeoutError(f"CDP {method}: no answer within {timeout:.3f}s")
+        await asyncio.wait_for(self._ws.send(payload), timeout=remaining)
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
