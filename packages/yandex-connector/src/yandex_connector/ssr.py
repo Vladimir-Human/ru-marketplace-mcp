@@ -365,8 +365,8 @@ def _first_price(*candidates: Any) -> tuple[float | None, str | None]:
     candidate that is PRESENT but unreadable does: the sources below it are
     less trustworthy (on a discounted row the offer's own price is the
     struck-through figure), so falling through would quote another role's
-    number as this role's price. The refused text is returned so the
-    connector can report the field instead of dropping it silently.
+    number as this role's price. The refused text, or a safe type-only
+    diagnostic for non-string values, is returned for the caller's warning.
     """
     for raw in candidates:
         if raw is None or (isinstance(raw, str) and not raw.strip()):
@@ -374,9 +374,8 @@ def _first_price(*candidates: Any) -> tuple[float | None, str | None]:
         price = _to_money(raw)
         if price is not None:
             return price, None
-        refused = _refused(raw, price)
-        if refused:
-            return None, refused
+        refused = _refused(raw, price) or f"invalid {type(raw).__name__} price"
+        return None, refused
     return None, None
 
 

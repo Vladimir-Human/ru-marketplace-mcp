@@ -26,6 +26,14 @@ dist/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+**/.hypothesis/
+node_modules/
+**/node_modules/
+.grace/
+work/
+.live-budget*.json
+doctor-status.json
 .coverage
 htmlcov/
 coverage.xml
