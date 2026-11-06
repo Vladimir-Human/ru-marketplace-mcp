@@ -91,11 +91,62 @@ def test_closed_state_reads_service_data_only():
 
 
 def test_a_closed_state_of_another_item_is_not_this_ads():
-    """A recommendation's closed state is not attributed to the requested ad."""
-    assert item_state.closed_state(_page("item_closed_9000000031.html"), 9000000099) == (
-        False,
-        "Объявление снято с публикации.",
-    )
+    """Another id's closed buyerItem and its banner are not attributed to the requested ad.
+
+    v2.9.0 returned (False, the banner text), and avito_card answered not_found for the requested id.
+    """
+    assert item_state.closed_state(_page("item_closed_9000000031.html"), 9000000099) == (True, None)
+
+
+async def test_another_items_closed_page_is_an_identity_mismatch_not_a_closure(monkeypatch):
+    """main read «снято с публикации» in the visible text and answered not_found for the requested id."""
+    error = await _error(monkeypatch, _page("item_closed_9000000031.html"), "9000000099")
+
+    assert error["error"] == "parser_drift"
+    assert "снято" not in error["message"]
+
+
+def _state_edited(name: str, edit) -> str:
+    """A capture with its page state edited in code (unit edge cases only)."""
+    html = _page(name)
+    match = re.search(r'JSON\.parse\("((?:[^"\\]|\\.)*)"\)', html)
+    assert match
+    state = json.loads(json.loads('"' + match.group(1) + '"'))
+    edit(state["loaderData"]["catalog-or-main-or-item"]["buyerItem"])
+    encoded = json.dumps(json.dumps(state, ensure_ascii=False), ensure_ascii=False)[1:-1]
+    return html[: match.start(1)] + encoded + html[match.end(1) :]
+
+
+def test_closure_flags_against_an_active_flag_are_not_a_closure():
+    def reopen(bi):
+        bi["item"]["isActive"] = True
+
+    assert item_state.closed_state(_state_edited("item_closed_9000000031.html", reopen), 9000000031) == (True, None)
+
+
+async def test_an_open_card_with_closure_flags_is_unknown_with_both_sides(monkeypatch):
+    def close(bi):
+        bi["closedItem"] = True
+        bi["closedItemStatus"] = "Объявление снято с публикации."
+
+    _serve_page(monkeypatch, _state_edited("item_state_active_9000000012.html", close))
+
+    result = await server.avito_card("9000000012")
+
+    assert result.availability == "unknown"
+    assert "buyerItem.closedItem=true" in result.availability_evidence
+    assert "item.isActive=true" in result.availability_evidence
+
+
+async def test_a_closure_banner_on_an_open_page_is_unknown_not_not_found(monkeypatch):
+    banner = '<div data-marker="item-view/closed-warning"><p>Объявление снято с публикации.</p></div>'
+    html = _page("item_state_active_9000000012.html").replace("</h1>", "</h1>" + banner, 1)
+    _serve_page(monkeypatch, html)
+
+    result = await server.avito_card("9000000012")
+
+    assert result.availability == "unknown"
+    assert any("closed-warning" in entry for entry in result.availability_evidence)
 
 
 def _open_page_without_product(description: str) -> str:

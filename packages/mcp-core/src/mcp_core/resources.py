@@ -180,7 +180,9 @@ widget's «Товар зарезервирован» only; the title, descriptio
 other seller-written text never decide it. schema.org InStock is not trusted
 (Avito says it for reserved ads too). reserved means another buyer holds the
 ad; signals that contradict each other, or no signal, give unknown, which is
-not a verdict. Closed or sold ads are not classified.
+not a verdict. Closed or sold ads are not classified (a closed ad is
+not_found, below); closure flags against item.isActive=true, or Avito's
+closure banner on a page that says it is open, give unknown with both sides.
 photos=N (0-3, default 0) is opt-in and costly in tokens. For an active ad
 only, it fetches up to N listing photos (640x480) from the page's own gallery,
 https on *.img.avito.st only, 1 s apart, at most 2 MB each, JPEG/PNG/WebP
@@ -201,7 +203,9 @@ a missing announcement page, or a closed/gone ad by Avito's own page state
 (closedItem / item.isClosed of this id, loader type notFound); the message
 quotes Avito's text («Объявление снято с публикации.», «Объявление закрыто.»).
 Avito's buyer page does not tell sold from withdrawn. Closure words in the
-seller's title or description never close an open ad. TransportDownError for CDP failures
+seller's title or description never close an open ad, and another id's
+closed page (after a redirect) is never this ad's not_found: the identity
+check answers ParserDriftError. TransportDownError for CDP failures
 or refusals (captcha guidance and pacing backoff); ParserDriftError if the
 Product (or DOM fallback) has neither title nor usable RUB price, or the
 requested id does not match the card source. DOM identity must be present.""",
