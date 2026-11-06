@@ -156,6 +156,13 @@ when a rendered page yields zero product tiles without challenge evidence.""",
 
 AvitoCardResponse; serialized fields and aliases are generated below. tier_used is "cdp".
 price_rub is None for missing/unknown or non-RUB prices, never invented 0.
+During an Avito sale price_rub is the price the buyer pays (the card state's
+formattedPrice.value), old_price_rub the struck listing price (item.price) and
+discount_percent Avito's own percent (computed from the two prices only when
+Avito shows none). They are accepted only when the struck price is the
+listing price, the sale price is below it, the percent agrees and the page
+price is one of the two; otherwise price_rub is None and _meta carries a
+price_conflict: line.
 seller is read from the same page's DOM block, or None if that block is absent.
 location (city), posted_at, views, today_views, condition, params, delivery
 and safe-deal terms, item_badges, metro and seller checks/tenure/reply_time come
@@ -215,6 +222,11 @@ requested id does not match the card source. DOM identity must be present.""",
 
 AvitoSearchResponse; serialized fields and aliases are generated below. Missing ad prices are null, never invented zero.
 Each listing preserves its own location and seller data when reported.
+During an Avito sale priceDetailed.value is the price before the discount:
+price_rub is the price the hit itself shows (iva.PriceStep component price),
+old_price_rub the struck price and discount_percent Avito's percent (component
+discount). A discount that does not add up gives price_rub None, counted in a
+price_conflict: line in _meta.
 availability is active/reserved/unknown from the hit's own isReserved flag;
 a hit without the flag is unknown. Reserved hits are kept by default
 (include_inactive=true): reservations often fall through, and the price is

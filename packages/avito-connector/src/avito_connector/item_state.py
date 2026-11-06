@@ -27,12 +27,22 @@ looks identical for sold and withdrawn ads).
 
 Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 15 of 50 hits on one page were reserved).
+
+A sale discount (live 2026-11-06, Avito's «Чёрная пятница»: 12 of 50 hits on
+one page, shown to a signed-out buyer) leaves the base price where the parser
+used to read it — ``priceDetailed.value`` on a search hit, ``item.price`` in
+the card state — and puts the price the buyer pays next to it:
+``iva.PriceStep`` components ``price`` and ``discount`` (``old_string``,
+``percent``) on the hit, ``item.formattedPrice`` (``value``, ``oldString``,
+``saleDiscount``) on the card. ``search_sale_price`` / ``card_sale_price``
+read them and accept a discount only when the struck price equals the base,
+the sale price is below it and Avito's percent agrees with the two.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Classify availability from explicit service signals; read deal/seller/location fields and closed state from the page.
+# PURPOSE: Classify availability from explicit service signals; read deal/seller/location fields, sale prices and closed state from the page.
 # SCOPE: Pure parsing of the already-fetched item HTML and js/items entries; no I/O; seller-written text never sets a status or flag.
 # DEPENDS: stdlib json/re/HTMLParser.
-# LINKS: M-AVITO; R-NO-FABRICATION,R-ERRORS; packages/avito-connector/tests/test_item_state.py,packages/avito-connector/tests/test_item_closed.py.
+# LINKS: M-AVITO; R-NO-FABRICATION,R-ERRORS; packages/avito-connector/tests/test_item_state.py,packages/avito-connector/tests/test_item_closed.py,packages/avito-connector/tests/test_sale_price.py.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # load_hydration: Decode window.__staticRouterHydrationData from the page, bounded in size.
@@ -46,6 +56,8 @@ Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 # photo_urls: Listing photo URLs (640x480 first) from the page's own gallery state, videos skipped.
 # photo_url_allowed: https on *.img.avito.st only, no credentials or odd ports.
 # closed_state: Whether the page's own state is known, and Avito's closure text when it says the ad is gone.
+# search_sale_price: A js/items hit's sale price, struck price and percent, or why they do not add up.
+# card_sale_price: The same from the card's own item.price and item.formattedPrice.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -623,3 +635,92 @@ def closed_state(html: str, item_id: int | None) -> tuple[bool, str | None]:
         return True, None
     banner = marker_texts(html, (_CLOSED_BANNER,)).get(_CLOSED_BANNER)
     return False, banner[:120] if banner else None
+
+
+# --------------------------------------------------------------------------
+# Sale prices (Avito's own discount on the listing; live 2026-11-06).
+# --------------------------------------------------------------------------
+
+_PERCENT = re.compile(r"^[\s\-\u2013\u2212]*(\d{1,2})\s*%\s*$")
+SalePrice = dict[str, int]
+
+
+def _rub(value: Any) -> int | None:
+    """A whole positive ruble amount from an int or a «4 600»-style string; anything else is None."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, str):
+        digits = re.sub(r"[\s\u00a0\u2009\u202f]", "", value)
+        if digits.isdigit() and len(digits) <= 12:
+            return int(digits) or None
+    return None
+
+
+def _percent(value: Any) -> int | None:
+    """A sale percent 1-99 from an int or a «–5%»-style string."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if 0 < value < 100 else None
+    match = _PERCENT.match(value) if isinstance(value, str) else None
+    return _percent(int(match.group(1))) if match else None
+
+
+def _resolve_sale(
+    base: int | None, now: int | None, old: int | None, percent: int | None
+) -> tuple[SalePrice | None, str | None]:
+    """A shown discount as (price, old price, percent), or the reason it does not add up."""
+    if base is None or now is None or old is None:
+        return None, f"incomplete discount (price {base}, sale price {now}, struck price {old})"
+    if old != base:
+        return None, f"struck price {old} is not the listing price {base}"
+    if now >= base:
+        return None, f"sale price {now} is not below the listing price {base}"
+    computed = round(100 * (base - now) / base)
+    if percent is None:
+        percent = computed
+    elif abs(computed - percent) > 1:
+        return None, f"{percent}% does not match {base} -> {now}"
+    return {"price_rub": now, "old_price_rub": base, "discount_percent": percent}, None
+
+
+def search_sale_price(item: dict[str, Any]) -> tuple[SalePrice | None, str | None]:
+    """(sale, conflict) for one js/items hit; (None, None) when no discount is shown.
+
+    ``priceDetailed.value`` is the listing price; the hit's ``iva.PriceStep``
+    renders the price the buyer sees (component ``price``) and, during a sale,
+    a ``discount`` component with the struck ``old_string`` and ``percent``.
+    """
+    steps: dict[str, dict[str, Any]] = {}
+    for step in _list(_dict(item, "iva"), "PriceStep"):
+        name = _dict(step, "componentData").get("component")
+        if isinstance(name, str) and name not in steps:
+            steps[name] = _dict(step, "payload")
+    base = _rub(_dict(item, "priceDetailed").get("value"))
+    now = _rub(_dict(steps.get("price"), "priceDetailed").get("value"))
+    discount = steps.get("discount")
+    if discount is None:
+        if now is not None and base is not None and now != base:
+            return None, f"shown price {now} differs from the listing price {base} without a discount"
+        return None, None
+    return _resolve_sale(base, now, _rub(discount.get("old_string")), _percent(discount.get("percent")))
+
+
+def card_sale_price(html: str, item_id: int | None) -> tuple[SalePrice | None, str | None]:
+    """(sale, conflict) from the card's own ``item.price`` and ``item.formattedPrice``.
+
+    ``item.price`` is the listing price; ``formattedPrice.value`` is the price
+    the page shows, and during a sale ``oldString`` is the struck price and
+    ``saleDiscount`` Avito's percent («–5%»).
+    """
+    item = _dict(buyer_item(load_hydration(html), item_id), "item")
+    shown = _dict(item, "formattedPrice")
+    base, now = _rub(item.get("price")), _rub(shown.get("value"))
+    old, percent = _rub(shown.get("oldString")), _percent(shown.get("saleDiscount"))
+    if old is None and shown.get("saleDiscount") is None:
+        if now is not None and base is not None and now != base:
+            return None, f"shown price {now} differs from the listing price {base} without a discount"
+        return None, None
+    return _resolve_sale(base, now, old, percent)

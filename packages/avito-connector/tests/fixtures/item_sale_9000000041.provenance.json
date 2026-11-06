@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/bytovaya_tehnika/robot_pylesos_fixture_9000000041",
+  "captured_at": "2026-11-06",
+  "sha256": "653fe228962373d7438526636c8a44016841cdb71dd8a6a6aacc8b6ec98415b8",
+  "method": "a genuine Avito item page of another seller's listing on Avito's «Чёрная пятница» sale, rendered signed out in the operator's Chrome over raw CDP on 2026-11-06 (page.content() via avito_card's own fetch; the page has no schema.org Product); trimmed to the title, the item-view/item-id element, the item-view/item-price element in its captured item-price-container nesting (generated attributes, scripts and the struck-price and percent texts stripped: the code reads those from the page state), and window.__staticRouterHydrationData reduced to buyerItem.item isActive, deliveryInfo.isReserved, price and formattedPrice (value, string, formatedString, oldString, saleDiscount, isWasLowered). De-identified: listing id, URL, title and both prices are fictional; the percent and the number formatting are as served; no seller, description, photo or location data kept",
+  "ground_truth": {
+    "note": "a sale: item.price 3000 is the listing price, formattedPrice.value 2550 the price the page shows, oldString the struck 3000, saleDiscount –15%; v2.9.0 avito_card read 2550 from the DOM but said nothing of the sale; the branch adds old_price_rub 3000 and discount_percent 15"
+  }
+}
