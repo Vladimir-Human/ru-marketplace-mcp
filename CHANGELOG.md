@@ -57,31 +57,40 @@
   only from validated `page`, `page_key` and `sort`. Once `limit` is filled, the
   next cursor is neither validated nor reported as a partial answer.
 ### Added
-- Avito: статус объявления. `avito_card` возвращает `availability`
-  (`active` / `reserved` / `sold` / `closed` / `unknown`) и `availability_evidence`
-  — флаги состояния той же отрисованной страницы (`deliveryInfo.isReserved`,
-  `safeDealDesktop.reserved`, `closedItem`, `closedItemStatus`) и видимые плашки
-  статуса. schema.org `InStock` не учитывается: Avito пишет его и у
-  зарезервированных объявлений (проверено на живых страницах 05–06.11.2026).
-  `active` — только при явном `isReserved: false`, иначе `unknown`. Страница
-  снятого или проданного объявления отвечает этим статусом (без названия, цены
-  и продавца) вместо `not_found`; «Объявление не найдено» остаётся `not_found`.
-  `avito_search` берёт `availability` из собственного `isReserved` выдачи,
-  по умолчанию убирает зарезервированные (`include_inactive=false`) и считает их
-  в `excluded_inactive`; объявление без флага остаётся (`unknown`). Лишних
-  запросов к Avito нет.
-- Avito: listing status. `avito_card` returns `availability`
-  (`active` / `reserved` / `sold` / `closed` / `unknown`) and
-  `availability_evidence` — page-state flags of the same rendered page
-  (`deliveryInfo.isReserved`, `safeDealDesktop.reserved`, `closedItem`,
-  `closedItemStatus`) and visible status banners. schema.org `InStock` is not
-  trusted: Avito states it for reserved ads too (checked on live pages,
-  2026-11-05/06). `active` needs an explicit `isReserved: false`, otherwise
-  `unknown`. A closed or sold ad page answers that status (no title, price or
-  seller) instead of `not_found`; «Объявление не найдено» stays `not_found`.
-  `avito_search` takes `availability` from the hit's own `isReserved`, drops
-  reserved hits by default (`include_inactive=false`) and counts them in
-  `excluded_inactive`; a hit without the flag is kept as `unknown`. No extra
+- Avito: резерв объявления. `avito_card` возвращает `availability`
+  (`active` / `reserved` / `unknown`) и `availability_evidence`. Статус берётся
+  только из служебных данных той же отрисованной страницы: флагов гидратации
+  (`item.isActive`, `item.deliveryInfo.isReserved`, `safeDealDesktop.reserved`)
+  и надписи «Товар зарезервирован» в виджете безопасной сделки. Заголовок,
+  описание, имя продавца и блок контактов (в нём это имя) не читаются: текст
+  продавца статус не задаёт. schema.org `InStock` не учитывается: Avito пишет
+  его и у зарезервированных объявлений (проверено на живых страницах
+  05–06.11.2026). `active` — только при `isActive: true` и явном
+  `isReserved: false`; противоречащие друг другу сигналы и их отсутствие дают
+  `unknown` (при противоречии в `availability_evidence` обе стороны).
+  Снятые и проданные объявления не классифицируются: страница
+  отсутствующего или снятого объявления по-прежнему `not_found`.
+  `avito_search` берёт `availability` из собственного `isReserved` выдачи и по
+  умолчанию возвращает все объявления (`include_inactive=true`); при
+  `include_inactive=false` зарезервированные убираются, считаются в
+  `excluded_inactive`, а в `_meta` появляется строка `info:`; `total_count` их
+  по-прежнему включает. Лишних запросов к Avito нет.
+- Avito: listing reservation. `avito_card` returns `availability`
+  (`active` / `reserved` / `unknown`) and `availability_evidence`. The status
+  comes only from service data of the same rendered page: hydration flags
+  (`item.isActive`, `item.deliveryInfo.isReserved`, `safeDealDesktop.reserved`)
+  and «Товар зарезервирован» in the safe-deal widget. The title, description,
+  seller name and the contacts block (which shows that name) are not read:
+  seller text never sets the status. schema.org `InStock` is not trusted:
+  Avito states it for reserved ads too (checked on live pages, 2026-11-05/06).
+  `active` needs `isActive: true` and an explicit `isReserved: false`; signals
+  that contradict each other, or none, give `unknown` (on a contradiction
+  `availability_evidence` lists both sides). Closed and sold ads are not
+  classified: a missing or removed ad page is still `not_found`.
+  `avito_search` takes `availability` from the hit's own `isReserved` and keeps
+  every hit by default (`include_inactive=true`); with `include_inactive=false`
+  reserved hits are dropped, counted in `excluded_inactive` and announced by
+  an `info:` line in `_meta`; `total_count` still includes them. No extra
   requests to Avito.
 
 ## [2.8.2] - 2026-11-03

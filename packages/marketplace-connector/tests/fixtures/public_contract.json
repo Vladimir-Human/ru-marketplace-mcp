@@ -124,7 +124,7 @@
           "default": null
         },
         "include_inactive": {
-          "default": false,
+          "default": true,
           "type": "boolean"
         },
         "location_id": {

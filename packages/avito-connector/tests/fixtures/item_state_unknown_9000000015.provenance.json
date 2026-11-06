@@ -1,9 +1,0 @@
-{
-  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000015",
-  "captured_at": "2026-11-06",
-  "sha256": "00c22a8627a1a95691181bc9d79bf2b81a8d48919ff9e8f48b4ac9ecb95e8373",
-  "method": "a synthetic edit of item_state_active_9000000012: the page-state script removed. Not a capture: Avito shows these states only on ads this session did not reach",
-  "ground_truth": {
-    "note": "availability unknown: no page state and no status banner, so InStock alone decides nothing"
-  }
-}

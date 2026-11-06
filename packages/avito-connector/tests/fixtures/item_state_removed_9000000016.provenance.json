@@ -1,9 +1,0 @@
-{
-  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000016",
-  "captured_at": "2026-11-06",
-  "sha256": "c4b575cb693abdf1b2e4b7b342084038d197facfdc99dd955c2c8c0d24a6699e",
-  "method": "a synthetic edit of item_state_active_9000000012: a closed-ad page without a schema.org Product, only the closure text. Not a capture: Avito shows these states only on ads this session did not reach",
-  "ground_truth": {
-    "note": "parse_item_page raises not_found; the card answers availability closed with the closure text as evidence"
-  }
-}

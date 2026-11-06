@@ -18,7 +18,7 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 | --- | --- | ---: | ---: | ---: |
 | compare | `compare-mcp` | 4 | 6984 | ≈1.7k |
 | decision | `decision-mcp` | 5 | 8079 | ≈2.0k |
-| full | `marketplace-mcp` | 39 | 53017 | ≈13.2k |
+| full | `marketplace-mcp` | 39 | 53578 | ≈13.3k |
 
 ## compare — `compare-mcp`
 
@@ -64,7 +64,7 @@ every error code.
 
 ## full — `marketplace-mcp`
 
-39 tools, 53017 `tools/list` bytes (≈13.2k tokens).
+39 tools, 53578 `tools/list` bytes (≈13.3k tokens).
 
 Resources (40): `guide://aliexpress/aliexpress_card`, `guide://aliexpress/aliexpress_search`, `guide://avito/avito_card`, `guide://avito/avito_search`, `guide://avito/avito_seller`, `guide://cian/cian_card`, `guide://cian/cian_search`, `guide://citilink/citilink_card`, `guide://citilink/citilink_search`, `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://detmir/detmir_card`, `guide://detmir/detmir_categories`, `guide://detmir/detmir_category`, `guide://dns/dns_card`, `guide://dns/dns_search`, `guide://lamoda/lamoda_card`, `guide://lamoda/lamoda_search`, `guide://marketplace/marketplace_health`, `guide://marketplace/marketplace_sources`, `guide://megamarket/megamarket_card`, `guide://megamarket/megamarket_search`, `guide://ozon/ozon_card`, `guide://ozon/ozon_reviews`, `guide://ozon/ozon_search`, `guide://taobao/taobao_card`, `guide://taobao/taobao_search`, `guide://wb/wb_card`, `guide://wb/wb_categories`, `guide://wb/wb_category_products`, `guide://wb/wb_questions`, `guide://wb/wb_reviews`, `guide://wb/wb_root_info`, `guide://wb/wb_search`, `guide://wb/wb_seller`, `guide://yandex/yandex_card`, `guide://yandex/yandex_search`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list
@@ -83,7 +83,7 @@ every error code.
 | Tool | Parameters | Description |
 | --- | --- | --- |
 | `avito_card` | `item_id_or_url: string` | Read an Avito item over CDP: Product JSON-LD first, item-view DOM fallback. |
-| `avito_search` | `query: string, page: integer = 1, location_id: string = null, category_id: string = null, include_inactive: boolean = false` | Search Avito listings via the internal js/items API. |
+| `avito_search` | `query: string, page: integer = 1, location_id: string = null, category_id: string = null, include_inactive: boolean = true` | Search Avito listings via the internal js/items API. |
 | `avito_seller` | `seller_id_or_url: string` | Read an Avito seller's rendered profile page over paced, allowlisted CDP. |
 
 ### cian — `cian_*` (2 tools)

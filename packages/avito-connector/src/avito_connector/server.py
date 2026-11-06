@@ -69,10 +69,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
 # _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
 # _build_search_url: Encode query, page and validated location/category identifiers.
-# avito_search: Read paginated classifieds search; per-hit availability from isReserved, reserved hits dropped unless
-#               include_inactive; warn when a required key family vanishes.
+# avito_search: Read paginated classifieds search; per-hit availability from isReserved; reserved hits kept unless
+#               include_inactive=false (then counted and announced in _meta); warn when a required key family vanishes.
 # avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope;
-#             availability from explicit page-state flags/banners (item_state); a closed/sold page is a status, not not_found.
+#             availability (active/reserved/unknown) from hydration flags and the safe-deal banner only (item_state).
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
 # avito_selfcheck: Chain search/card/seller to diagnose transport/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -970,15 +970,21 @@ async def avito_search(
     ] = None,
     category_id: Annotated[str | None, Field(description="Optional Avito category id to narrow the search")] = None,
     include_inactive: Annotated[
-        bool, Field(description="Keep reserved hits (availability=reserved); false drops and counts them")
-    ] = False,
+        bool,
+        Field(
+            description=(
+                "Keep reserved hits (availability=reserved), the default. false drops them from items and counts "
+                "them in excluded_inactive; total_count still includes them"
+            )
+        ),
+    ] = True,
     ctx: Context | None = None,
 ) -> AvitoSearchResponse:
     """Search Avito listings via the internal js/items API.
 
     price_rub is None for an ad without a price — never 0.
     Each hit carries availability from Avito's own isReserved flag; reserved
-    hits are dropped and counted in excluded_inactive unless include_inactive.
+    hits are kept unless include_inactive=false.
 
     Full field list and error codes: `guide://avito/avito_search`.
     """
@@ -1028,6 +1034,11 @@ async def avito_search(
             kept = [it for it in items_raw if it["availability"] not in _state.INACTIVE]
             excluded = len(items_raw) - len(kept)
             items_raw = kept
+            if excluded:
+                # Reservations on Avito often fall through: say what was hidden.
+                warnings.append(
+                    f"info: {excluded} reserved hit(s) dropped (include_inactive=false); total_count still counts them"
+                )
         items = [AvitoSearchItemOut(**it) for it in items_raw]
         result = AvitoSearchResponse(
             excluded_inactive=excluded,
@@ -1073,9 +1084,8 @@ async def avito_card(
     redirects to the canonical item page.
 
     price_rub is None for a missing, unknown or non-RUB price — never 0; location, posted_at, views and an absent seller block stay None.
-    availability (active/reserved/sold/closed/unknown) comes from explicit page
-    signals with availability_evidence; a closed or sold ad returns that status
-    with no title or price instead of not_found.
+    availability (active/reserved/unknown) comes from Avito's own page flags and
+    safe-deal banner, never from seller text, with availability_evidence.
 
     Full field list and error codes: `guide://avito/avito_card`.
     """
@@ -1138,26 +1148,7 @@ async def avito_card(
         try:
             item = parse_item_page(body, item_id)
         except (ParserDriftError, NotFoundError) as exc:
-            # A page that says the ad was closed or sold is a status of that ad,
-            # not a missing page: say so instead of not_found.
-            evidence = _state.closed_page_evidence(body) if isinstance(exc, NotFoundError) else []
-            if not evidence:
-                raise_tool_error(exc)
-            closed = AvitoCardResponse(
-                item_id=item_id,
-                url=url,
-                tier_used="cdp",
-                availability=_state.SOLD if any("родан" in entry for entry in evidence) else _state.CLOSED,
-                availability_evidence=evidence,
-            )
-            _pacer.record_success()
-            attached = R.attach_meta(
-                closed.model_dump(by_alias=True, exclude={"meta", "seller"}),
-                ["info: the ad is no longer published; title, price and seller are not shown"],
-                source="avito_card",
-            )
-            closed.meta = MetaOut(**attached["_meta"])
-            return closed
+            raise_tool_error(exc)
         seller_data = parse_item_seller(body)
         # The profile link ends in the id avito_seller accepts (/brands/<hash>,
         # /user/<hash>/profile), so the card hands it on rather than leaving it empty.

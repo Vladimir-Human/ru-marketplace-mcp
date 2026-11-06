@@ -19,11 +19,13 @@ Chrome over CDP — same pattern as Ozon.
 ## Tools available
 - `avito_search(query, page, location_id, category_id, include_inactive)` —
   listings via js/items. price_rub is None for ads with no price (free/exchange)
-  — never 0. Reserved hits (`availability: reserved`) are dropped unless
-  `include_inactive=true`; `excluded_inactive` says how many.
+  — never 0. Each hit has `availability` (active/reserved/unknown); reserved
+  hits are kept unless `include_inactive=false` (then `excluded_inactive` says
+  how many and `_meta` carries an `info:` line).
 - `avito_card(item_id_or_url)` — one listing: price, description, views, seller,
-  `availability` (active/reserved/sold/closed/unknown) with its evidence.
-  Reserved, sold or closed means it cannot be bought now; `unknown` is not a verdict.
+  `availability` (active/reserved/unknown) with its evidence, from the page's
+  service flags only, never from the seller's title or description. Reserved
+  means another buyer holds it; `unknown` is not a verdict.
 - `avito_seller(seller_id_or_url)` — seller rating, review count, active listings
 
 **Not an MCP tool:** `avito_selfcheck()` is a tri-state drift canary. It is

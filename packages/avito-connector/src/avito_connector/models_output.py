@@ -50,7 +50,10 @@ class AvitoSearchResponse(BaseModel):
     items: list[AvitoSearchItemOut] = Field(default_factory=list, description="Search result items.")
     excluded_inactive: int = Field(
         default=0,
-        description="Reserved hits dropped from items because include_inactive was false; 0 when they were kept.",
+        description=(
+            "Reserved hits dropped from items because include_inactive was false (0 by default, when they are kept); "
+            "total_count still counts them."
+        ),
     )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
@@ -79,15 +82,17 @@ class AvitoCardResponse(BaseModel):
     seller: AvitoSellerOut | None = Field(default=None, description="Seller info.")
     url: str = Field(default="", description="Canonical avito.ru listing URL.")
     tier_used: str = Field(default="", description="Fetch tier used.")
-    availability: Literal["active", "reserved", "sold", "closed", "unknown"] = Field(
+    availability: Literal["active", "reserved", "unknown"] = Field(
         default="unknown",
         description=(
-            "Listing status from explicit page signals: reserved/sold/closed mean it cannot be bought now. "
-            "schema.org InStock is not trusted (Avito says it for reserved ads too); unknown when the page is silent."
+            "Listing status from Avito's own page flags and safe-deal banner, never from seller text: reserved = "
+            "another buyer holds it, not purchasable now. schema.org InStock is not trusted (Avito says it for "
+            "reserved ads too); unknown when the page is silent or its signals contradict each other."
         ),
     )
     availability_evidence: list[str] = Field(
-        default_factory=list, description="The page flags or banner texts the availability rests on."
+        default_factory=list,
+        description="The page flags or banner text the availability rests on; on a contradiction, both sides.",
     )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
