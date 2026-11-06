@@ -22,6 +22,23 @@
   refused as if the page had left the allowed hosts. A navigation Chrome reports
   as failed (`errorText`) still ends on its load; without a main document the
   wait stays bounded by the same navigation deadline.
+- `ozon_reviews` снова листает страницы. Страница товара сейчас предлагает
+  сортировки `usefulness_desc` / `score_desc` / `score_asc`, и курсор следующей
+  страницы несёт `sort=usefulness_desc`; прежний список его не знал, поэтому
+  обход останавливался на первой странице с `partial=true` и
+  `stop_reason=invalid_next_button`. Порядок по умолчанию («новые и полезные»,
+  не строгая хронология) теперь `usefulness_desc`; `published_at_desc` принимается
+  как устаревший псевдоним. Курсор по-прежнему пересобирается только из
+  проверенных `page`, `page_key` и `sort`. Если `limit` набран, курсор следующей
+  страницы не проверяется и не превращает ответ в частичный.
+- `ozon_reviews` pages again. The product page now offers the sort values
+  `usefulness_desc` / `score_desc` / `score_asc`, and the next-page cursor carries
+  `sort=usefulness_desc`; the old allowlist did not know it, so the walk stopped
+  after page 1 with `partial=true` and `stop_reason=invalid_next_button`. The
+  default ("new and helpful", not strict chronology) is now `usefulness_desc`;
+  `published_at_desc` stays accepted as a legacy alias. The cursor is still rebuilt
+  only from validated `page`, `page_key` and `sort`. Once `limit` is filled, the
+  next cursor is neither validated nor reported as a partial answer.
 
 ## [2.8.2] - 2026-11-03
 

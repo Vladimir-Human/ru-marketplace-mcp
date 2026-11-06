@@ -68,7 +68,10 @@ class OzonReviewsResponse(BaseModel):
     status: str = Field(default="success", description="Response status: success or error.")
     url: str = Field(default="", description="Canonical Ozon reviews URL.")
     tier_used: str | None = Field(default=None, description="Fetch tier used for the first page.")
-    sort: str = Field(default="", description="API sort key used (published_at_desc, score_desc, score_asc).")
+    sort: str = Field(
+        default="",
+        description="API sort key used (usefulness_desc, score_desc, score_asc); published_at_desc requests map to usefulness_desc.",
+    )
     rating_score: float | None = Field(default=None, description="Aggregate review score.")
     reviews_count: int | None = Field(default=None, description="Total review count from paging or score widget.")
     distribution: dict[str, Any] = Field(default_factory=dict, description="Star distribution: stars -> count.")

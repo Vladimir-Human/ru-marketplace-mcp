@@ -116,16 +116,22 @@ PRODUCT_REVIEWS_PAGED_RE = re.compile(
     r"(\?sort=[a-z_]+|\?page=\d+&page_key=[A-Za-z0-9_=\-]+&sort=[a-z_]+)?$"
 )
 _REVIEW_PAGE_KEY_RE = re.compile(r"^[A-Za-z0-9_=\-]+$")
-# Verified live (Nov 2026) from webListReviews.sortings[].value — these are the
-# ONLY three the product page itself offers. Friendly aliases map onto them.
+# Read live from webListReviews.sortings[].value. On 2026-11-06 the product page
+# offered exactly usefulness_desc / score_desc / score_asc, and its paging
+# nextButton carried sort=usefulness_desc. published_at_desc (the value seen
+# earlier) stays accepted as a legacy alias of the default order, so callers
+# that pass it keep working. Friendly aliases map onto these.
 _ALLOWED_REVIEW_SORTS = {
-    "published_at_desc",  # "новые и полезные" (default)
+    "usefulness_desc",  # "новые и полезные" (default)
+    "published_at_desc",  # legacy value of the same default order
     "score_desc",  # "с высокой оценкой"
     "score_asc",  # "с низкой оценкой" — surfaces 1-star complaints first
 }
+_DEFAULT_REVIEW_SORT = "usefulness_desc"
 _REVIEW_SORT_ALIASES = {
-    "recent": "published_at_desc",
-    "default": "published_at_desc",
+    "recent": _DEFAULT_REVIEW_SORT,
+    "default": _DEFAULT_REVIEW_SORT,
+    "published_at_desc": _DEFAULT_REVIEW_SORT,
     "best": "score_desc",
     "highest": "score_desc",
     "worst": "score_asc",
@@ -722,7 +728,7 @@ def _safe_review_page_path(sku: str, next_button: str) -> str | None:
     qs = urllib.parse.parse_qs(next_button[1:])
     page = (qs.get("page") or [""])[0]
     page_key = (qs.get("page_key") or [""])[0]
-    sort = (qs.get("sort") or ["published_at_desc"])[0]
+    sort = (qs.get("sort") or [_DEFAULT_REVIEW_SORT])[0]
     if not page.isdigit() or int(page) < 1 or int(page) > 1000:
         return None
     if not _REVIEW_PAGE_KEY_RE.match(page_key):
@@ -810,10 +816,11 @@ async def ozon_reviews(
         str,
         Field(
             default="recent",
-            description='Review ordering. Aliases: "recent"/"default" -> newest, '
+            description='Review ordering. Aliases: "recent"/"default" -> Ozon\'s new-and-helpful order '
+            "(not strict chronology), "
             '"best"/"highest" -> highest rated first, '
             '"worst"/"lowest"/"complaints" -> LOWEST rated first. '
-            "Raw API values published_at_desc/score_desc/score_asc also accepted.",
+            "Raw API values usefulness_desc/score_desc/score_asc also accepted.",
         ),
     ] = "recent",
     ctx: Context | None = None,
@@ -892,7 +899,7 @@ async def _ozon_reviews_impl(
     if not PRODUCT_REVIEWS_PATH_RE.match(base_reviews):
         raise_tool_error(BadRequestError("SSRF guard: bad reviews path"))
     # First-page path carries ?sort= directly (verified: works without page_key).
-    target_path = base_reviews if api_sort == "published_at_desc" else f"{base_reviews}?sort={api_sort}"
+    target_path = base_reviews if api_sort == _DEFAULT_REVIEW_SORT else f"{base_reviews}?sort={api_sort}"
     if not PRODUCT_REVIEWS_PAGED_RE.match(target_path):
         raise_tool_error(BadRequestError("SSRF guard: bad reviews path"))
 
@@ -1011,6 +1018,11 @@ async def _ozon_reviews_impl(
                 seen_uuids.add(uuid)
             collected.append(_parse_review_item(r))
 
+        if len(collected) >= limit:
+            # Enough texts: the next page will not be fetched, so its cursor is
+            # not validated either — a cursor we never follow is not a partial.
+            next_path = None
+            break
         nb = paging.get("nextButton")
         if nb:
             candidate_next = _safe_review_page_path(sku, nb)
