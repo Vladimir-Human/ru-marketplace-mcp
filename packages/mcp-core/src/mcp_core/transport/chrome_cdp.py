@@ -968,6 +968,7 @@ class _RawCdpPage:
         statuses: list[int] = []
         nav_error: object = None
         main_frame: object = None
+        nav_failed = False
         rechecking = False
         while True:
             remaining = deadline - loop.time()
@@ -982,6 +983,7 @@ class _RawCdpPage:
                 if "error" in msg:
                     nav_error = msg["error"]
                 main_frame = main_frame or (msg.get("result") or {}).get("frameId")
+                nav_failed = nav_failed or "error" in msg or bool((msg.get("result") or {}).get("errorText"))
             method = msg.get("method", "")
             params = msg.get("params", {})
             if method == "Network.responseReceived" and params.get("type") == "Document":
@@ -999,6 +1001,14 @@ class _RawCdpPage:
             elif method == "Page.frameNavigated":
                 self._note_event(msg)
             elif method == "Page.loadEventFired":
+                # A new tab's initial about:blank can deliver its load event after
+                # Page.navigate was sent and before this navigation's main document.
+                # That load is not ours: ending the wait there returns no status and
+                # leaves the URL at about:blank, which the host check then refuses.
+                # A navigation Chrome already reported as failed (errorText) has no
+                # document to wait for; otherwise the deadline still bounds the wait.
+                if not statuses and not nav_failed:
+                    continue
                 if statuses and statuses[-1] == 403 and not rechecking:
                     rechecking = True
                     deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
