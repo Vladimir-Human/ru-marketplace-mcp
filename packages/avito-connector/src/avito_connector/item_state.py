@@ -199,8 +199,10 @@ def classify(bi: dict[str, Any] | None, texts: dict[str, str]) -> tuple[Availabi
     if closed:
         # closed_state() lets a card through with a closure signal only when the
         # page also says it is open: report both sides, decide nothing.
-        active = ["item.isActive=true"] if _bool_at(item, "isActive") is True else []
-        return UNKNOWN, ["contradicting status signals", *closed, *active, *reserved, *free]
+        opened = _open_flags(bi)
+        if opened or free:
+            return UNKNOWN, ["contradicting status signals", *closed, *opened, *reserved, *free]
+        return UNKNOWN, ["closed/removed signals on the page", *closed, *reserved]
     if reserved and free:
         return UNKNOWN, ["contradicting status signals", *reserved, *free]
     if reserved:
@@ -556,6 +558,21 @@ def _closed_flags(bi: dict[str, Any] | None) -> list[str]:
     return flags
 
 
+def _open_flags(bi: dict[str, Any] | None) -> list[str]:
+    """The buyerItem's own open flags (real booleans only)."""
+    if not isinstance(bi, dict):
+        return []
+    item = bi.get("item")
+    flags: list[str] = []
+    if _bool_at(item, "isActive") is True:
+        flags.append("item.isActive=true")
+    if bi.get("closedItem") is False:
+        flags.append("buyerItem.closedItem=false")
+    if _bool_at(item, "isClosed") is False:
+        flags.append("item.isClosed=false")
+    return flags
+
+
 def _closure_text(value: Any, fallback: str) -> str:
     return " ".join(value.split())[:120] if isinstance(value, str) and value.strip() else fallback
 
@@ -591,23 +608,18 @@ def closed_state(html: str, item_id: int | None) -> tuple[bool, str | None]:
         loader = {}
     bi = buyer_item(state, item_id)
     if isinstance(bi, dict):
-        item = bi.get("item")
-        flags = _closed_flags(bi)
-        if flags and _bool_at(item, "isActive") is not True:
+        closed = _closed_flags(bi)
+        opened = _open_flags(bi)
+        if closed and not opened:
             return True, _closure_text(bi.get("closedItemStatus"), "page state: closed")
-        if (
-            flags
-            or _bool_at(item, "isActive") is True
-            or bi.get("closedItem") is False
-            or _bool_at(item, "isClosed") is False
-        ):
+        if closed or opened:
             return True, None
     for value in loader.values():
         if isinstance(value, dict) and value.get("type") == "notFound":
             return True, _closure_text(value.get("message"), "page state: notFound")
-    if bi is None and any(
-        isinstance(value, dict) and isinstance(value.get("buyerItem"), dict) for value in loader.values()
-    ):
+    other = buyer_item(state, None)
+    other_id = _dict(other, "item").get("id") if isinstance(other, dict) else None
+    if bi is None and isinstance(other_id, int) and not isinstance(other_id, bool):
         return True, None
     banner = marker_texts(html, (_CLOSED_BANNER,)).get(_CLOSED_BANNER)
     return False, banner[:120] if banner else None
