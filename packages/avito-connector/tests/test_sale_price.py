@@ -55,6 +55,17 @@ def test_a_discounted_hit_is_priced_at_what_the_buyer_pays():
     assert rows[SALE_HIT]["old_price_rub"] == 3000
     assert rows[SALE_HIT]["discount_percent"] == 15
 
+    # Also works if Avito puts the already-discounted price into priceDetailed.value.
+    already_discounted = copy.deepcopy(_payload())
+    next(h for h in already_discounted["catalog"]["items"] if h["id"] == SALE_HIT)["priceDetailed"]["value"] = 2550
+    row = _rows(already_discounted)[SALE_HIT]
+    assert (row["price_rub"], row["old_price_rub"], row["discount_percent"], row["price_conflict"]) == (
+        2550,
+        3000,
+        15,
+        False,
+    )
+
 
 def test_a_hit_without_a_discount_is_unchanged():
     row = _rows(_payload())[PLAIN_HIT]
@@ -62,6 +73,20 @@ def test_a_hit_without_a_discount_is_unchanged():
     assert row["price_rub"] == 1800
     assert row["old_price_rub"] is None
     assert row["discount_percent"] is None
+
+    # Blank discount placeholders or a seller-lowered price (no sale percent, base == shown) stay non-conflicting.
+    blank_disc = copy.deepcopy(_payload())
+    plain = next(h for h in blank_disc["catalog"]["items"] if h["id"] == PLAIN_HIT)
+    plain["iva"]["PriceStep"].append(
+        {"componentData": {"component": "discount"}, "payload": {"old_string": "", "percent": ""}}
+    )
+    assert _rows(blank_disc)[PLAIN_HIT]["price_rub"] == 1800
+    lowered = copy.deepcopy(_payload())
+    plain_low = next(h for h in lowered["catalog"]["items"] if h["id"] == PLAIN_HIT)
+    plain_low["iva"]["PriceStep"].append(
+        {"componentData": {"component": "discount"}, "payload": {"old_string": "2 200", "percent": None}}
+    )
+    assert (_rows(lowered)[PLAIN_HIT]["price_rub"], _rows(lowered)[PLAIN_HIT]["old_price_rub"]) == (1800, None)
 
 
 def _percent_off(payload):
@@ -208,6 +233,13 @@ def test_a_card_percent_missing_is_computed_and_a_shown_price_without_discount_i
     sale, conflict = item_state.card_sale_price(_card_state_edited(no_discount), SALE_CARD)
     assert sale is None
     assert conflict == "shown price 2550 differs from the listing price 3000 without a discount"
+
+    def empty_strings_no_sale(item):
+        item["price"] = 2550
+        item["formattedPrice"]["oldString"] = ""
+        item["formattedPrice"]["saleDiscount"] = ""
+
+    assert item_state.card_sale_price(_card_state_edited(empty_strings_no_sale), SALE_CARD) == (None, None)
 
 
 def test_the_sale_of_another_item_is_not_read():

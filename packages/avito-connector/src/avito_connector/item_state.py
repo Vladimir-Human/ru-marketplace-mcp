@@ -668,22 +668,28 @@ def _percent(value: Any) -> int | None:
     return _percent(int(match.group(1))) if match else None
 
 
+def _blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
 def _resolve_sale(
     base: int | None, now: int | None, old: int | None, percent: int | None
 ) -> tuple[SalePrice | None, str | None]:
     """A shown discount as (price, old price, percent), or the reason it does not add up."""
     if base is None or now is None or old is None:
         return None, f"incomplete discount (price {base}, sale price {now}, struck price {old})"
-    if old != base:
+    if base == now and old > now and percent is None:
+        return None, None
+    if old != base and now != base:
         return None, f"struck price {old} is not the listing price {base}"
-    if now >= base:
-        return None, f"sale price {now} is not below the listing price {base}"
-    computed = round(100 * (base - now) / base)
+    if now >= old:
+        return None, f"sale price {now} is not below the listing price {old}"
+    computed = round(100 * (old - now) / old)
     if percent is None:
-        percent = computed
+        percent = max(1, min(99, computed))
     elif abs(computed - percent) > 1:
-        return None, f"{percent}% does not match {base} -> {now}"
-    return {"price_rub": now, "old_price_rub": base, "discount_percent": percent}, None
+        return None, f"{percent}% does not match {old} -> {now}"
+    return {"price_rub": now, "old_price_rub": old, "discount_percent": percent}, None
 
 
 def search_sale_price(item: dict[str, Any]) -> tuple[SalePrice | None, str | None]:
@@ -701,7 +707,7 @@ def search_sale_price(item: dict[str, Any]) -> tuple[SalePrice | None, str | Non
     base = _rub(_dict(item, "priceDetailed").get("value"))
     now = _rub(_dict(steps.get("price"), "priceDetailed").get("value"))
     discount = steps.get("discount")
-    if discount is None:
+    if discount is None or (_blank(discount.get("old_string")) and _blank(discount.get("percent"))):
         if now is not None and base is not None and now != base:
             return None, f"shown price {now} differs from the listing price {base} without a discount"
         return None, None
@@ -719,7 +725,7 @@ def card_sale_price(html: str, item_id: int | None) -> tuple[SalePrice | None, s
     shown = _dict(item, "formattedPrice")
     base, now = _rub(item.get("price")), _rub(shown.get("value"))
     old, percent = _rub(shown.get("oldString")), _percent(shown.get("saleDiscount"))
-    if old is None and shown.get("saleDiscount") is None:
+    if _blank(shown.get("oldString")) and _blank(shown.get("saleDiscount")):
         if now is not None and base is not None and now != base:
             return None, f"shown price {now} differs from the listing price {base} without a discount"
         return None, None
