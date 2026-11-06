@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/web/1/js/items?q=robot+vacuum&locationId=637640",
+  "captured_at": "2026-11-06",
+  "sha256": "87fad506290ccc41451585e02a2d4f4333b14a11c45ec59e2d151824da6b61c9",
+  "method": "a genuine Avito js/items response captured signed out on 2026-11-06 (50 hits, 12 on Avito's sale with an iva.PriceStep discount component); trimmed to one discounted hit of another seller and one hit without a discount, each reduced to the keys the parser reads and the PriceStep price, saleIcon and discount components as served (their debug ids dropped); totalCount as served. De-identified: ids, URLs, titles and every price are fictional, the location name is the city only, and every seller, phone, image and gallery key is dropped. No entry was invented.",
+  "ground_truth": {
+    "note": "hit 9000000042: priceDetailed.value 3000 is the listing price, PriceStep price 2550 the price shown, discount old_string 3000 and percent 15; v2.9.0 answered price_rub 3000, the branch 2550 with old_price_rub 3000 and discount_percent 15. Hit 9000000043: no discount, price_rub 1800"
+  }
+}

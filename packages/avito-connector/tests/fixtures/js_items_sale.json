@@ -1,0 +1,110 @@
+{
+  "count": 2,
+  "totalCount": 61,
+  "catalog": {
+    "items": [
+      {
+        "id": 9000000042,
+        "locationId": 639740,
+        "urlPath": "/moskva/bytovaya_tehnika/robot_pylesos_fixture_9000000042",
+        "title": "Робот-пылесос, фикстура со скидкой",
+        "addressDetailed": {
+          "locationName": "Москва"
+        },
+        "sortTimeStamp": 1792570457000,
+        "imagesCount": 5,
+        "isReserved": false,
+        "priceDetailed": {
+          "value": 3000,
+          "string": "3 000",
+          "fullString": "3 000 ₽",
+          "stringWithoutDiscount": null,
+          "wasLowered": false
+        },
+        "iva": {
+          "PriceStep": [
+            {
+              "componentData": {
+                "component": "price"
+              },
+              "payload": {
+                "priceDetailed": {
+                  "wasLowered": false,
+                  "postfix": "",
+                  "string": "2 550",
+                  "stringWithoutDiscount": null,
+                  "value": 2550
+                },
+                "normalizedPrice": null,
+                "isHighlighted": false
+              },
+              "default": true
+            },
+            {
+              "componentData": {
+                "component": "saleIcon"
+              },
+              "payload": {
+                "name": "time16",
+                "tooltip": {
+                  "text": "Скидка до 31 декабря"
+                }
+              },
+              "default": true
+            },
+            {
+              "componentData": {
+                "component": "discount"
+              },
+              "payload": {
+                "old_string": "3 000",
+                "percent": 15
+              },
+              "default": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 9000000043,
+        "locationId": 637640,
+        "urlPath": "/moskva/bytovaya_tehnika/robot_pylesos_fixture_9000000043",
+        "title": "Робот-пылесос, фикстура без скидки",
+        "addressDetailed": {
+          "locationName": "Москва"
+        },
+        "sortTimeStamp": 1793704334000,
+        "imagesCount": 3,
+        "isReserved": false,
+        "priceDetailed": {
+          "value": 1800,
+          "string": "1 800",
+          "fullString": "1 800 ₽",
+          "stringWithoutDiscount": null,
+          "wasLowered": false
+        },
+        "iva": {
+          "PriceStep": [
+            {
+              "componentData": {
+                "component": "price"
+              },
+              "payload": {
+                "isHighlighted": false,
+                "priceDetailed": {
+                  "wasLowered": false,
+                  "postfix": "",
+                  "string": "1 800",
+                  "stringWithoutDiscount": null,
+                  "value": 1800
+                },
+                "normalizedPrice": null
+              },
+              "default": true
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

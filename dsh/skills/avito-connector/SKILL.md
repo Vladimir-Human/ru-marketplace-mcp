@@ -19,7 +19,8 @@ Chrome over CDP — same pattern as Ozon.
 ## Tools available
 - `avito_search(query, page, location_id, category_id, include_inactive)` —
   listings via js/items. price_rub is None for ads with no price (free/exchange)
-  — never 0. Each hit has `availability` (active/reserved/unknown); reserved
+  — never 0; during an Avito sale it is the price after the discount, with
+  `old_price_rub` and `discount_percent` beside it. Each hit has `availability` (active/reserved/unknown); reserved
   hits are kept unless `include_inactive=false` (then `excluded_inactive` says
   how many and `_meta` carries an `info:` line).
 - `avito_card(item_id_or_url, photos=0)` — one listing: price, description, views, seller,
@@ -48,6 +49,10 @@ residential session:
   guess that reads like data.
 - **`price` does not exist as a top-level key.** The amount lives in
   `priceDetailed.value`; the connector reads it and leaves `None` for priceless ads.
+  During an Avito sale that value is the price before the discount; the price a
+  buyer pays is the hit's `iva.PriceStep` component `price`, next to a `discount`
+  component (`old_string`, `percent`). A discount that does not add up is
+  `price_rub=None` with a `price_conflict:` line in `_meta`, never a guess.
 - **`posted_at` is ISO-8601 UTC**, converted from Avito's `sortTimeStamp` (epoch
   milliseconds). There is no date string in the payload to pass through.
 - **`seller_name` is `None` on search rows.** The payload has no seller object at

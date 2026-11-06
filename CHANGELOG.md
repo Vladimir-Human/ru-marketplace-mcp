@@ -39,6 +39,26 @@
   page, and ignore the back-off after a 403/429. New
   `photos_status=fewer_on_page`: the page had fewer photos than asked and all of
   them arrived (it used to say `ok`).
+- Avito: во время распродажи Avito `avito_search` отдавал в `price_rub` цену до
+  скидки: `priceDetailed.value` остаётся прежней, а цену, которую видит и платит
+  покупатель, Avito кладёт в компоненты `iva.PriceStep` строки выдачи (`price` и
+  `discount` с `old_string` и `percent`). Теперь `price_rub` — цена со скидкой,
+  рядом новые `old_price_rub` (зачёркнутая) и `discount_percent` (процент Avito);
+  в `avito_card` то же из состояния страницы (`item.price`, `item.formattedPrice`).
+  Скидка принимается, только если зачёркнутая цена равна цене объявления, цена со
+  скидкой ниже неё и процент с ними сходится; иначе `price_rub=None` и строка
+  `price_conflict:` в `_meta`. Распродажу видно без входа; на 06.11.2026 — 12 из
+  50 объявлений одной выдачи.
+- Avito: during an Avito sale `avito_search` put the pre-discount price in
+  `price_rub`: `priceDetailed.value` keeps the listing price, while the price the
+  buyer sees and pays sits in the hit's `iva.PriceStep` components (`price`, and
+  `discount` with `old_string` and `percent`). `price_rub` is now the sale price,
+  with new `old_price_rub` (struck) and `discount_percent` (Avito's percent);
+  `avito_card` reads the same from the page state (`item.price`,
+  `item.formattedPrice`). A discount is accepted only when the struck price
+  equals the listing price, the sale price is below it and the percent agrees;
+  otherwise `price_rub` is None and `_meta` carries a `price_conflict:` line. The
+  sale shows signed out; on 2026-11-06 12 of 50 hits of one search were on it.
 
 ## [2.9.0] - 2026-11-06
 

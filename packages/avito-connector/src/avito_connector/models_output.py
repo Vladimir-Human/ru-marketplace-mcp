@@ -20,7 +20,16 @@ class MetaOut(MetaOutBase):
 class AvitoSearchItemOut(BaseModel):
     item_id: int | None = Field(default=None, description="Avito item id (the digits in the listing URL).")
     title: str | None = Field(default=None, description="Listing title.")
-    price_rub: float | None = Field(default=None, description="Price in rubles; None when the listing has no price.")
+    price_rub: float | None = Field(
+        default=None,
+        description="Price a buyer pays now, after an Avito sale discount; None when absent or the discount does not add up.",
+    )
+    old_price_rub: float | None = Field(
+        default=None, description="Struck-through price during an Avito sale, else None."
+    )
+    discount_percent: int | None = Field(
+        default=None, description="Avito's sale percent (computed from the two prices only when Avito shows none)."
+    )
     url: str | None = Field(default=None, description="Canonical avito.ru listing URL.")
     location: str | None = Field(default=None, description="Seller location string.")
     seller_name: str | None = Field(default=None, description="Seller display name.")
@@ -116,7 +125,16 @@ class AvitoCardResponse(BaseModel):
     status: str = Field(default="success", description="Response status: success or error.")
     item_id: int | None = Field(default=None, description="Avito item id.")
     title: str | None = Field(default=None, description="Listing title.")
-    price_rub: float | None = Field(default=None, description="Price in rubles; None when the listing has no price.")
+    price_rub: float | None = Field(
+        default=None,
+        description="Price a buyer pays now, after an Avito sale discount; None when absent or the discount does not add up.",
+    )
+    old_price_rub: float | None = Field(
+        default=None, description="Struck-through price during an Avito sale, else None."
+    )
+    discount_percent: int | None = Field(
+        default=None, description="Avito's sale percent (computed from the two prices only when Avito shows none)."
+    )
     description: str | None = Field(default=None, description="Listing description text.")
     location: str | None = Field(default=None, description="Item location string.")
     posted_at: str | None = Field(default=None, description="Publication time as reported by Avito.")

@@ -67,12 +67,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _raise_for_fetch_failure: Classify firewall, missing-page and transport failures.
 # _extract_item_id: Resolve numeric handles or Avito listing URLs.
 # _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
-# _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
+# _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices;
+#                      a sale discount gives the price paid plus old_price_rub/discount_percent (item_state).
 # _build_search_url: Encode query, page and validated location/category identifiers.
 # avito_search: Read paginated classifieds search; per-hit availability from isReserved; reserved hits kept unless
 #               include_inactive=false (then counted and announced in _meta); warn when a required key family vanishes.
 # avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope;
-#             availability (active/reserved/unknown) from hydration flags and the safe-deal banner only (item_state).
+#             availability (active/reserved/unknown) from hydration flags and the safe-deal banner only (item_state);
+#             a sale discount from the card state, checked against the page price; one that does not add up is None.
 # _attach_photos: Opt-in photos=N: https *.img.avito.st fetches through the source's pacer, bounded, stop at the first
 #                 refusal, nothing stored.
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
@@ -905,6 +907,15 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
         price = R.coerce_price(R.first_present(it, "price", "priceRub", "price_rub"))
         if price is None and isinstance(it.get("priceDetailed"), dict):
             price = R.coerce_price(R.first_present(it["priceDetailed"], "value", "price"))
+        # During an Avito sale priceDetailed.value stays the listing price; the
+        # price the buyer pays is in the hit's own PriceStep (live 2026-11-06).
+        sale, price_conflict = _state.search_sale_price(it)
+        if sale is not None and price not in (None, sale["old_price_rub"]):
+            price_conflict = f"price {price} is not the struck price {sale['old_price_rub']}"
+        if price_conflict:
+            price, sale = None, None
+        elif sale is not None:
+            price = float(sale["price_rub"])
         # The live js/items key is `urlPath`. The alias list used to read `uriPath`
         # — one letter out — so every search hit came back with url=None while the
         # rest of the row parsed fine. Verified 2026-07-28 against a real response
@@ -945,6 +956,9 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
                 "item_id": item_id,
                 "title": title,
                 "price_rub": price,
+                "old_price_rub": float(sale["old_price_rub"]) if sale else None,
+                "discount_percent": sale["discount_percent"] if sale else None,
+                "price_conflict": bool(price_conflict),
                 "url": uri or None,
                 "location": location,
                 "seller_name": R.first_present(seller, "name", "title")
@@ -1029,6 +1043,11 @@ async def avito_search(
 
         items_raw, total = _parse_search_items(payload)
         warnings: list[str] = []
+        conflicts = sum(1 for it in items_raw if it.pop("price_conflict", False))
+        if conflicts:
+            warnings.append(
+                f"price_conflict: {conflicts} hit(s) show an Avito discount that does not add up; their price_rub is None"
+            )
         if not items_raw and total not in (0, None):
             warnings.append("empty_items_with_nonzero_total")
         if items_raw:
@@ -1088,6 +1107,25 @@ _LD_CONDITIONS = {
     "RefurbishedCondition": "Восстановленное",
     "DamagedCondition": "Повреждённое",
 }
+
+
+def _apply_sale(item: dict[str, Any], sale: dict[str, int] | None, conflict: str | None) -> list[str]:
+    """Put Avito's sale discount on the card; a discount that does not add up leaves price_rub None.
+
+    The page price read from Product or the DOM must be one of the two prices
+    the card state names: the struck one (a Product offer can carry it) or the
+    sale price the page shows.
+    """
+    if sale is not None and item.get("price_rub") not in (None, sale["price_rub"], sale["old_price_rub"]):
+        conflict = f"page price {item.get('price_rub')} is neither {sale['price_rub']} nor {sale['old_price_rub']}"
+    if conflict:
+        item["price_rub"] = None
+        return [f"price_conflict: {conflict}; price_rub is None"]
+    if sale is not None:
+        item["price_rub"] = float(sale["price_rub"])
+        item["old_price_rub"] = float(sale["old_price_rub"])
+        item["discount_percent"] = sale["discount_percent"]
+    return []
 
 
 def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
@@ -1338,12 +1376,13 @@ async def avito_card(
         item["url"] = item["url"] or url
         item["availability"], item["availability_evidence"] = _state.card_availability(body, item_id)
         _apply_details(item, _state.card_details(body, item_id, item.get("description")))
+        price_warnings = _apply_sale(item, *_state.card_sale_price(body, item_id))
         result = AvitoCardResponse(**item, tier_used="cdp")
         _pacer.record_success()
         # The card's own fields; `seller` carries the seller's rating, not the
         # listing's, and must stay out of the offer invariants.
         card = result.model_dump(by_alias=True, exclude={"meta", "seller"})
-        attached = R.attach_meta(card, R.validate_offer(card), source="avito_card")
+        attached = R.attach_meta(card, [*R.validate_offer(card), *price_warnings], source="avito_card")
         result.meta = MetaOut(**attached["_meta"])
         if photos <= 0:
             return result
