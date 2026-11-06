@@ -3,10 +3,10 @@
 ``item_details_private_*`` is a trimmed, de-identified capture (2026-11-06) of a
 private listing; its street address, map point and stations are fictional.
 
-No company listing has been captured (the one reached on 2026-11-06 was already
-closed), so the company rule is exercised only by unit tests that edit the
-private capture in code (``_seller_type``): they prove the fail-closed rule, not
-Avito's format for company pages.
+``item_details_company_*`` is a trimmed, de-identified capture (2026-11-06) of a
+company seller's services listing (no schema.org Product on the page, so the card
+reads the item-view DOM); its address and map point are fictional. The rule
+combinations below edit the private capture in code (``_seller_type``).
 """
 
 from __future__ import annotations
@@ -276,3 +276,38 @@ def test_a_page_without_state_leaves_every_detail_empty():
 
     assert details["params"] == [] and details["metro"] == [] and details["delivery_services"] == []
     assert all(details[key] is None for key in ("condition", "safe_deal", "location", "views", "address", "coords"))
+
+
+COMPANY = "item_details_company_9000000033.html"
+
+
+async def test_a_real_company_page_returns_the_address_and_its_deal_terms(monkeypatch):
+    """Review #198 P2: a captured company page instead of a synthetic isCompany flip."""
+    _serve_page(monkeypatch, _page(COMPANY))
+
+    result = await server.avito_card("9000000033")
+
+    assert result.title == "Монтаж кондиционеров, фикстура"
+    assert result.price_rub is None  # «от 5 500 ₽» is a starting price, not one RUB price
+    assert result.address == "Москва, Тестовая улица, 2"
+    assert result.coords == {"lat": 55.6, "lng": 37.6}
+    assert result.location == "Москва"
+    assert result.safe_deal is False
+    assert result.price_offer_enabled is None  # bargainOffer is null on this page
+    assert result.delivery_services == []
+    assert result.views == 5913 and result.today_views == 3
+    assert result.seller is not None
+    assert result.seller.checks == ["Надёжный исполнитель"]
+    assert (result.seller.tenure, result.seller.seller_since) == ("gold", "мая 2015")
+    assert result.availability == "active"  # as the live call answered
+    assert result.meta.healthy is True
+
+
+async def test_a_real_company_page_with_a_private_dom_label_hides_the_address(monkeypatch):
+    html = _page(COMPANY).replace("<body>", '<body><div data-marker="seller-info/label">Частное лицо</div>', 1)
+    _serve_page(monkeypatch, html)
+
+    result = await server.avito_card("9000000033")
+
+    assert result.address is None and result.coords is None
+    assert "Тестовая" not in result.model_dump_json()

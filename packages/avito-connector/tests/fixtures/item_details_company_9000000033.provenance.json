@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/predlozheniya_uslug/fixture_9000000033",
+  "captured_at": "2026-11-06",
+  "sha256": "bc219521ff72f081fdb1093dac4e1078e513bac72c03e874686fb6887150274d",
+  "method": "a genuine Avito item page of a company seller (services) rendered in the operator's Chrome over raw CDP on 2026-11-06 14:29 MSK (page.content() via avito_card's own fetch; no schema.org Product on the page); trimmed to the item-view title, item-id and price elements (captured nesting) and window.__staticRouterHydrationData reduced to the buyerItem keys card_details and item_state read, each copied from the capture (first 4 params kept). De-identified: listing id, URL and title are fictional, the street address and map point are fictional; no seller name, id, phone or profile link kept",
+  "ground_truth": {
+    "note": "a company seller: buyerItem.seller.isCompany=true (top-level buyerItem.isCompany=true too), no DOM seller label kept; the fictional address and map point are returned; price «от 5 500 ₽» is not a single RUB price (None); bargainOffer is null on this page; safe deal button disabled"
+  }
+}
