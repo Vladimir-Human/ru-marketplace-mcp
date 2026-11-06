@@ -910,8 +910,8 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
         # During an Avito sale priceDetailed.value stays the listing price; the
         # price the buyer pays is in the hit's own PriceStep (live 2026-11-06).
         sale, price_conflict = _state.search_sale_price(it)
-        if sale is not None and price not in (None, sale["old_price_rub"]):
-            price_conflict = f"price {price} is not the struck price {sale['old_price_rub']}"
+        if sale is not None and price not in (None, sale["price_rub"], sale["old_price_rub"]):
+            price_conflict = f"price {price} is neither {sale['price_rub']} nor {sale['old_price_rub']}"
         if price_conflict:
             price, sale = None, None
         elif sale is not None:
