@@ -66,6 +66,9 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # show_browser_window: Move the scraping Chrome window on-screen and activate the first or named target.
 # open_tabs: Open pages in new tabs over browser-level CDP; never navigates or closes an existing tab.
 # _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
+# open_owned_popup: Open a raw-CDP popup from an owned page, attribute it by openerId and close only it.
+# _raw_owned_popup: Budget, open, status- and host-check one owned popup; the live-budget hook point.
+# _acquire_navigation_permit: Take a navigation permit; an open host breaker is rate_limited.
 # _new_tab: Claim a created target ID and close it if cancellation prevents handback.
 # _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
 # NavigationPolicyError: Report a final URL outside the caller's policy.
@@ -98,7 +101,7 @@ from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
 from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
 from mcp_core.redact import redact_error_text
-from mcp_core.transport.cdp_budget import HostRefusingError, navigation_budget
+from mcp_core.transport.cdp_budget import HostRefusingError, Slot, navigation_budget
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
 # fallback raises a clear error instead).
@@ -892,6 +895,11 @@ class _RawCdpPage:
         self._target_id = target_id
         self._next_id = 0
         self._url = "about:blank"
+        # Set by a caller that enabled Network events and knows the main frame:
+        # the main document's last HTTP status is then noted from the events
+        # any command reads while it waits (open_owned_popup).
+        self._main_frame_id: str | None = None
+        self._document_status: int | None = None
 
     @property
     def url(self) -> str:
@@ -933,10 +941,21 @@ class _RawCdpPage:
             return msg.get("result") or {}
 
     def _note_event(self, msg: dict) -> None:
-        if msg.get("method") == "Page.frameNavigated":
+        method = msg.get("method")
+        if method == "Page.frameNavigated":
             frame = msg.get("params", {}).get("frame", {})
             if isinstance(frame, dict) and not frame.get("parentId"):
                 self._url = frame.get("url") or self._url
+        elif method == "Network.responseReceived" and self._main_frame_id:
+            params = msg.get("params", {})
+            if (
+                isinstance(params, dict)
+                and params.get("type") == "Document"
+                and params.get("frameId") == self._main_frame_id
+            ):
+                status = (params.get("response") or {}).get("status")
+                if isinstance(status, int) and not isinstance(status, bool):
+                    self._document_status = status
 
     async def evaluate(self, expression: str, arg: object = None) -> Any:
         result = await self._send(
@@ -1563,6 +1582,240 @@ async def _raw_cdp_page(
                 await asyncio.to_thread(_hide_chrome_windows)
 
 
+_RAW_TARGET_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_POPUP_OPEN_TIMEOUT_S = 8.0
+_POPUP_LOAD_TIMEOUT_S = 12.0
+_POPUP_CLEANUP_TIMEOUT_S = 8.0
+# How long cleanup keeps looking for a popup that has not shown up yet (an open
+# that failed or was cancelled may still deliver one); each lookup is bounded
+# by the shared cleanup deadline, not by this window.
+_POPUP_ARRIVAL_GRACE_S = 1.0
+_POPUP_DISCOVER_TIMEOUT_S = 3.0
+_POPUP_CLOSE_TARGET_TIMEOUT_S = 2.0
+_NAVIGATION_STATUS_JS = (
+    "() => { const e = performance.getEntriesByType('navigation')[0];"
+    " return e && typeof e.responseStatus === 'number' ? e.responseStatus : null; }"
+)
+
+
+async def _acquire_navigation_permit(host: str) -> Slot:
+    """Take a navigation permit for ``host``; an open breaker is ``rate_limited``.
+
+    R-CDP-HOST-PAUSE: an open breaker is a timed refusal by the site, and the
+    agent must act on the remaining pause, not on a generic retryable transport
+    failure. The shared taxonomy answer is rate_limited with retry_after_s set to
+    the remaining cooldown; raising it as a ToolError here is the one mapping
+    every CDP connector shares, because their broad "except Exception" fetch
+    guards pass ToolError through untouched.
+    """
+    try:
+        return await navigation_budget().acquire(host)
+    except HostRefusingError as refusing:
+        raise_tool_error(
+            ConnectorError(
+                ErrorCode.RATE_LIMITED,
+                f"CDP navigation to {refusing.host} paused for {refusing.retry_after_s:g} s "
+                f"after {refusing.refusals} refusals",
+                provider=refusing.host,
+                retry_after_s=refusing.retry_after_s,
+            )
+        )
+
+
+@asynccontextmanager
+# START_CONTRACT: open_owned_popup
+# PURPOSE: Yield a raw-CDP popup opened from an owned page; attribute, budget, check and close only it.
+# INPUTS: Owned _RawCdpPage opener, item URL (shape validated by the caller), explicit allowed hosts.
+# OUTPUTS: Async context yielding the popup page; NavBlocked on a refused main document; NavigationPolicyError off-host; rate_limited ToolError on an open host breaker.
+# SIDE_EFFECTS: Acquire/release one navigation permit; open one popup; close only targets whose openerId is the opener.
+# END_CONTRACT: open_owned_popup
+async def open_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collection[str]) -> AsyncIterator[_RawCdpPage]:
+    """Open ``url`` from an owned raw-CDP page and yield the popup it created.
+
+    The raw-CDP counterpart of Playwright's ``popup`` event for sources that
+    must open an item from a loaded page (AliExpress challenges direct item
+    navigation). Connectors import this name; the work happens in
+    ``_raw_owned_popup``, the module-level hook point the live budget wraps
+    (as ``open_page`` delegates to ``_raw_cdp_page``).
+    """
+    async with _raw_owned_popup(opener, url, allowed_hosts=allowed_hosts) as popup:
+        yield popup
+
+
+@asynccontextmanager
+async def _raw_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collection[str]) -> AsyncIterator[_RawCdpPage]:
+    """Open, attribute, budget, check and finally close one raw-CDP popup.
+
+    Ownership is the popup's ``openerId`` equal to the opener's own target ID,
+    never a URL or arrival time: another tab with the very same URL, including
+    the operator's, is never a candidate and never closed.
+
+    * The URL is host-checked before the open. The open takes a
+      ``navigation_budget`` permit for the URL's host, as ``open_page`` does,
+      and gives it back once the document is up (before the yield) or on error.
+    * The main document's HTTP status is observed (``Network.responseReceived``
+      for the main frame, else the document's own navigation timing); a
+      refusing status raises ``NavBlocked`` and is reported to the breaker, so a
+      403/429 page is a transport refusal, not content to parse.
+    * The main-frame URL is host-checked while it loads, again right before
+      the yield (a redirect may land while ``readyState`` is awaited) and once
+      more on exit.
+    * Cleanup always looks for owned targets at least once, then closes them;
+      discovery and closing share one deadline. It also covers a popup that
+      arrives after a failed or cancelled open.
+    The caller validates the item URL's shape before calling.
+    """
+    if not isinstance(opener, _RawCdpPage) or not opener._target_id:
+        raise TypeError("open_owned_popup needs an owned raw-CDP page")
+    _check_final_host(url, allowed_hosts)
+    if _websockets is None:
+        raise RuntimeError("the raw-CDP popup needs the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+    permit = await _acquire_navigation_permit(urlsplit(url).hostname or "")
+    owned: set[str] = set()
+    try:
+        async with _websockets.connect(
+            browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+        ) as bws:
+            browser = _RawCdpPage(bws, "")
+
+            async def discover(timeout: float) -> None:
+                info = await browser._send("Target.getTargets", timeout=timeout)
+                for target in info.get("targetInfos", []):
+                    if isinstance(target, dict) and target.get("openerId") == opener._target_id:
+                        target_id = target.get("targetId")
+                        if isinstance(target_id, str) and _RAW_TARGET_ID_RE.fullmatch(target_id):
+                            owned.add(target_id)
+
+            async def cleanup() -> None:
+                # One deadline for finding and closing: a slow Target.getTargets
+                # may use what it needs, and whatever is left goes to closing.
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + _POPUP_CLEANUP_TIMEOUT_S
+                grace_until = loop.time() + _POPUP_ARRIVAL_GRACE_S
+                # Always look at least once: another popup may have arrived
+                # after the first was found. Keep looking for a short while
+                # when none has arrived yet (failed or cancelled open).
+                while True:
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
+                    try:
+                        await discover(max(0.1, remaining - _POPUP_CLOSE_TARGET_TIMEOUT_S))
+                    except Exception:
+                        pass
+                    if owned or loop.time() >= grace_until:
+                        break
+                    await asyncio.sleep(0.1)
+                for target_id in sorted(owned):
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
+                    try:
+                        await browser._send(
+                            "Target.closeTarget",
+                            {"targetId": target_id},
+                            timeout=min(_POPUP_CLOSE_TARGET_TIMEOUT_S, remaining),
+                        )
+                    except Exception:
+                        pass
+
+            try:
+                opened = await opener._send(
+                    "Runtime.evaluate",
+                    {
+                        "expression": _evaluate_expression("(url) => window.open(url, '_blank') !== null", url),
+                        "returnByValue": True,
+                        "awaitPromise": True,
+                        "userGesture": True,
+                    },
+                    timeout=5.0,
+                )
+                if opened.get("exceptionDetails") or (opened.get("result") or {}).get("value") is not True:
+                    raise RuntimeError("the browser refused to open the popup")
+                async with asyncio.timeout(_POPUP_OPEN_TIMEOUT_S):
+                    while not owned:
+                        await discover(_POPUP_DISCOVER_TIMEOUT_S)
+                        if not owned:
+                            await asyncio.sleep(0.1)
+                target_id = sorted(owned)[0]
+                page_ws = urlunsplit(
+                    urlsplit(browser_ws)._replace(path=f"/devtools/page/{target_id}", query="", fragment="")
+                )
+                async with _websockets.connect(
+                    page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+                ) as pws:
+                    page = _RawCdpPage(pws, target_id)
+                    await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                    tree = await page._send("Page.getFrameTree", timeout=_RAW_CONNECT_TIMEOUT_S)
+                    main_frame = ((tree.get("frameTree") or {}).get("frame") or {}).get("id")
+                    page._main_frame_id = main_frame if isinstance(main_frame, str) and main_frame else None
+                    await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                    await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                    async with asyncio.timeout(_POPUP_LOAD_TIMEOUT_S):
+                        while True:
+                            try:
+                                current = await current_page_url(page)
+                            except RuntimeError as exc:
+                                if str(exc) != "CDP returned no current main frame URL":
+                                    raise
+                                await asyncio.sleep(0.1)
+                                continue
+                            if current != "about:blank":
+                                _check_final_host(current, allowed_hosts)
+                                if await page.evaluate("() => document.readyState") == "complete":
+                                    break
+                            await asyncio.sleep(0.1)
+                        timing = None
+                        if page._document_status is None:
+                            # The document may have arrived before Network was
+                            # enabled on this freshly attached target.
+                            timing = await page.evaluate(_NAVIGATION_STATUS_JS)
+                        status = page._document_status
+                        if status is None and isinstance(timing, int) and not isinstance(timing, bool) and timing > 0:
+                            status = timing
+                        # A redirect can land while readyState or timing is awaited:
+                        # the URL checked above is not necessarily the page we yield.
+                        final = await current_page_url(page)
+                        _check_final_host(final, allowed_hosts)
+                    if status in _NAV_FAIL_STATUSES:
+                        raise NavBlocked(status, final)
+                    permit.ok()
+                    permit.release()
+                    yield page
+                    _check_final_host(await current_page_url(page), allowed_hosts)
+            except NavBlocked as exc:
+                # Settle before cleanup so a cancellation during teardown cannot
+                # erase an already-observed refusal.
+                permit.refused(exc.status)
+                raise
+            except NavigationPolicyError:
+                permit.neutral()
+                raise
+            finally:
+                # Shield the bounded cleanup but keep the caller's cancellation.
+                # cleanup() bounds itself; the outer cap is only a backstop.
+                cleanup_task = asyncio.create_task(asyncio.wait_for(cleanup(), timeout=_POPUP_CLEANUP_TIMEOUT_S + 1.0))
+                cancelled = False
+                while True:
+                    try:
+                        await asyncio.shield(cleanup_task)
+                        break
+                    except asyncio.CancelledError:
+                        if cleanup_task.cancelled():
+                            raise
+                        cancelled = True
+                    except Exception:
+                        break
+                if cancelled:
+                    raise asyncio.CancelledError
+    finally:
+        # Idempotent: on the success path it was already released before the yield.
+        permit.release()
+
+
 async def _new_tab(ctx: BrowserContext) -> Page:
     """Open a tab in ``ctx`` — in the background when stealth is on.
 
@@ -1764,25 +2017,8 @@ async def open_page(
     host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
     timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
-    budget = navigation_budget()
-    try:
-        permit = await budget.acquire(initial_host or "")
-    except HostRefusingError as refusing:
-        # R-CDP-HOST-PAUSE: an open breaker is a timed refusal by the site, and
-        # the agent must act on the remaining pause, not on a generic retryable
-        # transport failure. The shared taxonomy answer is rate_limited with
-        # retry_after_s set to the remaining cooldown; raising it as a ToolError
-        # here is the one mapping every CDP connector shares, because their broad
-        # "except Exception" fetch guards pass ToolError through untouched.
-        raise_tool_error(
-            ConnectorError(
-                ErrorCode.RATE_LIMITED,
-                f"CDP navigation to {refusing.host} paused for {refusing.retry_after_s:g} s "
-                f"after {refusing.refusals} refusals",
-                provider=refusing.host,
-                retry_after_s=refusing.retry_after_s,
-            )
-        )
+    # An open host breaker is rate_limited with retry_after_s (R-CDP-HOST-PAUSE).
+    permit = await _acquire_navigation_permit(initial_host or "")
     stack = AsyncExitStack()
     page: PageLike
     try:

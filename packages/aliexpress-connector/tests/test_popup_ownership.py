@@ -29,6 +29,7 @@ def popups(monkeypatch):
         late_registration=False,
         listeners=[],
         scans=0,
+        move_to=None,
     )
 
     class Popup:
@@ -50,6 +51,9 @@ def popups(monkeypatch):
                 await asyncio.Event().wait()
             if state.challenge:
                 self.url = "https://aliexpress.ru/punish?x5secdata=x"
+            if state.move_to and self.owned:
+                # The card redirects to another item while it is polled.
+                self.url = state.move_to
             return json.dumps({"title": self.url, "price_texts": {"attached": ["100 ₽"]}, "punish": state.challenge})
 
         async def close(self):
@@ -279,3 +283,197 @@ async def test_card_popup_close_is_bounded_and_releases_lock(popups):
     assert popups.owned.close_finished.is_set()
     assert popups.operator.close_calls == 0
     assert not server._cdp_lock.locked()
+
+
+class _RawLanding:
+    """A raw-CDP landing page: no Playwright context, no popup events."""
+
+    url = "https://aliexpress.ru/wholesale?SearchText=x"
+
+
+class _RawPopup:
+    def __init__(self, url):
+        self.url = url
+        self.reads = 0
+        self.move_to = None
+        self.report_url = False
+
+    async def evaluate(self, _expression):
+        self.reads += 1
+        if self.move_to:
+            self.url = self.move_to
+        payload = {"title": self.url, "price_texts": {"attached": ["100 ₽"]}, "punish": False}
+        if self.report_url:
+            payload["url"] = self.url
+        return json.dumps(payload)
+
+
+@pytest.fixture
+def raw_popup(monkeypatch):
+    state = SimpleNamespace(popup=_RawPopup(ITEM_URL), calls=[], exited=False)
+    landing = _RawLanding()
+
+    @asynccontextmanager
+    async def open_page(*_args, **_kwargs):
+        yield landing
+
+    @asynccontextmanager
+    async def open_owned_popup(opener, url, *, allowed_hosts):
+        state.calls.append((opener, url, set(allowed_hosts)))
+        try:
+            yield state.popup
+        finally:
+            state.exited = True
+
+    monkeypatch.setattr(server, "open_page", open_page)
+    # raising=False: the pre-fix module does not import open_owned_popup at all.
+    monkeypatch.setattr(server, "open_owned_popup", open_owned_popup, raising=False)
+    monkeypatch.setattr(server, "_polite_wait", AsyncMock())
+    monkeypatch.setattr(server, "_cdp_lock", asyncio.Lock())
+    state.landing = landing
+    return state
+
+
+async def test_card_reads_an_owned_raw_cdp_popup(raw_popup):
+    """Raw CDP (Playwright attach timed out) used to refuse every card with
+    transport_down; the card now opens the item from the landing page as an
+    owned raw popup and reads it like the Playwright tab."""
+    result = await server._cdp_card(ITEM_URL, None)
+
+    assert result["title"] == ITEM_URL
+    assert raw_popup.calls == [(raw_popup.landing, ITEM_URL, {"aliexpress.ru", "www.aliexpress.ru"})]
+    assert raw_popup.popup.reads == 1
+    assert raw_popup.exited
+    assert not server._cdp_lock.locked()
+
+
+@pytest.mark.parametrize(
+    ("url", "code"),
+    [
+        ("https://aliexpress.ru/item/1005010001.html", "transport_down"),
+        ("https://aliexpress.ru/punish?x5secdata=x", "challenge_required"),
+    ],
+)
+async def test_raw_popup_on_another_item_or_a_challenge_is_not_read(raw_popup, monkeypatch, url, code):
+    raw_popup.popup = _RawPopup(url)
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: None)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == code
+    assert raw_popup.popup.reads == 0
+    assert raw_popup.exited
+
+
+OTHER_ITEM = "https://aliexpress.ru/item/1005010001.html"
+
+
+@pytest.mark.parametrize("report_url", [False, True])
+async def test_raw_popup_redirected_to_another_item_during_the_read_is_not_returned(raw_popup, report_url):
+    """Review #195 P1: the item id was checked only before the 12 s poll; an A->B
+    redirect on the same host returned (and cached) item B's price under item A."""
+    raw_popup.popup.move_to = OTHER_ITEM
+    raw_popup.popup.report_url = report_url
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+    assert raw_popup.popup.reads >= 1
+    assert raw_popup.exited
+
+
+async def test_raw_popup_extractor_url_on_another_item_is_not_returned(raw_popup, monkeypatch):
+    """The extractor's own location.href is checked too, not only the tab URL."""
+
+    async def stale_tab_url(_target):
+        return ITEM_URL
+
+    monkeypatch.setattr(server, "current_page_url", stale_tab_url, raising=False)
+    raw_popup.popup.move_to = OTHER_ITEM
+    raw_popup.popup.report_url = True
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+
+
+async def test_raw_popup_moving_to_a_challenge_during_the_read_is_challenge_required(raw_popup, monkeypatch):
+    raw_popup.popup.move_to = "https://aliexpress.ru/punish?x5secdata=x"
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: None)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "challenge_required"
+
+
+async def test_playwright_popup_redirected_to_another_item_during_the_read_is_not_returned(popups):
+    """The same A->B check covers the Playwright popup path."""
+    popups.move_to = OTHER_ITEM
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+    assert popups.owned.closed
+
+
+async def test_card_tool_caches_nothing_when_the_item_moved(raw_popup, monkeypatch):
+    """Nothing read from a moved tab reaches the cache."""
+    server._cache.clear()
+    raw_popup.popup.move_to = OTHER_ITEM
+
+    with pytest.raises(ToolError):
+        await server.aliexpress_card(ITEM_URL)
+
+    assert server._cache.get(ITEM_URL) is None
+
+
+@pytest.mark.parametrize(
+    ("status", "blocked_url", "expected_code"),
+    [
+        (403, "https://aliexpress.ru/punish?x5secdata=x", "challenge_required"),
+        (429, ITEM_URL, "rate_limited"),
+        (503, ITEM_URL, "transport_down"),
+    ],
+)
+async def test_card_tool_maps_popup_nav_blocked_by_url_and_status(
+    raw_popup, monkeypatch, status, blocked_url, expected_code
+):
+    """A popup refused at HTTP level maps punish URLs to challenge_required and 429 to rate_limited."""
+    server._cache.clear()
+    refusals = []
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: refusals.append(True))
+
+    @asynccontextmanager
+    async def blocked_popup(_opener, _url, *, allowed_hosts):
+        raise server.NavBlocked(status, blocked_url)
+        yield
+
+    monkeypatch.setattr(server, "open_owned_popup", blocked_popup, raising=False)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.aliexpress_card(ITEM_URL)
+
+    assert json.loads(str(excinfo.value))["error"] == expected_code
+    if expected_code in ("challenge_required", "rate_limited"):
+        assert refusals == [True]
+
+
+async def test_raw_popup_extractor_url_on_foreign_host_with_same_item_id_is_rejected(raw_popup, monkeypatch):
+    """An extracted_url on a foreign host is rejected even if its path carries the requested item_id."""
+
+    async def stale_tab_url(_target):
+        return ITEM_URL
+
+    monkeypatch.setattr(server, "current_page_url", stale_tab_url, raising=False)
+    raw_popup.popup.move_to = "https://evil.invalid/item/100501000.html"
+    raw_popup.popup.report_url = True
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"
