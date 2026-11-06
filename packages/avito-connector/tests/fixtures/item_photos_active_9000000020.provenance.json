@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000020",
+  "captured_at": "2026-11-06",
+  "sha256": "18c46cb5dc3f7b4389f03d43c8a70d9af1dad2f82b5a66126f7bb5bca111480d",
+  "method": "a genuine Avito item page of a private listing rendered in the operator's Chrome over CDP on 2026-11-06 10:08 MSK (page.content()); trimmed like item_state_active_9000000012 plus buyerItem.galleryInfo.media with the captured entries only (isVideo and the 640x480/1280x960 urls of each). De-identified: listing id, URL, title, description and every photo URL are fictional (same *.img.avito.st shard hosts, invented paths); no seller data kept. No entry was added: videos and off-host URLs are tested on plain dicts",
+  "ground_truth": {
+    "note": "availability active; photo_urls returns the 2 fictional 640x480 URLs in gallery order"
+  }
+}

@@ -95,7 +95,7 @@ uvx ru-marketplace-mcp setup
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"   # 3381 офлайн-тестов, сеть не нужна
+uv run pytest -q -m "not live and not cdp"   # 3405 офлайн-тестов, сеть не нужна
 ```
 
 Проверка живого эндпоинта:
@@ -438,7 +438,7 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | Инструмент                                            | Что делает                                           |
 | ----------------------------------------------------- | ---------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id, include_inactive)` | Поиск объявлений через внутренний `js/items` API; `availability` из `isReserved`; зарезервированные остаются, `include_inactive=false` их убирает (`excluded_inactive`) |
-| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль), резерв `availability` (active/reserved/unknown) из служебных флагов страницы, не из текста продавца, условия сделки и доставки, проверки продавца, город и станции (точный адрес — только у компаний), дата, просмотры |
+| `avito_card(item_id_or_url, photos)`                  | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль), по запросу до 3 фото активного объявления (`photos`, затратно), резерв `availability` (active/reserved/unknown) из служебных флагов страницы, не из текста продавца, условия сделки и доставки, проверки продавца, город и станции (точный адрес — только у компаний), дата, просмотры |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов; число активных объявлений недоступно (`null`) |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
@@ -692,7 +692,7 @@ TTL.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3381 офлайн-тестов
+uv run pytest -q -m "not live and not cdp"    # 3405 офлайн-тестов
 uv run pytest -q -m "not live"                # то, что гоняет CI
 uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
 uv run ruff check . && uv run ruff format --check .
@@ -758,7 +758,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 ## Как это сделано
 
 Код и документацию я писал вместе с ИИ-ассистентами. Они работают быстро и
-ошибаются уверенно, поэтому проект устроен вокруг проверки: 3381 офлайн-тестов,
+ошибаются уверенно, поэтому проект устроен вокруг проверки: 3405 офлайн-тестов,
 аудит перед выпуском, тесты, которые прогоняют настоящий экстрактор по снятой с
 сайта разметке. В заметках к релизу перечислено, какие источники сверены с живыми
 страницами вручную и какие остались непроверенными.
@@ -862,7 +862,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3381 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 3405 offline tests, no network needed
 ```
 
 Client configuration mirrors the Russian section above. The shortest path is the
@@ -1113,7 +1113,7 @@ takes no part in `compare_prices`.
 | Tool                                              | What it does                                      |
 | ------------------------------------------------- | ------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id, include_inactive)` | Classified search through the internal `js/items` API; `availability` from `isReserved`; reserved hits kept, `include_inactive=false` drops them (`excluded_inactive`) |
-| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link), reservation `availability` (active/reserved/unknown) from the page's service flags, never seller text, deal and delivery terms, seller checks, city and stations (street address for companies only), date, views |
+| `avito_card(item_id_or_url, photos)`              | CDP item page: title, price, description, image count, seller (rating, profile link), up to 3 photos of an active ad on request (`photos`, costly), reservation `availability` (active/reserved/unknown) from the page's service flags, never seller text, deal and delivery terms, seller checks, city and stations (street address for companies only), date, views |
 | `avito_seller(seller_id_or_url)`                  | Seller rating, review count; active listing count unavailable (`null`)       |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the
@@ -1334,7 +1334,7 @@ import, and `compare_prices` queries the same subset.
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3381 offline tests
+uv run pytest -q -m "not live and not cdp"    # 3405 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -1396,7 +1396,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 3381 offline
+are confidently wrong, so the project is arranged around verification: 3405 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

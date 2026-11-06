@@ -77,6 +77,8 @@
         "metro": {},
         "params": {},
         "payment_on_delivery": {},
+        "photos": {},
+        "photos_status": {},
         "posted_at": {},
         "price_offer_enabled": {},
         "price_rub": {},
@@ -98,6 +100,12 @@
           "maxLength": 300,
           "minLength": 1,
           "type": "string"
+        },
+        "photos": {
+          "default": 0,
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "required": [
