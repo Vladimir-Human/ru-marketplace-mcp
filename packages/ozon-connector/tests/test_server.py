@@ -1157,3 +1157,81 @@ def test_ozon_proxy_falls_back_to_standard_variables(monkeypatch):
     monkeypatch.delenv("OZON_PROXY", raising=False)
     monkeypatch.setenv("HTTPS_PROXY", "http://generic:8080")
     assert server._proxy() == "http://generic:8080"
+
+
+# The product page's current cursor (live 2026-11-06): sortings offered
+# usefulness_desc / score_desc / score_asc and nextButton carried this sort.
+_CURRENT_NEXT = "?page=2&page_key=CLW0iv0QEgwI-__YzwYQyIylugMYBQ&sort=usefulness_desc"
+
+
+def _thirty(page):
+    return [{"uuid": f"p{page}-{i}", "content": {"comment": f"text {i}", "score": 5}} for i in range(30)]
+
+
+async def test_reviews_follow_the_current_usefulness_cursor(monkeypatch):
+    calls = []
+
+    async def fake_fetch(path, ctx):
+        calls.append(path)
+        page = len(calls)
+        return 200, _reviews_body(reviews=_thirty(page), next_button=_CURRENT_NEXT if page == 1 else None), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    result = await server.ozon_reviews("123", limit=35)
+
+    assert calls == [
+        "/product/123/reviews/",
+        "/product/123/reviews/?page=2&page_key=CLW0iv0QEgwI-__YzwYQyIylugMYBQ&sort=usefulness_desc",
+    ]
+    assert result.returned == 35
+    assert result.pages_fetched == 2
+    assert result.partial is False
+    assert result.stop_reason is None
+    assert result.sort == "usefulness_desc"
+
+
+async def test_reviews_reaching_the_limit_is_not_partial_whatever_the_cursor(monkeypatch):
+    calls = []
+
+    async def fake_fetch(path, ctx):
+        calls.append(path)
+        return 200, _reviews_body(reviews=_thirty(1), next_button="?page=2&page_key=abc&sort=unknown_order"), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    result = await server.ozon_reviews("123", limit=2)
+
+    assert len(calls) == 1
+    assert result.returned == 2
+    assert result.partial is False
+    assert result.stop_reason is None
+
+
+@pytest.mark.parametrize("sort", ["recent", "default", "published_at_desc", "usefulness_desc"])
+async def test_reviews_default_order_aliases_open_the_plain_first_page(monkeypatch, sort):
+    calls = []
+
+    async def fake_fetch(path, ctx):
+        calls.append(path)
+        return 200, _reviews_body(reviews=_thirty(1)), "fake"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+
+    result = await server.ozon_reviews("123", limit=1, sort=sort)
+
+    assert calls == ["/product/123/reviews/"]
+    assert result.sort == "usefulness_desc"
+
+
+def test_review_cursor_is_rebuilt_from_validated_parts_only():
+    assert server._safe_review_page_path("123", _CURRENT_NEXT) == (
+        "/product/123/reviews/?page=2&page_key=CLW0iv0QEgwI-__YzwYQyIylugMYBQ&sort=usefulness_desc"
+    )
+    for value in (
+        "https://evil.invalid/?page=2&page_key=abc&sort=usefulness_desc",
+        "?page=2&page_key=../../x&sort=usefulness_desc",
+        "?page=2&page_key=abc&sort=evil",
+        "?page=0&page_key=abc&sort=usefulness_desc",
+    ):
+        assert server._safe_review_page_path("123", value) is None
