@@ -27,7 +27,7 @@ Chrome over CDP — same pattern as Ozon.
   service flags only, never from the seller's title or description. Reserved
   means another buyer holds it; `unknown` is not a verdict.
   Also deal terms (condition, delivery, safe deal, bargain), seller checks and
-  tenure, city and stations (street address only for companies), date, views.
+  tenure, city and stations (street address only when every source says company), date, views.
 - `avito_seller(seller_id_or_url)` — seller rating, review count, active listings
 
 **Not an MCP tool:** `avito_selfcheck()` is a tri-state drift canary. It is

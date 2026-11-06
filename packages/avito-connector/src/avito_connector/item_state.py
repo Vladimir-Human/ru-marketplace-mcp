@@ -231,8 +231,22 @@ _VERIFICATION_NAMES = {
 }
 # Seller icon badges that state a check; the rest («Эковклад», charity) are promotions.
 _CHECK_BADGES = re.compile(r"подтвержд|надёжн|надежн|проверен|документ|реквизит", re.I)
-_NO_BARGAIN = re.compile(r"без\s+торга|торг\s+не\s*уместен|торга\s+нет|не\s+торгуюсь", re.I)
-_BARGAIN = re.compile(r"(?<![а-яё])торг(?![а-яё])|торг\s+уместен|возможен\s+торг|небольшой\s+торг", re.I)
+# «торг» as a word (not «торговый», «торгуюсь»). Negations are matched first and
+# cut out of the text, so «Торг: нет» or «торг не предлагать» never counts as «торг».
+_TORG = r"(?<![а-яё])торг(?![а-яё])"
+_NO_BARGAIN = re.compile(
+    r"без\s+торга"
+    r"|торга\s+нет"
+    r"|не\s+торгуюсь|не\s+торгуемся|торговаться\s+не\b"
+    rf"|{_TORG}\s*[:\-–—]?\s*(?:нет|не\b|неуместен|невозмож|исключ)",
+    re.I,
+)
+_BARGAIN = re.compile(_TORG, re.I)
+# The explicit «Торг» parameter some categories carry: its value decides.
+_PARAM_YES = re.compile(r"^(?:да|есть|возможен|уместен)$", re.I)
+_PARAM_NO = re.compile(r"^(?:нет|невозможен|неуместен)$", re.I)
+_MAX_SERVICES = 10
+_MAX_CHECKS = 10
 
 
 def _bool(value: Any) -> bool | None:
@@ -256,24 +270,50 @@ def _count(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
-def bargain(description: str | None, params: list[dict[str, str]]) -> bool | None:
-    """True/False only from explicit words; the «Предложить цену» form is not «торг»."""
-    text = " ".join([description or ""] + [f"{p['name']} {p['value']}" for p in params])
-    if _NO_BARGAIN.search(text):
+def _text_bargain(text: str) -> bool | None:
+    """True/False from the words alone; both a negation and a plain «торг» -> None."""
+    negated = bool(_NO_BARGAIN.search(text))
+    plain = bool(_BARGAIN.search(_NO_BARGAIN.sub(" ", text)))
+    if negated and plain:
+        return None
+    if negated:
         return False
-    if _BARGAIN.search(text):
-        return True
-    return None
+    return True if plain else None
+
+
+def bargain(description: str | None, params: list[dict[str, str]]) -> bool | None:
+    """True/False only from explicit statements; the «Предложить цену» form is not «торг».
+
+    The explicit «Торг» parameter decides first (да/нет); otherwise the listing
+    text, where negations («Торг: нет», «торг не …», «без торга») are read
+    before a plain «торг». A text that contradicts the parameter, or itself, is
+    None: the seller's words are data, not a flag to trust over the page.
+    """
+    param: bool | None = None
+    for entry in params:
+        if entry["name"].strip().lower() != "торг":
+            continue
+        value = entry["value"].strip()
+        if _PARAM_YES.match(value):
+            param = True
+        elif _PARAM_NO.match(value):
+            param = False
+        else:
+            return None
+    words = _text_bargain(description or "")
+    if param is not None and words is not None and words != param:
+        return None
+    return param if param is not None else words
 
 
 def is_company(bi: dict[str, Any] | None) -> bool | None:
     """The page state's own seller type; None when the page does not say."""
+    # Only buyerItem.seller.isCompany: the top-level buyerItem.isCompany is not
+    # used as a fallback (review #198); the DOM label is checked by the caller.
     if not isinstance(bi, dict):
         return None
-    for value in (_dict(bi, "seller").get("isCompany"), bi.get("isCompany")):
-        if isinstance(value, bool):
-            return value
-    return None
+    value = _dict(bi, "seller").get("isCompany")
+    return value if isinstance(value, bool) else None
 
 
 def _params(bi: dict[str, Any]) -> list[dict[str, str]]:
@@ -288,8 +328,9 @@ def _params(bi: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def _delivery_services(safe_deal: dict[str, Any]) -> list[str]:
-    services = []
-    for service in safe_deal.get("services") or []:
+    services: list[str] = []
+    raw = safe_deal.get("services")
+    for service in (raw if isinstance(raw, list) else [])[: _MAX_SERVICES * 3]:
         if (
             isinstance(service, dict)
             and service.get("available") is True
@@ -297,7 +338,11 @@ def _delivery_services(safe_deal: dict[str, Any]) -> list[str]:
             and isinstance(service.get("type"), str)
         ):
             kind: str = service["type"]
-            services.append(_SERVICE_NAMES.get(kind, kind)[:40])
+            name = _SERVICE_NAMES.get(kind, kind)[:40]
+            if name not in services:
+                services.append(name)
+                if len(services) == _MAX_SERVICES:
+                    break
     return services
 
 
@@ -305,14 +350,22 @@ def _seller_checks(item: dict[str, Any]) -> list[str]:
     checks: list[str] = []
     verification = _dict(_dict(item, "seller"), "verification")
     for key, label in _VERIFICATION_NAMES.items():
-        if verification.get(key) not in (None, False, "", [], {}):
+        # Only a real true: a string such as "false" or a pending-status object
+        # is not a confirmed check (live captures carry booleans or null).
+        if verification.get(key) is True:
             checks.append(label)
     badge_bar = _dict(item, "sellerBadgeBar")
-    for badge in list(badge_bar.get("iconsBadges") or []) + list(badge_bar.get("badges") or []):
+    icons, badges = badge_bar.get("iconsBadges"), badge_bar.get("badges")
+    candidates = (icons if isinstance(icons, list) else [])[: _MAX_CHECKS * 2] + (
+        badges if isinstance(badges, list) else []
+    )[: _MAX_CHECKS * 2]
+    for badge in candidates:
+        if len(checks) >= _MAX_CHECKS:
+            break
         title = _text(badge.get("title"), 80) if isinstance(badge, dict) else None
         if title and _CHECK_BADGES.search(title) and title not in checks:
             checks.append(title)
-    return checks
+    return checks[:_MAX_CHECKS]
 
 
 def card_details(html: str, item_id: int | None, description: str | None) -> dict[str, Any]:
@@ -356,10 +409,14 @@ def card_details(html: str, item_id: int | None, description: str | None) -> dic
     if isinstance(safe_deal, dict):
         out["delivery_services"] = _delivery_services(safe_deal)
         enabled = safe_deal.get("deliveryButtonEnabled")
-        if isinstance(enabled, bool):
-            out["safe_deal"] = enabled and _text(_dict(safe_deal, "deliveryButton").get("title")) is not None
-    if "bargainOffer" in bi:
-        out["price_offer_enabled"] = isinstance(bi.get("bargainOffer"), dict)
+        if enabled is False:
+            out["safe_deal"] = False
+        elif enabled is True and _text(_dict(safe_deal, "deliveryButton").get("title")) is not None:
+            # An enabled button without a recognisable title is not proof either way.
+            out["safe_deal"] = True
+    # The form object was a dict on every captured page; any other shape is unknown, not «no form».
+    if isinstance(bi.get("bargainOffer"), dict):
+        out["price_offer_enabled"] = True
     for badge in (_dict(item, "badgeBar").get("badges") or [])[:10]:
         title = _text(badge.get("title"), 80) if isinstance(badge, dict) else None
         if title:

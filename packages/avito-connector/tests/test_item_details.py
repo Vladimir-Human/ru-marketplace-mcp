@@ -2,18 +2,36 @@
 
 ``item_details_private_*`` is a trimmed, de-identified capture (2026-11-06) of a
 private listing; its street address, map point and stations are fictional.
-``item_details_company_*`` is a labelled synthetic edit with isCompany=true.
+
+No company listing has been captured (the one reached on 2026-11-06 was already
+closed), so the company rule is exercised only by unit tests that edit the
+private capture in code (``_seller_type``): they prove the fail-closed rule, not
+Avito's format for company pages.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from avito_connector import item_state, server
 
 FIXTURES = Path(__file__).parent / "fixtures"
-PRIVATE, COMPANY = "item_details_private_9000000018.html", "item_details_company_9000000017.html"
+PRIVATE = "item_details_private_9000000018.html"
+_STATE_PRIVATE = '\\"isCompany\\": false'
+
+
+def _seller_type(html: str, *, state: bool | None, dom: str | None) -> str:
+    """The private capture with the page-state seller type and the DOM seller label set in code."""
+    assert html.count(_STATE_PRIVATE) == 1
+    if state is None:
+        html = html.replace(_STATE_PRIVATE + ", ", "").replace(_STATE_PRIVATE, "")
+    else:
+        html = html.replace(_STATE_PRIVATE, f'\\"isCompany\\": {json.dumps(state)}')
+    if dom is not None:
+        html = html.replace("<body>", f'<body><div data-marker="seller-info/label">{dom}</div>', 1)
+    return html
 
 
 def _page(name: str) -> str:
@@ -76,18 +94,51 @@ async def test_private_seller_gets_city_and_stations_but_no_address(monkeypatch)
     assert "Тестовая" not in result.model_dump_json()
 
 
-async def test_company_seller_gets_the_address_the_page_gives(monkeypatch):
-    _serve_page(monkeypatch, _page(COMPANY))
+@pytest.mark.parametrize(("state", "dom"), [(True, "Компания"), (True, None), (None, "Компания"), (None, "Магазин")])
+async def test_address_only_when_every_stated_source_says_company(monkeypatch, state, dom):
+    """Unit test of the rule on an edited private capture, not a company-page fixture."""
+    _serve_page(monkeypatch, _seller_type(_page(PRIVATE), state=state, dom=dom))
 
-    result = await server.avito_card("9000000017")
+    result = await server.avito_card("9000000018")
 
     assert result.address == "Москва, Тестовая улица, 1"
     assert result.coords == {"lat": 55.5, "lng": 37.5}
     assert result.location == "Москва"
 
 
+@pytest.mark.parametrize(
+    ("state", "dom"),
+    [
+        (False, "Компания"),
+        (True, "Частное лицо"),
+        (False, "Магазин"),
+        (False, None),
+        (None, "Частное лицо"),
+        (None, None),
+    ],
+)
+async def test_contradicting_or_private_seller_types_never_expose_the_address(monkeypatch, state, dom):
+    """Review #198 P1: hydration and DOM were OR-ed, so one «company» source exposed
+    the street address and map point even when the other said private."""
+    _serve_page(monkeypatch, _seller_type(_page(PRIVATE), state=state, dom=dom))
+
+    result = await server.avito_card("9000000018")
+
+    assert result.address is None
+    assert result.coords is None
+    assert "Тестовая" not in result.model_dump_json()
+    assert result.location == "Москва"
+
+
+def test_top_level_buyer_item_is_company_is_not_a_fallback():
+    """Review #198 P1: buyerItem.isCompany is no longer read as a seller type."""
+    assert item_state.is_company({"isCompany": True, "seller": {}}) is None
+    assert item_state.is_company({"isCompany": True, "seller": {"isCompany": False}}) is False
+    assert item_state.is_company({"seller": {"isCompany": "true"}}) is None
+
+
 def test_unknown_seller_type_is_treated_as_private():
-    details = item_state.card_details(_page(COMPANY), 9000000017, None)
+    details = item_state.card_details(_page(PRIVATE), 9000000018, None)
     details["is_company"] = None
     card: dict = {"seller": None}
 
@@ -107,10 +158,100 @@ def test_unknown_seller_type_is_treated_as_private():
         ("Небольшой торг.", True),
         ("Забрать у торгового центра.", None),
         ("Отличное состояние.", None),
+        # Review #198 P2: these three used to come back True.
+        ("Торг: нет.", False),
+        ("Торг не предлагать, цена окончательная.", False),
+        ("Торг - нет", False),
+        ("Торг невозможен.", False),
+        ("Не торгуюсь.", False),
+        ("Торг уместен. Без торга.", None),
     ],
 )
 def test_bargain_only_from_explicit_words(text, expected):
     assert item_state.bargain(text, []) is expected
+
+
+@pytest.mark.parametrize(
+    ("value", "text", "expected"),
+    [
+        ("Нет", None, False),
+        ("нет", "Отличное состояние.", False),
+        ("Да", None, True),
+        ("Да", "Торг уместен.", True),
+        ("Да", "Без торга.", None),
+        ("Нет", "Небольшой торг.", None),
+        ("По договорённости", None, None),
+    ],
+)
+def test_bargain_reads_the_explicit_parameter_first(value, text, expected):
+    """Review #198 P2: the parameter «Торг = Нет» matched the bare word and gave True."""
+    assert item_state.bargain(text, [{"name": "Торг", "value": value}]) is expected
+
+
+@pytest.mark.parametrize("value", ["false", "pending", {"status": "pending"}, ["x"], 1])
+def test_only_a_true_verification_flag_is_a_seller_check(value):
+    """Review #198 P1: any truthy value used to read as «ИНН подтверждён»."""
+    item = {"seller": {"verification": {"isInnVerified": value, "isVerifiedSeller": value}}}
+
+    assert item_state._seller_checks(item) == []
+    item["seller"]["verification"]["isInnVerified"] = True
+    assert item_state._seller_checks(item) == ["ИНН подтверждён"]
+
+
+def _details_with(**safe_deal_or_offer) -> dict:
+    bi = {"item": {"id": 1}, **safe_deal_or_offer}
+    html = (
+        "<script>window.__staticRouterHydrationData = JSON.parse("
+        + json.dumps(json.dumps({"loaderData": {"x": {"buyerItem": bi}}}))
+        + ");</script>"
+    )
+    return item_state.card_details(html, 1, None)
+
+
+@pytest.mark.parametrize(
+    ("safe_deal", "expected"),
+    [
+        ({"deliveryButtonEnabled": True, "deliveryButton": {"title": "Купить с доставкой"}}, True),
+        ({"deliveryButtonEnabled": True, "deliveryButton": {}}, None),
+        ({"deliveryButtonEnabled": True}, None),
+        ({"deliveryButtonEnabled": False, "deliveryButton": {"title": "Купить с доставкой"}}, False),
+        ({"deliveryButtonEnabled": "true", "deliveryButton": {"title": "Купить с доставкой"}}, None),
+    ],
+)
+def test_safe_deal_is_not_false_without_a_title(safe_deal, expected):
+    """Review #198 P2: an enabled button with no recognisable title gave safe_deal=False."""
+    assert _details_with(safeDealDesktop=safe_deal)["safe_deal"] is expected
+
+
+@pytest.mark.parametrize(
+    ("offer", "expected"), [({"buttonTitle": "Отправить"}, True), ("form", None), (None, None), ([], None)]
+)
+def test_price_offer_enabled_is_never_a_guessed_false(offer, expected):
+    """Review #198 P2: a non-dict bargainOffer gave price_offer_enabled=False."""
+    assert _details_with(bargainOffer=offer)["price_offer_enabled"] is expected
+
+
+def test_delivery_services_are_deduplicated_and_bounded():
+    """Review #198 P2: an inflated services array went to the answer unbounded."""
+    services = [{"type": kind, "available": True, "enabled": True} for kind in ["delivery", "deliveryCourier"] * 50]
+    services += [{"type": f"kind{n}", "available": True, "enabled": True} for n in range(40)]
+
+    result = _details_with(safeDealDesktop={"services": services})["delivery_services"]
+
+    assert result[:2] == ["pvz", "courier"]
+    assert len(result) <= 10
+    assert len(result) == len(set(result))
+
+
+def test_seller_checks_are_deduplicated_and_bounded():
+    badges = [{"title": "Данные подтверждены"}] * 30 + [{"title": f"Документы проверены {n}"} for n in range(30)]
+    item = {"sellerBadgeBar": {"iconsBadges": badges, "badges": badges}}
+
+    checks = item_state._seller_checks(item)
+
+    assert checks[0] == "Данные подтверждены"
+    assert len(checks) <= 10
+    assert len(checks) == len(set(checks))
 
 
 def test_promotional_seller_badges_are_not_checks():

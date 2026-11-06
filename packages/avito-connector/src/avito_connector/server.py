@@ -1079,9 +1079,11 @@ _LD_CONDITIONS = {
 def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
     """Merge page-state fields into the card; values already read from the card source win.
 
-    Location privacy: a private seller's ad (or one whose seller type the page
-    does not state) shows only the city and nearby stations; the street
-    address and map point are kept only for a company seller.
+    Location privacy, fail-closed: the street address and map point are kept
+    only when every seller-type source on the page that states a type (the
+    page state's seller.isCompany and the DOM seller label) says company. A
+    private seller, an unstated type, or sources that disagree get the city and
+    nearby stations only.
     """
     for key in (
         "delivery_available",
@@ -1101,7 +1103,12 @@ def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
         if item.get(key) is None:
             item[key] = details[key]
     seller = item.get("seller")
-    company = details["is_company"] is True or (seller is not None and seller.is_company is True)
+    stated = [
+        value
+        for value in (details["is_company"], seller.is_company if seller is not None else None)
+        if value is not None
+    ]
+    company = bool(stated) and all(value is True for value in stated)
     if company:
         item["address"], item["coords"] = details["address"], details["coords"]
     extra = {k: v for k, v in details["seller"].items() if v}

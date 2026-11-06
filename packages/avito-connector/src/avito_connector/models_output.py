@@ -67,7 +67,10 @@ class AvitoSellerOut(BaseModel):
     profile_url: str | None = Field(default=None, description="Seller profile URL.")
     checks: list[str] = Field(
         default_factory=list,
-        description="Seller checks the item page states (e.g. «Данные подтверждены»); promotional badges excluded.",
+        description=(
+            "Seller checks the item page states (e.g. «Данные подтверждены»): verification flags that are true, "
+            "and check badges; promotional badges excluded; at most 10."
+        ),
     )
     tenure: str | None = Field(
         default=None, description="Avito tenure medal as the page names it (e.g. gold); not a date."
@@ -120,30 +123,45 @@ class AvitoCardResponse(BaseModel):
     params: list[AvitoParamOut] = Field(default_factory=list, description="Item parameters (Характеристики).")
     delivery_available: bool | None = Field(default=None, description="Avito Delivery is offered for this item.")
     delivery_services: list[str] = Field(
-        default_factory=list, description="Enabled delivery options: pvz, courier, postamat, click_and_collect, ..."
+        default_factory=list,
+        description="Enabled delivery options, deduplicated, at most 10: pvz, courier, postamat, click_and_collect, ...",
     )
     payment_on_delivery: bool | None = Field(
         default=None, description="Payment on receipt is possible (cash on delivery)."
     )
     safe_deal: bool | None = Field(
-        default=None, description="Buying through Avito payment and delivery («Купить с доставкой») is enabled."
+        default=None,
+        description=(
+            "Buying through Avito payment and delivery («Купить с доставкой») is enabled; None when the page "
+            "does not say, or shows an enabled button without a recognisable title."
+        ),
     )
     price_offer_enabled: bool | None = Field(
         default=None,
-        description="The «Предложить цену» form is available; it is not a statement that the price is negotiable.",
+        description=(
+            "True when the «Предложить цену» form is on the page; None otherwise (never guessed False). "
+            "It is not a statement that the price is negotiable."
+        ),
     )
     bargain: bool | None = Field(
-        default=None, description="True/False only when the listing text says «торг»/«без торга»; None otherwise."
+        default=None,
+        description=(
+            "From the explicit «Торг» parameter, else the listing text (negations such as «Торг: нет», «без торга» "
+            "first); None when not stated or when the text and the parameter disagree."
+        ),
     )
     item_badges: list[str] = Field(default_factory=list, description="Listing badges, e.g. «Авито Гарантия: …».")
     metro: list[AvitoMetroOut] = Field(default_factory=list, description="Nearby stations from the location block.")
     address: str | None = Field(
         default=None,
-        description="Street address as the page gives it; only for a company seller, None for a private one.",
+        description=(
+            "Street address as the page gives it, only when every seller-type source on the page says company; "
+            "None for a private seller, an unstated type or disagreeing sources."
+        ),
     )
     coords: dict[str, float] | None = Field(
         default=None,
-        description="Map point {lat, lng} of that address; only for a company seller, None for a private one.",
+        description="Map point {lat, lng} of that address, under the same rule as address; otherwise None.",
     )
     today_views: int | None = Field(default=None, description="Views today.")
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")

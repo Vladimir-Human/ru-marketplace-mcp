@@ -160,10 +160,19 @@ seller is read from the same page's DOM block, or None if that block is absent.
 location (city), posted_at, views, today_views, condition, params, delivery
 and safe-deal terms, item_badges, metro and seller checks/tenure/reply_time come
 from the same page's state; anything the page does not state is None/empty.
-bargain is true/false only when the listing text says «торг»/«без торга»;
-price_offer_enabled is the «Предложить цену» form, not a negotiable price.
-address and coords are filled only for a company seller: a private seller's
-ad (or one whose seller type is unknown) gets the city and stations only.
+Lists are deduplicated and bounded (delivery_services and seller.checks at
+most 10). seller.checks holds only verification flags that are true and
+check badges; a string, number or object is not a confirmed check.
+bargain comes from the explicit «Торг» parameter (да/нет), else the listing
+text with negations («Торг: нет», «торг не …», «без торга») read first; it is
+None when not stated or when text and parameter disagree. safe_deal is None
+for an enabled button without a recognisable title. price_offer_enabled is
+true when the «Предложить цену» form is on the page, else None; the form is
+not a statement that the price is negotiable.
+address and coords are fail-closed: they are filled only when every
+seller-type source on the page that states a type (page-state
+seller.isCompany and the DOM seller label) says company. A private seller,
+an unstated type or disagreeing sources get the city and stations only.
 availability is active/reserved/unknown, with availability_evidence. It is
 read from Avito's own page-state flags (item.isActive,
 item.deliveryInfo.isReserved, safeDealDesktop.reserved) and the safe-deal

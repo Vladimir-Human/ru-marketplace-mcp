@@ -94,24 +94,37 @@
 - Avito: `avito_card` читает со своей же страницы условия сделки и продавца:
   `condition` и `params` (характеристики), `delivery_available`,
   `delivery_services`, `payment_on_delivery`, `safe_deal`, `price_offer_enabled`
-  (форма «Предложить цену» — не обещание торга), `bargain` (только по словам
-  «торг»/«без торга»), `item_badges`, проверки продавца (`seller.checks`, без
-  рекламных значков), `seller.tenure`, `seller.seller_since`, `seller.reply_time`,
-  а также `location` (город), `metro`, `posted_at`, `views`, `today_views`.
-  Приватность: у частного продавца — и когда тип продавца на странице не указан —
-  только город и станции; улица и точка на карте (`address`, `coords`) отдаются
-  только для компаний. Отсутствующее остаётся `None`/пустым. Лишних запросов нет.
+  (форма «Предложить цену» — не обещание торга), `bargain`, `item_badges`,
+  проверки продавца (`seller.checks`, без рекламных значков), `seller.tenure`,
+  `seller.seller_since`, `seller.reply_time`, а также `location` (город),
+  `metro`, `posted_at`, `views`, `today_views`. `bargain` — сначала явный
+  параметр «Торг» (да/нет), затем текст, где отрицания («Торг: нет»,
+  «торг не …», «без торга») читаются раньше слова «торг»; противоречие текста
+  и параметра — `None`. Проверка продавца засчитывается только при флаге
+  `true`. Отсутствующее или незнакомой формы — `None`/пусто, не `False`
+  (`safe_deal` при включённой кнопке без названия, `price_offer_enabled` при
+  форме не-словаре). Списки дедуплицированы и ограничены. Приватность,
+  fail-closed: улица и точка на карте (`address`, `coords`) отдаются, только
+  если все указывающие тип источники страницы (`seller.isCompany` гидратации и
+  метка продавца в DOM) говорят «компания»; частное лицо, неуказанный тип или
+  расхождение источников — только город и станции. Лишних запросов нет.
 - Avito: `avito_card` reads deal and seller terms from the same page:
   `condition` and `params`, `delivery_available`, `delivery_services`,
   `payment_on_delivery`, `safe_deal`, `price_offer_enabled` (the «Предложить
-  цену» form, not a negotiable-price claim), `bargain` (only from the words
-  «торг»/«без торга»), `item_badges`, seller checks (`seller.checks`, promotional
-  badges excluded), `seller.tenure`, `seller.seller_since`, `seller.reply_time`,
-  plus `location` (city), `metro`, `posted_at`, `views`, `today_views`.
-  Privacy: a private seller — and one whose type the page does not state — gets
-  the city and stations only; the street address and map point (`address`,
-  `coords`) are returned only for a company. Missing data stays `None`/empty.
-  No extra requests.
+  цену» form, not a negotiable-price claim), `bargain`, `item_badges`, seller
+  checks (`seller.checks`, promotional badges excluded), `seller.tenure`,
+  `seller.seller_since`, `seller.reply_time`, plus `location` (city), `metro`,
+  `posted_at`, `views`, `today_views`. `bargain` reads the explicit «Торг»
+  parameter (да/нет) first, then the text with negations («Торг: нет»,
+  «торг не …», «без торга») ahead of a plain «торг»; text that contradicts the
+  parameter gives `None`. A seller check counts only for a `true` flag.
+  Missing or unfamiliar shapes are `None`/empty, never `False` (`safe_deal` for
+  an enabled button without a title, `price_offer_enabled` for a non-dict
+  form). Lists are deduplicated and bounded. Privacy, fail-closed: the street
+  address and map point (`address`, `coords`) are returned only when every
+  source on the page that states a seller type (page-state `seller.isCompany`
+  and the DOM seller label) says company; a private seller, an unstated type or
+  disagreeing sources get the city and stations only. No extra requests.
   requests to Avito.
 
 ## [2.8.2] - 2026-11-03

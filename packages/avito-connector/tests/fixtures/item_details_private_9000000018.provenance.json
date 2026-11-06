@@ -2,7 +2,7 @@
   "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000018",
   "captured_at": "2026-11-06",
   "sha256": "d06a367a75213dbdf3e5a059e05e6d32bc55e524298967c43c805a2ba98346a9",
-  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP on 2026-11-06 (page.content()), a private listing; trimmed to the schema.org Product, the status-bearing data-marker elements (Avito's generated class names stripped, nesting kept) and window.__staticRouterHydrationData reduced to the buyerItem keys item_state.py reads. De-identified: listing id, URL, title, description and photos replaced with fictional values; no seller name, id, phone or profile link kept; address, coordinates and nearby stations are fictional",
+  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP on 2026-11-06 (page.content()), a private listing; trimmed to the schema.org Product, the status-bearing data-marker elements (Avito's generated class names stripped, nesting kept) and window.__staticRouterHydrationData reduced to the buyerItem keys item_state.py read in the first review round (each copied from the capture; some status keys are no longer read). De-identified: listing id, URL, title, description and photos replaced with fictional values; no seller name, id, phone or profile link kept; address, coordinates and nearby stations are fictional",
   "ground_truth": {
     "note": "a private seller (buyerItem.seller.isCompany=false): city Москва, two stations, posted_at, views, today_views, params with «Состояние», delivery services, payment on delivery, safe deal, the «Предложить цену» form and seller checks/tenure/reply time; the fictional street address and map point are on the page and must not be returned"
   }
