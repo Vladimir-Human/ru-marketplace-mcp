@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/fixture_9000000032",
+  "captured_at": "2026-11-06",
+  "sha256": "166a221d4038c53ec0b7f308930f942ad63305fdb72aae3645376415fb56246c",
+  "method": "a genuine Avito item URL of a company ad (in that morning's search) rendered in the operator's Chrome over raw CDP on 2026-11-06 13:58 MSK (page.content() via avito_card's own fetch); trimmed to the visible «Объявление не посмотреть / Объявление закрыто.» block with its link (captured nesting, generated attributes stripped) and the loader entry type/message/isGone copied from window.__staticRouterHydrationData (the location key dropped). De-identified: the URL is fictional; the page itself carries no listing or seller data",
+  "ground_truth": {
+    "note": "a gone ad: loaderData type notFound, message «Объявление закрыто.», no buyerItem and no Product; main answered parser_drift, avito_card now answers not_found with that text"
+  }
+}

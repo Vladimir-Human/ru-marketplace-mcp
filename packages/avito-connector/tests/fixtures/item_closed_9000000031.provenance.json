@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/noutbuki/noutbuk_fixture_9000000031",
+  "captured_at": "2026-11-06",
+  "sha256": "a7c3375c83e2b83e4ed2081e0c348dc863f14ad04c54dee75e3f78d16857765b",
+  "method": "a genuine Avito item page of a private ad (its owner reports it sold) rendered in the operator's Chrome over raw CDP on 2026-11-06 14:30 MSK (page.content() via avito_card's own fetch; the page has no schema.org Product); trimmed to the title element, the item-view/closed-warning banner (captured nesting, generated attributes stripped) and window.__staticRouterHydrationData reduced to buyerItem.closedItem, closedItemStatus, item.isActive and item.isClosed, each copied from the capture. De-identified: listing id, URL and title are fictional; no seller, description, photo or location data kept",
+  "ground_truth": {
+    "note": "a closed ad: closedItem=true, closedItemStatus «Объявление снято с публикации.», item.isClosed=true, isActive=false and the banner with the same text; the buyer page does not say whether it was sold; avito_card answers not_found with that text"
+  }
+}

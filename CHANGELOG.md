@@ -91,6 +91,27 @@
   another item while it was read is neither returned nor cached. Cleanup always
   looks for owned tabs at least once, and finding and closing share one
   deadline.
+- Avito: закрытое объявление решается по служебному состоянию страницы.
+  Страница «Объявление закрыто.» (в гидратации `type: "notFound"`) отвечала
+  `parser_drift` — теперь `not_found`. Снятое с публикации (`closedItem`,
+  `closedItemStatus`, `item.isClosed` своего id, баннер
+  `item-view/closed-warning`) — `not_found` с текстом Avito в сообщении.
+  Покупательская страница Avito не различает «продано» и «снято»: проданное
+  владельцем объявление показывается так же, поэтому `sold` не выводится.
+  Если собственное состояние страницы говорит, что объявление открыто, слова
+  «снято с публикации», «не найдено», «404» в видимом тексте (заголовок и
+  описание пишет продавец) больше не делают его `not_found`; поиск по тексту
+  остаётся только для страниц без собственного состояния.
+- Avito: a closed ad is decided by the page's own service state. The
+  «Объявление закрыто.» page (hydration `type: "notFound"`) used to answer
+  `parser_drift`; it is `not_found` now. A withdrawn ad (`closedItem`,
+  `closedItemStatus`, `item.isClosed` of its own id, the
+  `item-view/closed-warning` banner) is `not_found` with Avito's text in the
+  message. Avito's buyer page does not tell sold from withdrawn — an ad its
+  owner sold looks the same — so no `sold` is inferred. When the page's own
+  state says the ad is open, closure words in the visible text (the title and
+  description are the seller's) no longer make it `not_found`; the text search
+  remains only for pages without their own state.
 
 ### Added
 - Avito: резерв объявления. `avito_card` возвращает `availability`
