@@ -1703,7 +1703,7 @@ async def _raw_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collect
                     if remaining <= 0:
                         break
                     try:
-                        await discover(min(_POPUP_DISCOVER_TIMEOUT_S, remaining))
+                        await discover(max(0.1, remaining - _POPUP_CLOSE_TARGET_TIMEOUT_S))
                     except Exception:
                         pass
                     if owned or loop.time() >= grace_until:
@@ -1768,23 +1768,32 @@ async def _raw_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collect
                                 if await page.evaluate("() => document.readyState") == "complete":
                                     break
                             await asyncio.sleep(0.1)
-                        # A redirect can land while readyState is awaited: the
-                        # URL checked above is not necessarily the page we yield.
-                        final = await current_page_url(page)
-                        _check_final_host(final, allowed_hosts)
-                        status = page._document_status
-                        if status is None:
+                        timing = None
+                        if page._document_status is None:
                             # The document may have arrived before Network was
                             # enabled on this freshly attached target.
                             timing = await page.evaluate(_NAVIGATION_STATUS_JS)
-                            if isinstance(timing, int) and not isinstance(timing, bool) and timing > 0:
-                                status = timing
+                        status = page._document_status
+                        if status is None and isinstance(timing, int) and not isinstance(timing, bool) and timing > 0:
+                            status = timing
+                        # A redirect can land while readyState or timing is awaited:
+                        # the URL checked above is not necessarily the page we yield.
+                        final = await current_page_url(page)
+                        _check_final_host(final, allowed_hosts)
                     if status in _NAV_FAIL_STATUSES:
                         raise NavBlocked(status, final)
                     permit.ok()
                     permit.release()
                     yield page
                     _check_final_host(await current_page_url(page), allowed_hosts)
+            except NavBlocked as exc:
+                # Settle before cleanup so a cancellation during teardown cannot
+                # erase an already-observed refusal.
+                permit.refused(exc.status)
+                raise
+            except NavigationPolicyError:
+                permit.neutral()
+                raise
             finally:
                 # Shield the bounded cleanup but keep the caller's cancellation.
                 # cleanup() bounds itself; the outer cap is only a backstop.
@@ -1802,14 +1811,6 @@ async def _raw_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collect
                         break
                 if cancelled:
                     raise asyncio.CancelledError
-    except NavBlocked as exc:
-        # The host refused the popup's main document: the breaker counts it.
-        permit.refused(exc.status)
-        raise
-    except NavigationPolicyError:
-        # Our refusal, not the host's (see open_page).
-        permit.neutral()
-        raise
     finally:
         # Idempotent: on the success path it was already released before the yield.
         permit.release()

@@ -430,3 +430,50 @@ async def test_card_tool_caches_nothing_when_the_item_moved(raw_popup, monkeypat
         await server.aliexpress_card(ITEM_URL)
 
     assert server._cache.get(ITEM_URL) is None
+
+
+@pytest.mark.parametrize(
+    ("status", "blocked_url", "expected_code"),
+    [
+        (403, "https://aliexpress.ru/punish?x5secdata=x", "challenge_required"),
+        (429, ITEM_URL, "rate_limited"),
+        (503, ITEM_URL, "transport_down"),
+    ],
+)
+async def test_card_tool_maps_popup_nav_blocked_by_url_and_status(
+    raw_popup, monkeypatch, status, blocked_url, expected_code
+):
+    """A popup refused at HTTP level maps punish URLs to challenge_required and 429 to rate_limited."""
+    server._cache.clear()
+    refusals = []
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: refusals.append(True))
+
+    @asynccontextmanager
+    async def blocked_popup(_opener, _url, *, allowed_hosts):
+        raise server.NavBlocked(status, blocked_url)
+        yield
+
+    monkeypatch.setattr(server, "open_owned_popup", blocked_popup, raising=False)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.aliexpress_card(ITEM_URL)
+
+    assert json.loads(str(excinfo.value))["error"] == expected_code
+    if expected_code in ("challenge_required", "rate_limited"):
+        assert refusals == [True]
+
+
+async def test_raw_popup_extractor_url_on_foreign_host_with_same_item_id_is_rejected(raw_popup, monkeypatch):
+    """An extracted_url on a foreign host is rejected even if its path carries the requested item_id."""
+
+    async def stale_tab_url(_target):
+        return ITEM_URL
+
+    monkeypatch.setattr(server, "current_page_url", stale_tab_url, raising=False)
+    raw_popup.popup.move_to = "https://evil.invalid/item/100501000.html"
+    raw_popup.popup.report_url = True
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == "transport_down"

@@ -333,3 +333,78 @@ def test_an_iframe_document_status_does_not_block_the_popup(monkeypatch):
     asyncio.run(_open(state))
 
     assert state.body_ran
+
+
+def test_redirect_during_navigation_timing_check_is_caught_before_yield(monkeypatch):
+    """Host check must run immediately before yield, after _NAVIGATION_STATUS_JS."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM])
+    timing_ran = False
+    orig_eval = c._RawCdpPage.evaluate
+
+    async def eval_with_redirect(self, expression, arg=None):
+        nonlocal timing_ran
+        res = await orig_eval(self, expression, arg)
+        if "responseStatus" in expression:
+            timing_ran = True
+        return res
+
+    async def url_after_timing(page):
+        page._url = "https://evil.invalid/item/123.html" if timing_ran else ITEM
+        return page._url
+
+    monkeypatch.setattr(c._RawCdpPage, "evaluate", eval_with_redirect)
+    monkeypatch.setattr(c, "current_page_url", url_after_timing)
+
+    with pytest.raises(c.NavigationPolicyError):
+        asyncio.run(_open(state))
+
+    assert not state.body_ran
+    assert state.closed == ["popup"]
+    assert ("neutral",) in state.budget.events
+
+
+def test_status_event_arriving_during_navigation_timing_blocks_popup(monkeypatch):
+    """A Network.responseReceived event arriving while _NAVIGATION_STATUS_JS runs is not lost."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], timing=0)
+    orig_eval = c._RawCdpPage.evaluate
+
+    async def eval_with_late_event(self, expression, arg=None):
+        if "responseStatus" in expression:
+            self._note_event(
+                {
+                    "method": "Network.responseReceived",
+                    "params": {
+                        "type": "Document",
+                        "frameId": "main",
+                        "response": {"status": 403},
+                    },
+                }
+            )
+        return await orig_eval(self, expression, arg)
+
+    monkeypatch.setattr(c._RawCdpPage, "evaluate", eval_with_late_event)
+
+    with pytest.raises(c.NavBlocked) as excinfo:
+        asyncio.run(_open(state))
+
+    assert excinfo.value.status == 403
+    assert not state.body_ran
+    assert ("refused", 403) in state.budget.events
+
+
+def test_cleanup_discovery_shares_cleanup_deadline_beyond_open_discover_cap(monkeypatch):
+    """cleanup() lets Target.getTargets use the cleanup budget minus close reserve, not the 3s open cap."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM])
+    cleanup_timeouts = []
+    orig_send = c._RawCdpPage._send
+
+    async def record_timeout(self, method, params=None, timeout=30):
+        if method == "Target.getTargets" and state.body_ran:
+            cleanup_timeouts.append(timeout)
+        return await orig_send(self, method, params=params, timeout=timeout)
+
+    monkeypatch.setattr(c._RawCdpPage, "_send", record_timeout)
+
+    asyncio.run(_open(state))
+
+    assert cleanup_timeouts and cleanup_timeouts[0] > c._POPUP_DISCOVER_TIMEOUT_S

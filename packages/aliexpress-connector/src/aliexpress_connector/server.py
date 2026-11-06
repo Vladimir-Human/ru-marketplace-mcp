@@ -70,6 +70,7 @@ from mcp_core.errors import (
     BadRequestError,
     ChallengeRequiredError,
     ParserDriftError,
+    RateLimitedError,
     ToolError,
     TransportDownError,
     raise_tool_error,
@@ -458,6 +459,12 @@ async def _read_card_target(target: Any, wants: re.Pattern[str]) -> dict[str, An
     if isinstance(extracted_url, str) and extracted_url:
         seen.append(extracted_url)
     for final_url in seen:
+        parts = urllib.parse.urlsplit(final_url)
+        host = (parts.hostname or "").lower()
+        if parts.scheme not in ("http", "https") or host not in _CARD_HOSTS:
+            raise_tool_error(
+                TransportDownError("the item tab moved off the allowed AliExpress hosts while it was read")
+            )
         if "punish" in final_url:
             _pacer.record_refusal()
             raise_tool_error(_challenge_error("the item tab moved to an x5sec challenge while it was read"))
@@ -769,6 +776,14 @@ async def aliexpress_card(
             try:
                 payload = await _cdp_card(url, ctx)
             except NavBlocked as exc:
+                if "punish" in (exc.final_url or ""):
+                    _pacer.record_refusal()
+                    raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
+                if exc.status == 429:
+                    _pacer.record_refusal()
+                    raise_tool_error(
+                        RateLimitedError("AliExpress rate limited the item tab (HTTP 429).", retry_after_s=30.0)
+                    )
                 raise_tool_error(TransportDownError(f"AliExpress navigation blocked (HTTP {exc.status})."))
             if _is_punish(payload):
                 _pacer.record_refusal()
