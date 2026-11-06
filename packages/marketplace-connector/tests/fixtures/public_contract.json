@@ -61,6 +61,8 @@
     "output": {
       "properties": {
         "_meta": {},
+        "availability": {},
+        "availability_evidence": {},
         "description": {},
         "images": {},
         "item_id": {},
@@ -96,6 +98,7 @@
       "properties": {
         "_meta": {},
         "count": {},
+        "excluded_inactive": {},
         "items": {},
         "location_id": {},
         "page": {},
@@ -119,6 +122,10 @@
             }
           ],
           "default": null
+        },
+        "include_inactive": {
+          "default": true,
+          "type": "boolean"
         },
         "location_id": {
           "anyOf": [

@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000011",
+  "captured_at": "2026-11-06",
+  "sha256": "af876307dd62e32f8e591a6c4986410b90deda75df2b5c11173175c7aa2cfa39",
+  "method": "a genuine Avito item page of a private listing rendered in the operator's Chrome over raw CDP on 2026-11-06 10:08 MSK (page.content() via avito_card's own fetch); trimmed to the schema.org Product offer, the safe-deal widget (data-marker=safedeal-item-card; captured element nesting and text, Avito's generated attributes, icons and scripts stripped) and window.__staticRouterHydrationData reduced to the buyerItem keys item_state.py reads (item.isActive, item.deliveryInfo.isReserved, safeDealDesktop.reserved), each copied from the capture; trimming removed keys and added none. De-identified: listing id, URL, title, description and photos are fictional; no seller name, id, phone, profile link or contacts block is kept",
+  "ground_truth": {
+    "note": "availability reserved: item.deliveryInfo.isReserved=true, safeDealDesktop.reserved=true and «Товар зарезервирован» in the safe-deal widget, while the schema.org offer says InStock and item.isActive=true"
+  }
+}

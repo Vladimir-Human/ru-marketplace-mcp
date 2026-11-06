@@ -7,6 +7,8 @@ writes, and serializes back to ``meta`` on the wire.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,6 +28,13 @@ class AvitoSearchItemOut(BaseModel):
     is_company: bool | None = Field(default=None, description="Whether the seller is a company profile.")
     posted_at: str | None = Field(default=None, description="Publication time as reported by Avito.")
     images: int = Field(default=0, description="Number of images attached to the listing.")
+    availability: Literal["active", "reserved", "unknown"] = Field(
+        default="unknown",
+        description=(
+            "From the hit's own isReserved flag: reserved = another buyer holds it, not purchasable now; "
+            "unknown when the flag is absent. Never guessed."
+        ),
+    )
 
 
 class AvitoSearchResponse(BaseModel):
@@ -39,6 +48,13 @@ class AvitoSearchResponse(BaseModel):
     count: int = Field(default=0, description="Number of items returned on this page.")
     total_count: int | None = Field(default=None, description="Total matches Avito reports for the query.")
     items: list[AvitoSearchItemOut] = Field(default_factory=list, description="Search result items.")
+    excluded_inactive: int = Field(
+        default=0,
+        description=(
+            "Reserved hits dropped from items because include_inactive was false (0 by default, when they are kept); "
+            "total_count still counts them."
+        ),
+    )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 
@@ -66,6 +82,18 @@ class AvitoCardResponse(BaseModel):
     seller: AvitoSellerOut | None = Field(default=None, description="Seller info.")
     url: str = Field(default="", description="Canonical avito.ru listing URL.")
     tier_used: str = Field(default="", description="Fetch tier used.")
+    availability: Literal["active", "reserved", "unknown"] = Field(
+        default="unknown",
+        description=(
+            "Listing status from Avito's own page flags and safe-deal banner, never from seller text: reserved = "
+            "another buyer holds it, not purchasable now. schema.org InStock is not trusted (Avito says it for "
+            "reserved ads too); unknown when the page is silent or its signals contradict each other."
+        ),
+    )
+    availability_evidence: list[str] = Field(
+        default_factory=list,
+        description="The page flags or banner text the availability rests on; on a contradiction, both sides.",
+    )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 

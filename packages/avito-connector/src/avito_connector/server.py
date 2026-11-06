@@ -69,8 +69,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
 # _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices.
 # _build_search_url: Encode query, page and validated location/category identifiers.
-# avito_search: Read paginated classifieds search; warn when a required key family vanishes.
-# avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope.
+# avito_search: Read paginated classifieds search; per-hit availability from isReserved; reserved hits kept unless
+#               include_inactive=false (then counted and announced in _meta); warn when a required key family vanishes.
+# avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope;
+#             availability (active/reserved/unknown) from hydration flags and the safe-deal banner only (item_state).
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
 # avito_selfcheck: Chain search/card/seller to diagnose transport/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -111,6 +113,7 @@ from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
+from avito_connector import item_state as _state
 from avito_connector.models_output import (
     AvitoCardResponse,
     AvitoSearchItemOut,
@@ -406,7 +409,8 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
     offers become price_rub; absent/unknown prices are None, never invented zero.
     If there is no Product, use identity-checked item-view DOM markers with an
     explicit rouble price. location, posted_at, views and seller stay None;
-    seller parsing is separate. Availability is not a public card field.
+    seller parsing is separate. Availability is classified separately
+    (item_state.card_availability) from the page state, never from JSON-LD.
     Raises raw ParserDriftError on empty Product or missing/invalid item DOM,
     NotFoundError on a removed/missing-ad page; the MCP adapter serializes these.
     """
@@ -933,6 +937,7 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
                 "is_company": R.first_present(seller, "isCompany", "is_company") if seller else None,
                 "posted_at": _posted_at(it),
                 "images": images_count,
+                "availability": _state.search_availability(it),
             }
         )
     return out, total
@@ -964,11 +969,22 @@ async def avito_search(
         str | None, Field(description="Avito location id; default AVITO_LOCATION_ID (637640 = Moscow)")
     ] = None,
     category_id: Annotated[str | None, Field(description="Optional Avito category id to narrow the search")] = None,
+    include_inactive: Annotated[
+        bool,
+        Field(
+            description=(
+                "Keep reserved hits (availability=reserved), the default. false drops them from items and counts "
+                "them in excluded_inactive; total_count still includes them"
+            )
+        ),
+    ] = True,
     ctx: Context | None = None,
 ) -> AvitoSearchResponse:
     """Search Avito listings via the internal js/items API.
 
     price_rub is None for an ad without a price — never 0.
+    Each hit carries availability from Avito's own isReserved flag; reserved
+    hits are kept unless include_inactive=false.
 
     Full field list and error codes: `guide://avito/avito_search`.
     """
@@ -1013,8 +1029,19 @@ async def avito_search(
             drift = R.shape_drift_warning(payload, SEARCH_REQUIRED_FAMILIES, source="avito_search")
             if drift:
                 warnings.append(drift)
+        excluded = 0
+        if not include_inactive:
+            kept = [it for it in items_raw if it["availability"] not in _state.INACTIVE]
+            excluded = len(items_raw) - len(kept)
+            items_raw = kept
+            if excluded:
+                # Reservations on Avito often fall through: say what was hidden.
+                warnings.append(
+                    f"info: {excluded} reserved hit(s) dropped (include_inactive=false); total_count still counts them"
+                )
         items = [AvitoSearchItemOut(**it) for it in items_raw]
         result = AvitoSearchResponse(
+            excluded_inactive=excluded,
             query=query,
             page=page,
             location_id=loc,
@@ -1057,6 +1084,8 @@ async def avito_card(
     redirects to the canonical item page.
 
     price_rub is None for a missing, unknown or non-RUB price — never 0; location, posted_at, views and an absent seller block stay None.
+    availability (active/reserved/unknown) comes from Avito's own page flags and
+    safe-deal banner, never from seller text, with availability_evidence.
 
     Full field list and error codes: `guide://avito/avito_card`.
     """
@@ -1129,6 +1158,7 @@ async def avito_card(
             AvitoSellerOut(**seller_data) if any(value is not None for value in seller_data.values()) else None
         )
         item["url"] = item["url"] or url
+        item["availability"], item["availability_evidence"] = _state.card_availability(body, item_id)
         result = AvitoCardResponse(**item, tier_used="cdp")
         _pacer.record_success()
         # The card's own fields; `seller` carries the seller's rating, not the
