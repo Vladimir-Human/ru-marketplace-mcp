@@ -205,12 +205,15 @@ def _assert_extracted_grid(result):
     machine; only the price comparison skips.
     """
     if not jsdom_available():
+        # domtest raises JsdomUnavailable with one of two texts: no Node.js at all,
+        # or Node.js without jsdom (#196). Either one is the missing harness.
+        content = str(result.content)
         assert result.is_error is True, "the search must not fail before the extraction"
-        assert "jsdom not installed" in str(result.content), (
-            "without the DOM harness the only acceptable failure is the missing jsdom, "
-            f"not a navigation timeout: {result.content}"
+        assert "jsdom not installed" in content or "node not available" in content, (
+            "without the DOM harness the only acceptable failure is the missing Node.js "
+            f"or jsdom, not a navigation timeout: {result.content}"
         )
-        pytest.skip("jsdom is not installed; the captured-price assertion needs it")
+        pytest.skip("Node.js or jsdom is not installed; the captured-price assertion needs them")
     assert result.is_error is False, str(result.content)
     data = result.structured_content
     assert data is not None

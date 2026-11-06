@@ -10,6 +10,23 @@
 ## [Unreleased]
 
 ### Fixed
+- `compare_prices(sources=…)`, `compare_verify_offer(source=…)` и
+  `decision_inspect(source=…)` принимают имена, которые показывает
+  `marketplace_sources` (`yandex`), и объявленные псевдонимы (`wb`, `ym`, `ali` и
+  другие из `mcp_core.sources`): они сводятся к каноническому имени до проверки.
+  Раньше такой вызов возвращал `bad_request`. Повтор источника в списке (`wb` и
+  `wildberries`) опрашивает его один раз; неизвестное имя по-прежнему ошибка (#197).
+- `compare_prices(sources=…)`, `compare_verify_offer(source=…)` and
+  `decision_inspect(source=…)` accept the names `marketplace_sources` shows
+  (`yandex`) and the declared aliases (`wb`, `ym`, `ali`, …): they resolve to the
+  canonical name before validation instead of returning `bad_request`. A source
+  named twice (`wb` and `wildberries`) is queried once; an unknown name is still
+  refused (#197).
+- Офлайн-тесты таймаута навигации AliExpress без Node.js в `PATH` пропускают
+  сверку цен, как и без jsdom, а не падают на тексте ошибки (#196).
+- The AliExpress navigation-timeout offline tests skip the price check without
+  Node.js on `PATH`, as they already did without jsdom, instead of failing on the
+  error text (#196).
 - Raw CDP: событие загрузки начальной `about:blank` новой вкладки, пришедшее
   раньше основного документа навигации, больше не завершает ожидание. Раньше
   навигация возвращала статус `None` и URL `about:blank`, и проверка хоста
