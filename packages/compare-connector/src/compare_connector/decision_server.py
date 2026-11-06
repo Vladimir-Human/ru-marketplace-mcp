@@ -12,7 +12,7 @@ single copy of the shared reference (R-TOOL-RESOURCES).
 # START_MODULE_CONTRACT
 # PURPOSE: Serve the decision profile: the compare tools plus one card inspector.
 # SCOPE: Mount the compare server, add decision_inspect, publish the reference resources.
-# DEPENDS: FastMCP; mcp_core output_schema/resources; compare_connector.server.
+# DEPENDS: FastMCP; mcp_core output_schema/resources/source_selection; compare_connector.server.
 # LINKS: M-DECISION; M-COMPARE; M-RESOURCES.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -28,6 +28,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.resources import mount_child, register_reference_resources
+from mcp_core.source_selection import canonical
 from pydantic import Field
 
 from compare_connector import server as compare
@@ -67,7 +68,7 @@ async def decision_inspect(
 
     Full field list and error codes: `guide://decision/decision_inspect`.
     """
-    name = source.strip().lower()
+    name = canonical(source)
     payload, _ = await compare._call_card_tool(name, product_id_or_url, include_reviews=include_reviews)
     return {"source": name, "product_id_or_url": product_id_or_url, "card": payload}
 

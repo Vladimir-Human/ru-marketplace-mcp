@@ -73,7 +73,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
-from mcp_core.source_selection import selected
+from mcp_core.source_selection import canonical, selected
 
 # Which sources compare searches, which card tool it verifies them with and
 # which of them quote a foreign currency all come from the source registry.
@@ -1127,7 +1127,9 @@ async def compare_prices(
     if sources:
         # An explicit list is validated strictly: naming a marketplace that does
         # not exist is a caller mistake worth surfacing, not silently dropping.
-        requested = [name.strip().lower() for name in sources if name and name.strip()]
+        # Declared aliases and mount names (wb, ym, yandex) resolve to the
+        # canonical name first: marketplace_sources lists mount names (#197).
+        requested = list(dict.fromkeys(canonical(name) for name in sources if name and name.strip()))
         unknown = [name for name in requested if name not in _SEARCH_IMPLS]
         if unknown:
             raise_tool_error(BadRequestError(f"unknown source(s) {unknown}: valid options are {sorted(_SEARCH_IMPLS)}"))
@@ -1400,7 +1402,7 @@ async def compare_verify_offer(
         isinstance(expected_price_rub, bool) or not math.isfinite(expected_price_rub) or expected_price_rub < 0
     ):
         raise_tool_error(BadRequestError("expected_price_rub must be a finite non-negative price"))
-    name = source.strip().lower()
+    name = canonical(source)
     if expected_variant_id is not None and name != "yandex_market":
         raise_tool_error(BadRequestError("expected_variant_id is supported only for yandex_market"))
     payload, requested_numeric_id = await _call_card_tool(name, product_id_or_url)
