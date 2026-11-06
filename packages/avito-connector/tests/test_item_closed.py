@@ -96,6 +96,15 @@ def test_a_closed_state_of_another_item_is_not_this_ads():
     v2.9.0 returned (False, the banner text), and avito_card answered not_found for the requested id.
     """
     assert item_state.closed_state(_page("item_closed_9000000031.html"), 9000000099) == (True, None)
+    # A partial buyerItem without an integer item.id is not mistaken for another item's page.
+    idless = json.dumps({"loaderData": {"main": {"buyerItem": {"closedItem": True, "item": None}}}})
+    banner = '<div data-marker="item-view/closed-warning">Объявление снято с публикации.</div>'
+    page_idless = f"{banner}<script>window.__staticRouterHydrationData = JSON.parse({json.dumps(idless)});</script>"
+    assert item_state.closed_state(page_idless, 9000000099) == (False, "Объявление снято с публикации.")
+    # Direct card_availability on a closed page does not claim contradicting signals when none are open.
+    status, evidence = item_state.card_availability(_page("item_closed_9000000031.html"), 9000000031)
+    assert status == "unknown"
+    assert "contradicting status signals" not in evidence
 
 
 async def test_another_items_closed_page_is_an_identity_mismatch_not_a_closure(monkeypatch):
