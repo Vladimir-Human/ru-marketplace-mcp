@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/web/1/js/items?q=xiaomi+tv+box+s&locationId=637640",
+  "captured_at": "2026-11-06",
+  "sha256": "5e6114ef0501377b3986068cfc6dfc7b71c31bb139766518fca865eb6b1fd2a7",
+  "method": "a genuine Avito js/items response captured from a residential session on 2026-11-06 (50 hits, 2 with isReserved=true); trimmed to one hit with isReserved=false, one with isReserved=true and a copy of the first with the isReserved key removed (the unknown case), each reduced to the keys the parser reads. De-identified: ids, URLs and titles are fictional, the context query and every seller, phone, image and gallery key are dropped; prices, location and timestamps are as served.",
+  "ground_truth": {
+    "note": "availability per hit: active (isReserved=false), reserved (isReserved=true), unknown (no isReserved key); default include_inactive=false keeps 2 items and reports excluded_inactive=1"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000013",
+  "captured_at": "2026-11-06",
+  "sha256": "56b1d232a9ab8487a6b6cbdc2d860419113b11076eae8aa54acdef13d2d24e1d",
+  "method": "a synthetic edit of item_state_active_9000000012: buyerItem.closedItem=true, closedItemStatus=closed and a closure banner. Not a capture: Avito shows these states only on ads this session did not reach",
+  "ground_truth": {
+    "note": "availability closed: closedItem=true plus the banner; JSON-LD still says what it said"
+  }
+}

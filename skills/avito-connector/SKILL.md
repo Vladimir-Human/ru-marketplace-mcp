@@ -17,9 +17,13 @@ Chrome over CDP — same pattern as Ozon.
   rating and active-listing count ARE the review signal
 
 ## Tools available
-- `avito_search(query, page, location_id, category_id)` — listings via js/items.
-  price_rub is None for ads with no price (free/exchange) — never 0.
-- `avito_card(item_id_or_url)` — one listing: price, description, views, seller
+- `avito_search(query, page, location_id, category_id, include_inactive)` —
+  listings via js/items. price_rub is None for ads with no price (free/exchange)
+  — never 0. Reserved hits (`availability: reserved`) are dropped unless
+  `include_inactive=true`; `excluded_inactive` says how many.
+- `avito_card(item_id_or_url)` — one listing: price, description, views, seller,
+  `availability` (active/reserved/sold/closed/unknown) with its evidence.
+  Reserved, sold or closed means it cannot be bought now; `unknown` is not a verdict.
 - `avito_seller(seller_id_or_url)` — seller rating, review count, active listings
 
 **Not an MCP tool:** `avito_selfcheck()` is a tri-state drift canary. It is

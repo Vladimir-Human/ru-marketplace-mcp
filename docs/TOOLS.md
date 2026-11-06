@@ -83,7 +83,7 @@ every error code.
 | Tool | Parameters | Description |
 | --- | --- | --- |
 | `avito_card` | `item_id_or_url: string` | Read an Avito item over CDP: Product JSON-LD first, item-view DOM fallback. |
-| `avito_search` | `query: string, page: integer = 1, location_id: string = null, category_id: string = null` | Search Avito listings via the internal js/items API. |
+| `avito_search` | `query: string, page: integer = 1, location_id: string = null, category_id: string = null, include_inactive: boolean = false` | Search Avito listings via the internal js/items API. |
 | `avito_seller` | `seller_id_or_url: string` | Read an Avito seller's rendered profile page over paced, allowlisted CDP. |
 
 ### cian — `cian_*` (2 tools)

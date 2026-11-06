@@ -1,0 +1,61 @@
+{
+  "count": 3,
+  "totalCount": 3,
+  "catalog": {
+    "items": [
+      {
+        "id": 9000000021,
+        "locationId": 637640,
+        "urlPath": "/moskva/audio_i_video/tv_pristavka_fixture_9000000021",
+        "title": "ТВ-приставка Xiaomi TV Box S, фикстура 1",
+        "location": null,
+        "addressDetailed": {
+          "locationName": "Москва"
+        },
+        "sortTimeStamp": 1792920036000,
+        "priceDetailed": {
+          "value": 2790,
+          "string": "2 790",
+          "fullString": "2 790 ₽"
+        },
+        "imagesCount": 2,
+        "isReserved": false
+      },
+      {
+        "id": 9000000022,
+        "locationId": 637640,
+        "urlPath": "/moskva/audio_i_video/tv_pristavka_fixture_9000000022",
+        "title": "ТВ-приставка Xiaomi TV Box S, фикстура 2",
+        "location": null,
+        "addressDetailed": {
+          "locationName": "Москва"
+        },
+        "sortTimeStamp": 1793902442000,
+        "priceDetailed": {
+          "value": 4500,
+          "string": "4 500",
+          "fullString": "4 500 ₽"
+        },
+        "imagesCount": 1,
+        "isReserved": true
+      },
+      {
+        "id": 9000000023,
+        "locationId": 637640,
+        "urlPath": "/moskva/audio_i_video/tv_pristavka_fixture_9000000023",
+        "title": "ТВ-приставка Xiaomi TV Box S, фикстура 3",
+        "location": null,
+        "addressDetailed": {
+          "locationName": "Москва"
+        },
+        "sortTimeStamp": 1792920036000,
+        "priceDetailed": {
+          "value": 2790,
+          "string": "2 790",
+          "fullString": "2 790 ₽"
+        },
+        "imagesCount": 2
+      }
+    ]
+  }
+}

@@ -437,8 +437,8 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 
 | Инструмент                                            | Что делает                                           |
 | ----------------------------------------------------- | ---------------------------------------------------- |
-| `avito_search(query, page, location_id, category_id)` | Поиск объявлений через внутренний `js/items` API     |
-| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль) |
+| `avito_search(query, page, location_id, category_id, include_inactive)` | Поиск объявлений через внутренний `js/items` API; `availability` из `isReserved`, зарезервированные по умолчанию убираются (`excluded_inactive`) |
+| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль), статус `availability` (active/reserved/sold/closed/unknown) с доказательствами |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов; число активных объявлений недоступно (`null`) |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
@@ -1112,8 +1112,8 @@ takes no part in `compare_prices`.
 
 | Tool                                              | What it does                                      |
 | ------------------------------------------------- | ------------------------------------------------- |
-| `avito_search(query, page, location_id, category_id)` | Classified search through the internal `js/items` API |
-| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link) |
+| `avito_search(query, page, location_id, category_id, include_inactive)` | Classified search through the internal `js/items` API; `availability` from `isReserved`, reserved hits dropped by default (`excluded_inactive`) |
+| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link), `availability` (active/reserved/sold/closed/unknown) with evidence |
 | `avito_seller(seller_id_or_url)`                  | Seller rating, review count; active listing count unavailable (`null`)       |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the

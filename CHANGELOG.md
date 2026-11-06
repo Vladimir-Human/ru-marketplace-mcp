@@ -56,6 +56,33 @@
   `published_at_desc` stays accepted as a legacy alias. The cursor is still rebuilt
   only from validated `page`, `page_key` and `sort`. Once `limit` is filled, the
   next cursor is neither validated nor reported as a partial answer.
+### Added
+- Avito: статус объявления. `avito_card` возвращает `availability`
+  (`active` / `reserved` / `sold` / `closed` / `unknown`) и `availability_evidence`
+  — флаги состояния той же отрисованной страницы (`deliveryInfo.isReserved`,
+  `safeDealDesktop.reserved`, `closedItem`, `closedItemStatus`) и видимые плашки
+  статуса. schema.org `InStock` не учитывается: Avito пишет его и у
+  зарезервированных объявлений (проверено на живых страницах 05–06.11.2026).
+  `active` — только при явном `isReserved: false`, иначе `unknown`. Страница
+  снятого или проданного объявления отвечает этим статусом (без названия, цены
+  и продавца) вместо `not_found`; «Объявление не найдено» остаётся `not_found`.
+  `avito_search` берёт `availability` из собственного `isReserved` выдачи,
+  по умолчанию убирает зарезервированные (`include_inactive=false`) и считает их
+  в `excluded_inactive`; объявление без флага остаётся (`unknown`). Лишних
+  запросов к Avito нет.
+- Avito: listing status. `avito_card` returns `availability`
+  (`active` / `reserved` / `sold` / `closed` / `unknown`) and
+  `availability_evidence` — page-state flags of the same rendered page
+  (`deliveryInfo.isReserved`, `safeDealDesktop.reserved`, `closedItem`,
+  `closedItemStatus`) and visible status banners. schema.org `InStock` is not
+  trusted: Avito states it for reserved ads too (checked on live pages,
+  2026-11-05/06). `active` needs an explicit `isReserved: false`, otherwise
+  `unknown`. A closed or sold ad page answers that status (no title, price or
+  seller) instead of `not_found`; «Объявление не найдено» stays `not_found`.
+  `avito_search` takes `availability` from the hit's own `isReserved`, drops
+  reserved hits by default (`include_inactive=false`) and counts them in
+  `excluded_inactive`; a hit without the flag is kept as `unknown`. No extra
+  requests to Avito.
 
 ## [2.8.2] - 2026-11-03
 

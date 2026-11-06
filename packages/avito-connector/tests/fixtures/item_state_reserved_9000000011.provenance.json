@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000011",
+  "captured_at": "2026-11-06",
+  "sha256": "fcb823be432e70ac4ce514d7a8db2427e8946d3fdce34cc7bee2d22453d62414",
+  "method": "a genuine Avito item page rendered in the operator's Chrome over CDP on 2026-11-06 (page.content()), a private listing; trimmed to the schema.org Product, the status-bearing data-marker elements (Avito's generated class names stripped, nesting kept) and window.__staticRouterHydrationData reduced to the buyerItem keys item_state.py reads. De-identified: listing id, URL, title, description and photos replaced with fictional values; no seller name, id, phone or profile link kept",
+  "ground_truth": {
+    "note": "availability reserved: item.deliveryInfo.isReserved=true, safeDealDesktop.reserved=true and the banner «Товар зарезервирован», while the schema.org offer says InStock and item.isActive=true"
+  }
+}
