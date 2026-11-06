@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-06
+
 ### Fixed
 - `compare_prices(sources=…)`, `compare_verify_offer(source=…)` и
   `decision_inspect(source=…)` принимают имена, которые показывает
