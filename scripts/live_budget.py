@@ -444,6 +444,10 @@ def _install_chrome_cdp(budget: Budget, restores: list[tuple[Any, str, Any, Any]
     )
     page_evaluate = _hook(Page, "evaluate", "playwright.async_api.Page.evaluate")
     open_tabs = _hook(chrome_cdp, "open_tabs", "mcp_core.transport.chrome_cdp.open_tabs")
+    # The raw popup is opened with opener._send(window.open) — not through
+    # _RawCdpPage.evaluate — so it is booked at its own hook point. Connectors
+    # import open_owned_popup by name; it delegates here at call time.
+    raw_owned_popup = _hook(chrome_cdp, "_raw_owned_popup", "mcp_core.transport.chrome_cdp._raw_owned_popup")
 
     @contextlib.asynccontextmanager
     async def counted_playwright_page(url: str, *args: Any, **kwargs: Any) -> Any:
@@ -455,6 +459,12 @@ def _install_chrome_cdp(budget: Budget, restores: list[tuple[Any, str, Any, Any]
     async def counted_raw_cdp_page(url: str, *args: Any, **kwargs: Any) -> Any:
         await budget.reserve_async("chrome-load(raw)", url)
         async with raw_cdp_page(url, *args, **kwargs) as page:
+            yield page
+
+    @contextlib.asynccontextmanager
+    async def counted_raw_owned_popup(opener: Any, url: str, *args: Any, **kwargs: Any) -> Any:
+        await budget.reserve_async("chrome-popup(raw)", url)
+        async with raw_owned_popup(opener, url, *args, **kwargs) as page:
             yield page
 
     async def book_evaluation(expression: Any, arg: Any) -> None:
@@ -486,6 +496,7 @@ def _install_chrome_cdp(budget: Budget, restores: list[tuple[Any, str, Any, Any]
     _replace(chrome_cdp._RawCdpPage, "evaluate", counted_raw_evaluate, restores, "chrome_cdp._RawCdpPage.evaluate")
     _replace(Page, "evaluate", counted_page_evaluate, restores, "playwright.async_api.Page.evaluate")
     _replace(chrome_cdp, "open_tabs", counted_open_tabs, restores, "chrome_cdp.open_tabs")
+    _replace(chrome_cdp, "_raw_owned_popup", counted_raw_owned_popup, restores, "chrome_cdp._raw_owned_popup")
 
 
 def _install_ozon(budget: Budget, restores: list[tuple[Any, str, Any, Any]]) -> None:

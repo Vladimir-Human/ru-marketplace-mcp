@@ -477,3 +477,64 @@ def test_an_abandoned_lock_file_does_not_stop_the_run(
 
     assert len(budget.ledger.load()) == 1
     assert not lock.exists()
+
+
+def test_a_raw_cdp_popup_is_booked_before_it_opens(
+    tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review #195 P2: the raw popup opens with ``opener._send(window.open)``,
+    past the ``_RawCdpPage.evaluate`` hook, so its page load was never counted.
+    Connectors import ``open_owned_popup`` by name; it delegates at call time to
+    ``_raw_owned_popup``, which the budget wraps."""
+    import contextlib
+
+    from mcp_core.transport import chrome_cdp
+
+    opened: list[str] = []
+
+    @contextlib.asynccontextmanager
+    async def fake_raw_owned_popup(opener: Any, url: str, *, allowed_hosts: Any) -> Any:
+        opened.append(url)
+        yield "popup"
+
+    monkeypatch.setattr(chrome_cdp, "_raw_owned_popup", fake_raw_owned_popup)
+    live_budget.install(_budget(tmp_path, clock))
+
+    async def run() -> None:
+        async with chrome_cdp.open_owned_popup(object(), url, allowed_hosts={"aliexpress.ru"}) as page:
+            assert page == "popup"
+
+    url = "https://aliexpress.ru/item/100500612345.html"
+    asyncio.run(run())
+
+    assert opened == [url]
+    entries = live_budget.Ledger(tmp_path / "live-budget.json").load()
+    assert [(entry["group"], entry["kind"], entry["url"]) for entry in entries] == [
+        ("aliexpress", "chrome-popup(raw)", url)
+    ]
+
+
+def test_a_refused_run_opens_no_raw_popup(tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> None:
+    import contextlib
+
+    from mcp_core.transport import chrome_cdp
+
+    opened: list[str] = []
+
+    @contextlib.asynccontextmanager
+    async def fake_raw_owned_popup(opener: Any, url: str, *, allowed_hosts: Any) -> Any:
+        opened.append(url)
+        yield "popup"
+
+    monkeypatch.setattr(chrome_cdp, "_raw_owned_popup", fake_raw_owned_popup)
+    live_budget.install(_budget(tmp_path, clock, total=0))
+
+    async def run() -> None:
+        async with chrome_cdp.open_owned_popup(
+            object(), "https://aliexpress.ru/item/1.html", allowed_hosts={"aliexpress.ru"}
+        ):
+            pass
+
+    with pytest.raises(live_budget.BudgetExhausted):
+        asyncio.run(run())
+    assert opened == []

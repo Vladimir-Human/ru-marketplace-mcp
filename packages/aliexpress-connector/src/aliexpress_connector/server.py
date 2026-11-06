@@ -81,7 +81,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
-from mcp_core.transport.chrome_cdp import NavBlocked, open_owned_popup, open_page
+from mcp_core.transport.chrome_cdp import NavBlocked, current_page_url, open_owned_popup, open_page
 from pydantic import Field
 
 from aliexpress_connector.models_output import (
@@ -416,8 +416,15 @@ _POPUP_ARRIVAL_TIMEOUT_S = 2.0
 _CARD_HOSTS = frozenset({"aliexpress.ru", "www.aliexpress.ru"})
 
 
-async def _read_card_target(target: Any) -> dict[str, Any]:
-    """Read one owned item tab; shared by the Playwright and raw-CDP popups."""
+async def _read_card_target(target: Any, wants: re.Pattern[str]) -> dict[str, Any]:
+    """Read one owned item tab; shared by the Playwright and raw-CDP popups.
+
+    The poll below can take 12 s, and the tab may move meanwhile (a redirect
+    to a similar or bundled item on the same host). The tab's current URL and
+    the URL the extractor saw are therefore checked against the full item id
+    after the read, before anything is returned or cached: a price is never
+    reported under another item's id.
+    """
     raw = None
     # The sticky price module is client-rendered and lags the title:
     # keep polling for gyph-attached prices; a title-only state is
@@ -442,6 +449,26 @@ async def _read_card_target(target: Any) -> dict[str, Any]:
     if _is_punish(data):
         _pacer.record_refusal()
         raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
+    try:
+        tab_url = await asyncio.wait_for(current_page_url(target), timeout=_POPUP_CLOSE_TIMEOUT_S)
+    except Exception as exc:
+        raise_tool_error(TransportDownError(f"could not re-read the item tab URL after the read: {type(exc).__name__}"))
+    seen = [tab_url]
+    extracted_url = data.get("url")
+    if isinstance(extracted_url, str) and extracted_url:
+        seen.append(extracted_url)
+    for final_url in seen:
+        if "punish" in final_url:
+            _pacer.record_refusal()
+            raise_tool_error(_challenge_error("the item tab moved to an x5sec challenge while it was read"))
+    for final_url in seen:
+        if not wants.search(urllib.parse.urlsplit(final_url).path):
+            raise_tool_error(
+                TransportDownError(
+                    "the item tab moved away from the requested AliExpress item while it was read; "
+                    "nothing from it is reported"
+                )
+            )
     return data
 
 
@@ -470,7 +497,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                         raise_tool_error(
                             TransportDownError("the owned item tab did not reach the requested AliExpress item")
                         )
-                    return await _read_card_target(raw_popup)
+                    return await _read_card_target(raw_popup, wants)
             before = set(context.pages)
             owned: set[Any] = set()
             arrived = asyncio.Event()
@@ -557,7 +584,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                             "open aliexpress.ru in the scraping profile and retry — this is not a parser failure"
                         )
                     )
-                return await _read_card_target(target)
+                return await _read_card_target(target, wants)
             finally:
                 task = asyncio.create_task(cleanup())
                 cancelled = False

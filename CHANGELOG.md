@@ -64,7 +64,15 @@
   времени появления; вкладка оператора с тем же URL не трогается. URL товара и
   вкладки проверяются по хостам `aliexpress.ru`, путь — по полному item id;
   закрываются только собственные вкладки, в том числе при отмене. Капча x5sec
-  по-прежнему не обходится и возвращается как `challenge_required`.
+  по-прежнему не обходится и возвращается как `challenge_required`. Открытие
+  вкладки берёт пермит `navigation_budget` (лимиты и брейкер хоста) и
+  учитывается живым бюджетом `scripts/live_budget.py`; HTTP-статус основного
+  документа вкладки проверяется, и 403/429 — отказ транспорта, а не
+  `parser_drift`. URL вкладки перепроверяется после готовности документа, а
+  после чтения карточки и URL вкладки, и `location.href` экстрактора сверяются
+  с полным item id: если карточка за время чтения ушла на другой товар, ответа
+  и записи в кеш нет. Очистка всегда ищет собственные вкладки хотя бы раз, поиск
+  и закрытие делят один дедлайн.
 - `aliexpress_card` now works over raw CDP too (when Playwright could not attach
   and `open_page` fell back to raw). It used to refuse every card there with
   `transport_down`. The landing page now opens the item with a plain
@@ -73,7 +81,16 @@
   with the same URL is left alone. The item and popup URLs are host-checked
   against `aliexpress.ru`, the path against the full item id; only owned tabs
   are closed, cancellation included. An x5sec challenge is still not bypassed
-  and comes back as `challenge_required`.
+  and comes back as `challenge_required`. Opening the popup takes a
+  `navigation_budget` permit (concurrency limits and the host breaker) and is
+  booked by the live budget in `scripts/live_budget.py`; the popup's
+  main-document HTTP status is observed, so 403/429 is a transport refusal, not
+  `parser_drift`. The popup URL is re-checked once the document is complete,
+  and after the card is read both the tab URL and the extractor's
+  `location.href` are matched against the full item id: a card that moved to
+  another item while it was read is neither returned nor cached. Cleanup always
+  looks for owned tabs at least once, and finding and closing share one
+  deadline.
 
 ### Added
 - Avito: резерв объявления. `avito_card` возвращает `availability`

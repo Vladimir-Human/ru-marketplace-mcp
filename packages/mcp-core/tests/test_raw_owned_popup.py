@@ -115,3 +115,221 @@ def test_owned_popup_needs_an_owned_raw_page():
 
     with pytest.raises(TypeError):
         asyncio.run(run())
+
+
+class _Budget:
+    """Records the permit lifecycle open_owned_popup drives (review #195 P2)."""
+
+    def __init__(self, *, refusing=False):
+        self.events = []
+        self.refusing = refusing
+
+    async def acquire(self, host):
+        if self.refusing:
+            from mcp_core.transport.cdp_budget import HostRefusingError
+
+            raise HostRefusingError(host, 30.0, 10)
+        self.events.append(("acquire", host))
+        budget = self
+
+        class _Slot:
+            def ok(self):
+                budget.events.append(("ok",))
+
+            def refused(self, status=None):
+                budget.events.append(("refused", status))
+
+            def neutral(self):
+                budget.events.append(("neutral",))
+
+            def release(self):
+                if ("release",) not in budget.events:
+                    budget.events.append(("release",))
+
+        return _Slot()
+
+
+def _fake_cdp(
+    monkeypatch,
+    *,
+    urls,
+    get_targets_delay=0.0,
+    late_second=False,
+    status_event=None,
+    timing=None,
+    cancel_open=False,
+    budget=None,
+):
+    """A fake raw CDP: the landing opens one popup whose URL follows ``urls``."""
+    state = SimpleNamespace(closed=[], sent=[], opened=False, discoveries=0, body_ran=False, url_reads=0)
+    budget = budget or _Budget()
+
+    @asynccontextmanager
+    async def connect(url, **kwargs):
+        yield object()
+
+    async def send(self, method, params=None, timeout=30):
+        state.sent.append((self._target_id, method))
+        if method == "Runtime.evaluate" and self._target_id == "landing":
+            state.budget_at_open = tuple(budget.events)
+            state.opened = True
+            if cancel_open:
+                raise asyncio.CancelledError
+            return {"result": {"value": True}}
+        if method == "Target.getTargets":
+            state.discoveries += 1
+            if get_targets_delay:
+                await asyncio.sleep(get_targets_delay)
+            infos = [{"targetId": "foreign", "openerId": "operator", "url": ITEM}]
+            if state.opened:
+                infos.append({"targetId": "popup", "openerId": "landing"})
+            if late_second and state.discoveries > 1:
+                infos.append({"targetId": "popup2", "openerId": "landing"})
+            return {"targetInfos": infos}
+        if method == "Page.getFrameTree":
+            return {"frameTree": {"frame": {"id": "main"}}}
+        if method == "Runtime.enable" and status_event is not None:
+            # A Network.responseReceived event read while this command waits.
+            self._note_event(
+                {
+                    "method": "Network.responseReceived",
+                    "params": {
+                        "type": "Document",
+                        "frameId": status_event[0],
+                        "response": {"status": status_event[1]},
+                    },
+                }
+            )
+        if method == "Target.closeTarget":
+            state.closed.append(params["targetId"])
+        return {}
+
+    async def evaluate(self, expression, arg=None):
+        if "readyState" in expression:
+            return "complete"
+        if "responseStatus" in expression:
+            return timing
+        raise AssertionError(expression)
+
+    async def current_url(page):
+        state.url_reads += 1
+        page._url = urls[min(state.url_reads, len(urls)) - 1]
+        return page._url
+
+    monkeypatch.setattr(c, "_browser_ws_url", lambda: "ws://127.0.0.1:9222/devtools/browser/test")
+    monkeypatch.setattr(c, "_websockets", SimpleNamespace(connect=connect))
+    monkeypatch.setattr(c._RawCdpPage, "_send", send)
+    monkeypatch.setattr(c._RawCdpPage, "evaluate", evaluate)
+    monkeypatch.setattr(c, "current_page_url", current_url)
+    monkeypatch.setattr(c, "navigation_budget", lambda: budget)
+    state.budget = budget
+    state.budget_at_open = None
+    return state
+
+
+async def _open(state):
+    async with c.open_owned_popup(c._RawCdpPage(object(), "landing"), ITEM, allowed_hosts={"aliexpress.ru"}):
+        state.body_ran = True
+
+
+def test_a_redirect_while_ready_state_is_awaited_never_reaches_the_caller(monkeypatch):
+    """Review #195 P1: the host was checked before readyState == complete and not
+    again before the yield, so an off-host redirect in between reached extraction."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM, "https://evil.invalid/item/123.html"])
+
+    with pytest.raises(c.NavigationPolicyError):
+        asyncio.run(_open(state))
+
+    assert not state.body_ran
+    assert state.closed == ["popup"]
+
+
+def test_cleanup_waits_for_a_slow_get_targets_after_cancellation(monkeypatch):
+    """Review #195 P2: a 1.2 s Target.getTargets after a cancelled open was cut by
+    a 1 s inner timeout, owned stayed empty and the popup leaked."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], get_targets_delay=1.2, cancel_open=True)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(_open(state))
+
+    assert state.closed == ["popup"]
+
+
+def test_cleanup_always_rediscovers_and_closes_a_popup_that_arrived_later(monkeypatch):
+    """Review #195 P2: cleanup skipped discovery once one popup was owned."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], late_second=True)
+
+    asyncio.run(_open(state))
+
+    assert sorted(state.closed) == ["popup", "popup2"]
+
+
+def test_the_popup_open_takes_and_returns_a_navigation_permit(monkeypatch):
+    """Review #195 P2: open_page releases its permit before yielding, so the popup
+    open went past the global/host navigation limits and the breaker."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM])
+    seen_in_body = []
+
+    async def run():
+        async with c.open_owned_popup(c._RawCdpPage(object(), "landing"), ITEM, allowed_hosts={"aliexpress.ru"}):
+            seen_in_body.extend(state.budget.events)
+
+    asyncio.run(run())
+
+    assert state.budget_at_open == (("acquire", "aliexpress.ru"),)
+    # Released once the document is up, before the caller holds the page.
+    assert seen_in_body == [("acquire", "aliexpress.ru"), ("ok",), ("release",)]
+
+
+def test_a_failed_popup_open_still_returns_the_permit(monkeypatch):
+    state = _fake_cdp(monkeypatch, urls=[ITEM], cancel_open=True)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(_open(state))
+
+    assert state.budget.events[0] == ("acquire", "aliexpress.ru")
+    assert state.budget.events[-1] == ("release",)
+
+
+def test_an_open_host_breaker_refuses_the_popup_before_it_opens(monkeypatch):
+    from fastmcp.exceptions import ToolError
+
+    state = _fake_cdp(monkeypatch, urls=[ITEM], budget=_Budget(refusing=True))
+
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(_open(state))
+
+    assert "rate_limited" in str(excinfo.value)
+    assert not state.opened
+
+
+@pytest.mark.parametrize(
+    ("status_event", "timing", "status"),
+    [
+        (("main", 403), None, 403),
+        (("main", 429), None, 429),
+        (None, 403, 403),
+    ],
+)
+def test_a_refused_popup_document_is_nav_blocked_not_content(monkeypatch, status_event, timing, status):
+    """Review #195 P2: the popup's HTTP status was not observed, so a 403 page was
+    polled 12 times and reported as parser_drift instead of a transport refusal."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], status_event=status_event, timing=timing)
+
+    with pytest.raises(c.NavBlocked) as excinfo:
+        asyncio.run(_open(state))
+
+    assert excinfo.value.status == status
+    assert not state.body_ran
+    assert state.closed == ["popup"]
+    assert ("refused", status) in state.budget.events
+    assert ("ok",) not in state.budget.events
+
+
+def test_an_iframe_document_status_does_not_block_the_popup(monkeypatch):
+    """Only the main frame's document decides; a 403 iframe is not a refusal."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], status_event=("child-frame", 403), timing=200)
+
+    asyncio.run(_open(state))
+
+    assert state.body_ran
