@@ -279,3 +279,77 @@ async def test_card_popup_close_is_bounded_and_releases_lock(popups):
     assert popups.owned.close_finished.is_set()
     assert popups.operator.close_calls == 0
     assert not server._cdp_lock.locked()
+
+
+class _RawLanding:
+    """A raw-CDP landing page: no Playwright context, no popup events."""
+
+    url = "https://aliexpress.ru/wholesale?SearchText=x"
+
+
+class _RawPopup:
+    def __init__(self, url):
+        self.url = url
+        self.reads = 0
+
+    async def evaluate(self, _expression):
+        self.reads += 1
+        return json.dumps({"title": self.url, "price_texts": {"attached": ["100 ₽"]}, "punish": False})
+
+
+@pytest.fixture
+def raw_popup(monkeypatch):
+    state = SimpleNamespace(popup=_RawPopup(ITEM_URL), calls=[], exited=False)
+    landing = _RawLanding()
+
+    @asynccontextmanager
+    async def open_page(*_args, **_kwargs):
+        yield landing
+
+    @asynccontextmanager
+    async def open_owned_popup(opener, url, *, allowed_hosts):
+        state.calls.append((opener, url, set(allowed_hosts)))
+        try:
+            yield state.popup
+        finally:
+            state.exited = True
+
+    monkeypatch.setattr(server, "open_page", open_page)
+    # raising=False: the pre-fix module does not import open_owned_popup at all.
+    monkeypatch.setattr(server, "open_owned_popup", open_owned_popup, raising=False)
+    monkeypatch.setattr(server, "_polite_wait", AsyncMock())
+    monkeypatch.setattr(server, "_cdp_lock", asyncio.Lock())
+    state.landing = landing
+    return state
+
+
+async def test_card_reads_an_owned_raw_cdp_popup(raw_popup):
+    """Raw CDP (Playwright attach timed out) used to refuse every card with
+    transport_down; the card now opens the item from the landing page as an
+    owned raw popup and reads it like the Playwright tab."""
+    result = await server._cdp_card(ITEM_URL, None)
+
+    assert result["title"] == ITEM_URL
+    assert raw_popup.calls == [(raw_popup.landing, ITEM_URL, {"aliexpress.ru", "www.aliexpress.ru"})]
+    assert raw_popup.popup.reads == 1
+    assert raw_popup.exited
+    assert not server._cdp_lock.locked()
+
+
+@pytest.mark.parametrize(
+    ("url", "code"),
+    [
+        ("https://aliexpress.ru/item/1005010001.html", "transport_down"),
+        ("https://aliexpress.ru/punish?x5secdata=x", "challenge_required"),
+    ],
+)
+async def test_raw_popup_on_another_item_or_a_challenge_is_not_read(raw_popup, monkeypatch, url, code):
+    raw_popup.popup = _RawPopup(url)
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: None)
+
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+
+    assert json.loads(str(excinfo.value))["error"] == code
+    assert raw_popup.popup.reads == 0
+    assert raw_popup.exited

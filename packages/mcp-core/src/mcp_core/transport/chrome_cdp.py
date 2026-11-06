@@ -66,6 +66,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # show_browser_window: Move the scraping Chrome window on-screen and activate the first or named target.
 # open_tabs: Open pages in new tabs over browser-level CDP; never navigates or closes an existing tab.
 # _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
+# open_owned_popup: Open a raw-CDP popup from an owned page, attribute it by openerId and close only it.
 # _new_tab: Claim a created target ID and close it if cancellation prevents handback.
 # _check_final_host: Enforce scheme and exact/suffix allowed-host policy.
 # NavigationPolicyError: Report a final URL outside the caller's policy.
@@ -1561,6 +1562,126 @@ async def _raw_cdp_page(
             # Closing the tab un-hides the app again; tuck it away between calls.
             if STEALTH and sys.platform in ("win32", "darwin"):
                 await asyncio.to_thread(_hide_chrome_windows)
+
+
+_RAW_TARGET_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_POPUP_OPEN_TIMEOUT_S = 8.0
+_POPUP_LOAD_TIMEOUT_S = 12.0
+_POPUP_CLEANUP_TIMEOUT_S = 8.0
+
+
+@asynccontextmanager
+async def open_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collection[str]) -> AsyncIterator[_RawCdpPage]:
+    """Open ``url`` from an owned raw-CDP page and yield the popup it created.
+
+    The raw-CDP counterpart of Playwright's ``popup`` event for sources that
+    must open an item from a loaded page (AliExpress challenges direct item
+    navigation). Ownership is the popup's ``openerId`` equal to the opener's
+    own target ID, never a URL or arrival time: another tab with the very same
+    URL, including the operator's, is never a candidate and never closed.
+    The URL is host-checked before the open, the popup's main-frame URL before
+    it is yielded and again on exit. Cleanup closes only the owned targets and
+    is bounded; it also covers a popup that arrives after a failed or cancelled
+    open. The caller validates the item URL's shape before calling.
+    """
+    if not isinstance(opener, _RawCdpPage) or not opener._target_id:
+        raise TypeError("open_owned_popup needs an owned raw-CDP page")
+    _check_final_host(url, allowed_hosts)
+    if _websockets is None:
+        raise RuntimeError("the raw-CDP popup needs the 'websockets' package (cdp extra)")
+    browser_ws = _browser_ws_url()
+    if not browser_ws:
+        raise RuntimeError(f"CDP endpoint on {CDP_HOST}:{CDP_PORT} returned no websocket URL")
+    owned: set[str] = set()
+    async with _websockets.connect(
+        browser_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+    ) as bws:
+        browser = _RawCdpPage(bws, "")
+
+        async def discover() -> None:
+            info = await browser._send("Target.getTargets", timeout=3.0)
+            for target in info.get("targetInfos", []):
+                if isinstance(target, dict) and target.get("openerId") == opener._target_id:
+                    target_id = target.get("targetId")
+                    if isinstance(target_id, str) and _RAW_TARGET_ID_RE.fullmatch(target_id):
+                        owned.add(target_id)
+
+        async def cleanup() -> None:
+            # A popup may still be on its way when the open failed or was cancelled.
+            try:
+                async with asyncio.timeout(1.0):
+                    while not owned:
+                        await discover()
+                        if not owned:
+                            await asyncio.sleep(0.1)
+            except Exception:
+                pass
+            for target_id in sorted(owned):
+                try:
+                    await browser._send("Target.closeTarget", {"targetId": target_id}, timeout=2.0)
+                except Exception:
+                    pass
+
+        try:
+            opened = await opener._send(
+                "Runtime.evaluate",
+                {
+                    "expression": _evaluate_expression("(url) => window.open(url, '_blank') !== null", url),
+                    "returnByValue": True,
+                    "awaitPromise": True,
+                    "userGesture": True,
+                },
+                timeout=5.0,
+            )
+            if opened.get("exceptionDetails") or (opened.get("result") or {}).get("value") is not True:
+                raise RuntimeError("the browser refused to open the popup")
+            async with asyncio.timeout(_POPUP_OPEN_TIMEOUT_S):
+                while not owned:
+                    await discover()
+                    if not owned:
+                        await asyncio.sleep(0.1)
+            target_id = sorted(owned)[0]
+            page_ws = urlunsplit(
+                urlsplit(browser_ws)._replace(path=f"/devtools/page/{target_id}", query="", fragment="")
+            )
+            async with _websockets.connect(
+                page_ws, max_size=_RAW_MAX_FRAME_BYTES, open_timeout=_RAW_CONNECT_TIMEOUT_S
+            ) as pws:
+                page = _RawCdpPage(pws, target_id)
+                await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                async with asyncio.timeout(_POPUP_LOAD_TIMEOUT_S):
+                    while True:
+                        try:
+                            current = await current_page_url(page)
+                        except RuntimeError as exc:
+                            if str(exc) != "CDP returned no current main frame URL":
+                                raise
+                            await asyncio.sleep(0.1)
+                            continue
+                        if current != "about:blank":
+                            _check_final_host(current, allowed_hosts)
+                            if await page.evaluate("() => document.readyState") == "complete":
+                                break
+                        await asyncio.sleep(0.1)
+                yield page
+                _check_final_host(await current_page_url(page), allowed_hosts)
+        finally:
+            # Shield the bounded cleanup but keep the caller's cancellation.
+            cleanup_task = asyncio.create_task(asyncio.wait_for(cleanup(), timeout=_POPUP_CLEANUP_TIMEOUT_S))
+            cancelled = False
+            while True:
+                try:
+                    await asyncio.shield(cleanup_task)
+                    break
+                except asyncio.CancelledError:
+                    if cleanup_task.cancelled():
+                        raise
+                    cancelled = True
+                except Exception:
+                    break
+            if cancelled:
+                raise asyncio.CancelledError
 
 
 async def _new_tab(ctx: BrowserContext) -> Page:

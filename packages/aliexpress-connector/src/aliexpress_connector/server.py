@@ -43,7 +43,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
 # _tile_prices: Separate current, old and conditional/coupon tile prices.
 # _cdp_render_search: Read the rendered search grid from a landing page.
-# _cdp_card: Match the full item ID on an owned popup and bound cleanup on all exits.
+# _read_card_target: Poll one owned item tab for the price module and classify an x5sec challenge.
+# _cdp_card: Match the full item ID on an owned popup (Playwright or raw CDP) and bound cleanup on all exits.
 # _card_prices: Pair glyph-scored card prices without inventing absent modules.
 # aliexpress_search: Return normalized rendered offers and price warnings,
 #                    plus a runtime shape-drift warning when a required key vanishes.
@@ -80,7 +81,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
-from mcp_core.transport.chrome_cdp import NavBlocked, open_page
+from mcp_core.transport.chrome_cdp import NavBlocked, open_owned_popup, open_page
 from pydantic import Field
 
 from aliexpress_connector.models_output import (
@@ -412,6 +413,36 @@ def _unwrap_extract(raw: Any, what: str) -> dict[str, Any]:
 
 _POPUP_CLOSE_TIMEOUT_S = 5.0
 _POPUP_ARRIVAL_TIMEOUT_S = 2.0
+_CARD_HOSTS = frozenset({"aliexpress.ru", "www.aliexpress.ru"})
+
+
+async def _read_card_target(target: Any) -> dict[str, Any]:
+    """Read one owned item tab; shared by the Playwright and raw-CDP popups."""
+    raw = None
+    # The sticky price module is client-rendered and lags the title:
+    # keep polling for gyph-attached prices; a title-only state is
+    # only accepted after half the budget, so a lazy module does not
+    # masquerade as a permanent price_missing (measured 2026-08-20).
+    for attempt in range(12):
+        try:
+            raw = await asyncio.wait_for(target.evaluate(_CARD_EXTRACT_JS), timeout=30.0)
+            probe = json.loads(raw) if isinstance(raw, str) and raw.strip().startswith("{") else {}
+            if probe.get("punish"):
+                break
+            if (probe.get("price_texts") or {}).get("attached"):
+                break
+            if attempt >= 6 and probe.get("title"):
+                break
+        except Exception:
+            pass
+        await asyncio.sleep(1)
+    if raw is None:
+        raise_tool_error(TransportDownError("item tab produced no extractable content"))
+    data = _unwrap_extract(raw, "card")
+    if _is_punish(data):
+        _pacer.record_refusal()
+        raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
+    return data
 
 
 async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
@@ -426,16 +457,20 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
     async with _cdp_lock:
         await _polite_wait()
         async with open_page(_LANDING, wait_ms=9000, navigation_timeout_ms=TIMEOUT * 1000) as page:
-            # Raw CDP has no sibling-page handles: refuse before opening a popup
-            # that this transport could neither identify nor clean up.
             context = getattr(page, "context", None)
             if context is None:
-                raise_tool_error(
-                    TransportDownError(
-                        "aliexpress_card needs the Playwright-managed CDP page (tab-hopping); "
-                        "the raw-CDP fallback carries no page context. Run with the default transport."
-                    )
-                )
+                # Raw CDP has no Playwright page context: open the item as a popup
+                # attributed by its openerId and closed by its own target ID.
+                async with open_owned_popup(page, url, allowed_hosts=_CARD_HOSTS) as raw_popup:
+                    popup_url = raw_popup.url or ""
+                    if "punish" in popup_url:
+                        _pacer.record_refusal()
+                        raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
+                    if not wants.search(urllib.parse.urlsplit(popup_url).path):
+                        raise_tool_error(
+                            TransportDownError("the owned item tab did not reach the requested AliExpress item")
+                        )
+                    return await _read_card_target(raw_popup)
             before = set(context.pages)
             owned: set[Any] = set()
             arrived = asyncio.Event()
@@ -522,31 +557,7 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                             "open aliexpress.ru in the scraping profile and retry — this is not a parser failure"
                         )
                     )
-                raw = None
-                # The sticky price module is client-rendered and lags the title:
-                # keep polling for gyph-attached prices; a title-only state is
-                # only accepted after half the budget, so a lazy module does not
-                # masquerade as a permanent price_missing (measured 2026-08-20).
-                for attempt in range(12):
-                    try:
-                        raw = await asyncio.wait_for(target.evaluate(_CARD_EXTRACT_JS), timeout=30.0)
-                        probe = json.loads(raw) if isinstance(raw, str) and raw.strip().startswith("{") else {}
-                        if probe.get("punish"):
-                            break
-                        if (probe.get("price_texts") or {}).get("attached"):
-                            break
-                        if attempt >= 6 and probe.get("title"):
-                            break
-                    except Exception:
-                        pass
-                    await asyncio.sleep(1)
-                if raw is None:
-                    raise_tool_error(TransportDownError("item tab produced no extractable content"))
-                data = _unwrap_extract(raw, "card")
-                if _is_punish(data):
-                    _pacer.record_refusal()
-                    raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
-                return data
+                return await _read_card_target(target)
             finally:
                 task = asyncio.create_task(cleanup())
                 cancelled = False

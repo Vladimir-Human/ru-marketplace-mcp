@@ -56,6 +56,25 @@
   `published_at_desc` stays accepted as a legacy alias. The cursor is still rebuilt
   only from validated `page`, `page_key` and `sort`. Once `limit` is filled, the
   next cursor is neither validated nor reported as a partial answer.
+- `aliexpress_card` работает и в raw-CDP (когда Playwright не подключился к
+  Chrome и `open_page` перешёл на raw). Раньше карточка в этом случае всегда
+  отказывала с `transport_down`. Теперь стартовая страница открывает товар
+  обычным `window.open` с жестом пользователя, а новая вкладка опознаётся по
+  `openerId` — собственному target ID стартовой страницы, а не по URL или
+  времени появления; вкладка оператора с тем же URL не трогается. URL товара и
+  вкладки проверяются по хостам `aliexpress.ru`, путь — по полному item id;
+  закрываются только собственные вкладки, в том числе при отмене. Капча x5sec
+  по-прежнему не обходится и возвращается как `challenge_required`.
+- `aliexpress_card` now works over raw CDP too (when Playwright could not attach
+  and `open_page` fell back to raw). It used to refuse every card there with
+  `transport_down`. The landing page now opens the item with a plain
+  user-gesture `window.open`, and the new tab is attributed by its `openerId` —
+  the landing page's own target ID, not a URL or arrival time; an operator tab
+  with the same URL is left alone. The item and popup URLs are host-checked
+  against `aliexpress.ru`, the path against the full item id; only owned tabs
+  are closed, cancellation included. An x5sec challenge is still not bypassed
+  and comes back as `challenge_required`.
+
 ### Added
 - Avito: резерв объявления. `avito_card` возвращает `availability`
   (`active` / `reserved` / `unknown`) и `availability_evidence`. Статус берётся
@@ -91,6 +110,7 @@
   every hit by default (`include_inactive=true`); with `include_inactive=false`
   reserved hits are dropped, counted in `excluded_inactive` and announced by
   an `info:` line in `_meta`; `total_count` still includes them. No extra
+  requests to Avito.
 - Avito: `avito_card` читает со своей же страницы условия сделки и продавца:
   `condition` и `params` (характеристики), `delivery_available`,
   `delivery_services`, `payment_on_delivery`, `safe_deal`, `price_offer_enabled`
@@ -125,7 +145,6 @@
   source on the page that states a seller type (page-state `seller.isCompany`
   and the DOM seller label) says company; a private seller, an unstated type or
   disagreeing sources get the city and stations only. No extra requests.
-  requests to Avito.
 
 ## [2.8.2] - 2026-11-03
 
