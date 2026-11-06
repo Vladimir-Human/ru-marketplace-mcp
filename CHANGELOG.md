@@ -27,6 +27,18 @@
   second was silently `active`. Another ad's closed page (after a redirect, for
   example) is no longer the requested id's `not_found`: the identity check
   answers `parser_drift`.
+- Avito: `avito_card(photos=N)` загружает каждое фото через общий темп запросов
+  к Avito (его интервал и откат после отказа), первое тоже. Раньше между фото
+  стояла собственная пауза 1 с, первое фото запрашивалось сразу после страницы
+  карточки, а откат после 403/429 на фото не действовал. Новый статус
+  `photos_status=fewer_on_page`: на странице меньше фото, чем просили, и все
+  они доставлены (раньше `ok`).
+- Avito: `avito_card(photos=N)` fetches every photo through the source's own
+  pacer (its gap and its back-off after a refusal), the first one included. It
+  used to sleep its own 1 s between photos, fetch the first right after the card
+  page, and ignore the back-off after a 403/429. New
+  `photos_status=fewer_on_page`: the page had fewer photos than asked and all of
+  them arrived (it used to say `ok`).
 
 ## [2.9.0] - 2026-11-06
 

@@ -185,10 +185,12 @@ not_found, below); closure flags against item.isActive=true, or Avito's
 closure banner on a page that says it is open, give unknown with both sides.
 photos=N (0-3, default 0) is opt-in and costly in tokens. For an active ad
 only, it fetches up to N listing photos (640x480) from the page's own gallery,
-https on *.img.avito.st only, 1 s apart, at most 2 MB each, JPEG/PNG/WebP
+https on *.img.avito.st only, each fetch through the source's own pacer (its
+gap and its back-off after a refusal), at most 2 MB each, JPEG/PNG/WebP
 only, and returns them as MCP image content after the JSON text; nothing is
 stored. The first refusal stops the loop and is never retried; photos_status
-says why: ok, skipped_inactive (reserved or unknown ad), none_on_page,
+says why: ok, fewer_on_page (all the page had, fewer than asked),
+skipped_inactive (reserved or unknown ad), none_on_page,
 refused_403, rate_limited (429), refused_http (another status), too_large,
 bad_type, fetch_failed. photos lists every photo tried with delivered and
 bytes. The photos belong to the seller: describe the item, its condition and

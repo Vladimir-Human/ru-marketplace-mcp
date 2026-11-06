@@ -73,7 +73,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 #               include_inactive=false (then counted and announced in _meta); warn when a required key family vanishes.
 # avito_card: Read item-page Product (or identity-checked item DOM) and seller block over CDP; full URLs only with an item-page path; never use a catalog envelope;
 #             availability (active/reserved/unknown) from hydration flags and the safe-deal banner only (item_state).
-# _attach_photos: Opt-in photos=N: paced https *.img.avito.st fetches, bounded, stop at the first refusal, nothing stored.
+# _attach_photos: Opt-in photos=N: https *.img.avito.st fetches through the source's pacer, bounded, stop at the first
+#                 refusal, nothing stored.
 # avito_seller: Read CDP profile reputation; active_items stays None (not shown).
 # avito_selfcheck: Chain search/card/seller to diagnose transport/parser health; not an MCP tool.
 # END_MODULE_MAP
@@ -1134,7 +1135,6 @@ def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
 
 _MAX_PHOTOS = 3
 _PHOTO_MAX_BYTES = 2 * 1024 * 1024
-_PHOTO_GAP_S = 1.0
 _PHOTO_TIMEOUT_S = 20.0
 _PHOTO_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 
@@ -1183,22 +1183,26 @@ def _sync_photo_get(url: str) -> tuple[int, str, bytes]:
 
 
 async def _attach_photos(result: AvitoCardResponse, urls: list[str], limit: int) -> list[ImageContent]:
-    """Fetch up to ``limit`` listing photos, paced; stop at the first refusal, never retry.
+    """Fetch up to ``limit`` listing photos; stop at the first refusal, never retry.
 
-    Only *.img.avito.st over https; bytes stay in memory for this answer and are
-    never written anywhere. photos_status names the outcome that ended the loop.
+    Only *.img.avito.st over https; each fetch waits on the source's own pacer
+    (its gap and its back-off after a refusal), like every other Avito request,
+    the first one included. Bytes stay in memory for this answer and are never
+    written anywhere. photos_status names the outcome that ended the loop;
+    fewer_on_page when every photo on the page arrived but there were fewer
+    than asked.
     """
     images: list[ImageContent] = []
-    picked = [url for url in urls if _state.photo_url_allowed(url)][: max(0, min(limit, _MAX_PHOTOS))]
+    wanted = max(0, min(limit, _MAX_PHOTOS))
+    picked = [url for url in urls if _state.photo_url_allowed(url)][:wanted]
     if not picked:
         result.photos_status = "none_on_page"
         return images
     result.photos_status = "ok"
-    for index, url in enumerate(picked):
+    for url in picked:
         entry = AvitoPhotoOut(url=url)
         result.photos.append(entry)
-        if index:
-            await asyncio.sleep(_PHOTO_GAP_S)
+        await _polite_wait()
         try:
             status, content_type, data = await asyncio.wait_for(
                 asyncio.to_thread(_sync_photo_get, url), timeout=_PHOTO_TIMEOUT_S
@@ -1225,6 +1229,8 @@ async def _attach_photos(result: AvitoCardResponse, urls: list[str], limit: int)
         entry.delivered = True
         entry.bytes = len(data)
         images.append(ImageContent(type="image", data=base64.b64encode(data).decode("ascii"), mime_type=content_type))
+    if result.photos_status == "ok" and len(picked) < wanted:
+        result.photos_status = "fewer_on_page"
     return images
 
 
