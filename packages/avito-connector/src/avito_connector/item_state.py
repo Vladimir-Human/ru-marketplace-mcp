@@ -19,17 +19,20 @@ safe-deal widget and ``item.deliveryInfo.isReserved`` /
 signals that contradict each other are ``unknown`` with both sides in the
 evidence, and silence is ``unknown`` rather than a guess.
 
-Closed and sold listings are out of scope here: no captured page shows how
-Avito marks them, so they are not classified (a missing ad stays not_found).
+Closed and gone listings (live 2026-11-06) are detected by ``closed_state``
+from the page's own ``buyerItem`` closure flags, ``loaderData`` ``notFound``
+entries, and ``item-view/closed-warning`` banner so ``avito_card`` raises
+``NotFoundError`` with Avito's text without inferring ``sold`` (the buyer page
+looks identical for sold and withdrawn ads).
 
 Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 15 of 50 hits on one page were reserved).
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Classify availability from explicit service signals; read deal/seller/location fields the page states.
+# PURPOSE: Classify availability from explicit service signals; read deal/seller/location fields and closed state from the page.
 # SCOPE: Pure parsing of the already-fetched item HTML and js/items entries; no I/O; seller-written text never sets a status or flag.
 # DEPENDS: stdlib json/re/HTMLParser.
-# LINKS: M-AVITO; R-NO-FABRICATION; packages/avito-connector/tests/test_item_state.py.
+# LINKS: M-AVITO; R-NO-FABRICATION,R-ERRORS; packages/avito-connector/tests/test_item_state.py,packages/avito-connector/tests/test_item_closed.py.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # load_hydration: Decode window.__staticRouterHydrationData from the page, bounded in size.
@@ -42,6 +45,7 @@ Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 # is_company: The page state's own seller type; None when the page is silent.
 # photo_urls: Listing photo URLs (640x480 first) from the page's own gallery state, videos skipped.
 # photo_url_allowed: https on *.img.avito.st only, no credentials or odd ports.
+# closed_state: Whether the page's own state is known, and Avito's closure text when it says the ad is gone.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -524,3 +528,49 @@ def photo_url_allowed(url: str) -> bool:
         and parts.password is None
         and port in (None, 443)
     )
+
+
+# --------------------------------------------------------------------------
+# Closed / removed ads (avito_card answers not_found for them).
+# --------------------------------------------------------------------------
+
+_CLOSED_BANNER = "item-view/closed-warning"
+
+
+def _closure_text(value: Any, fallback: str) -> str:
+    return " ".join(value.split())[:120] if isinstance(value, str) and value.strip() else fallback
+
+
+def closed_state(html: str, item_id: int | None) -> tuple[bool, str | None]:
+    """(own state known, Avito's closure text or None) from service data only.
+
+    Captured 2026-11-06: a withdrawn or sold ad («Объявление снято с
+    публикации.», the same text whether the seller sold it or not) still renders
+    its buyerItem with ``closedItem: true``, ``closedItemStatus`` and
+    ``item.isClosed: true``, plus the ``item-view/closed-warning`` banner; a
+    gone ad («Объявление закрыто.») renders a loader entry ``type: "notFound"``
+    with that message and no buyerItem. Avito's buyer page does not say whether
+    a closed ad was sold, so nothing here claims it. When the page carries its
+    own buyerItem for the requested id and explicitly marks it open, the page
+    is known to be open: the caller must not look for closure words in the
+    visible text, where the title and description are the seller's.
+    """
+    state = load_hydration(html)
+    bi = buyer_item(state, item_id)
+    if isinstance(bi, dict):
+        item = bi.get("item")
+        if bi.get("closedItem") is True or (isinstance(item, dict) and item.get("isClosed") is True):
+            return True, _closure_text(bi.get("closedItemStatus"), "page state: closed")
+        if (
+            (isinstance(item, dict) and item.get("isActive") is True)
+            or bi.get("closedItem") is False
+            or (isinstance(item, dict) and item.get("isClosed") is False)
+        ):
+            return True, None
+    loader = state.get("loaderData") if isinstance(state, dict) else None
+    if isinstance(loader, dict):
+        for value in loader.values():
+            if isinstance(value, dict) and value.get("type") == "notFound":
+                return True, _closure_text(value.get("message"), "page state: notFound")
+    banner = marker_texts(html, (_CLOSED_BANNER,)).get(_CLOSED_BANNER)
+    return False, banner[:120] if banner else None

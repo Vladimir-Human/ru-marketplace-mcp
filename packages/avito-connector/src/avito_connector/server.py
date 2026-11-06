@@ -420,6 +420,12 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
     Raises raw ParserDriftError on empty Product or missing/invalid item DOM,
     NotFoundError on a removed/missing-ad page; the MCP adapter serializes these.
     """
+    # Avito's own state first: a closed or gone ad is not_found with Avito's
+    # closure text, and a page whose own state says it is open is never closed
+    # by words in the visible text (the title and description are the seller's).
+    state_known, closure = _state.closed_state(html, item_id)
+    if closure:
+        raise NotFoundError(f"Avito item page: the ad is closed or removed («{closure}»).")
     document = _ItemPageHTML()
     document.feed(html)
     document.close()
@@ -447,7 +453,7 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
             continue
     if not products:
         visible = " ".join(document.text)
-        if re.search(
+        if not state_known and re.search(
             r"Объявление\s+не\s+найдено|снято\s+с\s+публикации|Ошибка\s+404|Страница\s+не\s+найдена",
             visible,
             re.IGNORECASE,
