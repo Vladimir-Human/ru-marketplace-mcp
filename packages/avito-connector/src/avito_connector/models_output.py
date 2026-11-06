@@ -90,6 +90,25 @@ class AvitoMetroOut(BaseModel):
     walk: str | None = Field(default=None, description="Walking time text, e.g. 6–10 мин.")
 
 
+class AvitoPhotoOut(BaseModel):
+    url: str = Field(description="Photo URL on *.img.avito.st (640x480 variant when available).")
+    delivered: bool = Field(default=False, description="True when this photo is attached as MCP image content.")
+    bytes: int | None = Field(default=None, description="Size of the attached image in bytes.")
+
+
+PhotosStatus = Literal[
+    "ok",
+    "skipped_inactive",
+    "none_on_page",
+    "refused_403",
+    "rate_limited",
+    "refused_http",
+    "too_large",
+    "bad_type",
+    "fetch_failed",
+]
+
+
 class AvitoCardResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
@@ -164,6 +183,17 @@ class AvitoCardResponse(BaseModel):
         description="Map point {lat, lng} of that address, under the same rule as address; otherwise None.",
     )
     today_views: int | None = Field(default=None, description="Views today.")
+    photos: list[AvitoPhotoOut] = Field(
+        default_factory=list, description="Photos tried with photos=N; delivered ones follow as image content."
+    )
+    photos_status: PhotosStatus | None = Field(
+        default=None,
+        description=(
+            "None when photos=0. ok: every requested photo delivered; skipped_inactive: the ad is not active; "
+            "none_on_page; refused_403 / rate_limited (429) / refused_http (other status); too_large; bad_type; "
+            "fetch_failed. The first refusal stops the photo loop and is never retried."
+        ),
+    )
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 
