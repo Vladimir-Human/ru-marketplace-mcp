@@ -98,7 +98,7 @@ from mpstats_connector.settings import MPStatsSettings, get_settings
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.8.2"
+SERVER_VERSION = "2.9.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(
