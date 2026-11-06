@@ -649,7 +649,10 @@ def parse_item_seller(html: str) -> dict[str, Any]:
     document.close()
     name_node = document.marked("seller-info/name")
     score_node = document.marked("rating-caption/rating") or document.marked("sellerRate")
-    label = _seller_text(document.marked("seller-info/label"))
+    labels = [_seller_text(node) for node in document.nodes if node["attrs"].get("data-marker") == "seller-info/label"]
+    label = next((lbl for lbl in labels if lbl), None)
+    label_types = {lbl != "Частное лицо" for lbl in labels if lbl in ("Частное лицо", "Компания", "Магазин")}
+    is_company = False if False in label_types else (True if True in label_types else None)
     rating_container = next(
         (node for node in document.nodes if "seller-info-rating" in (node["attrs"].get("class") or "").split()),
         None,
@@ -701,7 +704,7 @@ def parse_item_seller(html: str) -> dict[str, Any]:
         "name": _seller_text(name_node),
         "rating_score": _seller_score(score_text) if block_present else None,
         "rating_count": _seller_review_count(review_text) if block_present else None,
-        "is_company": False if label == "Частное лицо" else (True if label in ("Компания", "Магазин") else None),
+        "is_company": is_company,
         "profile_url": profile_url,
     }
 

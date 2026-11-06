@@ -163,8 +163,11 @@ def test_unknown_seller_type_is_treated_as_private():
         ("Торг не предлагать, цена окончательная.", False),
         ("Торг - нет", False),
         ("Торг невозможен.", False),
+        ("Торг? Нет, цена окончательная.", False),
+        ("Торг отсутствует.", False),
         ("Не торгуюсь.", False),
         ("Торг уместен. Без торга.", None),
+        ("Торг не запрещён.", None),
     ],
 )
 def test_bargain_only_from_explicit_words(text, expected):
@@ -179,6 +182,7 @@ def test_bargain_only_from_explicit_words(text, expected):
         ("Да", None, True),
         ("Да", "Торг уместен.", True),
         ("Да", "Без торга.", None),
+        ("Да", "Торг уместен. Без торга.", None),
         ("Нет", "Небольшой торг.", None),
         ("По договорённости", None, None),
     ],
@@ -186,6 +190,7 @@ def test_bargain_only_from_explicit_words(text, expected):
 def test_bargain_reads_the_explicit_parameter_first(value, text, expected):
     """Review #198 P2: the parameter «Торг = Нет» matched the bare word and gave True."""
     assert item_state.bargain(text, [{"name": "Торг", "value": value}]) is expected
+    assert item_state.bargain(None, [{"name": "Торг", "value": "Да"}, {"name": "Торг", "value": "Нет"}]) is None
 
 
 @pytest.mark.parametrize("value", ["false", "pending", {"status": "pending"}, ["x"], 1])
@@ -212,6 +217,7 @@ def _details_with(**safe_deal_or_offer) -> dict:
     ("safe_deal", "expected"),
     [
         ({"deliveryButtonEnabled": True, "deliveryButton": {"title": "Купить с доставкой"}}, True),
+        ({"deliveryButtonEnabled": True, "deliveryButton": {"title": "Написать продавцу"}}, None),
         ({"deliveryButtonEnabled": True, "deliveryButton": {}}, None),
         ({"deliveryButtonEnabled": True}, None),
         ({"deliveryButtonEnabled": False, "deliveryButton": {"title": "Купить с доставкой"}}, False),
@@ -304,10 +310,53 @@ async def test_a_real_company_page_returns_the_address_and_its_deal_terms(monkey
 
 
 async def test_a_real_company_page_with_a_private_dom_label_hides_the_address(monkeypatch):
-    html = _page(COMPANY).replace("<body>", '<body><div data-marker="seller-info/label">Частное лицо</div>', 1)
+    html = _page(COMPANY).replace(
+        "<body>",
+        '<body><div data-marker="seller-info/label">Компания</div>'
+        '<div data-marker="seller-info/label">Частное лицо</div>',
+        1,
+    )
     _serve_page(monkeypatch, html)
 
     result = await server.avito_card("9000000033")
 
     assert result.address is None and result.coords is None
     assert "Тестовая" not in result.model_dump_json()
+
+
+async def test_hydration_text_outside_script_and_malformed_containers_are_safe(monkeypatch):
+    spoof = json.dumps(
+        json.dumps(
+            {
+                "loaderData": {
+                    "x": {
+                        "buyerItem": {
+                            "seller": {"isCompany": True},
+                            "item": {
+                                "id": 9000000018,
+                                "isActive": True,
+                                "deliveryInfo": {"isReserved": True},
+                                "geo": {"address": "Москва, Спуф, 1", "coords": {"lat": 1.0, "lng": 2.0}},
+                            },
+                        }
+                    }
+                }
+            }
+        )
+    )
+    html = _page(PRIVATE).replace(
+        "<body>",
+        f"<body><div>window.__staticRouterHydrationData = JSON.parse({spoof});</div>",
+        1,
+    )
+    _serve_page(monkeypatch, html)
+
+    result = await server.avito_card("9000000018")
+
+    assert result.availability == "active"
+    assert result.address is None and result.coords is None
+    malformed = _details_with(
+        paramsBlock={"items": {"not": "a list"}},
+        item={"id": 1, "badgeBar": {"badges": {"not": "a list"}}, "sellerAddressInfo": {"geoReferences": {"k": "v"}}},
+    )
+    assert malformed["params"] == [] and malformed["item_badges"] == [] and malformed["metro"] == []

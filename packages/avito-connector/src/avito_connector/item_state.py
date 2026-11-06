@@ -55,6 +55,7 @@ RESERVED: Final = "reserved"
 UNKNOWN: Final = "unknown"
 INACTIVE = frozenset({RESERVED})
 
+_SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
 _HYDRATION_RE = re.compile(r'window\.__staticRouterHydrationData\s*=\s*JSON\.parse\("((?:[^"\\]|\\.)*)"\)', re.S)
 _MAX_STATE_CHARS = 4 * 1024 * 1024
 
@@ -120,14 +121,19 @@ def marker_texts(html: str, markers: tuple[str, ...] = _SERVICE_MARKERS) -> dict
 
 
 def load_hydration(html: str) -> dict[str, Any] | None:
-    match = _HYDRATION_RE.search(html)
-    if not match or len(match.group(1)) > _MAX_STATE_CHARS:
-        return None
-    try:
-        data = json.loads(json.loads('"' + match.group(1) + '"'))
-    except (ValueError, TypeError):
-        return None
-    return data if isinstance(data, dict) else None
+    """Decode window.__staticRouterHydrationData from a single real <script> element only."""
+    found: list[dict[str, Any]] = []
+    for script_match in _SCRIPT_RE.finditer(html):
+        match = _HYDRATION_RE.search(script_match.group(1))
+        if not match or len(match.group(1)) > _MAX_STATE_CHARS:
+            continue
+        try:
+            data = json.loads(json.loads('"' + match.group(1) + '"'))
+        except (ValueError, TypeError):
+            continue
+        if isinstance(data, dict):
+            found.append(data)
+    return found[0] if len(found) == 1 else None
 
 
 def buyer_item(state: dict[str, Any] | None, item_id: int | None) -> dict[str, Any] | None:
@@ -234,14 +240,16 @@ _CHECK_BADGES = re.compile(r"подтвержд|надёжн|надежн|про
 # «торг» as a word (not «торговый», «торгуюсь»). Negations are matched first and
 # cut out of the text, so «Торг: нет» or «торг не предлагать» never counts as «торг».
 _TORG = r"(?<![а-яё])торг(?![а-яё])"
+_DOUBLE_NEG_BARGAIN = re.compile(rf"{_TORG}\s+не\s+(?:запрещ|исключ)", re.I)
 _NO_BARGAIN = re.compile(
     r"без\s+торга"
     r"|торга\s+нет"
     r"|не\s+торгуюсь|не\s+торгуемся|торговаться\s+не\b"
-    rf"|{_TORG}\s*[:\-–—]?\s*(?:нет|не\b|неуместен|невозмож|исключ)",
+    rf"|{_TORG}\s*[?:\-–—]?\s*(?:нет|не\b|неуместен|невозмож|исключ|отсутств)",
     re.I,
 )
 _BARGAIN = re.compile(_TORG, re.I)
+_SAFE_DEAL_BUTTON = re.compile(r"доставк|купить", re.I)
 # The explicit «Торг» parameter some categories carry: its value decides.
 _PARAM_YES = re.compile(r"^(?:да|есть|возможен|уместен)$", re.I)
 _PARAM_NO = re.compile(r"^(?:нет|невозможен|неуместен)$", re.I)
@@ -262,6 +270,11 @@ def _dict(container: Any, key: str) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _list(container: Any, key: str) -> list[Any]:
+    value = container.get(key) if isinstance(container, dict) else None
+    return value if isinstance(value, list) else []
+
+
 def _number(value: Any) -> float | None:
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
@@ -270,15 +283,17 @@ def _count(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
-def _text_bargain(text: str) -> bool | None:
-    """True/False from the words alone; both a negation and a plain «торг» -> None."""
+def _text_bargain(text: str) -> tuple[bool | None, bool]:
+    """(verdict, conflicted) from the words alone; both a negation and a plain «торг» -> (None, True)."""
+    if _DOUBLE_NEG_BARGAIN.search(text):
+        return None, True
     negated = bool(_NO_BARGAIN.search(text))
     plain = bool(_BARGAIN.search(_NO_BARGAIN.sub(" ", text)))
     if negated and plain:
-        return None
+        return None, True
     if negated:
-        return False
-    return True if plain else None
+        return False, False
+    return (True, False) if plain else (None, False)
 
 
 def bargain(description: str | None, params: list[dict[str, str]]) -> bool | None:
@@ -289,18 +304,23 @@ def bargain(description: str | None, params: list[dict[str, str]]) -> bool | Non
     before a plain «торг». A text that contradicts the parameter, or itself, is
     None: the seller's words are data, not a flag to trust over the page.
     """
-    param: bool | None = None
+    param_values: set[bool] = set()
     for entry in params:
         if entry["name"].strip().lower() != "торг":
             continue
         value = entry["value"].strip()
         if _PARAM_YES.match(value):
-            param = True
+            param_values.add(True)
         elif _PARAM_NO.match(value):
-            param = False
+            param_values.add(False)
         else:
             return None
-    words = _text_bargain(description or "")
+    if len(param_values) > 1:
+        return None
+    param = next(iter(param_values), None)
+    words, conflicted = _text_bargain(description or "")
+    if conflicted:
+        return None
     if param is not None and words is not None and words != param:
         return None
     return param if param is not None else words
@@ -318,7 +338,7 @@ def is_company(bi: dict[str, Any] | None) -> bool | None:
 
 def _params(bi: dict[str, Any]) -> list[dict[str, str]]:
     params: list[dict[str, str]] = []
-    for entry in (_dict(bi, "paramsBlock").get("items") or [])[:40]:
+    for entry in _list(_dict(bi, "paramsBlock"), "items")[:40]:
         if not isinstance(entry, dict):
             continue
         name, value = _text(entry.get("title"), 80), _text(entry.get("description"))
@@ -409,21 +429,22 @@ def card_details(html: str, item_id: int | None, description: str | None) -> dic
     if isinstance(safe_deal, dict):
         out["delivery_services"] = _delivery_services(safe_deal)
         enabled = safe_deal.get("deliveryButtonEnabled")
+        button_title = _text(_dict(safe_deal, "deliveryButton").get("title"))
         if enabled is False:
             out["safe_deal"] = False
-        elif enabled is True and _text(_dict(safe_deal, "deliveryButton").get("title")) is not None:
-            # An enabled button without a recognisable title is not proof either way.
+        elif enabled is True and button_title is not None and _SAFE_DEAL_BUTTON.search(button_title):
+            # An enabled button without a recognisable delivery/buy title is not proof either way.
             out["safe_deal"] = True
     # The form object was a dict on every captured page; any other shape is unknown, not «no form».
     if isinstance(bi.get("bargainOffer"), dict):
         out["price_offer_enabled"] = True
-    for badge in (_dict(item, "badgeBar").get("badges") or [])[:10]:
+    for badge in _list(_dict(item, "badgeBar"), "badges")[:10]:
         title = _text(badge.get("title"), 80) if isinstance(badge, dict) else None
         if title:
             detail = _text(badge.get("description"), 120)
             out["item_badges"].append(f"{title}: {detail}" if detail else title)
     out["location"] = _text(_dict(item, "location").get("name"), 80)
-    for ref in (_dict(item, "sellerAddressInfo").get("geoReferences") or [])[:5]:
+    for ref in _list(_dict(item, "sellerAddressInfo"), "geoReferences")[:5]:
         name = _text(ref.get("content"), 80) if isinstance(ref, dict) else None
         if name:
             walk = _text(_dict(ref, "afterWithIcon").get("text"), 40)
