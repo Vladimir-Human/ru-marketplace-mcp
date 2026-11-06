@@ -9,6 +9,25 @@
 
 ## [Unreleased]
 
+### Fixed
+- Avito: признак закрытия больше не перевешивает противоречащий ему признак
+  открытого объявления. Флаги закрытия (`closedItem`, `item.isClosed`) при
+  `item.isActive=true` и баннер «снято с публикации» на странице, которая сама
+  говорит, что объявление открыто, дают карточку с `availability=unknown` и
+  обеими сторонами в `availability_evidence`. Раньше в первом случае был
+  уверенный `not_found`, во втором баннер молча пропускался (`active`).
+  Страница другого объявления (например, после редиректа) с баннером закрытия
+  больше не превращается в `not_found` запрошенного id: отвечает проверка
+  идентичности, `parser_drift`.
+- Avito: a closure signal no longer outweighs a contradicting open signal.
+  Closure flags (`closedItem`, `item.isClosed`) next to `item.isActive=true`, and
+  the «снято с публикации» banner on a page whose own state says it is open, now
+  give the card with `availability=unknown` and both sides in
+  `availability_evidence`. The first used to be a confident `not_found`, the
+  second was silently `active`. Another ad's closed page (after a redirect, for
+  example) is no longer the requested id's `not_found`: the identity check
+  answers `parser_drift`.
+
 ## [2.9.0] - 2026-11-06
 
 ### Fixed

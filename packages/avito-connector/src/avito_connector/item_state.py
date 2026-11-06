@@ -192,6 +192,15 @@ def classify(bi: dict[str, Any] | None, texts: dict[str, str]) -> tuple[Availabi
         hit = _RESERVED_BANNER.search(texts.get(marker, ""))
         if hit:
             reserved.append(f"{marker}: «{hit.group(0)}»")
+    closed = _closed_flags(bi)
+    banner = texts.get(_CLOSED_BANNER)
+    if banner:
+        closed.append(f"{_CLOSED_BANNER}: «{banner[:80]}»")
+    if closed:
+        # closed_state() lets a card through with a closure signal only when the
+        # page also says it is open: report both sides, decide nothing.
+        active = ["item.isActive=true"] if _bool_at(item, "isActive") is True else []
+        return UNKNOWN, ["contradicting status signals", *closed, *active, *reserved, *free]
     if reserved and free:
         return UNKNOWN, ["contradicting status signals", *reserved, *free]
     if reserved:
@@ -205,7 +214,7 @@ def classify(bi: dict[str, Any] | None, texts: dict[str, str]) -> tuple[Availabi
 
 
 def card_availability(html: str, item_id: int | None) -> tuple[Availability, list[str]]:
-    return classify(buyer_item(load_hydration(html), item_id), marker_texts(html))
+    return classify(buyer_item(load_hydration(html), item_id), marker_texts(html, (*_SERVICE_MARKERS, _CLOSED_BANNER)))
 
 
 def search_availability(item: dict[str, Any]) -> Availability:
@@ -537,6 +546,16 @@ def photo_url_allowed(url: str) -> bool:
 _CLOSED_BANNER = "item-view/closed-warning"
 
 
+def _closed_flags(bi: dict[str, Any] | None) -> list[str]:
+    """The buyerItem's own closure flags (real booleans only)."""
+    if not isinstance(bi, dict):
+        return []
+    flags = ["buyerItem.closedItem=true"] if bi.get("closedItem") is True else []
+    if _bool_at(bi.get("item"), "isClosed") is True:
+        flags.append("item.isClosed=true")
+    return flags
+
+
 def _closure_text(value: Any, fallback: str) -> str:
     return " ".join(value.split())[:120] if isinstance(value, str) and value.strip() else fallback
 
@@ -546,31 +565,49 @@ def closed_state(html: str, item_id: int | None) -> tuple[bool, str | None]:
 
     Captured 2026-11-06: a withdrawn or sold ad («Объявление снято с
     публикации.», the same text whether the seller sold it or not) still renders
-    its buyerItem with ``closedItem: true``, ``closedItemStatus`` and
-    ``item.isClosed: true``, plus the ``item-view/closed-warning`` banner; a
-    gone ad («Объявление закрыто.») renders a loader entry ``type: "notFound"``
-    with that message and no buyerItem. Avito's buyer page does not say whether
-    a closed ad was sold, so nothing here claims it. When the page carries its
-    own buyerItem for the requested id and explicitly marks it open, the page
-    is known to be open: the caller must not look for closure words in the
-    visible text, where the title and description are the seller's.
+    its buyerItem with ``closedItem: true``, ``closedItemStatus``,
+    ``item.isClosed: true`` and ``item.isActive: false``, plus the
+    ``item-view/closed-warning`` banner; a gone ad («Объявление закрыто.»)
+    renders a loader entry ``type: "notFound"`` with that message and no
+    buyerItem. Avito's buyer page does not say whether a closed ad was sold, so
+    nothing here claims it.
+
+    The requested id's own buyerItem decides first, ahead of any loader
+    ``notFound`` entry (an auxiliary sub-route may carry one on an open page).
+    Closure text is returned only for that id, and only when ``item.isActive``
+    is not ``true``: closure flags against an active flag are a contradiction
+    the card reports as ``unknown`` (classify), not a not_found. The page is
+    known to be open when its own flags say so (``isActive``, ``closedItem`` or
+    ``isClosed``); ``isActive: false`` alone says neither. A buyerItem of
+    another id is not this ad's page: nothing is attributed to the requested
+    id, not even the banner, and the card's identity check answers. A known
+    state means the caller must not look for closure words in the visible text,
+    where the title and description are the seller's. Only a page without its
+    own decisive state falls back to the banner.
     """
     state = load_hydration(html)
+    loader = state.get("loaderData") if isinstance(state, dict) else None
+    if not isinstance(loader, dict):
+        loader = {}
     bi = buyer_item(state, item_id)
     if isinstance(bi, dict):
         item = bi.get("item")
-        if bi.get("closedItem") is True or (isinstance(item, dict) and item.get("isClosed") is True):
+        flags = _closed_flags(bi)
+        if flags and _bool_at(item, "isActive") is not True:
             return True, _closure_text(bi.get("closedItemStatus"), "page state: closed")
         if (
-            (isinstance(item, dict) and item.get("isActive") is True)
+            flags
+            or _bool_at(item, "isActive") is True
             or bi.get("closedItem") is False
-            or (isinstance(item, dict) and item.get("isClosed") is False)
+            or _bool_at(item, "isClosed") is False
         ):
             return True, None
-    loader = state.get("loaderData") if isinstance(state, dict) else None
-    if isinstance(loader, dict):
-        for value in loader.values():
-            if isinstance(value, dict) and value.get("type") == "notFound":
-                return True, _closure_text(value.get("message"), "page state: notFound")
+    for value in loader.values():
+        if isinstance(value, dict) and value.get("type") == "notFound":
+            return True, _closure_text(value.get("message"), "page state: notFound")
+    if bi is None and any(
+        isinstance(value, dict) and isinstance(value.get("buyerItem"), dict) for value in loader.values()
+    ):
+        return True, None
     banner = marker_texts(html, (_CLOSED_BANNER,)).get(_CLOSED_BANNER)
     return False, banner[:120] if banner else None
