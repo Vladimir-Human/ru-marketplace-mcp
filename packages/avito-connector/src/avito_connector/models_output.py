@@ -98,6 +98,7 @@ class AvitoPhotoOut(BaseModel):
 
 PhotosStatus = Literal[
     "ok",
+    "fewer_on_page",
     "skipped_inactive",
     "none_on_page",
     "refused_403",
@@ -189,7 +190,8 @@ class AvitoCardResponse(BaseModel):
     photos_status: PhotosStatus | None = Field(
         default=None,
         description=(
-            "None when photos=0. ok: every requested photo delivered; skipped_inactive: the ad is not active; "
+            "None when photos=0. ok: every requested photo delivered; fewer_on_page: all the page had, fewer than "
+            "asked; skipped_inactive: the ad is not active; "
             "none_on_page; refused_403 / rate_limited (429) / refused_http (other status); too_large; bad_type; "
             "fetch_failed. The first refusal stops the photo loop and is never retried."
         ),

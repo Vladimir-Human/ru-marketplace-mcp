@@ -29,14 +29,15 @@ def _page(name: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _setup(monkeypatch):
+    """Every photo fetch waits on the source's own pacer; the waits are counted, not slept."""
     server._cache._data.clear()
-    sleeps: list[float] = []
+    waits: list[int] = []
 
-    async def no_sleep(seconds):
-        sleeps.append(seconds)
+    async def counted_wait():
+        waits.append(1)
 
-    monkeypatch.setattr(server.asyncio, "sleep", no_sleep)
-    yield sleeps
+    monkeypatch.setattr(server, "_polite_wait", counted_wait)
+    yield waits
     server._cache._data.clear()
 
 
@@ -124,7 +125,7 @@ async def test_photos_zero_makes_no_extra_request_and_returns_the_plain_card(mon
 async def test_photos_arrive_as_image_content_after_the_json(monkeypatch, _setup):
     fetched = _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (200, "image/jpeg", JPEG)])
 
-    result = await server.avito_card("9000000020", photos=3)
+    result = await server.avito_card("9000000020", photos=2)
 
     assert isinstance(result, ToolResult)
     text, *images = result.content
@@ -135,7 +136,30 @@ async def test_photos_arrive_as_image_content_after_the_json(monkeypatch, _setup
     assert [image.mimeType for image in images] == ["image/jpeg", "image/jpeg"]
     assert base64.b64decode(images[0].data) == JPEG
     assert fetched == [URL_1, URL_2]
-    assert _setup == [server._PHOTO_GAP_S]
+    assert _setup == [1, 1]
+
+
+async def test_fewer_photos_on_the_page_than_asked_is_said(monkeypatch):
+    """Review #199: the agent sees why fewer photos arrived than it asked for; v2.9.0 said ok."""
+    _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (200, "image/jpeg", JPEG)])
+
+    result = await server.avito_card("9000000020", photos=3)
+
+    assert result.structured_content["photos_status"] == "fewer_on_page"
+    assert [p["delivered"] for p in result.structured_content["photos"]] == [True, True]
+
+
+async def test_every_photo_fetch_waits_on_the_sources_pacer(monkeypatch, _setup):
+    """No private sleep: the source's gap and its back-off after a refusal apply to every photo, the first included.
+
+    v2.9.0 slept its own 1 s between photos and fetched the first one right after the card page.
+    """
+    _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG)])
+
+    await server.avito_card("9000000020", photos=1)
+
+    assert _setup == [1]
+    assert not hasattr(server, "_PHOTO_GAP_S")
 
 
 async def test_the_advertised_photos_argument_is_capped_at_three_and_off_by_default():
@@ -180,7 +204,7 @@ async def test_the_first_refusal_stops_the_photo_loop_with_its_status(monkeypatc
 async def test_a_refusal_after_a_delivered_photo_keeps_that_photo(monkeypatch):
     _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (403, "text/html", b"")])
 
-    result = await server.avito_card("9000000020", photos=2)
+    result = await server.avito_card("9000000020", photos=3)
 
     assert result.structured_content["photos_status"] == "refused_403"
     assert [p["delivered"] for p in result.structured_content["photos"]] == [True, False]
