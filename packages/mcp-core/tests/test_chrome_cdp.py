@@ -732,6 +732,51 @@ def test_goto_and_status_returns_the_last_document_status_and_stops_on_load():
     assert page.url == "https://x/final"
 
 
+def test_goto_and_status_skips_the_initial_blank_load_before_the_document():
+    """A queued load of the new tab's about:blank is not this navigation's load.
+
+    Chrome can deliver Page.loadEventFired for the initial about:blank before
+    the navigation's own main document. Ending the wait there returned no status
+    and left the URL at about:blank, which the host check then refused as if the
+    page had left the allowed hosts.
+    """
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"method": "Page.loadEventFired", "params": {}},
+            {"id": 1, "result": {"frameId": "F"}},
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "frameId": "F", "response": {"status": 200, "url": "https://x/final"}},
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    assert asyncio.run(page.goto_and_status("https://x/")) == 200
+    assert page.url == "https://x/final"
+
+
+def test_goto_and_status_still_stops_on_load_after_a_failed_navigation():
+    """A navigation Chrome reports as failed has no document: its load ends the wait."""
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"frameId": "F", "errorText": "net::ERR_NAME_NOT_RESOLVED"}},
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    async def run():
+        return await asyncio.wait_for(page.goto_and_status("https://x/", navigation_timeout_ms=60_000), timeout=5)
+
+    assert asyncio.run(run()) is None
+
+
 def test_goto_and_status_reports_a_block_page(monkeypatch):
     """A 403 that outlives the anti-bot recheck is a verdict open_page turns into NavBlocked."""
     import asyncio

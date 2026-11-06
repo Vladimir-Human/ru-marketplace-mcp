@@ -9,6 +9,20 @@
 
 ## [Unreleased]
 
+### Fixed
+- Raw CDP: событие загрузки начальной `about:blank` новой вкладки, пришедшее
+  раньше основного документа навигации, больше не завершает ожидание. Раньше
+  навигация возвращала статус `None` и URL `about:blank`, и проверка хоста
+  отказывала, как будто страница ушла с разрешённого хоста. Навигация, о сбое
+  которой Chrome сообщил (`errorText`), по-прежнему заканчивается на загрузке;
+  без основного документа ожидание ограничено тем же дедлайном навигации.
+- Raw CDP: a load event of the new tab's initial `about:blank` that arrives
+  before the navigation's main document no longer ends the wait. It used to
+  return a `None` status with the URL still `about:blank`, which the host check
+  refused as if the page had left the allowed hosts. A navigation Chrome reports
+  as failed (`errorText`) still ends on its load; without a main document the
+  wait stays bounded by the same navigation deadline.
+
 ## [2.8.2] - 2026-11-03
 
 ### Fixed
