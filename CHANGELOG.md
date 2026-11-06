@@ -91,6 +91,27 @@
   every hit by default (`include_inactive=true`); with `include_inactive=false`
   reserved hits are dropped, counted in `excluded_inactive` and announced by
   an `info:` line in `_meta`; `total_count` still includes them. No extra
+- Avito: `avito_card` читает со своей же страницы условия сделки и продавца:
+  `condition` и `params` (характеристики), `delivery_available`,
+  `delivery_services`, `payment_on_delivery`, `safe_deal`, `price_offer_enabled`
+  (форма «Предложить цену» — не обещание торга), `bargain` (только по словам
+  «торг»/«без торга»), `item_badges`, проверки продавца (`seller.checks`, без
+  рекламных значков), `seller.tenure`, `seller.seller_since`, `seller.reply_time`,
+  а также `location` (город), `metro`, `posted_at`, `views`, `today_views`.
+  Приватность: у частного продавца — и когда тип продавца на странице не указан —
+  только город и станции; улица и точка на карте (`address`, `coords`) отдаются
+  только для компаний. Отсутствующее остаётся `None`/пустым. Лишних запросов нет.
+- Avito: `avito_card` reads deal and seller terms from the same page:
+  `condition` and `params`, `delivery_available`, `delivery_services`,
+  `payment_on_delivery`, `safe_deal`, `price_offer_enabled` (the «Предложить
+  цену» form, not a negotiable-price claim), `bargain` (only from the words
+  «торг»/«без торга»), `item_badges`, seller checks (`seller.checks`, promotional
+  badges excluded), `seller.tenure`, `seller.seller_since`, `seller.reply_time`,
+  plus `location` (city), `metro`, `posted_at`, `views`, `today_views`.
+  Privacy: a private seller — and one whose type the page does not state — gets
+  the city and stations only; the street address and map point (`address`,
+  `coords`) are returned only for a company. Missing data stays `None`/empty.
+  No extra requests.
   requests to Avito.
 
 ## [2.8.2] - 2026-11-03

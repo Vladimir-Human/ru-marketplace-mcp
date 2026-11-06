@@ -299,7 +299,7 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 <!-- tools-cost:start -->
 Так сделано потому, что смонтированный сервер платится в каждом запросе:
 рекомендуемый режим сравнения цен стоит ≈1.7k токенов, режим с инспекцией
-карточки — ≈2.0k, полный набор — ≈13.3k (оценка по `tools/list`;
+карточки — ≈2.0k, полный набор — ≈13.4k (оценка по `tools/list`;
 подробности в [docs/TOOLS.md](docs/TOOLS.md)).
 <!-- tools-cost:end -->
 Включение и полный режим описаны в [dsh/README.md](dsh/README.md).
@@ -438,7 +438,7 @@ TLS-имперсонация. Если Cloudflare выдаёт челлендж,
 | Инструмент                                            | Что делает                                           |
 | ----------------------------------------------------- | ---------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id, include_inactive)` | Поиск объявлений через внутренний `js/items` API; `availability` из `isReserved`; зарезервированные остаются, `include_inactive=false` их убирает (`excluded_inactive`) |
-| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль), резерв `availability` (active/reserved/unknown) из служебных флагов страницы, не из текста продавца |
+| `avito_card(item_id_or_url)`                          | Страница объявления через CDP: название, цена, описание, число фото, продавец (рейтинг, ссылка на профиль), резерв `availability` (active/reserved/unknown) из служебных флагов страницы, не из текста продавца, условия сделки и доставки, проверки продавца, город и станции (точный адрес — только у компаний), дата, просмотры |
 | `avito_seller(seller_id_or_url)`                      | Рейтинг продавца, число отзывов; число активных объявлений недоступно (`null`) |
 
 Авито — это объявления, а не каталог: пула отзывов на товар нет, репутация
@@ -943,7 +943,7 @@ disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
 A mounted server is paid on every request — ≈1.7k tokens for the
 recommended price-comparison profile, ≈2.0k for the decision profile and
-≈13.3k for the full set (estimated from `tools/list`; details in
+≈13.4k for the full set (estimated from `tools/list`; details in
 [docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
 <!-- tools-cost:end -->
 [dsh/README.md](dsh/README.md) covers enabling it and the full mode.
@@ -1113,7 +1113,7 @@ takes no part in `compare_prices`.
 | Tool                                              | What it does                                      |
 | ------------------------------------------------- | ------------------------------------------------- |
 | `avito_search(query, page, location_id, category_id, include_inactive)` | Classified search through the internal `js/items` API; `availability` from `isReserved`; reserved hits kept, `include_inactive=false` drops them (`excluded_inactive`) |
-| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link), reservation `availability` (active/reserved/unknown) from the page's service flags, never seller text |
+| `avito_card(item_id_or_url)`                      | CDP item page: title, price, description, image count, seller (rating, profile link), reservation `availability` (active/reserved/unknown) from the page's service flags, never seller text, deal and delivery terms, seller checks, city and stations (street address for companies only), date, views |
 | `avito_seller(seller_id_or_url)`                  | Seller rating, review count; active listing count unavailable (`null`)       |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the

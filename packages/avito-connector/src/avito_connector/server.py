@@ -116,6 +116,8 @@ from pydantic import Field
 from avito_connector import item_state as _state
 from avito_connector.models_output import (
     AvitoCardResponse,
+    AvitoMetroOut,
+    AvitoParamOut,
     AvitoSearchItemOut,
     AvitoSearchResponse,
     AvitoSelfcheckResponse,
@@ -465,7 +467,9 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
     if title is None and price is None:
         raise ParserDriftError("avito_card: schema.org Product carries neither name nor RUB price")
     images = product.get("image")
+    condition = str(offers.get("itemCondition") or product.get("itemCondition") or "").rsplit("/", 1)[-1]
     return {
+        "condition": _LD_CONDITIONS.get(condition),
         "item_id": item_id if item_id is not None else R.coerce_int(product.get("sku")),
         "title": title,
         "price_rub": price,
@@ -1064,6 +1068,50 @@ async def avito_search(
         raise_tool_error_from(exc, _redact(f"avito_search failed: {exc}"))
 
 
+_LD_CONDITIONS = {
+    "NewCondition": "Новое",
+    "UsedCondition": "Б/у",
+    "RefurbishedCondition": "Восстановленное",
+    "DamagedCondition": "Повреждённое",
+}
+
+
+def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
+    """Merge page-state fields into the card; values already read from the card source win.
+
+    Location privacy: a private seller's ad (or one whose seller type the page
+    does not state) shows only the city and nearby stations; the street
+    address and map point are kept only for a company seller.
+    """
+    for key in (
+        "delivery_available",
+        "delivery_services",
+        "payment_on_delivery",
+        "safe_deal",
+        "price_offer_enabled",
+        "bargain",
+        "item_badges",
+        "today_views",
+    ):
+        item[key] = details[key]
+    item["condition"] = details["condition"] or item.get("condition")
+    item["params"] = [AvitoParamOut(**p) for p in details["params"]]
+    item["metro"] = [AvitoMetroOut(**m) for m in details["metro"]]
+    for key in ("location", "posted_at", "views"):
+        if item.get(key) is None:
+            item[key] = details[key]
+    seller = item.get("seller")
+    company = details["is_company"] is True or (seller is not None and seller.is_company is True)
+    if company:
+        item["address"], item["coords"] = details["address"], details["coords"]
+    extra = {k: v for k, v in details["seller"].items() if v}
+    if seller is None and extra:
+        item["seller"] = AvitoSellerOut(**extra)
+    elif seller is not None:
+        for key, value in extra.items():
+            setattr(seller, key, value)
+
+
 @mcp.tool(
     name="avito_card",
     annotations=ToolAnnotations(
@@ -1083,7 +1131,10 @@ async def avito_card(
     minus query/fragment; numeric ids and slug paths use /{id}, which Avito
     redirects to the canonical item page.
 
-    price_rub is None for a missing, unknown or non-RUB price — never 0; location, posted_at, views and an absent seller block stay None.
+    price_rub is None for a missing, unknown or non-RUB price — never 0; absent data stays None, never guessed.
+    Deal terms (condition, params, delivery, safe_deal, bargain), seller checks
+    and tenure, city, nearby stations, date and views come from the same page.
+    address and coords are given only when every source on the page says company.
     availability (active/reserved/unknown) comes from Avito's own page flags and
     safe-deal banner, never from seller text, with availability_evidence.
 
@@ -1159,6 +1210,7 @@ async def avito_card(
         )
         item["url"] = item["url"] or url
         item["availability"], item["availability_evidence"] = _state.card_availability(body, item_id)
+        _apply_details(item, _state.card_details(body, item_id, item.get("description")))
         result = AvitoCardResponse(**item, tier_used="cdp")
         _pacer.record_success()
         # The card's own fields; `seller` carries the seller's rating, not the

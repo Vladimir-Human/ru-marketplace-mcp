@@ -1,4 +1,4 @@
-"""Avito listing availability: active, reserved or unknown.
+"""Avito item-page state: availability (active, reserved or unknown), deal terms, seller checks, location.
 
 The rendered item page that ``avito_card`` already reads carries the page's own
 state as ``window.__staticRouterHydrationData = JSON.parse("...")``; its
@@ -26,8 +26,8 @@ Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 15 of 50 hits on one page were reserved).
 """
 # START_MODULE_CONTRACT
-# PURPOSE: Classify an Avito listing as active/reserved/unknown from explicit service signals only.
-# SCOPE: Pure parsing of the already-fetched item HTML and js/items entries; no I/O; seller-written text never read.
+# PURPOSE: Classify availability from explicit service signals; read deal/seller/location fields the page states.
+# SCOPE: Pure parsing of the already-fetched item HTML and js/items entries; no I/O; seller-written text never sets a status or flag.
 # DEPENDS: stdlib json/re/HTMLParser.
 # LINKS: M-AVITO; R-NO-FABRICATION; packages/avito-connector/tests/test_item_state.py.
 # END_MODULE_CONTRACT
@@ -38,6 +38,8 @@ Search hits carry ``isReserved`` on the js/items entry itself (live 2026-11-05:
 # classify: availability + evidence from hydration flags and the safe-deal banner; contradictions or silence -> unknown.
 # card_availability: classify() over one item page.
 # search_availability: active/reserved/unknown from a js/items entry's own isReserved.
+# card_details: Deal terms, delivery/payment, bargain words, badges, seller checks/tenure, location, date, views.
+# is_company: The page state's own seller type; None when the page is silent.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -201,3 +203,190 @@ def search_availability(item: dict[str, Any]) -> Availability:
     if value is False:
         return ACTIVE
     return UNKNOWN
+
+
+# --------------------------------------------------------------------------
+# Deal terms, seller checks and location from the same page state.
+# --------------------------------------------------------------------------
+
+# safeDealDesktop.services[].type -> a stable public name.
+_SERVICE_NAMES = {
+    "delivery": "pvz",
+    "deliveryCourier": "courier",
+    "deliveryPostamat": "postamat",
+    "deliveryCNC": "click_and_collect",
+    "deliveryT2D": "to_door",
+    "deliveryDBS": "seller_delivery",
+    "deliveryCDBS": "seller_delivery_cdbs",
+    "deliveryCourierD2D": "courier_door_to_door",
+    "deliveryDBSOwnCourier": "seller_own_courier",
+}
+_VERIFICATION_NAMES = {
+    "isInnVerified": "ИНН подтверждён",
+    "isVerifiedSeller": "Проверенный продавец",
+    "hasRealtyVerificationBadge": "Проверка недвижимости",
+    "officialDealerBadge": "Официальный дилер",
+    "verifiedPartnerBadge": "Проверенный партнёр",
+    "carOwnerBadge": "Собственник авто",
+}
+# Seller icon badges that state a check; the rest («Эковклад», charity) are promotions.
+_CHECK_BADGES = re.compile(r"подтвержд|надёжн|надежн|проверен|документ|реквизит", re.I)
+_NO_BARGAIN = re.compile(r"без\s+торга|торг\s+не\s*уместен|торга\s+нет|не\s+торгуюсь", re.I)
+_BARGAIN = re.compile(r"(?<![а-яё])торг(?![а-яё])|торг\s+уместен|возможен\s+торг|небольшой\s+торг", re.I)
+
+
+def _bool(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
+def _text(value: Any, limit: int = 200) -> str | None:
+    return " ".join(value.split())[:limit] if isinstance(value, str) and value.strip() else None
+
+
+def _dict(container: Any, key: str) -> dict[str, Any]:
+    value = container.get(key) if isinstance(container, dict) else None
+    return value if isinstance(value, dict) else {}
+
+
+def _number(value: Any) -> float | None:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _count(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+
+
+def bargain(description: str | None, params: list[dict[str, str]]) -> bool | None:
+    """True/False only from explicit words; the «Предложить цену» form is not «торг»."""
+    text = " ".join([description or ""] + [f"{p['name']} {p['value']}" for p in params])
+    if _NO_BARGAIN.search(text):
+        return False
+    if _BARGAIN.search(text):
+        return True
+    return None
+
+
+def is_company(bi: dict[str, Any] | None) -> bool | None:
+    """The page state's own seller type; None when the page does not say."""
+    if not isinstance(bi, dict):
+        return None
+    for value in (_dict(bi, "seller").get("isCompany"), bi.get("isCompany")):
+        if isinstance(value, bool):
+            return value
+    return None
+
+
+def _params(bi: dict[str, Any]) -> list[dict[str, str]]:
+    params: list[dict[str, str]] = []
+    for entry in (_dict(bi, "paramsBlock").get("items") or [])[:40]:
+        if not isinstance(entry, dict):
+            continue
+        name, value = _text(entry.get("title"), 80), _text(entry.get("description"))
+        if name and value:
+            params.append({"name": name, "value": value})
+    return params
+
+
+def _delivery_services(safe_deal: dict[str, Any]) -> list[str]:
+    services = []
+    for service in safe_deal.get("services") or []:
+        if (
+            isinstance(service, dict)
+            and service.get("available") is True
+            and service.get("enabled") is True
+            and isinstance(service.get("type"), str)
+        ):
+            kind: str = service["type"]
+            services.append(_SERVICE_NAMES.get(kind, kind)[:40])
+    return services
+
+
+def _seller_checks(item: dict[str, Any]) -> list[str]:
+    checks: list[str] = []
+    verification = _dict(_dict(item, "seller"), "verification")
+    for key, label in _VERIFICATION_NAMES.items():
+        if verification.get(key) not in (None, False, "", [], {}):
+            checks.append(label)
+    badge_bar = _dict(item, "sellerBadgeBar")
+    for badge in list(badge_bar.get("iconsBadges") or []) + list(badge_bar.get("badges") or []):
+        title = _text(badge.get("title"), 80) if isinstance(badge, dict) else None
+        if title and _CHECK_BADGES.search(title) and title not in checks:
+            checks.append(title)
+    return checks
+
+
+def card_details(html: str, item_id: int | None, description: str | None) -> dict[str, Any]:
+    """Deal terms, seller checks and location fields; missing data stays None/empty.
+
+    ``address`` and ``coords`` are returned as the page gives them; the caller
+    exposes them only for a company seller (server._apply_details).
+    """
+    bi = buyer_item(load_hydration(html), item_id)
+    out: dict[str, Any] = {
+        "condition": None,
+        "params": [],
+        "delivery_available": None,
+        "delivery_services": [],
+        "payment_on_delivery": None,
+        "safe_deal": None,
+        "price_offer_enabled": None,
+        "bargain": bargain(description, []),
+        "item_badges": [],
+        "location": None,
+        "metro": [],
+        "address": None,
+        "coords": None,
+        "posted_at": None,
+        "views": None,
+        "today_views": None,
+        "is_company": is_company(bi),
+        "seller": {},
+    }
+    if not isinstance(bi, dict):
+        return out
+    item = _dict(bi, "item")
+    params = _params(bi)
+    out["params"] = params
+    out["condition"] = next((p["value"] for p in params if p["name"].lower() == "состояние"), None)
+    out["bargain"] = bargain(description, params)
+    delivery = _dict(item, "deliveryInfo")
+    out["delivery_available"] = _bool(delivery.get("isDelivery"))
+    out["payment_on_delivery"] = _bool(delivery.get("isCod"))
+    safe_deal = bi.get("safeDealDesktop")
+    if isinstance(safe_deal, dict):
+        out["delivery_services"] = _delivery_services(safe_deal)
+        enabled = safe_deal.get("deliveryButtonEnabled")
+        if isinstance(enabled, bool):
+            out["safe_deal"] = enabled and _text(_dict(safe_deal, "deliveryButton").get("title")) is not None
+    if "bargainOffer" in bi:
+        out["price_offer_enabled"] = isinstance(bi.get("bargainOffer"), dict)
+    for badge in (_dict(item, "badgeBar").get("badges") or [])[:10]:
+        title = _text(badge.get("title"), 80) if isinstance(badge, dict) else None
+        if title:
+            detail = _text(badge.get("description"), 120)
+            out["item_badges"].append(f"{title}: {detail}" if detail else title)
+    out["location"] = _text(_dict(item, "location").get("name"), 80)
+    for ref in (_dict(item, "sellerAddressInfo").get("geoReferences") or [])[:5]:
+        name = _text(ref.get("content"), 80) if isinstance(ref, dict) else None
+        if name:
+            walk = _text(_dict(ref, "afterWithIcon").get("text"), 40)
+            out["metro"].append({"name": name, "distance": _text(ref.get("after"), 40), "walk": walk})
+    geo = _dict(item, "geo")
+    out["address"] = _text(geo.get("address")) or _text(item.get("address"))
+    coords = _dict(geo, "coords")
+    lat, lng = _number(coords.get("lat")), _number(coords.get("lng"))
+    if lat is not None and lng is not None:
+        out["coords"] = {"lat": lat, "lng": lng}
+    out["posted_at"] = _text(item.get("sortFormatedDate"), 60)
+    stats = _dict(bi, "viewStat")
+    out["views"], out["today_views"] = _count(stats.get("totalViews")), _count(stats.get("todayViews"))
+    seller_state = _dict(bi, "seller")
+    since = _text(seller_state.get("tenureSince"), 60)
+    out["seller"] = {
+        "checks": _seller_checks(item),
+        "tenure": _text(seller_state.get("tenureMedal"), 40) or _text(_dict(item, "seller").get("tenureMedal"), 40),
+        # tenureSince carried a medal word, not a date, on 2026-11-05: keep only text with a year.
+        "seller_since": since if since and re.search(r"\d{4}", since) else None,
+        "reply_time": _text(seller_state.get("replyTimeText"), 80),
+    }
+    return out

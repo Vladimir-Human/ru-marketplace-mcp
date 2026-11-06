@@ -1,0 +1,9 @@
+{
+  "url": "https://www.avito.ru/moskva/audio_i_video/tv_pristavka_fixture_9000000017",
+  "captured_at": "2026-11-06",
+  "sha256": "ba58cb49b7fc94394b5d6ea4f74a3d8cafca5c3d287603a3b74ad2c3ecc7f8eb",
+  "method": "a synthetic edit of item_details_private_9000000018: buyerItem.seller.isCompany=true. Not a capture: Avito shows these states only on ads this session did not reach",
+  "ground_truth": {
+    "note": "a company seller: the fictional address and map point are returned as the page gives them"
+  }
+}
