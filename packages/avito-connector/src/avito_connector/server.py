@@ -137,7 +137,7 @@ from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_re
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.9.0"
+SERVER_VERSION = "2.9.1"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.avito.ru"
