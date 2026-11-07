@@ -53,4 +53,10 @@ jobs:
       - name: Publish ru-marketplace-mcp-dsh to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish ./dsh --access public --provenance
+        run: |
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            printf '//registry.npmjs.org/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$HOME/.npmrc"
+          else
+            npm install -g npm@latest
+          fi
+          npm publish ./dsh --access public --provenance
