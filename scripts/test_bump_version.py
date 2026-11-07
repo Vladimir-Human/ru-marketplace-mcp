@@ -61,6 +61,15 @@ def mini_tree(tmp_path: Path) -> Path:
         '      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"\n    }\n  ]\n}\n',
     )
     _write(tmp_path, "dsh/package.json", '{\n  "name": "bundle",\n  "version": "1.2.3"\n}\n')
+    _write(tmp_path, ".claude-plugin/plugin.json", '{\n  "name": "p",\n  "version": "1.2.3"\n}\n')
+    _write(
+        tmp_path,
+        ".claude-plugin/marketplace.json",
+        '{\n  "name": "p",\n  "plugins": [\n    {\n      "version": "1.2.3"\n    }\n  ]\n}\n',
+    )
+    _write(tmp_path, ".codex-plugin/plugin.json", '{\n  "name": "p",\n  "version": "1.2.3"\n}\n')
+    _write(tmp_path, ".cursor-plugin/plugin.json", '{\n  "name": "p",\n  "version": "1.2.3"\n}\n')
+    _write(tmp_path, "gemini-extension.json", '{\n  "name": "p",\n  "version": "1.2.3"\n}\n')
     return tmp_path
 
 
@@ -78,10 +87,15 @@ def test_the_expected_declaration_files_are_pinned_in_this_test(mini_tree: Path)
     declared = {path.relative_to(mini_tree).as_posix() for path in _declared_files(mini_tree)}
 
     assert declared == {
+        ".claude-plugin/marketplace.json",
+        ".claude-plugin/plugin.json",
+        ".codex-plugin/plugin.json",
+        ".cursor-plugin/plugin.json",
         "docker-compose.yml",
         "docs/DEPLOYMENT.md",
         "dsh/README.md",
         "dsh/package.json",
+        "gemini-extension.json",
         "packages/a/pyproject.toml",
         "packages/a/src/a/__init__.py",
         "packages/a/src/a/server.py",
@@ -105,6 +119,7 @@ def test_the_site_table_names_every_declaration_family(mini_tree: Path) -> None:
         "server.json",
         "OCI image tag",
         "dsh/package.json",
+        "plugin manifest",
     }
 
 

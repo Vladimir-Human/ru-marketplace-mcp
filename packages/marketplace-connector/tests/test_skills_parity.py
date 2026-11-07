@@ -70,17 +70,16 @@ def _tool_names_in_source(package: str) -> set[str]:
 
 
 def _frontmatter(skill_md: Path) -> dict[str, str]:
+    import yaml
+
     text = skill_md.read_text(encoding="utf-8")
     if not text.startswith("---"):
         return {}
     end = text.index("---", 3)
     block = text[3:end]
-    out: dict[str, str] = {}
-    for line in block.splitlines():
-        if ":" in line:
-            key, _, value = line.partition(":")
-            out[key.strip()] = value.strip()
-    return out
+    parsed = yaml.safe_load(block)
+    assert isinstance(parsed, dict), f"{skill_md}: frontmatter must be a valid YAML mapping"
+    return {str(key): str(value) for key, value in parsed.items()}
 
 
 CONNECTORS = _connector_packages()

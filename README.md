@@ -4,6 +4,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
+[![Glama MCP](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp)
 
 **MCP-серверы для российских и китайских маркетплейсов.** Цены, наличие,
 рейтинги, отзывы и реквизиты продавцов с Wildberries, Ozon, Яндекс Маркета,
@@ -246,6 +247,14 @@ scraping-Chrome на экран — на Windows автозапуск конне
 
 <details>
 <summary><b>Claude Code</b></summary>
+
+Установка плагина (15 навыков + MCP) одной командой:
+
+```text
+/plugin install ru-marketplace-mcp --marketplace Vladimir-Human/ru-marketplace-mcp
+```
+
+Или подключение серверов вручную из локального клона:
 
 ```bash
 claude mcp add wildberries -- uv run --directory /путь/к/ru-marketplace-mcp wb-mcp

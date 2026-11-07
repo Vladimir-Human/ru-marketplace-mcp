@@ -128,6 +128,17 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
     server_manifest = root / "server.json"
     dsh_manifest = root / "dsh" / "package.json"
+    plugin_manifests = tuple(
+        p
+        for p in (
+            root / ".claude-plugin" / "marketplace.json",
+            root / ".claude-plugin" / "plugin.json",
+            root / ".codex-plugin" / "plugin.json",
+            root / ".cursor-plugin" / "plugin.json",
+            root / "gemini-extension.json",
+        )
+        if p.exists()
+    )
 
     return (
         Site("pyproject.toml", PYPROJECT_VERSION, manifests, description="a project manifest version"),
@@ -184,6 +195,14 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             value_group=2,
             top_level_indent=True,
             description="the dsh bundle version",
+        ),
+        Site(
+            "plugin manifest",
+            JSON_TOP_LEVEL_VERSION,
+            plugin_manifests,
+            value_group=2,
+            top_level_indent=True,
+            description="a client plugin or extension manifest version",
         ),
     )
 
