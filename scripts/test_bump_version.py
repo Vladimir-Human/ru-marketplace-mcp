@@ -298,3 +298,16 @@ def test_the_version_check_refuses_a_version_the_root_does_not_say(
     # The same argument as the root version is accepted.
     assert check_versions.main([OLD], root=mini_tree) == 0
     assert "agreed in" in capsys.readouterr().err
+
+
+def test_deleting_one_plugin_manifest_fails_the_version_check(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Deleting one of the 5 plugin manifests must fail check_versions, not shrink the table."""
+    (mini_tree / "gemini-extension.json").unlink()
+
+    assert check_versions.main([], root=mini_tree) == 1
+
+    err = capsys.readouterr().err
+    assert "files that declare no version at all" in err
+    assert "gemini-extension.json" in err

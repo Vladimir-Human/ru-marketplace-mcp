@@ -9,7 +9,7 @@ AliExpress gates the whole catalogue behind x5sec, Alibaba's JS risk control.
 There is no anonymous tier (measured 2026-08-20: item pages answer a captcha
 challenge, search ships an empty SPA shell, the h5api route is gone). Every read
 runs in the operator's Chrome over CDP, two hops per card: a landing search page
-(never challenged) opens the item in a new tab, and the rendered DOM is read from
+(less frequently challenged than direct item URLs) opens the item in a new tab, and the rendered DOM is read from
 there. Direct navigation to item pages is structurally absent from the connector
 for exactly this reason.
 
@@ -39,9 +39,9 @@ offers rank directly against Wildberries and Ozon in `compare_prices`.
 
 ## How failures come back
 
-- A challenge on the landing or on the card tab → ToolError / TransportDownError
-  with the manual fix inline (open the site in the scraping profile, pass the
-  check by hand). Never a retried call on your own.
+- A challenge on the landing or on the card tab → `challenge_required` (`ChallengeRequiredError` / `ToolError` / `TransportDownError`, `requires_user_action=true`)
+  with the manual fix inline (run `uvx ru-marketplace-mcp unblock aliexpress` or `marketplace-mcp browser show`, open the site in the scraping profile, pass the
+  check by hand, then retry). Never a retried call on your own.
 - A title-only card (price module stripped) → a normal card response with
   price_rub None and a `price_missing` warning — NOT an error, NOT a zero.
 - Zero tiles on a rendered search → ParserDriftError; treat it as „check the

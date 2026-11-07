@@ -36,7 +36,7 @@ connector's canary at once.
   the challenged search/card tab is retained. Complete its interaction, then
   repeat the same tool arguments in the same MCP session before expiry. No new
   navigation is issued for that resume; expiry never extends on retries.
-- The operator's Chrome must be running with CDP (scripts/start_chrome_cdp.sh).
+- The operator's Chrome must be running with CDP (`uvx ru-marketplace-mcp browser start` or `scripts/start_chrome_cdp.sh`; use `uvx ru-marketplace-mcp unblock taobao` to log in).
 ## DSH activation
 
 In DeepSeek Harness, the default profile exposes only `compare_prices` and

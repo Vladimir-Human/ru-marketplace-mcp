@@ -36,9 +36,9 @@ every connector's canary at once.
 1. `ozon_search("query")` → get list of SKUs
 2. `ozon_card(sku)` → drill into chosen product
 3. If a call comes back blocked, the tier-1 request was challenged — start Chrome
-   for the fallback (`scripts/start_chrome_cdp.ps1`), log into ozon.ru in the
-   scraping profile, and retry. Confirm the port with
-   `Test-NetConnection 127.0.0.1 -Port 9222`.
+   for the fallback (`uvx ru-marketplace-mcp browser start` or `scripts/start_chrome_cdp.ps1`),
+   log into ozon.ru or pass the check (`uvx ru-marketplace-mcp unblock ozon`), and retry.
+   Confirm the port with `Test-NetConnection 127.0.0.1 -Port 9222`.
 
 ## Gotchas
 - Ozon sometimes shows captcha challenge. Library waits 5s but cannot solve captcha.

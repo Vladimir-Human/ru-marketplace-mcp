@@ -24,7 +24,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
-TAG_WORKFLOWS = ("release.yml", "mcp-registry-publish.yml", "pypi-publish.yml")
+TAG_WORKFLOWS = ("release.yml", "mcp-registry-publish.yml", "pypi-publish.yml", "npm-publish.yml")
 PUBLISHER_SHA256 = "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
 
 

@@ -1,0 +1,56 @@
+name: npm publish (DSH bundle)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the DSH bundle to npm
+    # Off until the owner sets the repository variable NPM_PUBLISH=true and
+    # configures NPM_TOKEN (or npm trusted publishing) in the `npm` environment.
+    if: vars.NPM_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check dsh/package.json version and skill parity against the selected tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          tag = os.environ["RELEASE_TAG"]
+          if os.environ["RELEASE_REF_TYPE"] != "tag" or not tag.startswith("v"):
+              raise SystemExit("Select a v* tag for workflow_dispatch; branch publishing is refused")
+          manifest = json.loads(Path("dsh/package.json").read_text(encoding="utf-8"))
+          expected = tag.removeprefix("v")
+          if manifest.get("version") != expected:
+              raise SystemExit(f"dsh/package.json version {manifest.get('version')} does not match tag {tag}")
+          src_skills = {p.relative_to("skills").as_posix(): p.read_bytes() for p in Path("skills").rglob("*") if p.is_file()}
+          dsh_skills = {p.relative_to("dsh/skills").as_posix(): p.read_bytes() for p in Path("dsh/skills").rglob("*") if p.is_file()}
+          if src_skills != dsh_skills:
+              raise SystemExit("dsh/skills does not match skills/ byte-for-byte")
+          print(f"[R-NPM-PUBLISH] ok: ru-marketplace-mcp-dsh@{expected} matches {tag} and skills parity holds")
+          PY
+
+      - name: Publish ru-marketplace-mcp-dsh to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish ./dsh --access public --provenance

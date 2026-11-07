@@ -142,4 +142,8 @@ In DeepSeek Harness, the default profile exposes only `compare_prices` and
 `compare_sources` through the cheap compare mount. Per-marketplace tools and
 `marketplace_sources` require `RU_MARKETPLACE_MCP_FULL=1` and a profile restart;
 do not call them in the default mode. Cian is never part of the compare mount,
-so it is only reachable in the full profile.
+so it is only reachable in the full profile. In standard MCP clients (Claude,
+Cursor, Codex, Gemini CLI, OpenCode), Cian tools require mounting the unified
+`marketplace-mcp` server (`--profile full`, configured by default in `.mcp.json`
+and `gemini-extension.json`) or the standalone `cian-mcp` server — they are not
+exposed by `compare-mcp` or `decision-mcp`.
