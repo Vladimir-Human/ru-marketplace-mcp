@@ -311,4 +311,3 @@ def test_deleting_one_plugin_manifest_fails_the_version_check(
     err = capsys.readouterr().err
     assert "files that declare no version at all" in err
     assert "gemini-extension.json" in err
-

@@ -378,4 +378,3 @@ def test_frontmatter_rejects_broken_or_non_string_yaml(tmp_path: Path) -> None:
     non_string.write_text("---\nname: test\ndescription:\n  nested: mapping\n---\n", encoding="utf-8")
     with pytest.raises(AssertionError, match="must be a YAML string"):
         _frontmatter(non_string)
-
