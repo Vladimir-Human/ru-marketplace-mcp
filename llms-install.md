@@ -47,6 +47,8 @@ uvx ru-marketplace-mcp install cursor --write --profile compare
 
 ### Docker alternative (stdio)
 
+The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:latest`) is built from `Dockerfile.stdio` (`MCP_TRANSPORT=stdio`, default entry point `marketplace-mcp`). Note that the root `Dockerfile` is HTTP-first (`wb-mcp` on port 8000); for local stdio builds use `docker build -f Dockerfile.stdio .` or pass `-e MCP_TRANSPORT=stdio`.
+
 ```json
 {
   "mcpServers": {
@@ -56,7 +58,10 @@ uvx ru-marketplace-mcp install cursor --write --profile compare
         "run",
         "--rm",
         "-i",
-        "ghcr.io/vladimir-human/ru-marketplace-mcp:latest"
+        "-e",
+        "MCP_TRANSPORT=stdio",
+        "ghcr.io/vladimir-human/ru-marketplace-mcp:latest",
+        "compare-mcp"
       ]
     }
   }

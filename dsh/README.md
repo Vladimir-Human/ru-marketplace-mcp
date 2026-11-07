@@ -40,6 +40,8 @@ published over MCP.
    first use carries no app and cannot be launched):
 
    ```console
+   dsh plugin --profile web add ru-marketplace-mcp-dsh
+   # or from GitHub:
    dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
    ```
 

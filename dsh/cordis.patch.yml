@@ -48,7 +48,7 @@
           - decision-mcp
         failOnStartupError: false
 
-    # Deliberate full-mount choice: 40 model-facing tools (38 without an MPSTATS token), the largest tool
+    # Deliberate full-mount choice: 41 model-facing tools (39 without an MPSTATS token), the largest tool
     # list per request (see docs/TOOLS.md). Operator-only *_selfcheck tools are no longer published over
     # MCP; `marketplace-mcp doctor` still runs them from the CLI.
     - id: ru-marketplace-full

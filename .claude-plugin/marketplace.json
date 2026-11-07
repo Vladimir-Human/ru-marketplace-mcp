@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
   "name": "ru-marketplace-mcp",
   "owner": {"name": "Vladimir-Human", "url": "https://github.com/Vladimir-Human"},
   "description": "ru-marketplace-mcp для Claude Code: 12 маркетплейсов РФ и Китая и недвижимость Циан как MCP-серверы и 15 навыков без ключей API.",

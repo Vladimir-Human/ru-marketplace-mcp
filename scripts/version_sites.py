@@ -128,17 +128,14 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
     server_manifest = root / "server.json"
     dsh_manifest = root / "dsh" / "package.json"
-    plugin_manifests = tuple(
-        p
-        for p in (
-            root / ".claude-plugin" / "marketplace.json",
-            root / ".claude-plugin" / "plugin.json",
-            root / ".codex-plugin" / "plugin.json",
-            root / ".cursor-plugin" / "plugin.json",
-            root / "gemini-extension.json",
-        )
-        if p.exists()
+    all_plugin_manifests = (
+        root / ".claude-plugin" / "marketplace.json",
+        root / ".claude-plugin" / "plugin.json",
+        root / ".codex-plugin" / "plugin.json",
+        root / ".cursor-plugin" / "plugin.json",
+        root / "gemini-extension.json",
     )
+    plugin_manifests = all_plugin_manifests if any(p.exists() for p in all_plugin_manifests) else ()
 
     return (
         Site("pyproject.toml", PYPROJECT_VERSION, manifests, description="a project manifest version"),
@@ -222,6 +219,8 @@ def _matches(site: Site, text: str) -> list[re.Match[str]]:
 def _declarations_for(site: Site, root: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
     for path in site.paths:
+        if not path.exists():
+            continue
         text = read_raw(path)
         for match in _matches(site, text):
             start, end = match.span(site.value_group)

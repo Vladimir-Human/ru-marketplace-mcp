@@ -8,7 +8,7 @@
       "args": [
         "--from",
         "ru-marketplace-mcp",
-        "compare-mcp"
+        "marketplace-mcp"
       ]
     }
   }

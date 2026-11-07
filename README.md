@@ -2,9 +2,13 @@
 
 [![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/pypi/v/ru-marketplace-mcp.svg)](https://pypi.org/project/ru-marketplace-mcp/)
+[![npm](https://img.shields.io/npm/v/ru-marketplace-mcp-dsh.svg?label=npm%20%28dsh%29)](https://www.npmjs.com/package/ru-marketplace-mcp-dsh)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
 [![Glama MCP](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=marketplace&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22ru-marketplace-mcp%22%2C%22compare-mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_MCP-000000?logo=cursor&logoColor=white)](cursor://anysphere.cursor-deeplink/mcp/install?name=marketplace&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJydS1tYXJrZXRwbGFjZS1tY3AiLCJjb21wYXJlLW1jcCJdfQ==)
 
 **MCP-серверы для российских и китайских маркетплейсов.** Цены, наличие,
 рейтинги, отзывы и реквизиты продавцов с Wildberries, Ozon, Яндекс Маркета,
@@ -299,10 +303,12 @@ JSON-RPC через stdin и stdout, диагностику пишут в stderr
 [`dsh/`](dsh/README.md) и ставится штатным менеджером плагинов (`pnpm` нужен на PATH):
 
 ```console
+dsh plugin --profile web add ru-marketplace-mcp-dsh
+# или напрямую из GitHub:
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-Сразу после установки появляются 15 навыков и **ни одного** MCP-инструмента: обе
+Сразу после установки появляются 15 навыков и **ни одного** MCP-инструмента: все три
 строки MCP выключены, пока не задана переменная `RU_MARKETPLACE_MCP_DIR` с путём к
 клону.
 <!-- tools-cost:start -->
@@ -944,10 +950,12 @@ request to a website on its own and none solves the check for you.
 entry, from the [`dsh/`](dsh/README.md) subdirectory (`pnpm` must be on PATH):
 
 ```console
+dsh plugin --profile web add ru-marketplace-mcp-dsh
+# or directly from GitHub:
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-That gives you 15 skills immediately and **no** MCP tools: both MCP rows stay
+That gives you 15 skills immediately and **no** MCP tools: all three MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
 A mounted server is paid on every request — ≈1.7k tokens for the

@@ -79,6 +79,11 @@ def _frontmatter(skill_md: Path) -> dict[str, str]:
     block = text[3:end]
     parsed = yaml.safe_load(block)
     assert isinstance(parsed, dict), f"{skill_md}: frontmatter must be a valid YAML mapping"
+    for key in ("name", "description"):
+        if key in parsed:
+            assert isinstance(parsed[key], str), (
+                f"{skill_md}: frontmatter {key!r} must be a YAML string, got {type(parsed[key]).__name__}"
+            )
     return {str(key): str(value) for key, value in parsed.items()}
 
 
@@ -359,3 +364,18 @@ def test_full_only_skills_explain_dsh_activation() -> None:
             continue
         text = path.read_text(encoding="utf-8")
         assert "RU_MARKETPLACE_MCP_FULL=1" in text, f"missing DSH activation contract: {path}"
+
+
+def test_frontmatter_rejects_broken_or_non_string_yaml(tmp_path: Path) -> None:
+    import yaml
+
+    broken = tmp_path / "broken.md"
+    broken.write_text("---\nname: test\ndescription: first line: unquoted: colon\n---\n", encoding="utf-8")
+    with pytest.raises(yaml.YAMLError):
+        _frontmatter(broken)
+
+    non_string = tmp_path / "non_string.md"
+    non_string.write_text("---\nname: test\ndescription:\n  nested: mapping\n---\n", encoding="utf-8")
+    with pytest.raises(AssertionError, match="must be a YAML string"):
+        _frontmatter(non_string)
+
