@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "ru-marketplace-mcp",
+  "displayName": "ru-marketplace-mcp",
+  "description": "Двенадцать площадок РФ и Китая (Wildberries, Ozon, Яндекс Маркет, Авито, Циан, AliExpress, Taobao, Детский мир, Мегамаркет, Lamoda, DNS, Ситилинк) как MCP-серверы и 15 навыков. Сравнение цен без ключей API. | 12 Russian and Chinese marketplaces and classifieds as read-only MCP servers and 15 Agent Skills.",
+  "version": "2.9.1",
+  "author": {"name": "Vladimir-Human", "url": "https://github.com/Vladimir-Human"},
+  "homepage": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
+  "repository": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "mcp-server", "wildberries", "ozon", "yandex-market", "avito", "cian", "aliexpress", "taobao", "price-comparison", "russia", "ecommerce"],
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp#readme",
+  "supportUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp/issues",
+  "skills": "./skills/"
+}

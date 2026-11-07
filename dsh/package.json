@@ -1,7 +1,34 @@
 {
   "name": "ru-marketplace-mcp-dsh",
   "version": "2.9.1",
+  "description": "12 Russian and Chinese marketplaces and classifieds (Wildberries, Ozon, Yandex Market, Avito, Cian, AliExpress, Taobao, Detsky Mir, Megamarket, Lamoda, DNS, Citilink) as MCP servers and 15 Agent Skills for DeepSeek Harness",
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/Vladimir-Human/ru-marketplace-mcp/tree/main/dsh#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vladimir-Human/ru-marketplace-mcp.git",
+    "directory": "dsh"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "agent-skills",
+    "wildberries",
+    "ozon",
+    "yandex-market",
+    "avito",
+    "aliexpress",
+    "taobao",
+    "cian",
+    "russia",
+    "ecommerce",
+    "price-comparison"
+  ],
   "files": [
     "cordis.patch.yml",
     "skills"

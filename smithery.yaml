@@ -1,0 +1,19 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      profile:
+        type: string
+        enum:
+          - compare
+          - decision
+          - full
+        default: compare
+        description: "MCP server profile: compare (4 tools), decision (5 tools), or full (39 tools)"
+  commandFunction: |-
+    (config) => {
+      const scripts = { compare: "compare-mcp", decision: "decision-mcp", full: "marketplace-mcp" };
+      const script = scripts[config?.profile] || "compare-mcp";
+      return { command: "uvx", args: ["--from", "ru-marketplace-mcp", script] };
+    }

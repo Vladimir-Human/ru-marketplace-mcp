@@ -1,0 +1,15 @@
+{
+  "name": "ru-marketplace-mcp",
+  "version": "2.9.1",
+  "description": "Двенадцать площадок РФ и Китая (Wildberries, Ozon, Яндекс Маркет, Авито, Циан, AliExpress, Taobao, Детский мир, Мегамаркет, Lamoda, DNS, Ситилинк) как MCP-серверы и 15 навыков. | 12 Russian and Chinese marketplaces and classifieds as read-only MCP servers and 15 Agent Skills.",
+  "mcpServers": {
+    "marketplace": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "ru-marketplace-mcp",
+        "compare-mcp"
+      ]
+    }
+  }
+}
