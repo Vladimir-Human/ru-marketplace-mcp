@@ -17,6 +17,12 @@
     "category": "Productivity",
     "capabilities": ["Read"],
     "websiteURL": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
+    "privacyPolicyURL": "https://github.com/Vladimir-Human/ru-marketplace-mcp/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/Vladimir-Human/ru-marketplace-mcp/blob/main/LICENSE",
+    "composerIcon": "./.claude-plugin/icon.svg",
+    "logo": "./.claude-plugin/icon.png",
+    "brandColor": "#2D2A7A",
+    "screenshots": [],
     "defaultPrompt": ["Сравни цены на AirPods Pro 2 по всем маркетплейсам"]
   }
 }
