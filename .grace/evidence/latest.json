@@ -1,52 +1,28 @@
 {
-  "release": "2.8.2",
-  "phase": "release_2_8_2_prepared_and_verified",
-  "base_commit": "4381669",
-  "branch": "release/v2.8.2",
+  "release": "2.9.1",
+  "phase": "issue_214_ozon_review_item_id_fixed_and_verified",
+  "base_commit": "dea4865",
+  "branch": "fix/ozon-review-item-id-214",
   "requirements": [
-    "R-CDP-NAV-TIMEOUT",
-    "R-CDP-COMMAND-DEADLINE",
-    "R-CDP-HOST-PAUSE",
-    "R-ERRORS",
-    "R-INPUT-TRUST",
-    "R-TRANSPORT",
+    "R-OZON-REVIEW-ITEM-ID",
+    "R-NO-FABRICATION",
+    "R-DRIFT",
     "R-OFFLINE",
-    "R-VERSION",
-    "R-RELEASE-BUMP",
-    "R-LOCK-REVISION"
+    "R-TOOL-SCHEMA",
+    "R-VERSION"
   ],
   "source_hashes": {
-    "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": "5177ca6841df9bc157784daae5e8d4165cf8dfafa53b409ff8a661ea3834a9ba",
-    "packages/aliexpress-connector/src/aliexpress_connector/server.py": "09b31966c89aafa7af40aebf6cb36193edac82632cc562ef120bcef13b7fa6a9",
-    "packages/aliexpress-connector/src/aliexpress_connector/settings.py": "5b7f6bdd37b8ade9bc88d59dfb082f63dab1540ed1866393cc38102143135037",
-    "packages/mcp-core/tests/test_navigation_timeout.py": "1fdd18268cdddd5adf49bd605d24fe4790ef95e0770b6cd08c1b7dffe0b31b87",
-    "packages/aliexpress-connector/tests/test_navigation_timeout.py": "500bdb06b352ea2b2a34e113e7cc6c8967659de81f4e553988b0b219665dda75",
-    "docs/CDP_SETUP.md": "c97c2bf411f5510f3daa84a3d87f7a9c8d08ee60190a8fa760f97f9b9d0c323c",
-    "docs/releases/RELEASE_NOTES_v2.8.2.md": "9a699d419564eba3fa5fcf00f31da6e1563cc85eed59143ad6b9b4d12abfabcf"
+    "packages/ozon-connector/src/ozon_connector/server.py": "72a6dadb33f824d813cd0a56ae396978b798e8ba5e73875a633519a0dcb35202",
+    "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
+    "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
   },
   "checks": {
-    "published_baseline_public_mcp_regression": "failed at Page.goto Timeout 20000ms before extraction",
-    "published_baseline_complementary_selection": "20 failed / 10 passed",
-    "published_baseline_raw_semantics_probe": "NavigationPolicyError, final_url about:blank, owned target closed",
-    "new_regressions_on_fix": "33 passed with jsdom; 6 passed and 2 skipped in a CI-like job without jsdom",
-    "ci_like_without_jsdom": "the captured-price assertion skips like the other DOM-level checks; the navigation contract still asserts",
-    "new_regressions_on_published_baseline_without_jsdom": "6 failed, 2 passed - the old code fails at the 20000ms navigation timeout, never a skip",
-    "corrected_core_oracle_on_published_baseline": "17 failed / 8 passed",
-    "package_passed": 3241,
-    "package_skipped": 2,
-    "package_deselected": 5,
-    "script_passed": 312,
-    "coverage_percent": 88.98,
-    "coverage_floor_percent": 80,
-    "mypy": "host, win32 and darwin: no issues in 115 source files",
-    "repository_gates": "versions, lock revision, no-print, documented test count, tools doc, provenance, wire budget: all exit 0",
-    "ruff": "438 files already formatted; check clean",
-    "real_stdio_on_release_sources": "32/32 sessions across both protocol eras, every server v2.8.2, unified profile 39 tools / 13 mounts",
-    "version_declarations": 88,
-    "lock_revision": 5,
-    "registry_dependency_versions": "unchanged; only the 17 workspace versions moved to 2.8.2"
+    "baseline_dea4865_regression_selection": "4 failed at the exact reported spots: None == 3157082368, [None, 3157082368, None, 1] != [3157082368, 3157082368, 3157082999, None], healthy True != False on all-null sample, selfcheck success != drift_detected",
+    "fixed_ozon_and_guide_contracts_selection": "141 passed in 5.70s",
+    "mypy": "Success: no issues found in 6 source files (packages/ozon-connector/src)",
+    "ruff": "format and check clean on packages/ozon-connector",
+    "repository_gates": "check_no_print (100 files), check_versions (93 places at 2.9.1), gen_tools_doc --check, and .grace XML parsing all exit 0"
   },
-  "artifacts": "external issue-190-20261103 evidence (published baseline failure, candidate runs, probe of published raw semantics, release gates, stdio sessions)",
-  "not_proven": "Live marketplace runs: no browser was available on the release machine, so no source was checked live in this round and the 2.8.1 source status is not claimed to be better. Russian CDN timings, real cookies and live AliExpress output were not measured. A configured navigation budget has no artificial upper bound, while tool-level ceilings (COMPARE_SOURCE_TIMEOUT, the 90-second selfcheck limit) stay in force.",
-  "checked_on_utc": "2026-11-03"
+  "not_proven": "Live Ozon network/CDP calls were not executed in this offline verification run; live webListReviews decimal-string itemId payload was provided in issue #214.",
+  "checked_on_utc": "2026-11-08"
 }

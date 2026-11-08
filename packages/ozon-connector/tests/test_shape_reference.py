@@ -113,7 +113,9 @@ async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch
     reviews_body = json.dumps(
         {
             "widgetStates": {
-                "webListReviews-1": json.dumps({"paging": {"total": 1}, "reviews": [{"content": {"comment": "ok"}}]}),
+                "webListReviews-1": json.dumps(
+                    {"paging": {"total": 1}, "reviews": [{"itemId": "123", "content": {"comment": "ok"}}]}
+                ),
             },
         }
     )

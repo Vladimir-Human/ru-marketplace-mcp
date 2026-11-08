@@ -595,7 +595,7 @@ def test_ozon_selfcheck_includes_runtime_identity(monkeypatch):
             },
         }
     )
-    reviews_body = _reviews_body(reviews=[{"content": {"comment": "ok"}}])
+    reviews_body = _reviews_body(reviews=[{"itemId": "123", "content": {"comment": "ok"}}])
 
     async def fake_fetch(path, ctx):
         if path.startswith("/search/"):
@@ -943,7 +943,7 @@ def test_reviews_report_zero_own_reviews_when_the_pool_is_all_neighbours(monkeyp
 
 
 def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
-    """A drifted itemId/products must degrade to None/{}, never crash the tool."""
+    """A drifted non-numeric itemId/products must degrade to None/{} and flag the all-null sample."""
     body = json.dumps(
         {
             "widgetStates": {
@@ -952,7 +952,7 @@ def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
                         "paging": {"total": 2},
                         "products": ["not", "a", "mapping"],
                         "reviews": [
-                            {"uuid": "a", "itemId": "123", "content": {"score": 5, "comment": "string id"}},
+                            {"uuid": "a", "itemId": "not-a-sku", "content": {"score": 5, "comment": "bad string id"}},
                             {"uuid": "b", "itemId": {"bad": "shape"}, "content": {"score": 5, "comment": "dict id"}},
                         ],
                     }
@@ -967,12 +967,144 @@ def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
 
     async def scenario():
         monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
-        data = (await server.ozon_reviews("123", limit=5)).model_dump()
+        result = await server.ozon_reviews("123", limit=5)
+        data = result.model_dump()
 
         assert data["returned"] == 2
         assert [r["item_id"] for r in data["reviews"]] == [None, None]
         assert data["own_reviews"] == 0
         assert data["pool_variants"] == {}
+        assert result.meta.healthy is False
+        assert any(w.startswith("review_item_id_missing:") for w in result.meta.warnings)
+
+    _run(scenario())
+
+
+def test_parse_review_item_normalizes_int_and_decimal_string_item_ids_and_rejects_malformed():
+    """R-OZON-REVIEW-ITEM-ID (#214): integer and decimal-string itemId values
+    normalize to the same positive integer SKU; booleans, non-positive integers
+    and malformed values become None."""
+    for valid in (3157082368, "3157082368", " 3157082368 "):
+        parsed = server._parse_review_item({"itemId": valid, "content": {"score": 5}})
+        assert parsed["item_id"] == 3157082368
+
+    for invalid in (
+        None,
+        True,
+        False,
+        0,
+        "0",
+        -1,
+        "-3157082368",
+        "3157082368.0",
+        "3157082368abc",
+        "²",
+        "",
+        "   ",
+        {"id": 3157082368},
+        [3157082368],
+        3157082368.0,
+    ):
+        parsed = server._parse_review_item({"itemId": invalid, "content": {"score": 5}})
+        assert parsed["item_id"] is None, f"expected None for {invalid!r}, got {parsed['item_id']!r}"
+
+
+def test_reviews_count_own_reviews_across_decimal_string_and_int_item_ids(monkeypatch):
+    """R-OZON-REVIEW-ITEM-ID (#214): through public ozon_reviews, decimal-string
+    and integer itemId values both attribute reviews to their variant SKU and
+    contribute to own_reviews; a partial unattributed record is noted with info:
+    without marking the attributed sample unhealthy."""
+    body = json.dumps(
+        {
+            "widgetStates": {
+                "webListReviews-1": json.dumps(
+                    {
+                        "paging": {"total": 4},
+                        "products": {
+                            "3157082368": {"name": "OXYGEN FITNESS FALCO"},
+                            "3157082999": {"name": "Neighbour treadmill"},
+                        },
+                        "reviews": [
+                            {"uuid": "r1", "itemId": "3157082368", "content": {"score": 5, "comment": "string own"}},
+                            {"uuid": "r2", "itemId": 3157082368, "content": {"score": 4, "comment": "int own"}},
+                            {
+                                "uuid": "r3",
+                                "itemId": "3157082999",
+                                "content": {"score": 2, "comment": "string neighbour"},
+                            },
+                            {"uuid": "r4", "itemId": True, "content": {"score": 1, "comment": "boolean rejected"}},
+                        ],
+                    }
+                ),
+                "webReviewProductScore-1": json.dumps({"totalScore": 4.7, "reviewsCount": 4, "score": []}),
+            },
+        }
+    )
+
+    async def fake_fetch(path, ctx):
+        return 200, body, "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+        result = await server.ozon_reviews("3157082368", limit=10)
+        data = result.model_dump()
+
+        assert data["requested_item_id"] == 3157082368
+        assert [r["item_id"] for r in data["reviews"]] == [3157082368, 3157082368, 3157082999, None]
+        assert data["own_reviews"] == 2
+        assert result.meta.healthy is True
+        assert "info:review_item_id_missing: 1/4 returned reviews have item_id=None" in result.meta.warnings
+
+    _run(scenario())
+
+
+def test_selfcheck_flags_reviews_when_item_id_is_missing_or_unparseable(monkeypatch):
+    """R-OZON-REVIEW-ITEM-ID (#214): ozon_selfcheck reports drift on reviews and
+    reviews_sort when review texts parse but every item_id is None."""
+    search_body = json.dumps(
+        {
+            "widgetStates": {
+                "tileGridDesktop-1": json.dumps(
+                    {
+                        "items": [
+                            {
+                                "sku": 123,
+                                "action": {"link": "/product/good-filter-123/"},
+                                "mainState": [
+                                    {"type": "textDS", "id": "name", "textDS": {"text": "Good filter"}},
+                                ],
+                            },
+                        ],
+                    }
+                ),
+            },
+        }
+    )
+    card_body = json.dumps(
+        {
+            "widgetStates": {
+                "webPrice-1": json.dumps({"price": "1 000 ₽", "cardPrice": "900 ₽", "isAvailable": True}),
+                "webReviewProductScore-1": json.dumps({"totalScore": 4.7, "reviewsCount": 5}),
+            },
+        }
+    )
+    reviews_body = _reviews_body(reviews=[{"content": {"comment": "text without itemId"}}])
+
+    async def fake_fetch(path, ctx):
+        if path.startswith("/search/"):
+            return 200, search_body, "fake"
+        if "/reviews/" in path:
+            return 200, reviews_body, "fake"
+        return 200, card_body, "fake"
+
+    async def scenario():
+        monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+        result = await server.ozon_selfcheck()
+
+        assert result.status == "drift_detected"
+        assert result.checks["reviews"].state == "drift"
+        assert result.checks["reviews"].smoke["shape_drift"] == "shape_drift: ozon_reviews: missing reviews[].item_id"
+        assert result.checks["reviews_sort"].state == "drift"
 
     _run(scenario())
 

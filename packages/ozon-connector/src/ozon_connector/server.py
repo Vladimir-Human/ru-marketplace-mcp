@@ -26,9 +26,12 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # _fetch_composer: Select paced impersonated HTTP or operator-browser fetch.
 # _parse_widgets: Normalize card widget fields without inventing missing prices.
 # _safe_review_page_path: Rebuild pagination from validated review components.
+# _coerce_review_item_id: Normalize positive int or ASCII decimal-string review itemId to int.
+# _parse_review_item: Normalize review text, score, author and variant item_id.
 # _parse_search_tile: Preserve offer identity, price kinds and stock warnings.
 # ozon_card: Read a validated SKU/product path with a required widgetStates object.
-# ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data.
+# ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data;
+#               warn when returned reviews lose item_id provenance.
 # ozon_search: Search and normalize composer result tiles from a required widgetStates object,
 #              publish count as the number of returned items, name the parsed total
 #              separately and warn when the 30-item cap cut the page; a runtime
@@ -739,6 +742,25 @@ def _safe_review_page_path(sku: str, next_button: str) -> str | None:
     return path if PRODUCT_REVIEWS_PAGED_RE.match(path) else None
 
 
+def _coerce_review_item_id(value: Any) -> int | None:
+    """Normalize an Ozon review itemId (positive int or ASCII decimal string) to int.
+
+    Ozon's webListReviews serves 10-digit SKUs as decimal strings ("3157082368")
+    as well as ints; booleans (bool is a subclass of int), non-positive values
+    and malformed strings or containers return None (#214, R-OZON-REVIEW-ITEM-ID).
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, str):
+        s = value.strip()
+        if s.isascii() and s.isdigit():
+            n = int(s)
+            return n if n > 0 else None
+    return None
+
+
 def _parse_review_item(r: dict) -> dict[str, Any]:
     """Map one raw Ozon review object to our compact shape.
 
@@ -783,7 +805,7 @@ def _parse_review_item(r: dict) -> dict[str, Any]:
         # Ozon serves ONE review pool per card family, so a review here may well
         # describe a different variant — in practice often a different brand.
         # itemId is the only field that says which product it is actually about.
-        "item_id": r.get("itemId") if isinstance(r.get("itemId"), int) else None,
+        "item_id": _coerce_review_item_id(r.get("itemId")),
     }
 
 
@@ -1051,6 +1073,27 @@ async def _ozon_reviews_impl(
             if stars:
                 distribution[stars] = row.get("value")
 
+    requested_item_id = _coerce_review_item_id(sku)
+    review_warnings = R.validate_review_block(
+        {
+            "returned": len(collected),
+            "reviews": collected,
+            "reviews_count": score_first.get("reviewsCount") or total_from_paging,
+            "rating_score": score_first.get("totalScore"),
+        }
+    )
+    if collected:
+        unattributed = sum(1 for r in collected if r.get("item_id") is None)
+        if unattributed == len(collected):
+            review_warnings.append(
+                f"review_item_id_missing: all {len(collected)} returned reviews have item_id=None; "
+                "own_reviews=0 is unverified (itemId drift?)"
+            )
+        elif unattributed > 0:
+            review_warnings.append(
+                f"info:review_item_id_missing: {unattributed}/{len(collected)} returned reviews have item_id=None"
+            )
+
     return OzonReviewsResponse(
         **R.attach_meta(
             {
@@ -1068,18 +1111,13 @@ async def _ozon_reviews_impl(
                 "last_error": last_error,
                 "requested_limit": limit,
                 "reviews": collected,
-                "requested_item_id": int(sku) if str(sku).isdigit() else None,
-                "own_reviews": sum(1 for r in collected if str(r.get("item_id")) == str(sku)),
+                "requested_item_id": requested_item_id,
+                "own_reviews": sum(
+                    1 for r in collected if requested_item_id is not None and r.get("item_id") == requested_item_id
+                ),
                 "pool_variants": pool_variants,
             },
-            R.validate_review_block(
-                {
-                    "returned": len(collected),
-                    "reviews": collected,
-                    "reviews_count": score_first.get("reviewsCount") or total_from_paging,
-                    "rating_score": score_first.get("totalScore"),
-                }
-            ),
+            review_warnings,
             source="ozon_reviews",
         )
     )
@@ -1619,9 +1657,22 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
             (json.loads(v) if isinstance(v, str) else v for k, v in widgets.items() if k.startswith("webListReviews")),
             {},
         )
-        revs = wlr.get("reviews") or []
-        texts = sum(1 for r in revs if (r.get("content") or {}).get("comment"))
-        return {"ok": texts > 0, "reviews_in_page": len(revs), "with_text": texts}
+        revs = [r for r in (wlr.get("reviews") or []) if isinstance(r, dict)]
+        parsed = [_parse_review_item(r) for r in revs]
+        texts = sum(1 for r in parsed if r.get("text") or r.get("positive") or r.get("negative"))
+        with_item_id = sum(1 for r in parsed if r.get("item_id") is not None)
+        shape_drift = (
+            "shape_drift: ozon_reviews: missing reviews[].item_id"
+            if (texts > 0 and with_item_id == 0)
+            else None
+        )
+        return {
+            "ok": texts > 0 and with_item_id > 0,
+            "reviews_in_page": len(revs),
+            "with_text": texts,
+            "with_item_id": with_item_id,
+            "shape_drift": shape_drift,
+        }
 
     await _check(
         "search", "/search/?text=сетевой фильтр&page=1", {"tileGridDesktop"}, _smoke_search, baseline="сетевой фильтр"
