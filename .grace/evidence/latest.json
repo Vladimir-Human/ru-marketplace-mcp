@@ -12,7 +12,7 @@
     "R-VERSION"
   ],
   "source_hashes": {
-    "packages/ozon-connector/src/ozon_connector/server.py": "72a6dadb33f824d813cd0a56ae396978b798e8ba5e73875a633519a0dcb35202",
+    "packages/ozon-connector/src/ozon_connector/server.py": "f08e3b6b8c4c78a3e6aa9dca42dfa9b73ba5fa1a70fd19a31f4cbbe1a12d79dc",
     "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
     "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
   },

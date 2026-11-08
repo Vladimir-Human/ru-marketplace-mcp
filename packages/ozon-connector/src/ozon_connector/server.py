@@ -1662,9 +1662,7 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
         texts = sum(1 for r in parsed if r.get("text") or r.get("positive") or r.get("negative"))
         with_item_id = sum(1 for r in parsed if r.get("item_id") is not None)
         shape_drift = (
-            "shape_drift: ozon_reviews: missing reviews[].item_id"
-            if (texts > 0 and with_item_id == 0)
-            else None
+            "shape_drift: ozon_reviews: missing reviews[].item_id" if (texts > 0 and with_item_id == 0) else None
         )
         return {
             "ok": texts > 0 and with_item_id > 0,
