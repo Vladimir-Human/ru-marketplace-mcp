@@ -28,6 +28,7 @@ from chat history.
 | Reporter | Issue | Contribution |
 |---|---|---|
 | [@HeckfyCU](https://github.com/HeckfyCU) | [#190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190) | Timed every AliExpress navigation request from a Russian residential IP and pinpointed the page-readiness deadline that kept `aliexpress_search` from returning offers. |
+| [@XaruStar](https://github.com/XaruStar) | [#214](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/214) | Captured live Ozon `webListReviews` payloads returning decimal-string `itemId` values and traced why `_parse_review_item`, `ozon_reviews` (`own_reviews`), and `ozon_selfcheck` silently dropped review SKU attribution. |
 
 ## Automation / Автоматизация
 
