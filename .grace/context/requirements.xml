@@ -275,4 +275,7 @@
   <requirement id="R-WARNING-BUDGET" source="Outside-in study 2026-11-02, remaining-check R18: twelve diagnostics arrived as ten without a word">
     A bounded list of diagnostics stays bounded and says what it left out: the delivery names the number of suppressed diagnostics, through the native tool and through the comparison. A diagnostic that explains an unhealthy answer is never dropped behind an informational note, and the health verdict is computed from the full list, so a cut list cannot turn an unhealthy answer into a healthy one.
   </requirement>
+  <requirement id="R-OZON-REVIEW-ITEM-ID" source="Owner request 2026-11-08: solve https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/214">
+    Normalize Ozon review itemId values from positive integers and ASCII decimal strings to the same positive integer SKU; reject booleans, non-positive values and malformed strings or containers as None. Compute own_reviews against the normalized integer requested_item_id. When a non-empty review sample has all item_id values None, emit a review_item_id_missing health warning so meta.healthy is false and own_reviews=0 is never mistaken for a verified neighbour-only pool; when a partial subset has item_id None alongside attributed reviews, emit an info:review_item_id_missing count note that preserves meta.healthy. In ozon_selfcheck, _smoke_reviews runs _parse_review_item and reports drift (shape_drift: ozon_reviews: missing reviews[].item_id) when review texts parse but no review carries a valid item_id.
+  </requirement>
 </requirements>
