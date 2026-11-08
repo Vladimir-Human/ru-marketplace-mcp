@@ -10,6 +10,7 @@
   "homepage": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
   "repository": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
   "license": "MIT",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "mcp",
     "mcp-server",
