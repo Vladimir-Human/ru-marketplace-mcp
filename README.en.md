@@ -422,7 +422,7 @@ compare_prices("кроссовки мужские")
   yandex_market   2499 RUB   Кеды A-LOW
   yandex_market   3480 RUB   Кеды
 
-  cheapest: wildberries 712 RUB, spread 5858 RUB, complete: true
+  cheapest: wildberries 712 RUB, spread 2768 RUB, complete: true
 ```
 
 Sources are queried concurrently and each reports its own outcome. One marketplace

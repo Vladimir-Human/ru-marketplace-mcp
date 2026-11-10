@@ -21,5 +21,5 @@
   <text x="48" y="164" class="m soft">yandex_market</text><text x="248" y="164" text-anchor="end" class="m price">2499 ₽</text><text x="276" y="164" class="m ink">Кеды A-LOW</text>
   <text x="48" y="190" class="m soft">yandex_market</text><text x="248" y="190" text-anchor="end" class="m price">3480 ₽</text><text x="276" y="190" class="m ink">Кеды</text>
   <line x1="48" y1="210" x2="712" y2="210" stroke="#2c3442"/>
-  <text x="48" y="236" class="m"><tspan class="ok">дешевле всего:</tspan><tspan class="ink" dx="8">wildberries 712 ₽ · разброс 5858 ₽ · complete: true</tspan></text>
+  <text x="48" y="236" class="m"><tspan class="ok">дешевле всего:</tspan><tspan class="ink" dx="8">wildberries 712 ₽ · разброс 2768 ₽ · complete: true</tspan></text>
 </svg>
