@@ -10,6 +10,13 @@
 ## [Unreleased]
 
 ### Changed
+- README: русский README короче. Описание инструментов по площадкам перенесено
+  в `docs/TOOLS.ru.md`, в README остался список со ссылками. Команды из
+  исходников и проверка живого эндпоинта — в «Разработке». Вверху пять
+  значков вместо семи (без Glama и npm).
+- README: in the `compare_prices` example the spread now matches the prices shown
+  (3480 − 712 = 2768 ₽; it said 5858 ₽), in both READMEs and in the demo image.
+  The Russian per-source tool details moved to `docs/TOOLS.ru.md`.
 - README: английская часть вынесена в `README.en.md`, вверху обоих файлов
   переключатель языка. Первый экран: описание, пример `compare_prices`
   (`docs/assets/demo-compare.svg`, тот же вывод, что в разделе «Сравнение цен»)
