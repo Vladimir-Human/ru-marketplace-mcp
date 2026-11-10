@@ -21,6 +21,9 @@ STALE_README = """# Test README
 <!-- tools-cost:start -->
 old Russian numbers
 <!-- tools-cost:end -->
+"""
+
+STALE_README_EN = """# Test README (English)
 
 <!-- tools-cost:start -->
 old English numbers
@@ -33,6 +36,12 @@ STALE_DSH_README = """# dsh
 | old | table |
 <!-- tools-cost-dsh:end -->
 """
+
+
+def _seed_readme_en(root: Path) -> Path:
+    path = root / "README.en.md"
+    path.write_text(STALE_README_EN, encoding="utf-8", newline="\n")
+    return path
 
 
 def _seed_dsh_readme(root: Path) -> Path:
@@ -112,6 +121,7 @@ def test_check_rejects_a_stale_docs_file_and_accepts_a_fresh_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     (tmp_path / "README.md").write_text(STALE_README, encoding="utf-8", newline="\n")
+    _seed_readme_en(tmp_path)
     _seed_dsh_readme(tmp_path)
     gen.write_outputs(gen.render_outputs(tmp_path))
     monkeypatch.setattr(gen, "REPO_ROOT", tmp_path)
@@ -127,16 +137,25 @@ def test_check_rejects_a_stale_docs_file_and_accepts_a_fresh_one(
 def test_readme_cost_blocks_are_rewritten_and_checked(
     tmp_path: Path, measurements: tuple[gen.Measurement, ...]
 ) -> None:
-    rendered = gen.render_readme(STALE_README, measurements)
+    rendered = gen.render_readme(STALE_README, measurements, "ru")
+    rendered_en = gen.render_readme(STALE_README_EN, measurements, "en")
 
-    assert rendered.count("<!-- tools-cost:start -->") == 2
+    assert rendered.count("<!-- tools-cost:start -->") == 1
+    assert rendered_en.count("<!-- tools-cost:start -->") == 1
     assert "old Russian numbers" not in rendered
-    assert "old English numbers" not in rendered
+    assert "old English numbers" not in rendered_en
+    assert "Так сделано" in rendered
+    assert "A mounted server" in rendered_en
     for measurement in measurements:
         assert f"≈{gen.format_tokens(measurement.token_estimate)}" in rendered
-    assert gen.render_readme(rendered, measurements) == rendered
+        assert f"≈{gen.format_tokens(measurement.token_estimate)}" in rendered_en
+    assert gen.render_readme(rendered, measurements, "ru") == rendered
+    assert gen.render_readme(rendered_en, measurements, "en") == rendered_en
+    with pytest.raises(ValueError, match="exactly one tools-cost block"):
+        gen.render_readme(STALE_README + STALE_README_EN, measurements, "ru")
 
     (tmp_path / "README.md").write_text(rendered, encoding="utf-8", newline="\n")
+    _seed_readme_en(tmp_path)
     _seed_dsh_readme(tmp_path)
     gen.write_outputs(gen.render_outputs(tmp_path))
     assert gen.check_outputs(tmp_path) == []
@@ -148,6 +167,11 @@ def test_readme_cost_blocks_are_rewritten_and_checked(
         newline="\n",
     )
     assert gen.check_outputs(tmp_path) == [gen.STALE_README]
+
+    readme_en = tmp_path / "README.en.md"
+    readme.write_text(rendered, encoding="utf-8", newline="\n")
+    readme_en.write_text(STALE_README_EN, encoding="utf-8", newline="\n")
+    assert gen.check_outputs(tmp_path) == [gen.STALE_README_EN]
 
 
 def test_parameter_rendering_covers_required_default_enum_and_array() -> None:
@@ -187,6 +211,7 @@ def test_dsh_readme_mode_table_is_generated_and_checked(
         gen.render_dsh_readme("# no block\n", measurements)
 
     (tmp_path / "README.md").write_text(STALE_README, encoding="utf-8", newline="\n")
+    _seed_readme_en(tmp_path)
     dsh_readme = _seed_dsh_readme(tmp_path)
     gen.write_outputs(gen.render_outputs(tmp_path))
     assert gen.check_outputs(tmp_path) == []
@@ -210,7 +235,9 @@ def test_the_printed_token_numbers_follow_the_stated_rule(measurements: tuple[ge
         cyrillic = sum(1 for ch in text if "\u0400" <= ch <= "\u04ff")
         return int(cyrillic / 3.0 + (len(text) - cyrillic) / 4.0)
 
-    readme = gen.render_readme(STALE_README, measurements)
+    readme = gen.render_readme(STALE_README, measurements, "ru") + gen.render_readme(
+        STALE_README_EN, measurements, "en"
+    )
     dsh_readme = gen.render_dsh_readme(STALE_DSH_README, measurements)
     docs = gen.render_docs(measurements)
 
