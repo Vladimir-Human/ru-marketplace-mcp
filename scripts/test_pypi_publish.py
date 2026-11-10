@@ -163,12 +163,16 @@ def test_owner_registration_has_one_documented_source():
 
 def test_the_docs_offer_the_pypi_install_now_that_publishing_is_on():
     # The owner enabled publishing on 2026-10-31 and v2.7.0 is on PyPI: both README
-    # quickstarts and QUICKSTART offer the one-command install, nothing calls it off.
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    # quickstarts (README.md in Russian, README.en.md in English) and QUICKSTART offer
+    # the one-command install, nothing calls it off.
+    readme_ru = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
+    readme = readme_ru + readme_en
     quickstart = (ROOT / "docs" / "QUICKSTART.md").read_text(encoding="utf-8")
     deployment = (ROOT / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8")
     checklist = (ROOT / "docs" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
-    assert readme.count("uvx ru-marketplace-mcp setup") == 2
+    assert "uvx ru-marketplace-mcp setup" in readme_ru
+    assert "uvx ru-marketplace-mcp setup" in readme_en
     assert "uvx ru-marketplace-mcp setup" in quickstart
     for stale in ("publishing is off", "публикация пока выключена", "future PyPI bundle", "будущий PyPI-бандл"):
         assert stale not in readme
