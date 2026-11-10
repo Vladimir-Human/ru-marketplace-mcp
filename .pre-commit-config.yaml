@@ -52,7 +52,7 @@ repos:
         name: documented test count is current
         entry: python scripts/check_test_count.py
         language: system
-        files: (^packages/.*/tests/.*\.py|README\.md|docs/ARCHITECTURE\.md)$
+        files: (^packages/.*/tests/.*\.py|README(\.en)?\.md|docs/ARCHITECTURE\.md)$
         pass_filenames: false
 
       - id: check-versions

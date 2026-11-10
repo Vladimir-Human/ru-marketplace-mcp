@@ -9,6 +9,21 @@
 
 ## [Unreleased]
 
+### Changed
+- README: английская часть вынесена в `README.en.md`, вверху обоих файлов
+  переключатель языка. Первый экран: описание, пример `compare_prices`
+  (`docs/assets/demo-compare.svg`, тот же вывод, что в разделе «Сравнение цен»)
+  и быстрый старт; кнопки установки в VS Code и Cursor перенесены к нему, абзац
+  про `CHROME_CHALLENGE_HANDOFF_S` — в «Настройку». `gen_tools_doc.py` пишет
+  русский блок стоимости в `README.md`, английский — в `README.en.md`;
+  `check_test_count.py` проверяет оба файла.
+- README: the English half moved to `README.en.md`, with a language switch at the
+  top of both files. The first screen is now the summary, a `compare_prices`
+  example (`docs/assets/demo-compare.svg`, the same output as the price comparison
+  section) and the quickstart. `gen_tools_doc.py` writes the Russian cost block to
+  `README.md` and the English one to `README.en.md`; `check_test_count.py` checks
+  both files.
+
 ## [2.9.1] - 2026-11-06
 
 ### Fixed

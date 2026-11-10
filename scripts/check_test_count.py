@@ -32,7 +32,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # the same file are not mistaken for it.
 QUOTED = re.compile(r"(\d[\d  ]*)(?=\s*(?:офлайн|offline))")
 
-DOC_FILES = ["README.md", "docs/ARCHITECTURE.md"]
+DOC_FILES = ["README.md", "README.en.md", "docs/ARCHITECTURE.md"]
 
 # The selection CI runs and the docs describe.
 MARKERS = "not live and not cdp"

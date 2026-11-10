@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="280" viewBox="0 0 760 280" role="img" aria-labelledby="t d">
+  <title id="t">compare_prices: где дешевле</title>
+  <desc id="d">Пример вызова compare_prices("кроссовки мужские") из раздела «Сравнение цен» README: предложения Wildberries и Яндекс Маркета по возрастанию цены и итог — дешевле всего wildberries 712 ₽.</desc>
+  <style>
+    .m { font-family: "IBM Plex Mono", "JetBrains Mono", "DejaVu Sans Mono", Consolas, ui-monospace, Menlo, monospace; font-size: 14px; }
+    .ink { fill: #e4e8f0; }
+    .soft { fill: #a3adc0; }
+    .acc { fill: #8fa9f2; }
+    .ok { fill: #7fd1a0; }
+    .price { fill: #f2c879; }
+  </style>
+  <rect width="760" height="280" rx="12" fill="#12161e"/>
+  <path d="M0 12a12 12 0 0 1 12-12h736a12 12 0 0 1 12 12v24H0z" fill="#191e28"/>
+  <circle cx="22" cy="18" r="6" fill="#f08a83"/>
+  <circle cx="42" cy="18" r="6" fill="#f2c879"/>
+  <circle cx="62" cy="18" r="6" fill="#7fd1a0"/>
+  <text x="380" y="23" text-anchor="middle" class="m soft" font-size="12">compare-mcp · пример из README</text>
+  <text x="28" y="74" class="m"><tspan class="acc">›</tspan><tspan class="ink" dx="8">compare_prices(</tspan><tspan class="price">"кроссовки мужские"</tspan><tspan class="ink">)</tspan></text>
+  <text x="48" y="112" class="m soft">wildberries</text><text x="248" y="112" text-anchor="end" class="m price">712 ₽</text><text x="276" y="112" class="m ink">Кроссовки изи дышащие спортивные</text>
+  <text x="48" y="138" class="m soft">wildberries</text><text x="248" y="138" text-anchor="end" class="m price">814 ₽</text><text x="276" y="138" class="m ink">Зимние кроссовки теплые с мехом</text>
+  <text x="48" y="164" class="m soft">yandex_market</text><text x="248" y="164" text-anchor="end" class="m price">2499 ₽</text><text x="276" y="164" class="m ink">Кеды A-LOW</text>
+  <text x="48" y="190" class="m soft">yandex_market</text><text x="248" y="190" text-anchor="end" class="m price">3480 ₽</text><text x="276" y="190" class="m ink">Кеды</text>
+  <line x1="48" y1="210" x2="712" y2="210" stroke="#2c3442"/>
+  <text x="48" y="236" class="m"><tspan class="ok">дешевле всего:</tspan><tspan class="ink" dx="8">wildberries 712 ₽ · разброс 5858 ₽ · complete: true</tspan></text>
+</svg>

@@ -9,8 +9,9 @@ calls their public ``list_tools()`` (after output-schema compaction), and render
   the input JSON schema and the first paragraph of the description;
 * the measured ``tools/list`` payload size and an approximate token count per
   profile;
-* the two ``<!-- tools-cost:start -->`` blocks in ``README.md`` (Russian first,
-  English second), so the published cost figures come from the same measurement.
+* the ``<!-- tools-cost:start -->`` block in ``README.md`` (Russian) and the one in
+  ``README.en.md`` (English), so the published cost figures come from the same
+  measurement.
 
 The output is deterministic: sorted tools and groups, no timestamps, no paths, no
 Python-version-specific text, and LF line endings. ``--check`` regenerates in
@@ -33,7 +34,7 @@ Run: uv run python scripts/gen_tools_doc.py [--check]
 # first_paragraph: Take the first description paragraph and make it table-safe.
 # render_resources: Render a profile's served resource URIs for the generated docs.
 # render_docs: Render the complete docs/TOOLS.md text.
-# render_readme: Replace both README cost blocks with measured figures.
+# render_readme: Replace one README's cost block with measured figures in its language.
 # render_outputs: Collect measurements and render both output files under a root.
 # check_outputs: Compare both files on disk with a fresh in-memory generation.
 # END_MODULE_MAP
@@ -55,10 +56,12 @@ import mcp_wire
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = Path("docs/TOOLS.md")
 README_PATH = Path("README.md")
+README_EN_PATH = Path("README.en.md")
 DSH_README_PATH = Path("dsh") / "README.md"
 
 STALE_DOCS = "docs/TOOLS.md is stale; run scripts/gen_tools_doc.py"
 STALE_README = "README.md is stale (tools-cost block); run scripts/gen_tools_doc.py"
+STALE_README_EN = "README.en.md is stale (tools-cost block); run scripts/gen_tools_doc.py"
 STALE_DSH_README = "dsh/README.md is stale (tools-cost-dsh block); run scripts/gen_tools_doc.py"
 
 COST_BLOCK = re.compile(r"<!-- tools-cost:start -->.*?<!-- tools-cost:end -->", re.DOTALL)
@@ -317,13 +320,13 @@ def render_cost_block(language: str, measurements: tuple[Measurement, ...]) -> s
     return f"<!-- tools-cost:start -->\n{body}\n<!-- tools-cost:end -->"
 
 
-def render_readme(readme: str, measurements: tuple[Measurement, ...]) -> str:
-    """Rewrite both marked blocks in place: Russian first, then English."""
+def render_readme(readme: str, measurements: tuple[Measurement, ...], language: str = "ru") -> str:
+    """Rewrite the one marked block in place: README.md is Russian, README.en.md English."""
     matches = COST_BLOCK.findall(readme)
-    if len(matches) != 2:
-        raise ValueError(f"README.md must contain exactly two tools-cost blocks, found {len(matches)}")
-    blocks = iter((render_cost_block("ru", measurements), render_cost_block("en", measurements)))
-    return COST_BLOCK.sub(lambda _match: next(blocks), readme)
+    if len(matches) != 1:
+        name = README_EN_PATH if language == "en" else README_PATH
+        raise ValueError(f"{name} must contain exactly one tools-cost block, found {len(matches)}")
+    return COST_BLOCK.sub(lambda _match: render_cost_block(language, measurements), readme)
 
 
 DSH_MODE_LABELS = {
@@ -366,10 +369,12 @@ def render_outputs(root: Path) -> dict[Path, str]:
     """Render both generated files for ``root`` without writing anything."""
     measurements = collect_profiles()
     readme = (root / README_PATH).read_text(encoding="utf-8")
+    readme_en = (root / README_EN_PATH).read_text(encoding="utf-8")
     dsh_readme = (root / DSH_README_PATH).read_text(encoding="utf-8")
     return {
         root / DOCS_PATH: render_docs(measurements),
-        root / README_PATH: render_readme(readme, measurements),
+        root / README_PATH: render_readme(readme, measurements, "ru"),
+        root / README_EN_PATH: render_readme(readme_en, measurements, "en"),
         root / DSH_README_PATH: render_dsh_readme(dsh_readme, measurements),
     }
 
@@ -390,7 +395,11 @@ def check_outputs(root: Path) -> list[str]:
         except FileNotFoundError:
             actual = None
         if actual != text:
-            stale = {root / DOCS_PATH: STALE_DOCS, root / README_PATH: STALE_README}
+            stale = {
+                root / DOCS_PATH: STALE_DOCS,
+                root / README_PATH: STALE_README,
+                root / README_EN_PATH: STALE_README_EN,
+            }
             problems.append(stale.get(path, STALE_DSH_README))
     return problems
 
