@@ -21,6 +21,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
+# Every job only reads the checkout. Declared here rather than left to the
+# repository default, so pull-request runs stay read-only even if that default
+# changes (R-CI-TOKEN-SCOPE; scripts/test_workflow_permissions.py).
+permissions:
+  contents: read
+
 env:
   # Prove the committed uv.lock rather than re-resolving in CI. With "1" every
   # `uv sync`/`uv run` refuses to touch the lockfile, so CI installs the exact
