@@ -29,6 +29,7 @@ from chat history.
 |---|---|---|
 | [@HeckfyCU](https://github.com/HeckfyCU) | [#190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190) | Timed every AliExpress navigation request from a Russian residential IP and pinpointed the page-readiness deadline that kept `aliexpress_search` from returning offers. |
 | [@XaruStar](https://github.com/XaruStar) | [#214](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/214) | Captured live Ozon `webListReviews` payloads returning decimal-string `itemId` values and traced why `_parse_review_item`, `ozon_reviews` (`own_reviews`), and `ozon_selfcheck` silently dropped review SKU attribution. |
+| [@Runnin4ik](https://github.com/Runnin4ik) | [#225](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/225), [#226](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/226) | Showed that `ozon_search` returned display strings (`"17 324 ₽"`, `"4.9"`) and a lost `rating_count` where `ozon_card` returns numbers; timed `compare_prices` under a `MARKETPLACE_SOURCES` selection, which led to closing three source-deselection gaps in the compare tools. |
 
 ## Automation / Автоматизация
 
