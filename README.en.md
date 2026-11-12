@@ -102,7 +102,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3442 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 3452 offline tests, no network needed
 ```
 
 Client configuration mirrors the [Russian section](README.md#подключение-к-mcp-клиенту). The shortest path is the
@@ -570,13 +570,16 @@ name is rejected at startup with the supported-source list, so a typo cannot
 silently produce a partial server. Unset or blank mounts everything, as before.
 Deselected sources show up in
 `marketplace_sources` under `skipped`, marked as deselected rather than failed to
-import, and `compare_prices` queries the same subset.
+import. By default, `compare_prices` queries only selected goods sources with
+text search: Detsky Mir has no text search, and Cian and MPStats do not take part
+in goods comparison. Explicit `sources` can narrow this subset, not re-enable a
+disabled source: that request returns `bad_request`, as does inspecting its card.
 
 ## Development
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3442 offline tests
+uv run pytest -q -m "not live and not cdp"    # 3452 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -638,7 +641,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 3442 offline
+are confidently wrong, so the project is arranged around verification: 3452 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

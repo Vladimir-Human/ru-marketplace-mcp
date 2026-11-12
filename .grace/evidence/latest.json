@@ -1,28 +1,79 @@
 {
   "release": "2.9.1",
-  "phase": "issue_214_ozon_review_item_id_fixed_and_verified",
-  "base_commit": "dea4865",
-  "branch": "fix/ozon-review-item-id-214",
+  "phase": "issue_225_partial_fix_gates_blocked",
+  "base_commit": "fd36678",
+  "branch": "fix/compare-mounted-sources",
   "requirements": [
-    "R-OZON-REVIEW-ITEM-ID",
-    "R-NO-FABRICATION",
-    "R-DRIFT",
+    "R-COMPARE-SOURCE-SELECTION",
     "R-OFFLINE",
-    "R-TOOL-SCHEMA",
-    "R-VERSION"
+    "R-TOOL-SCHEMA"
   ],
   "source_hashes": {
-    "packages/ozon-connector/src/ozon_connector/server.py": "f08e3b6b8c4c78a3e6aa9dca42dfa9b73ba5fa1a70fd19a31f4cbbe1a12d79dc",
-    "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
-    "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
+    "packages/compare-connector/src/compare_connector/server.py": "d92b264245b083160f9cd8dafa46001a040ce2bb21f8bc3e59d3dd02c265d186",
+    "packages/compare-connector/tests/test_source_selection.py": "2bca9fdeaa809cbc614e4ea008cc97db23aae8a6a72728f0250e5cde23f2d92c",
+    "packages/mcp-core/src/mcp_core/resources.py": "7a70998e46b83cf563ebddce2f03d5d0c3ad648aa20ba98482a226c4753c9fa7",
+    ".grace/context/requirements.xml": "f02dc4342cd21b5da9152761a9dec7937a80c186eca06ab6f9c7df1a0c2744c2",
+    ".grace/graph/index.xml": "2d7da7283e5113a75a0c26bf4c2f25e52534f15d0a5598425d8b425f4e235c4b",
+    ".grace/verification/index.xml": "adc21a47d92050a3c6c3d368f5568ce648501159f3fa65652595b24efb3f1a17"
   },
   "checks": {
-    "baseline_dea4865_regression_selection": "4 failed at the exact reported spots: None == 3157082368, [None, 3157082368, None, 1] != [3157082368, 3157082368, 3157082999, None], healthy True != False on all-null sample, selfcheck success != drift_detected",
-    "fixed_ozon_and_guide_contracts_selection": "141 passed in 5.70s",
-    "mypy": "Success: no issues found in 6 source files (packages/ozon-connector/src)",
-    "ruff": "format and check clean on packages/ozon-connector",
-    "repository_gates": "check_no_print (100 files), check_versions (93 places at 2.9.1), gen_tools_doc --check, and .grace XML parsing all exit 0"
+    "baseline_fd36678": "4 failed, 6 passed: extra disabled discovery imports, stale installed inventory, compare_verify_offer and decision_inspect called disabled AliExpress instead of returning bad_request. Default-price cold/preloaded/unset/blank controls passed. Log: tmp/issue225-baseline-mounted.log",
+    "fixed_selection": "10 passed. Log: tmp/issue225-fixed.log",
+    "final_focused": "160 passed, 6 MCP logging deprecation warnings. Log: tmp/issue225-focused-final.log",
+    "uv sync --locked --all-packages": "pass with worktree-local UV_CACHE_DIR after global cache access was denied; uv.lock unchanged",
+    "uv run ruff check .": "pass; warning for unreadable generated pytest cache directory",
+    "uv run ruff format --check .": "fail: generated pytest-cache-files-md2ygbqy directory is unreadable; 455 files already formatted",
+    "changed_python_ruff_check_and_format": "pass for server.py, test_source_selection.py and resources.py",
+    "uv run mypy": "pass: 116 source files",
+    "uv run mypy --platform win32": "pass: 116 source files",
+    "uv run pytest -q -m \"not live and not cdp\"": "fail: 97 failed, 2868 passed, 5 deselected, 487 errors; temporary-folder Windows permission failures despite TEMP/TMP under tmp/. Log: tmp/issue225-pytest.log",
+    "uv run python scripts/check_no_print.py": "pass: 100 files",
+    "uv run python scripts/check_test_count.py": "pass: 3452 in 6 documented places",
+    "uv run python scripts/gen_tools_doc.py --check": "pass",
+    "uv run python scripts/check_provenance.py": "pass: 41 pins, 49 sidecars, 13 pre-existing completeness exceptions",
+    "uv run python scripts/check_versions.py": "pass: 2.9.1 in 93 declarations",
+    "uv run python scripts/check_lock_revision.py": "pass: revision 5",
+    "GRACE_XML_and_git_diff_check": "pass before this evidence update"
   },
-  "not_proven": "Live Ozon network/CDP calls were not executed in this offline verification run; live webListReviews decimal-string itemId payload was provided in issue #214.",
-  "checked_on_utc": "2026-11-08"
+  "published_wheel": {
+    "url": "https://files.pythonhosted.org/packages/1e/31/db811b44941429e5bf5e4e44cdf7d5f66fbd8e6bea057bfe9feda96a0fe8/ru_marketplace_mcp-2.9.1-py3-none-any.whl",
+    "sha256": "a1a8120b3e6c7067698fe1137fc8547b69dad6d99afc6ed3cee7f4870cb46439",
+    "observation": "Archive digest verified; compare_prices and selected() source inspected, not installed/executed. Both already filter the explicit environment per call."
+  },
+  "not_proven": [
+    "The reporter full-price fan-out under a stable explicit environment was not reproduced; no causal browser-show or registry-widening path was established.",
+    "Live marketplace/CDP behavior was not tested.",
+    "Full suite and whole-repository formatting must pass before commit; nothing staged or committed yet."
+  ],
+  "blocking_condition": "Windows access denied on Python-created temporary directories; the one unconfined permission-repair request could not run because no approval channel is available. No permissions or owners were changed.",
+  "next_action": "User temporarily enables full access; remove only verified generated cache junk, rerun full gates, then stage explicit paths and commit without push. Do not claim the original price symptom reproduced.",
+  "checked_on_utc": "2026-11-12T21:03:39.900962+00:00",
+  "previous_evidence": {
+    "release": "2.9.1",
+    "phase": "issue_214_ozon_review_item_id_fixed_and_verified",
+    "base_commit": "dea4865",
+    "branch": "fix/ozon-review-item-id-214",
+    "requirements": [
+      "R-OZON-REVIEW-ITEM-ID",
+      "R-NO-FABRICATION",
+      "R-DRIFT",
+      "R-OFFLINE",
+      "R-TOOL-SCHEMA",
+      "R-VERSION"
+    ],
+    "source_hashes": {
+      "packages/ozon-connector/src/ozon_connector/server.py": "f08e3b6b8c4c78a3e6aa9dca42dfa9b73ba5fa1a70fd19a31f4cbbe1a12d79dc",
+      "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
+      "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
+    },
+    "checks": {
+      "baseline_dea4865_regression_selection": "4 failed at the exact reported spots: None == 3157082368, [None, 3157082368, None, 1] != [3157082368, 3157082368, 3157082999, None], healthy True != False on all-null sample, selfcheck success != drift_detected",
+      "fixed_ozon_and_guide_contracts_selection": "141 passed in 5.70s",
+      "mypy": "Success: no issues found in 6 source files (packages/ozon-connector/src)",
+      "ruff": "format and check clean on packages/ozon-connector",
+      "repository_gates": "check_no_print (100 files), check_versions (93 places at 2.9.1), gen_tools_doc --check, and .grace XML parsing all exit 0"
+    },
+    "not_proven": "Live Ozon network/CDP calls were not executed in this offline verification run; live webListReviews decimal-string itemId payload was provided in issue #214.",
+    "checked_on_utc": "2026-11-08"
+  }
 }

@@ -2,8 +2,8 @@
 
 The other connectors each answer "what does this cost on X". This one answers the
 question people actually ask — "where is this cheapest right now" — by querying
-every installed marketplace concurrently and normalising the answers into one
-ranked list.
+every selected installed marketplace concurrently and normalising the answers
+into one ranked list.
 
 Three design decisions worth stating, because they are what make the output
 trustworthy:
@@ -28,12 +28,13 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
-# REQUIREMENTS: R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION.
+# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# _available_sources: Import connectors defensively and report missing installations.
+# _available_sources: Apply selection before defensive imports; report unavailable connectors.
+# _require_selected: Reject explicit search/card sources disabled by the operator.
 # _dedupe: Merge duplicate offers while preserving source identity.
 # _has_bundle_phrase_prefix: Recognize up to three local modifiers between an explicit bundle cue and this accessory.
 # _has_bundle_phrase_suffix: Recognize bounded lexical noun/modifier tails without crossing accessory clauses.
@@ -125,8 +126,9 @@ mcp = FastMCP(
 _CARD_TOOL_NAMES = CARD_TOOL_NAMES
 
 
+# START_BLOCK_SOURCE_SELECTION
 def _available_sources() -> dict[str, Any]:
-    """Import each marketplace connector defensively.
+    """Import selected marketplace connectors defensively.
 
     A missing optional dependency (Ozon's curl_cffi/Playwright) or a broken
     install reduces coverage; it must not prevent the server from starting.
@@ -134,18 +136,26 @@ def _available_sources() -> dict[str, Any]:
     for a source the registry does not know, or the reverse.
     """
     sources: dict[str, Any] = {}
+    chosen = selected()
 
     for name in COMPARE_SOURCES:
+        # Selection is authorization, not a post-discovery display filter. A
+        # disabled optional connector must not run even its import-time setup.
+        if chosen is not None and name not in chosen:
+            continue
         try:
             sources[name] = importlib.import_module(BY_NAME[name].module)
         except Exception as exc:
             log_event("compare.source_unavailable", source=name, error=_redact(str(exc))[:120])
 
-    chosen = selected()
-    if chosen is not None:
-        sources = {name: module for name, module in sources.items() if name in chosen}
-
     return sources
+
+
+def _require_selected(names: Iterable[str], chosen: set[str] | None) -> None:
+    """Use the same bad_request refusal for explicit search and card sources."""
+    deselected = [name for name in names if chosen is not None and name not in chosen]
+    if deselected:
+        raise_tool_error(BadRequestError(f"source(s) {deselected} are deselected by MARKETPLACE_SOURCES"))
 
 
 SOURCES = _available_sources()
@@ -167,6 +177,7 @@ SEARCHABLE = (
     "citilink",
     "aliexpress",
 )
+# END_BLOCK_SOURCE_SELECTION
 
 
 def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
@@ -1133,9 +1144,7 @@ async def compare_prices(
         unknown = [name for name in requested if name not in _SEARCH_IMPLS]
         if unknown:
             raise_tool_error(BadRequestError(f"unknown source(s) {unknown}: valid options are {sorted(_SEARCH_IMPLS)}"))
-        deselected = [name for name in requested if chosen is not None and name not in chosen]
-        if deselected:
-            raise_tool_error(BadRequestError(f"source(s) {deselected} are deselected by MARKETPLACE_SOURCES"))
+        _require_selected(requested, chosen)
     else:
         # Default: every searchable marketplace that is actually wired up. Reading
         # from _SEARCH_IMPLS rather than the static tuple keeps this honest when
@@ -1317,6 +1326,7 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
     """Dispatch both comparison profiles through the same native card contract."""
     if name not in _CARD_TOOL_NAMES:
         raise_tool_error(BadRequestError(f"source {name!r} has no supported card inspector"))
+    _require_selected([name], selected())
     module = SOURCES.get(name)
     if module is None:
         raise_tool_error(BadRequestError(f"source {name!r} is not installed in this profile"))
@@ -1510,22 +1520,22 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     if ctx is not None:
         await ctx.info("compare_sources: reporting installed marketplaces")
 
-    installed = sorted(SOURCES)
-    searchable = [name for name in SEARCHABLE if name in SOURCES]
     chosen = selected()
+    installed = sorted(name for name in SOURCES if chosen is None or name in chosen)
+    searchable = [name for name in SEARCHABLE if name in installed]
     deselected = set(_CARD_TOOL_NAMES) - chosen if chosen is not None else set()
 
     return {
         "installed": installed,
         "searchable": searchable,
-        "not_installed": sorted(set(_SEARCH_IMPLS) - set(SOURCES) - deselected),
+        "not_installed": sorted(set(_SEARCH_IMPLS) - set(installed) - deselected),
         "deselected": sorted(deselected),
         "notes": {
             "detsky_mir": (
                 "installed for direct card/category lookups but excluded from text comparison — "
                 "its API has no working text search"
             )
-            if "detsky_mir" in SOURCES
+            if "detsky_mir" in installed
             else ("deselected by MARKETPLACE_SOURCES" if "detsky_mir" in deselected else "not installed"),
             "ozon": ("requires curl_cffi and, when Cloudflare challenges, a logged-in Chrome on the CDP port"),
             "yandex_market": "reports both an everyday price and a Plus-subscriber price",

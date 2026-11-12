@@ -9,6 +9,18 @@
 
 ## [Unreleased]
 
+### Fixed
+- Сравнение: `MARKETPLACE_SOURCES` применяется до импорта коннекторов. Уже
+  загруженная отключённая площадка больше не попадает в доступные источники
+  `compare_sources`, а `compare_verify_offer` и `decision_inspect` отклоняют её
+  с `bad_request`, как `compare_prices(sources=…)`. Без переменной или с пустым
+  значением поведение не меняется (#225).
+- Comparison: `MARKETPLACE_SOURCES` is applied before importing connectors.
+  A previously loaded disabled source no longer appears as available in
+  `compare_sources`, and `compare_verify_offer` and `decision_inspect` reject it
+  with `bad_request`, like `compare_prices(sources=…)`. Unset or blank selection
+  keeps the previous behavior (#225).
+
 ### Changed
 - README: русский README короче. Описание инструментов по площадкам перенесено
   в `docs/TOOLS.ru.md`, в README остался список со ссылками. Команды из
