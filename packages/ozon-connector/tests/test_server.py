@@ -206,8 +206,9 @@ def test_parse_search_tile_reads_textds_tile_name():
     parsed = server._parse_search_tile(item)
 
     assert parsed["title"] == "Network filter AGNI 5 sockets"
-    assert parsed["price"] == "2 890 ₽"
-    assert parsed["rating"] == "4.9"
+    assert parsed["price"] == 2890.0
+    assert parsed["rating"] == 4.9
+    assert parsed["rating_count"] == 19189
     assert parsed["stock"] == "1577 шт осталось"
 
 

@@ -25,7 +25,7 @@ step, not something already in place.
 # PURPOSE: Normalize drifting upstream values and report structural health honestly.
 # SCOPE: Offline coercion, validation, shape fingerprints and tri-state canaries.
 # DEPENDS: stdlib math,re,collections.abc,typing; mcp_core.redact; no network or persistence.
-# LINKS: M-RESILIENCE; M-DOM; M-MODELS.
+# LINKS: M-RESILIENCE; M-DOM; M-MODELS; R-OZON-SEARCH-NUMERIC.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # DECOY_MARKERS: The one list of non-price text markers, shared with the DOM decoy regex.
@@ -207,7 +207,7 @@ def coerce_count(value: Any) -> int | None:
 
 # The unit labels a marketplace puts in front of / behind a counter. Only
 # these are stripped; any other word stays in the text and makes it ambiguous.
-_COUNT_LABEL_RE = re.compile(r"(?i)\b(?:отзыв\w*|review(?:s)?|оценк\w*)\b")
+_COUNT_LABEL_RE = re.compile(r"(?i)\b(?:отзыв\w*|review(?:s)?|оцен(?:к\w*|ок))\b")
 # Spaces a marketplace uses as a thousands separator: plain, no-break
 # (U+00A0), narrow no-break (U+202F) and thin (U+2009).
 _COUNT_SPACES = " \u00a0\u202f\u2009"

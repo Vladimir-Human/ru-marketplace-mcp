@@ -28,7 +28,7 @@ CASES = [
 SAMPLE_ITEMS = {
     "wb": lambda m: m.WbCardItem(nm_id=1, name="x", price_rub=100.0, total_quantity=2, in_stock=True),
     "yandex": lambda m: m.YandexProduct(product_id="1", title="x", price_rub=100.0),
-    "ozon": lambda m: m.OzonSearchItemOut(sku="1", title="x", price="100 ₽"),
+    "ozon": lambda m: m.OzonSearchItemOut(sku="1", title="x", price=100.0),
     "avito": lambda m: m.AvitoSearchItemOut(item_id=1, title="x", price_rub=100.0),
     "taobao": lambda m: m.TaobaoSearchItemOut(item_id="1", title="x", price_cny=100.0),
     "megamarket": lambda m: m.MegamarketSearchItemOut(item_id="1", title="x", price_rub=100.0),
