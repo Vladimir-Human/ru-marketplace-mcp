@@ -1,6 +1,6 @@
 {
   "name": "ru-marketplace-mcp-dsh",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "12 Russian and Chinese marketplaces and classifieds (Wildberries, Ozon, Yandex Market, Avito, Cian, AliExpress, Taobao, Detsky Mir, Megamarket, Lamoda, DNS, Citilink) as MCP servers and 15 Agent Skills for DeepSeek Harness",
   "type": "module",
   "license": "MIT",

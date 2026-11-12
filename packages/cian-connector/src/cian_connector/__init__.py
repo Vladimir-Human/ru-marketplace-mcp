@@ -1,3 +1,3 @@
 """Cian (cian.ru) MCP connector — Russian real-estate listings."""
 
-__version__ = "2.9.1"
+__version__ = "2.9.2"

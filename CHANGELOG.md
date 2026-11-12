@@ -9,7 +9,33 @@
 
 ## [Unreleased]
 
+## [2.9.2] - 2026-11-12
+
+### Added
+- Манифесты для каталогов клиентов: `.claude-plugin/` (Claude Code),
+  `.codex-plugin/`, `.cursor-plugin/`, `gemini-extension.json`, `.mcp.json`,
+  `smithery.yaml`, `skills.sh.json` и инструкция `llms-install.md`. Их версии
+  сверяет и поднимает тот же гейт версий. Исправлен YAML во frontmatter навыка
+  AliExpress (#208, #209, #211, #213).
+- Client catalog manifests: `.claude-plugin/` (Claude Code), `.codex-plugin/`,
+  `.cursor-plugin/`, `gemini-extension.json`, `.mcp.json`, `smithery.yaml`,
+  `skills.sh.json` and the `llms-install.md` guide. The version gate checks and
+  bumps their versions too. The AliExpress skill frontmatter is valid YAML again
+  (#208, #209, #211, #213).
+
 ### Fixed
+- Ozon: `ozon_reviews` принимает `itemId` отзыва и строкой из цифр
+  (`"3157082368"`), а не только числом. Раньше такие отзывы теряли `item_id`, и
+  `own_reviews` молча показывал `0`. Если ни у одного отзыва нет `item_id`,
+  ответ теперь предупреждает `review_item_id_missing` и не считается здоровым;
+  `ozon_selfcheck` ловит такой дрейф (#214).
+- Ozon: `ozon_reviews` accepts a review `itemId` given as a decimal string
+  (`"3157082368"`), not only as a number. Such reviews used to lose `item_id`
+  and `own_reviews` silently reported `0`. When no returned review has an
+  `item_id`, the answer now warns `review_item_id_missing` and is not healthy;
+  `ozon_selfcheck` catches this drift (#214).
+- README: кнопки установки в Cursor и VS Code ведут на рабочие ссылки (#212).
+- README: the Cursor and VS Code install buttons use working links (#212).
 - Сравнение: `MARKETPLACE_SOURCES` применяется до импорта коннекторов. Уже
   загруженная отключённая площадка больше не попадает в доступные источники
   `compare_sources`, а `compare_verify_offer` и `decision_inspect` отклоняют её
