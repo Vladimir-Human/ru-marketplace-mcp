@@ -8,6 +8,18 @@ The ``meta`` field is populated from the ``_meta`` key that
 ``resilience.attach_meta`` writes, and serializes back to ``meta`` on the wire.
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Define typed Ozon card, review, search and selfcheck wire responses.
+# SCOPE: Nullable numeric RUB prices, 0..5 ratings and integer tile counts; unchanged aliases/envelopes.
+# DEPENDS: Pydantic; mcp_core.models.
+# LINKS: M-OZON; R-OZON-SEARCH-NUMERIC.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# OzonCardResponse/OzonReviewsResponse: Card and review response models.
+# OzonSearchItemOut/OzonSearchResponse: Numeric tile values and bounded search results.
+# OzonSelfcheckResponse: Operator-only canary response.
+# END_MODULE_MAP
+
 from __future__ import annotations
 
 from typing import Any
@@ -97,15 +109,23 @@ class OzonReviewsResponse(BaseModel):
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
 
 
+# START_BLOCK_SEARCH_OUTPUT
 class OzonSearchItemOut(BaseModel):
     sku: int | str | None = Field(default=None, description="Product SKU (nmId).")
     url: str | None = Field(default=None, description="Canonical Ozon product URL.")
     canonical_path: str | None = Field(default=None, description="Canonical /product/<digits>/ path.")
     card_input: str | None = Field(default=None, description="Input string to pass to ozon_card for full details.")
     title: str | None = Field(default=None, description="Product title.")
-    price: str | None = Field(default=None, description="Display price string.")
-    price_original: str | None = Field(default=None, description="Strikethrough original price string.")
-    rating: str | None = Field(default=None, description="Rating display string.")
+    price: float | None = Field(
+        default=None, description="Current/sale price shown on the tile in rubles; None when absent or unparseable."
+    )
+    price_original: float | None = Field(
+        default=None,
+        description="Strikethrough reference price in rubles, not an offer; None when absent or unparseable.",
+    )
+    rating: float | None = Field(
+        default=None, description="Product rating on the 0..5 scale; None when absent or invalid."
+    )
     rating_count: int | None = Field(
         default=None,
         description=(
@@ -134,6 +154,9 @@ class OzonSearchResponse(BaseModel):
     )
     items: list[OzonSearchItemOut] = Field(default_factory=list, description="Search result items (max 30).")
     meta: MetaOut = Field(default_factory=MetaOut, alias="_meta", description="Validation metadata.")
+
+
+# END_BLOCK_SEARCH_OUTPUT
 
 
 class OzonSelfcheckCheckOut(SelfCheckEntryBase):

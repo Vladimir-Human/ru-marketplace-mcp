@@ -14,7 +14,9 @@ covered.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+import pytest
 from compare_connector import server as compare
 from ozon_connector import server as ozon
 
@@ -47,6 +49,38 @@ def _patch_ozon(monkeypatch, tiles: list[dict]) -> None:
     monkeypatch.setattr(ozon, "_fetch_composer", fake_fetch)
     monkeypatch.setitem(compare.SOURCES, "ozon", ozon)
     ozon._cache.clear()
+
+
+@pytest.mark.parametrize("rating_text,priced", [("4.9", True), ("0.0", True), ("4.9", False)])
+async def test_numeric_search_fields_reach_compare_unchanged(monkeypatch, rating_text, priced):
+    """R-OZON-SEARCH-NUMERIC: numeric/null prices, zero ratings and counts survive comparison."""
+    fixture = Path(__file__).resolve().parents[2] / "ozon-connector/tests/fixtures/search_composer_live.json"
+    payload = json.loads(fixture.read_text(encoding="utf-8"))
+    widget = json.loads(next(iter(payload["widgetStates"].values())))
+    tile = widget["items"][0]
+    for atom in tile["mainState"]:
+        if atom["type"] == "priceV2":
+            atom["priceV2"]["price"][0]["text"] = "17\u00a0324 ₽" if priced else "17 324 ₽ 27 949 ₽"
+            atom["priceV2"]["price"][1]["text"] = "27\u202f949 ₽"
+        elif atom["type"] == "labelListV2":
+            labels = atom["labelListV2"]
+            if labels["testInfo"]["automatizationId"] == "tile-list-rating":
+                texts = [sub["text"] for sub in labels["items"] if sub["type"] == "text"]
+                texts[0]["text"] = rating_text
+                texts[1]["text"] = "2\u202f518 оценок"
+    _patch_ozon(monkeypatch, [tile])
+
+    result = await compare.compare_prices("ноутбук", sources=["ozon"])
+
+    offer = result.offers[0]
+    assert offer.price_rub == (17324.0 if priced else None)
+    assert offer.rating == float(rating_text)
+    assert offer.rating_count == 2518
+    if priced:
+        assert result.cheapest.price_rub == 17324.0
+    else:
+        assert result.cheapest is None  # the original price is never a substitute offer
+        assert any("price_unparseable" in w for w in result.warnings)
 
 
 async def test_a_magnitude_review_count_never_reaches_the_comparison_as_an_integer(monkeypatch):

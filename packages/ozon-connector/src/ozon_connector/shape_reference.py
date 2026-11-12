@@ -20,15 +20,27 @@ and price-less cases are already loud through the no_items warning and
 ``validate_offer`` aggregation.
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Pin the normalized search fingerprint and navigability tripwire.
+# SCOPE: Captured fixture types; required URL family only, not upstream availability.
+# DEPENDS: mcp_core.resilience; ozon_connector.server; captured search fixture.
+# LINKS: M-OZON; R-OZON-SEARCH-NUMERIC; R-SHAPE-DRIFT-WARNING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# SEARCH_SHAPE_REFERENCE: Numeric normalized types measured from the captured tiles.
+# SEARCH_REQUIRED_FAMILIES: URL presence required by tool and canary.
+# END_MODULE_MAP
+
 from __future__ import annotations
 
+# START_BLOCK_SEARCH_SHAPE
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].canonical_path:str",
     "items[].card_input:str",
-    "items[].price:str",
+    "items[].price:float",
+    "items[].price_original:float",
     "items[].price_original:null",
-    "items[].price_original:str",
-    "items[].rating:str",
+    "items[].rating:float",
     "items[].rating_count:int",
     "items[].sku:int",
     "items[].stock:null",
@@ -38,6 +50,7 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
 )
 
 # Key families whose PRESENCE the tile parser depends on; the type may
-# legitimately vary with the data (``price_original:str`` on a discounted
+# legitimately vary with the data (``price_original:float`` on a discounted
 # tile, ``:null`` on a tile without one).
 SEARCH_REQUIRED_FAMILIES: tuple[tuple[str, ...], ...] = (("items[].url",),)
+# END_BLOCK_SEARCH_SHAPE

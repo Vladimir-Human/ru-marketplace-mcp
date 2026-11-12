@@ -9,6 +9,20 @@
 
 ## [Unreleased]
 
+### Fixed
+- Ozon: `ozon_search` отдаёт `price` и `price_original` числами в рублях,
+  `rating` — числом, а не строками для показа. Это изменение типов полей;
+  отсутствующие и неразбираемые значения остаются `null`. `rating_count`
+  больше не теряется, если список рейтинга показывает число без скобок или
+  с подписью «оценок», а не «отзывов». `compare_prices` сохраняет числовые
+  значения, включая рейтинг `0.0` (#226).
+- Ozon: `ozon_search` returns `price` and `price_original` as numbers in rubles
+  and `rating` as a number instead of display strings. This changes the field
+  types; missing and unparseable values remain `null`. `rating_count` is no
+  longer lost when the rating list shows a bare count or an «оценок» label
+  instead of «отзывов». `compare_prices` preserves the numeric values,
+  including a `0.0` rating (#226).
+
 ### Changed
 - README: русский README короче. Описание инструментов по площадкам перенесено
   в `docs/TOOLS.ru.md`, в README остался список со ссылками. Команды из
