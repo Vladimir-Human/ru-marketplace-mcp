@@ -92,7 +92,7 @@ from lamoda_connector.shape_reference import (
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.9.1"
+SERVER_VERSION = "2.9.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 SITE_BASE = "https://www.lamoda.ru"

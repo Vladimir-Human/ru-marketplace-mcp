@@ -1,3 +1,3 @@
 """Cross-marketplace price comparison MCP connector."""
 
-__version__ = "2.9.1"
+__version__ = "2.9.2"
