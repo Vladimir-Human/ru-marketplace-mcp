@@ -28,7 +28,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
-# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION.
+# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
@@ -486,9 +486,8 @@ def _wb_product_url(nm_id: object) -> str:
     return f"https://www.wildberries.ru/catalog/{nm_id}/detail.aspx" if nm_id else ""
 
 
-# Ozon's search tiles carry display text, not numbers: "1 234 ₽" for a price and
-# "4,8" for a rating, with non-breaking and narrow no-break spaces as thousands
-# separators and a comma decimal mark.
+# Native search prices are numeric or None; shared coercion also accepts older
+# display strings, including localized decimal marks and grouping spaces.
 def _as_price(value: object) -> float | None:
     """Coerce a marketplace price into a float, or ``None`` when there isn't one.
 
@@ -684,7 +683,7 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
                 brand="",
                 seller="",
                 price_rub=_as_price(item.price),
-                rating=_as_price(item.rating),
+                rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),
                 url=item.url or "",

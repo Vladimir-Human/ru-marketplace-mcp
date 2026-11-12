@@ -20,6 +20,8 @@ env/
 
 # Testing / tooling caches
 .pytest_cache/
+pytest-cache-files-*/
+.tmp/
 .mypy_cache/
 .ruff_cache/
 .hypothesis/

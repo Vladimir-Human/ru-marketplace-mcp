@@ -1,7 +1,7 @@
 {
   "release": "2.9.1",
-  "phase": "issue_225_partial_fix_gates_blocked",
-  "base_commit": "fd36678",
+  "phase": "issue_225_fixed_full_offline_gate_passed",
+  "base_commit": "8445e30",
   "branch": "fix/compare-mounted-sources",
   "requirements": [
     "R-COMPARE-SOURCE-SELECTION",
@@ -9,12 +9,12 @@
     "R-TOOL-SCHEMA"
   ],
   "source_hashes": {
-    "packages/compare-connector/src/compare_connector/server.py": "d92b264245b083160f9cd8dafa46001a040ce2bb21f8bc3e59d3dd02c265d186",
+    "packages/compare-connector/src/compare_connector/server.py": "b58fe3d1b35005a86a4337d7709cc21553624c84f89e94af657090306e015fbc",
     "packages/compare-connector/tests/test_source_selection.py": "2bca9fdeaa809cbc614e4ea008cc97db23aae8a6a72728f0250e5cde23f2d92c",
-    "packages/mcp-core/src/mcp_core/resources.py": "7a70998e46b83cf563ebddce2f03d5d0c3ad648aa20ba98482a226c4753c9fa7",
-    ".grace/context/requirements.xml": "f02dc4342cd21b5da9152761a9dec7937a80c186eca06ab6f9c7df1a0c2744c2",
-    ".grace/graph/index.xml": "2d7da7283e5113a75a0c26bf4c2f25e52534f15d0a5598425d8b425f4e235c4b",
-    ".grace/verification/index.xml": "adc21a47d92050a3c6c3d368f5568ce648501159f3fa65652595b24efb3f1a17"
+    "packages/mcp-core/src/mcp_core/resources.py": "fba62a206defdbab010fc2b458de289d6882199c20b76883b6c08eca25a28345",
+    ".grace/context/requirements.xml": "17b1612025b8fe5c77a70c985680329339a12fc95a330777ea45938cc407b830",
+    ".grace/graph/index.xml": "3dbb2c96981464b0cbc32e095cd423aa1a709ea3d16f97cfa2b7af2d09d11722",
+    ".grace/verification/index.xml": "870902068a329ba8e962a782f3f4516938b1513f4a9f176ba543827ef8ba1a77"
   },
   "checks": {
     "baseline_fd36678": "4 failed, 6 passed: extra disabled discovery imports, stale installed inventory, compare_verify_offer and decision_inspect called disabled AliExpress instead of returning bad_request. Default-price cold/preloaded/unset/blank controls passed. Log: tmp/issue225-baseline-mounted.log",
@@ -33,7 +33,9 @@
     "uv run python scripts/check_provenance.py": "pass: 41 pins, 49 sidecars, 13 pre-existing completeness exceptions",
     "uv run python scripts/check_versions.py": "pass: 2.9.1 in 93 declarations",
     "uv run python scripts/check_lock_revision.py": "pass: revision 5",
-    "GRACE_XML_and_git_diff_check": "pass before this evidence update"
+    "GRACE_XML_and_git_diff_check": "pass before this evidence update",
+    "full_offline_gate_before_merge": "3450 passed, 2 skipped (uv run pytest -q -m 'not live and not cdp'); ruff format --check pass. Run by Claude on f0f047d.",
+    "merge_with_main_8445e30": "Merged origin/main 8445e30 (#227) into f0f047d; test-count docs 3464. ruff check/format, mypy (native and win32), check_no_print, check_test_count, check_provenance, check_versions, check_lock_revision, gen_tools_doc --check: pass; pytest offline 3462 passed, 2 skipped. Run by Claude."
   },
   "published_wheel": {
     "url": "https://files.pythonhosted.org/packages/1e/31/db811b44941429e5bf5e4e44cdf7d5f66fbd8e6bea057bfe9feda96a0fe8/ru_marketplace_mcp-2.9.1-py3-none-any.whl",
@@ -42,11 +44,8 @@
   },
   "not_proven": [
     "The reporter full-price fan-out under a stable explicit environment was not reproduced; no causal browser-show or registry-widening path was established.",
-    "Live marketplace/CDP behavior was not tested.",
-    "Full suite and whole-repository formatting must pass before commit; nothing staged or committed yet."
+    "Live marketplace/CDP behavior was not tested."
   ],
-  "blocking_condition": "Windows access denied on Python-created temporary directories; the one unconfined permission-repair request could not run because no approval channel is available. No permissions or owners were changed.",
-  "next_action": "User temporarily enables full access; remove only verified generated cache junk, rerun full gates, then stage explicit paths and commit without push. Do not claim the original price symptom reproduced.",
   "checked_on_utc": "2026-11-12T21:03:39.900962+00:00",
   "previous_evidence": {
     "release": "2.9.1",

@@ -22,6 +22,7 @@ from mcp_core.resilience import bound_warnings, coerce_count
     ("raw", "expected"),
     [
         ("24 086 отзывов", 24086),
+        ("2\u00a0518 оценок", 2518),
         ("1 200", 1200),
         ("1200", 1200),
         ("(15 374)", 15374),
@@ -33,7 +34,7 @@ from mcp_core.resilience import bound_warnings, coerce_count
     ],
 )
 def test_a_count_the_text_names_keeps_its_value(raw: object, expected: int) -> None:
-    """The ordinary forms parse; the thousands separator is not a second number."""
+    """R-OZON-SEARCH-NUMERIC: labelled/grouped counts keep their exact value."""
     assert coerce_count(raw) == expected
 
 

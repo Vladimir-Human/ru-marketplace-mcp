@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; packages/ozon-connector/tests.
+# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -28,7 +28,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # _safe_review_page_path: Rebuild pagination from validated review components.
 # _coerce_review_item_id: Normalize positive int or ASCII decimal-string review itemId to int.
 # _parse_review_item: Normalize review text, score, author and variant item_id.
-# _parse_search_tile: Preserve offer identity, price kinds and stock warnings.
+# _parse_search_tile: Preserve identity/stock; coerce RUB prices, rating and count with raw-value warnings.
 # ozon_card: Read a validated SKU/product path with a required widgetStates object.
 # ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data;
 #               warn when returned reviews lose item_id provenance.
@@ -1123,6 +1123,10 @@ async def _ozon_reviews_impl(
     )
 
 
+# START_BLOCK_SEARCH
+# R-OZON-SEARCH-NUMERIC: normalize tile values with shared helpers, retaining raw-value diagnostics.
+
+
 def _atom_text(atom: dict, type_key: str) -> str | None:
     """Extract text from a mainState atom of given type."""
     if atom.get("type") != type_key:
@@ -1269,15 +1273,14 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
                 txt = txt_obj.get("text") if isinstance(txt_obj, dict) else None
                 if not isinstance(txt, str) or not txt:
                     continue
-                # Rating, e.g. "4,8" or "4.8"
-                if not rating and re.match(r"^\d[.,]\d", txt):
+                # A plain decimal score is the rating, not a counter/magnitude.
+                if rating is None and re.fullmatch(r"\d[.,]\d+", txt.strip()):
                     rating = txt
-                # Review count: Nov-2026 format "24 086 отзывов" (no parens);
-                # older format was "(15 374)". The label is split off and the
-                # number parsed strictly (mcp_core.coerce_count): a glued
-                # digit run turned "1.2K отзывов" into the plausible-but-wrong
-                # 12 and kept the answer healthy (R05).
-                elif not rating_count and ("отзыв" in txt or ("(" in txt and ")" in txt)):
+                # Pass every other rating-list text to the shared strict count
+                # parser: it handles отзывов/оценок, bare grouped digits and
+                # parentheses, and refuses magnitude forms instead of guessing.
+                # The old отзыв/parens filter discarded supported counters (#226).
+                elif rating_count is None:
                     rating_count = R.coerce_count(txt)
 
     out["title"] = title
@@ -1286,6 +1289,14 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
     out["rating"] = rating
     out["rating_count"] = rating_count
     out["stock"] = stock_label
+    # Validate raw values before coercion so a refused price/rating does not
+    # silently become a healthy null. This internal key is not in the wire model.
+    validation_warnings = R.validate_offer(out, require_title=True)
+    if validation_warnings:
+        out["_validation_warnings"] = validation_warnings
+    out["price"] = R.coerce_price(price_text)
+    out["price_original"] = R.coerce_price(price_original_text)
+    out["rating"] = R.coerce_rating(rating)
     return out
 
 
@@ -1300,7 +1311,7 @@ def _aggregate_offer_warnings(items: list[dict]) -> list[str]:
 
     tally: Counter = Counter()
     for it in items:
-        for w in R.validate_offer(it, require_title=True):
+        for w in it.get("_validation_warnings") or R.validate_offer(it, require_title=True):
             tally[w.split(":")[0]] += 1
     n = len(items)
     out: list[str] = []
@@ -1493,6 +1504,9 @@ async def _ozon_search_impl(
             source="ozon_search",
         )
     )
+
+
+# END_BLOCK_SEARCH
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls ozon_selfcheck()

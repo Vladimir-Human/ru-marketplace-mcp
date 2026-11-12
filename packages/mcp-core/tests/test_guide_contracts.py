@@ -8,7 +8,7 @@ fixtures are replayed offline alongside small synthetic API/DOM answers.
 # PURPOSE: Verify every guide against actual MCP replies and synthetic source failures.
 # SCOPE: Serialized fields/aliases/envelopes, conditional and partial prices, AliExpress challenges.
 # DEPENDS: pytest; FastMCP Client; connector servers; existing offline fixtures.
-# LINKS: M-RESOURCES; R-GUIDE-CONTRACTS; R-OFFLINE; R-NO-FABRICATION.
+# LINKS: M-RESOURCES; R-GUIDE-CONTRACTS; R-OFFLINE; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _prepare: Replace upstream reads, never public tool implementations.
@@ -218,6 +218,11 @@ def _prepare(monkeypatch, tool_name, mode="normal"):
                 ]
             },
         }
+        if tool_name == "ozon_search":
+            # R-OZON-SEARCH-NUMERIC: exercise non-null wire types on real captured atoms.
+            captured = json.loads(_fixture("ozon", "search_composer_live.json"))["widgetStates"]
+            widgets.update({key: json.loads(value) for key, value in captured.items()})
+            del widgets["tileGridDesktop-1"]
         calls = []
 
         async def composer(path, ctx):
@@ -512,6 +517,17 @@ async def test_each_guide_matches_public_tool_answer(monkeypatch, tool_name):
     if tool_name == "compare_prices":
         assert answer["cheapest"]["price_rub"] == 1234
         assert answer["cheapest_comparable"]["price_rub"] == 1234
+    if tool_name == "ozon_search":
+        # R-OZON-SEARCH-NUMERIC: JSON numbers/null, not localized display strings.
+        assert answer["count"] == 3
+        assert {key: answer["items"][0][key] for key in ("price", "price_original", "rating", "rating_count")} == {
+            "price": 39534.0,
+            "price_original": 66888.0,
+            "rating": 5.0,
+            "rating_count": 339,
+        }
+        assert answer["items"][1]["price_original"] is None
+        assert "rubles" in text
     if tool_name == "wb_search":
         assert set(answer) == {"result"} and answer["result"]["count"] == 1
     if tool_name == "compare_browser_snapshot":

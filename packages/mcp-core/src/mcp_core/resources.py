@@ -34,7 +34,7 @@ contract tests check these guides against synthetic upstream answers.
 # PURPOSE: Serve behavioral guides with generated serialized fields and the error taxonomy.
 # SCOPE: Wire aliases/envelopes, field schemas, resource registration, one shared error URI per profile.
 # DEPENDS: mcp_core.errors, mcp_core.output_schema; Pydantic, FastMCP resources/tools/transforms; json, typing.
-# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION.
+# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # GUIDE_SCHEME: URI scheme of the per-tool guides.
@@ -617,6 +617,10 @@ keeps _meta.healthy=true). Zero parsed items is NOT an error, but it is NOT
 healthy either: count=0 with empty items carries a `no_items` warning
 (_meta.healthy=false), because an empty tile grid and a tileGrid selector
 that stopped matching look the same from here.
+Prices are numbers in rubles: price is the current/sale amount shown on the tile,
+price_original is a strikethrough reference, not another offer. rating is a
+number on the 0..5 scale; rating_count is an integer from the tile's rating list,
+not fetched from the card. Missing or unparseable values are null.
 
 ## Error Format
 
