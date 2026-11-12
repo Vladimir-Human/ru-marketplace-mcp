@@ -34,7 +34,7 @@ contract tests check these guides against synthetic upstream answers.
 # PURPOSE: Serve behavioral guides with generated serialized fields and the error taxonomy.
 # SCOPE: Wire aliases/envelopes, field schemas, resource registration, one shared error URI per profile.
 # DEPENDS: mcp_core.errors, mcp_core.output_schema; Pydantic, FastMCP resources/tools/transforms; json, typing.
-# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-OZON-SEARCH-NUMERIC.
+# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # GUIDE_SCHEME: URI scheme of the per-tool guides.
@@ -342,19 +342,21 @@ proof of the cheapest price across sources that failed or returned degraded data
 ## Error Format
 
 On validation failure, raises ToolError with a JSON message describing the
-error code and whether it is retryable. Individual source failures do NOT
-raise — they are reported in `source_outcomes`.""",
+error code and whether it is retryable. Explicit sources disabled by
+MARKETPLACE_SOURCES are bad_request, not silently queried. Individual source
+failures do NOT raise — they are reported in `source_outcomes`.""",
     "compare_sources": """## Return Format
 
 Plain object: {installed, searchable, not_installed, deselected, notes,
 source_timeout_s, server_version, server_started_at, process_id}. notes
 explains per-source access quirks (CDP-only sources, currencies, missing
-text search).
+text search). installed and searchable include only sources allowed by
+MARKETPLACE_SOURCES; cached imports do not override deselection.
 
 ## Error Format
 
-Never raises ToolError: pure introspection of which connector packages
-are installed — nothing here touches the network.""",
+Never raises ToolError: pure introspection of available configured connectors —
+nothing here touches the network.""",
     "compare_verify_offer": """## Return Format
 
 JSON object: `{source, product_id_or_url, card, price_verification}`.
@@ -375,9 +377,9 @@ Without it, only the current default card price is checked.
 
 ## Error Format
 
-Raises `BadRequestError` when the source is unknown, not installed, or the
-identifier cannot be validated; native card errors are returned as tool
-errors with their source-specific taxonomy.""",
+Raises `BadRequestError` when the source is unknown, not installed, disabled by
+MARKETPLACE_SOURCES, or the identifier cannot be validated; native card errors
+are returned as tool errors with their source-specific taxonomy.""",
     "decision_inspect": """## Return Format
 
 JSON object: `{source, product_id_or_url, card}`. `card` is the native source
@@ -391,8 +393,9 @@ Native Wallet/Plus-only prices are still conditional, not everyday prices.
 ## Error Format
 
 Raises `BadRequestError` when the source has no supported card inspector, is not
-installed in this profile, or the identifier cannot be validated (a positive
-numeric id or the source's canonical product URL); failures of the native card
+installed in this profile, disabled by MARKETPLACE_SOURCES, or the identifier
+cannot be validated (a positive numeric id or the source's canonical product URL);
+failures of the native card
 tool itself keep their source-specific taxonomy.""",
     "detmir_card": """## Return Format
 

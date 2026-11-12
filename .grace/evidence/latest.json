@@ -1,79 +1,78 @@
 {
   "release": "2.9.1",
-  "phase": "issue_226_numeric_search_focused_verified_full_offline_gate_blocked",
-  "base_commit": "fd36678",
-  "branch": "fix/ozon-search-numeric",
+  "phase": "issue_225_fixed_full_offline_gate_passed",
+  "base_commit": "8445e30",
+  "branch": "fix/compare-mounted-sources",
   "requirements": [
-    "R-OZON-SEARCH-NUMERIC",
-    "R-COUNT-PARSE",
-    "R-NO-FABRICATION",
-    "R-GUIDE-CONTRACTS",
+    "R-COMPARE-SOURCE-SELECTION",
+    "R-OFFLINE",
     "R-TOOL-SCHEMA"
   ],
   "source_hashes": {
-    ".gitignore": "3f47a5d7301b9d8265ca80f41e3e93eafeb8aa788d3a727ec607efb18fc73378",
-    ".grace/context/requirements.xml": "29ba1ada1e0e3ea2a2c24bc92bfec2d0e9f197bcb965a777cf23c5cf5a62c4a8",
-    ".grace/graph/index.xml": "b666bd29bf0d8507448e71d1ce0ceb05fc6c7baf1a43b14a9a28db194763dcd7",
-    ".grace/verification/index.xml": "ff5f41095f4d0618d905fa34d81eae95215c1229124a0ce6cf77ca95de2d28fb",
-    "CHANGELOG.md": "4bb626b0f7f0906b15cd730cb64e00b59178cfbe408e0c599fe08c667491597f",
-    "README.md": "1d1f37e7f168420f4215e1c3a8f8c2458a11d2ce9ce74c053aef9cf545a219ca",
-    "README.en.md": "261c4fea392b9114ade75e4a4b6158c57ff4ce168fa12bba1669aa9738f5f01b",
-    "docs/ARCHITECTURE.md": "ff3e9cbf0fe78611442ed7a0dfa14f4a567ded0362e7bc172355a4b9866ec193",
-    "packages/ozon-connector/src/ozon_connector/server.py": "a7f217fef74660585c8d118212cebe671669123a83b018f73aacbf629220a2d3",
-    "packages/ozon-connector/src/ozon_connector/models_output.py": "41d86a86abecb680a39dbf17ae1b47fb67aa5a6f5d557e893842e40bb05a5fae",
-    "packages/ozon-connector/src/ozon_connector/shape_reference.py": "ef85211a0998b0526e7a06a6e3084b1cd27a3cfd48905c16a56e2610c7191e0a",
-    "packages/ozon-connector/tests/test_search_parser_live.py": "145d69570cd857f7ea2d74f26b575b305f241e59ef17b71696c5d2a5b3a1b113",
-    "packages/ozon-connector/tests/test_server.py": "3117f6728dcc8bcafa738b62584a2f47072cf1ab94246c378d5b40826ceaddec",
-    "packages/mcp-core/src/mcp_core/resilience.py": "74a1fb481af22212b60cc58ac49d73da7a9e4cd35c2d17b3dc59078cc1d59ff5",
-    "packages/mcp-core/src/mcp_core/resources.py": "dc3de9b0780076249d0d00567d398b73257603790f54a37858a7466e9823d9d0",
-    "packages/mcp-core/tests/test_count_and_warning_budget.py": "6a04084217d1fa459ba4445714d5de8735d36837eeba4ab2df1a51cf39640766",
-    "packages/mcp-core/tests/test_guide_contracts.py": "36a1e05dc1c0123eba41feda27efb52b0eb28722290b2c88fcc2bdb5271378df",
-    "packages/compare-connector/src/compare_connector/server.py": "707eec64a83ce5b759482b264395f13eaba0528a81dbf06f8758da86b560bdc6",
-    "packages/compare-connector/tests/test_review_count_adapter.py": "cb0d295c295ba030770a7addb8356a2ddd2fa19b5753718c07441d6fc3724e92",
-    "packages/compare-connector/tests/test_source_warnings.py": "00db9d8e13d3978b21faa3f03c1d896bec8e2b477c1e013d93f480ccd45c5e87"
-  },
-  "fixture": {
-    "path": "packages/ozon-connector/tests/fixtures/search_composer_live.json",
-    "sha256": "141c187698fa1bc56a757e202210cfb8511bfe6d145e3fac58e6c500f6c55df2",
-    "provenance": "Captured 2026-08-07; unchanged fixture and sidecar. Issue regressions replace only displayed values in memory."
+    "packages/compare-connector/src/compare_connector/server.py": "b58fe3d1b35005a86a4337d7709cc21553624c84f89e94af657090306e015fbc",
+    "packages/compare-connector/tests/test_source_selection.py": "2bca9fdeaa809cbc614e4ea008cc97db23aae8a6a72728f0250e5cde23f2d92c",
+    "packages/mcp-core/src/mcp_core/resources.py": "fba62a206defdbab010fc2b458de289d6882199c20b76883b6c08eca25a28345",
+    ".grace/context/requirements.xml": "17b1612025b8fe5c77a70c985680329339a12fc95a330777ea45938cc407b830",
+    ".grace/graph/index.xml": "3dbb2c96981464b0cbc32e095cd423aa1a709ea3d16f97cfa2b7af2d09d11722",
+    ".grace/verification/index.xml": "870902068a329ba8e962a782f3f4516938b1513f4a9f176ba543827ef8ba1a77"
   },
   "checks": {
-    "baseline_issue_fields": "6 failed, 1 passed: four localized price/rating cases remained strings; оценок and bare grouped count remained None; parentheses passed",
-    "baseline_null_and_compare": "4 failed: ambiguous price remained string, оценок count was lost, zero rating was lost",
-    "baseline_mcp_wire": "1 failed: public MCP returned display price/rating strings instead of numeric values",
-    "baseline_shared_count_label": "1 failed, 9 passed: coerce_count returned None for 2 NBSP 518 оценок before the existing label pattern was extended",
-    "focused_after_fix": "198 passed in 6.56s; 28 upstream MCP logging deprecation warnings",
-    "uv sync --locked": "pass; CPython 3.12.12, pinned dependencies installed; uv.lock unchanged",
-    "uv run ruff check .": "pass",
-    "uv run ruff format --check .": "pass; 454 files already formatted; initial scratch-directory scan crashed before temporary artifacts were ignored",
-    "uv run mypy": "pass; no issues in 116 source files",
-    "uv run mypy --platform win32": "pass; no issues in 116 source files",
-    "uv run pytest -q -m \"not live and not cdp\"": "fail; 97 failed, 2870 passed, 5 deselected, 487 errors; inspected failures are Windows temporary-directory PermissionError/WinError 5",
-    "uv run python scripts/check_no_print.py": "pass; 100 files",
-    "uv run python scripts/check_test_count.py": "pass; 3454 tests quoted in 6 places",
-    "uv run python scripts/gen_tools_doc.py --check": "pass; compact public snapshot/generated docs need no nested-field regeneration",
-    "uv run python scripts/check_provenance.py": "pass; 41 pins, 49 sidecars; 13 existing dated exceptions",
-    "uv run python scripts/check_versions.py": "pass; 2.9.1 in 93 places",
-    "uv run python scripts/check_lock_revision.py": "pass; revision 5",
-    "uv lock --check": "pass",
-    "mcp_wire three-profile baseline gate": "pass; compare, decision and marketplace unchanged wire/model costs",
-    "GRACE XML": "pass; three XML files parsed",
-    "changed_file_line_endings": "pass; all changed source/docs/GRACE inputs use LF"
+    "baseline_fd36678": "4 failed, 6 passed: extra disabled discovery imports, stale installed inventory, compare_verify_offer and decision_inspect called disabled AliExpress instead of returning bad_request. Default-price cold/preloaded/unset/blank controls passed. Log: tmp/issue225-baseline-mounted.log",
+    "fixed_selection": "10 passed. Log: tmp/issue225-fixed.log",
+    "final_focused": "160 passed, 6 MCP logging deprecation warnings. Log: tmp/issue225-focused-final.log",
+    "uv sync --locked --all-packages": "pass with worktree-local UV_CACHE_DIR after global cache access was denied; uv.lock unchanged",
+    "uv run ruff check .": "pass; warning for unreadable generated pytest cache directory",
+    "uv run ruff format --check .": "fail: generated pytest-cache-files-md2ygbqy directory is unreadable; 455 files already formatted",
+    "changed_python_ruff_check_and_format": "pass for server.py, test_source_selection.py and resources.py",
+    "uv run mypy": "pass: 116 source files",
+    "uv run mypy --platform win32": "pass: 116 source files",
+    "uv run pytest -q -m \"not live and not cdp\"": "fail: 97 failed, 2868 passed, 5 deselected, 487 errors; temporary-folder Windows permission failures despite TEMP/TMP under tmp/. Log: tmp/issue225-pytest.log",
+    "uv run python scripts/check_no_print.py": "pass: 100 files",
+    "uv run python scripts/check_test_count.py": "pass: 3452 in 6 documented places",
+    "uv run python scripts/gen_tools_doc.py --check": "pass",
+    "uv run python scripts/check_provenance.py": "pass: 41 pins, 49 sidecars, 13 pre-existing completeness exceptions",
+    "uv run python scripts/check_versions.py": "pass: 2.9.1 in 93 declarations",
+    "uv run python scripts/check_lock_revision.py": "pass: revision 5",
+    "GRACE_XML_and_git_diff_check": "pass before this evidence update",
+    "full_offline_gate_before_merge": "3450 passed, 2 skipped (uv run pytest -q -m 'not live and not cdp'); ruff format --check pass. Run by Claude on f0f047d.",
+    "merge_with_main_8445e30": "Merged origin/main 8445e30 (#227) into f0f047d; test-count docs 3464. ruff check/format, mypy (native and win32), check_no_print, check_test_count, check_provenance, check_versions, check_lock_revision, gen_tools_doc --check: pass; pytest offline 3462 passed, 2 skipped. Run by Claude."
   },
-  "logs": {
-    "before": ".tmp/issue226-before.log",
-    "before_extra": ".tmp/issue226-before-extra.log",
-    "before_wire": ".tmp/issue226-before-wire.log",
-    "before_shared_count": ".tmp/issue226-before-count-helper.log",
-    "focused_after": ".tmp/issue226-after.log",
-    "full_offline": ".tmp/issue226-offline.log"
+  "published_wheel": {
+    "url": "https://files.pythonhosted.org/packages/1e/31/db811b44941429e5bf5e4e44cdf7d5f66fbd8e6bea057bfe9feda96a0fe8/ru_marketplace_mcp-2.9.1-py3-none-any.whl",
+    "sha256": "a1a8120b3e6c7067698fe1137fc8547b69dad6d99afc6ed3cee7f4870cb46439",
+    "observation": "Archive digest verified; compare_prices and selected() source inspected, not installed/executed. Both already filter the explicit environment per call."
   },
-  "not_proven": "No live Ozon/CDP calls; issue lacks the raw rating-count atom. Full offline suite must pass outside the restrictive sandbox before commit. TEMP/TMP=.tmp did not resolve permission failures.",
-  "remaining": [
-    "Switch session to full access or enable an approval channel; both exact-command escalation requests failed because no approval channel is available.",
-    "Rerun full offline suite unmodified with jsdom installed; do not skip failing tests.",
-    "Remove verified task-created .tmp and pytest-cache-files-* directories; cleanup was sandbox-denied.",
-    "Stage only the explicit changed paths and commit fix: ozon_search returns numeric price, rating and rating_count (#226). Do not push or open a PR."
+  "not_proven": [
+    "The reporter full-price fan-out under a stable explicit environment was not reproduced; no causal browser-show or registry-widening path was established.",
+    "Live marketplace/CDP behavior was not tested."
   ],
-  "checked_on_utc": "2026-11-12T21:08:42.495101+00:00"
+  "checked_on_utc": "2026-11-12T21:03:39.900962+00:00",
+  "previous_evidence": {
+    "release": "2.9.1",
+    "phase": "issue_214_ozon_review_item_id_fixed_and_verified",
+    "base_commit": "dea4865",
+    "branch": "fix/ozon-review-item-id-214",
+    "requirements": [
+      "R-OZON-REVIEW-ITEM-ID",
+      "R-NO-FABRICATION",
+      "R-DRIFT",
+      "R-OFFLINE",
+      "R-TOOL-SCHEMA",
+      "R-VERSION"
+    ],
+    "source_hashes": {
+      "packages/ozon-connector/src/ozon_connector/server.py": "f08e3b6b8c4c78a3e6aa9dca42dfa9b73ba5fa1a70fd19a31f4cbbe1a12d79dc",
+      "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
+      "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
+    },
+    "checks": {
+      "baseline_dea4865_regression_selection": "4 failed at the exact reported spots: None == 3157082368, [None, 3157082368, None, 1] != [3157082368, 3157082368, 3157082999, None], healthy True != False on all-null sample, selfcheck success != drift_detected",
+      "fixed_ozon_and_guide_contracts_selection": "141 passed in 5.70s",
+      "mypy": "Success: no issues found in 6 source files (packages/ozon-connector/src)",
+      "ruff": "format and check clean on packages/ozon-connector",
+      "repository_gates": "check_no_print (100 files), check_versions (93 places at 2.9.1), gen_tools_doc --check, and .grace XML parsing all exit 0"
+    },
+    "not_proven": "Live Ozon network/CDP calls were not executed in this offline verification run; live webListReviews decimal-string itemId payload was provided in issue #214.",
+    "checked_on_utc": "2026-11-08"
+  }
 }
