@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 from fastmcp.exceptions import ToolError
+from playwright.async_api import Error as PlaywrightError
 from wb_connector import dom_transport as D
 from wb_connector import server
 
@@ -562,6 +563,142 @@ def test_render_reports_the_page_empty_notice(monkeypatch: pytest.MonkeyPatch) -
     _patch_open_page(monkeypatch, page)
     data = _run(D.render(D.search_url("zzzqqq"), D.SEARCH_EXTRACT_JS, "search"))
     assert data["page_says_empty"] is True
+
+
+_NAVIGATION_ERROR = "Page.evaluate: Execution context was destroyed, most likely because of a navigation"
+
+
+class _EvaluationFailurePage(_FakePage):
+    def __init__(self, expression: str, error: Exception) -> None:
+        super().__init__([{"state": "ok", "tiles": 3}], SEARCH_PAYLOAD)
+        self._expression = expression
+        self._error = error
+
+    async def evaluate(self, expression: str, arg: object = None) -> Any:
+        if expression is self._expression:
+            raise self._error
+        return await super().evaluate(expression, arg)
+
+
+def _patch_page_sequence(monkeypatch: pytest.MonkeyPatch, pages: list[Any]) -> tuple[list[str], list[Any]]:
+    import mcp_core.transport.chrome_cdp as cdp
+
+    _patch_open_page(monkeypatch, pages[0])
+    opened: list[str] = []
+    closed: list[Any] = []
+
+    @asynccontextmanager
+    async def fake_open_page(url: str, wait_ms: int = 0, *, allowed_hosts: Any = None):
+        assert allowed_hosts == D.ALLOWED_HOSTS
+        page = pages[len(opened)]
+        opened.append(url)
+        try:
+            if isinstance(page, Exception):
+                raise page
+            yield page
+        finally:
+            closed.append(page)
+
+    monkeypatch.setattr(cdp, "open_page", fake_open_page)
+    return opened, closed
+
+
+@pytest.mark.parametrize("expression", [D.PROBE_JS, D.SEARCH_EXTRACT_JS], ids=["readiness", "extract"])
+def test_render_reopens_once_after_navigation_destroys_evaluation(
+    monkeypatch: pytest.MonkeyPatch, expression: str
+) -> None:
+    first = _EvaluationFailurePage(expression, PlaywrightError(_NAVIGATION_ERROR))
+    second = _FakePage([{"state": "ok", "tiles": 3}], SEARCH_PAYLOAD)
+    opened, closed = _patch_page_sequence(monkeypatch, [first, second])
+    gap_previous_navigation: list[float] = []
+    monkeypatch.setattr(D, "_last_nav", -1.0)
+
+    async def observe_gap() -> None:
+        gap_previous_navigation.append(D._last_nav)
+
+    monkeypatch.setattr(D, "_gap", observe_gap)
+    url = D.search_url("navigation-race")
+    data = _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    assert data["tiles"] == SEARCH_PAYLOAD["tiles"]
+    assert data["page_says_empty"] is False
+    assert opened == [url, url] and closed == [first, second]
+    assert gap_previous_navigation[0] == -1.0
+    assert gap_previous_navigation[1] > 0
+    assert D._last_nav >= gap_previous_navigation[1]
+    assert _run(D.render(url, D.SEARCH_EXTRACT_JS, "search")) == data
+    assert len(opened) == 2  # only a successful render enters the cache
+
+
+def test_render_navigation_retry_is_bounded_and_does_not_cache_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    pages = [_EvaluationFailurePage(D.PROBE_JS, PlaywrightError(_NAVIGATION_ERROR)) for _ in range(2)]
+    opened, closed = _patch_page_sequence(monkeypatch, pages)
+    url = D.search_url("repeated-navigation")
+    with pytest.raises(PlaywrightError, match="Execution context was destroyed"):
+        _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    assert opened == [url, url] and closed == pages
+    assert D._dom_cache.get(url) is None
+
+
+@pytest.mark.parametrize("after_navigation_retry", [False, True], ids=["first-attempt", "second-attempt"])
+def test_render_does_not_retry_http_403(monkeypatch: pytest.MonkeyPatch, after_navigation_retry: bool) -> None:
+    from mcp_core.transport.chrome_cdp import NavBlocked
+
+    pages: list[Any] = [NavBlocked(403)]
+    if after_navigation_retry:
+        pages.insert(0, _EvaluationFailurePage(D.PROBE_JS, PlaywrightError(_NAVIGATION_ERROR)))
+    opened, closed = _patch_page_sequence(monkeypatch, pages)
+    url = D.search_url("blocked-navigation")
+    with pytest.raises(ToolError) as exc:
+        _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    body = json.loads(str(exc.value))
+    assert body["error"] == "transport_down" and body["status_code"] == 403
+    assert len(opened) == len(pages) and closed == pages
+    assert D._dom_cache.get(url) is None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        PlaywrightError("Page.evaluate: Target page, context or browser has been closed"),
+        PlaywrightError("Page.evaluate: TypeError: broken extractor"),
+        PlaywrightError("Page.evaluate: Execution context was destroyed"),
+        RuntimeError(_NAVIGATION_ERROR),
+    ],
+    ids=["target-closed", "other-driver-error", "no-navigation-evidence", "not-a-playwright-error"],
+)
+def test_render_does_not_retry_other_evaluation_errors(monkeypatch: pytest.MonkeyPatch, error: Exception) -> None:
+    page = _EvaluationFailurePage(D.PROBE_JS, error)
+    opened, closed = _patch_page_sequence(monkeypatch, [page])
+    url = D.search_url("driver-failure")
+    with pytest.raises(type(error)) as caught:
+        _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    assert caught.value is error
+    assert opened == [url] and closed == [page]
+    assert D._dom_cache.get(url) is None
+
+
+def test_render_does_not_retry_evaluation_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    page = _EvaluationFailurePage(D.PROBE_JS, TimeoutError("evaluation timed out"))
+    opened, closed = _patch_page_sequence(monkeypatch, [page])
+    url = D.search_url("evaluation-timeout")
+    with pytest.raises(ToolError) as exc:
+        _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    assert json.loads(str(exc.value))["error"] == "transport_down"
+    assert opened == [url] and closed == [page]
+    assert D._dom_cache.get(url) is None
+
+
+@pytest.mark.parametrize("captcha", [False, True], ids=["suspicious-activity", "captcha"])
+def test_render_stops_on_a_block_after_navigation_retry(monkeypatch: pytest.MonkeyPatch, captcha: bool) -> None:
+    first = _EvaluationFailurePage(D.PROBE_JS, PlaywrightError(_NAVIGATION_ERROR))
+    second = _FakePage([{"state": "blocked", "captcha": captcha}], {})
+    opened, closed = _patch_page_sequence(monkeypatch, [first, second])
+    url = D.search_url("challenge-after-navigation")
+    with pytest.raises(ToolError) as exc:
+        _run(D.render(url, D.SEARCH_EXTRACT_JS, "search"))
+    assert json.loads(str(exc.value))["error"] == ("challenge_required" if captcha else "transport_down")
+    assert opened == [url, url] and closed == [first, second]
+    assert D._dom_cache.get(url) is None
 
 
 # --------------------------------------------------------------- tool wiring

@@ -34,6 +34,17 @@ the page shows it, and the Wallet price otherwise — ``price_kind`` says which.
 Parsing is pure Python over plain text lines so it can be tested offline and
 survives CSS class churn; the JS side only collects text.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Read WB search and cards from rendered catalog pages without calling blocked API hosts.
+# SCOPE: Readiness checks, bounded extraction, price-role parsing and successful-result caching.
+# INVARIANTS: Reopen once only for Playwright's navigation-destroyed execution context;
+#             recheck readiness/status/host and keep pacing; never retry a challenge or refusal.
+# LINKS: M-WB; M-CHROME-CDP; R-WB-DOM-NAVIGATION-RETRY.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# render: Under the DOM lock, pace and open an owned page, check readiness and extract;
+#         one navigation-race retry repeats the full checked flow before caching success.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
@@ -797,29 +808,39 @@ async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
         return cached
     try:
         from mcp_core.transport.chrome_cdp import NavBlocked, open_page
+        from playwright.async_api import Error as PlaywrightError
     except ImportError as exc:  # pragma: no cover - playwright ships with the monorepo venv
         raise_tool_error(
             TransportDownError(f"WB_TRANSPORT=dom needs the CDP transport (playwright): {exc}", provider="wb")
         )
     async with _dom_lock:
-        await _gap()
-        try:
-            async with open_page(url, wait_ms=_settings.dom_settle_ms, allowed_hosts=ALLOWED_HOSTS) as page:
-                probe = await _wait_ready(page, want, url)
-                raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
-        except NavBlocked as exc:
-            log_event("wb_dom.nav_blocked", status=exc.status)
-            raise_tool_error(
-                TransportDownError(
-                    f"WB refused the page (HTTP {exc.status}) in the scraping-profile Chrome",
-                    provider="wb",
-                    status_code=exc.status,
+        for attempt in range(2):
+            await _gap()
+            try:
+                async with open_page(url, wait_ms=_settings.dom_settle_ms, allowed_hosts=ALLOWED_HOSTS) as page:
+                    probe = await _wait_ready(page, want, url)
+                    raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
+                break
+            except PlaywrightError as exc:
+                # WB can reload after navigation while its automatic browser check
+                # finishes. Reopen once so readiness, HTTP status and host policy
+                # are checked again, rather than evaluating an unchecked document.
+                if attempt or "Execution context was destroyed, most likely because of a navigation" not in str(exc):
+                    raise
+                log_event("wb_dom.navigation_retry", attempt=attempt + 1)
+            except NavBlocked as exc:
+                log_event("wb_dom.nav_blocked", status=exc.status)
+                raise_tool_error(
+                    TransportDownError(
+                        f"WB refused the page (HTTP {exc.status}) in the scraping-profile Chrome",
+                        provider="wb",
+                        status_code=exc.status,
+                    )
                 )
-            )
-        except TimeoutError:
-            raise_tool_error(TransportDownError("WB page did not answer the extractor in time", provider="wb"))
-        finally:
-            _last_nav = time.monotonic()
+            except TimeoutError:
+                raise_tool_error(TransportDownError("WB page did not answer the extractor in time", provider="wb"))
+            finally:
+                _last_nav = time.monotonic()
     if not isinstance(raw, str) or len(raw.encode()) > MAX_PAYLOAD_BYTES:
         raise_tool_error(ParserDriftError("WB page extractor returned no payload or an oversized one", provider="wb"))
     try:

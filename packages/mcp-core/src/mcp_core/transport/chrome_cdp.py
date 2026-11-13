@@ -33,9 +33,9 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
-# SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy and snapshots.
+# SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy, snapshots and opt-in Ozon OS identity.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -65,6 +65,8 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # browser_status: Report CDP reachability, Chrome version, page count and window state.
 # show_browser_window: Move the scraping Chrome window on-screen and activate the first or named target.
 # open_tabs: Open pages in new tabs over browser-level CDP; never navigates or closes an existing tab.
+# _validate_ozon_compat_url: Limit opt-in OS identity to exact HTTPS Ozon origins, initially and before handback.
+# _windows_chrome_ua_override: Derive Windows OS presentation from Chrome's actual UA, preserving native brands/version.
 # _raw_cdp_page: Create, attach, navigate and finally close one exact raw target.
 # open_owned_popup: Open a raw-CDP popup from an owned page, attribute it by openerId and close only it.
 # _raw_owned_popup: Budget, open, status- and host-check one owned popup; the live-budget hook point.
@@ -1506,12 +1508,67 @@ async def open_tabs(urls: list[str]) -> dict[str, Any]:
     return {"ok": True, "target_ids": target_ids, "reason": None}
 
 
+_OZON_COMPAT_HOSTS = frozenset({"www.ozon.ru", "ozon.ru"})
+
+
+def _validate_ozon_compat_url(url: str) -> None:
+    """Keep the opt-in identity override on exact HTTPS Ozon origins only."""
+    parsed = urlsplit(url)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname not in _OZON_COMPAT_HOSTS
+        or parsed.port not in (None, 443)
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise ValueError("Windows Chrome compatibility requires an exact HTTPS ozon.ru or www.ozon.ru origin")
+
+
+def _windows_chrome_ua_override(browser_version: Mapping[str, Any]) -> dict[str, Any]:
+    """Change only the OS presentation; keep Chrome's real version and brands.
+
+    Browser.getVersion supplies the native UA, including its actual reduced or
+    full Chrome version token. Chromium preserves native brands/fullVersionList
+    and fullVersion when those optional metadata fields are omitted.
+    """
+    native_ua = browser_version.get("userAgent")
+    product = browser_version.get("product")
+    if not isinstance(native_ua, str) or not isinstance(product, str):
+        raise RuntimeError("Browser.getVersion did not supply a consistent native Chrome user agent")
+    product_match = re.fullmatch(r"(?:HeadlessChrome|Chrome)/(\d+)(?:\.\d+){3}", product)
+    ua_match = re.search(r"\b(?:HeadlessChrome|Chrome)/(\d+)(?:\.\d+){3}\b", native_ua)
+    if not product_match or not ua_match or product_match[1] != ua_match[1]:
+        raise RuntimeError("Browser.getVersion did not supply a consistent native Chrome user agent")
+    windows_ua, changed = re.subn(r"\([^)]*\)", "(Windows NT 10.0; Win64; x64)", native_ua, count=1)
+    if not changed:
+        raise RuntimeError("Browser.getVersion user agent has no platform component")
+    return {
+        "userAgent": windows_ua,
+        "platform": "Win32",
+        "userAgentMetadata": {
+            "platform": "Windows",
+            "platformVersion": "15.0.0",
+            "architecture": "x86",
+            "model": "",
+            "mobile": False,
+            "bitness": "64",
+            "wow64": False,
+        },
+    }
+
+
 # START_BLOCK_OWNED_NAVIGATION
 @asynccontextmanager
 async def _raw_cdp_page(
-    url: str, wait_ms: int, *, navigation_timeout_ms: float | None = None
+    url: str,
+    wait_ms: int,
+    *,
+    navigation_timeout_ms: float | None = None,
+    ozon_windows_compat: bool = False,
 ) -> AsyncIterator[_RawCdpPage]:
     """Open a tab over raw CDP, mirroring open_page's guarantees."""
+    if ozon_windows_compat:
+        _validate_ozon_compat_url(url)
     timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     if _websockets is None:
         raise RuntimeError("the raw-CDP fallback needs the 'websockets' package (cdp extra)")
@@ -1561,6 +1618,13 @@ async def _raw_cdp_page(
                 await page._send("Page.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
                 await page._send("Network.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
                 await page._send("Runtime.enable", timeout=_RAW_CONNECT_TIMEOUT_S)
+                if ozon_windows_compat:
+                    version = await browser._send("Browser.getVersion", timeout=_RAW_CONNECT_TIMEOUT_S)
+                    await page._send(
+                        "Network.setUserAgentOverride",
+                        _windows_chrome_ua_override(version),
+                        timeout=_RAW_CONNECT_TIMEOUT_S,
+                    )
                 status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms)
                 if status in _NAV_FAIL_STATUSES:
                     raise NavBlocked(status, page.url)
@@ -1893,12 +1957,28 @@ async def _new_tab(ctx: BrowserContext) -> Page:
 
 @asynccontextmanager
 async def _playwright_page(
-    url: str, wait_ms: int = 5000, *, navigation_timeout_ms: float | None = None
+    url: str,
+    wait_ms: int = 5000,
+    *,
+    navigation_timeout_ms: float | None = None,
+    ozon_windows_compat: bool = False,
 ) -> AsyncIterator[Page]:
+    if ozon_windows_compat:
+        _validate_ozon_compat_url(url)
     timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     async with get_context() as ctx:
         page = await asyncio.wait_for(_new_tab(ctx), timeout=_TAB_OP_TIMEOUT_S)
+        compat_session = None
         try:
+            if ozon_windows_compat:
+                compat_session = await asyncio.wait_for(ctx.new_cdp_session(page), timeout=_RAW_CONNECT_TIMEOUT_S)
+                version = await asyncio.wait_for(
+                    compat_session.send("Browser.getVersion"), timeout=_RAW_CONNECT_TIMEOUT_S
+                )
+                await asyncio.wait_for(
+                    compat_session.send("Network.setUserAgentOverride", _windows_chrome_ua_override(version)),
+                    timeout=_RAW_CONNECT_TIMEOUT_S,
+                )
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             status = resp.status if resp is not None else None
             if status == 403:
@@ -1933,6 +2013,11 @@ async def _playwright_page(
                 await asyncio.wait_for(page.close(), timeout=_TAB_OP_TIMEOUT_S)
             except Exception:
                 pass
+            if compat_session is not None:
+                try:
+                    await asyncio.wait_for(compat_session.detach(), timeout=_RAW_CONNECT_TIMEOUT_S)
+                except Exception:
+                    pass
             # Closing the tab un-hides the app again; tuck it away between calls.
             if STEALTH and sys.platform in ("win32", "darwin"):
                 await asyncio.to_thread(_hide_chrome_windows)
@@ -1974,12 +2059,15 @@ async def open_page(
     *,
     allowed_hosts: Collection[str] | None = None,
     navigation_timeout_ms: float | None = None,
+    ozon_windows_compat: bool = False,
 ) -> AsyncIterator[PageLike]:
     """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
 
     ``navigation_timeout_ms`` overrides ``CHROME_NAV_TIMEOUT_MS`` (default 20000).
     Both transports receive this same positive finite initial-navigation budget;
     attach, settle, recheck, extraction and teardown retain their separate bounds.
+    ``ozon_windows_compat`` changes the OS identity only on the owned Ozon tab,
+    before its first navigation; native brands, versions and language are kept.
 
     Guarantees:
       * non-http(s) schemes are refused outright (scheme guard);
@@ -2010,6 +2098,8 @@ async def open_page(
     low = (url or "").strip().lower()
     if not (low.startswith("http://") or low.startswith("https://")):
         raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
+    if ozon_windows_compat:
+        _validate_ozon_compat_url(url)
     # Default to the origin host. Callers may list a small explicit set for
     # marketplace aliases (for example www + bare host), but redirects to an
     # arbitrary host are never allowed to drive the authenticated profile.
@@ -2021,12 +2111,15 @@ async def open_page(
     permit = await _acquire_navigation_permit(initial_host or "")
     stack = AsyncExitStack()
     page: PageLike
+    page_options: dict[str, Any] = {"navigation_timeout_ms": timeout_ms}
+    if ozon_windows_compat:
+        page_options["ozon_windows_compat"] = True
     try:
         try:
-            page = await stack.enter_async_context(_playwright_page(url, wait_ms, navigation_timeout_ms=timeout_ms))
+            page = await stack.enter_async_context(_playwright_page(url, wait_ms, **page_options))
         except _CdpConnectTimeout as attach_exc:
             try:
-                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms, navigation_timeout_ms=timeout_ms))
+                page = await stack.enter_async_context(_raw_cdp_page(url, wait_ms, **page_options))
             except (NavBlocked, NavigationPolicyError):
                 raise
             except Exception as raw_exc:
@@ -2036,6 +2129,11 @@ async def open_page(
                     f"{attach_exc} The raw-CDP fallback failed too: {type(raw_exc).__name__}: {str(raw_exc)[:160]}"
                 ) from raw_exc
         _check_final_host(page.url, host_policy)
+        if ozon_windows_compat:
+            try:
+                _validate_ozon_compat_url(page.url)
+            except ValueError as exc:
+                raise NavigationPolicyError(page.url, _OZON_COMPAT_HOSTS) from exc
         permit.ok()
     except NavBlocked as exc:
         # The host actively refused the main document: that is the signal the

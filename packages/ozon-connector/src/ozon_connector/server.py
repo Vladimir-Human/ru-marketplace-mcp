@@ -15,14 +15,15 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Ozon product cards, reviews and search through composer data.
-# SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback.
+# SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; packages/ozon-connector/tests.
+# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
 # _canonical_composer_path: Restrict browser fetch routes and query keys.
+# _cdp_fetch_json: Fetch through an owned Ozon tab, requesting Windows OS identity only when explicitly configured.
 # _fetch_composer: Select paced impersonated HTTP or operator-browser fetch.
 # _parse_widgets: Normalize card widget fields without inventing missing prices.
 # _safe_review_page_path: Rebuild pagination from validated review components.
@@ -379,7 +380,10 @@ async def _cdp_fetch_json(api_url: str, ctx: Context | None) -> tuple[int, str]:
     """
 
     async def _attempt() -> tuple[int, str]:
-        async with _cdp_lock, open_page("https://www.ozon.ru/", wait_ms=4000) as page:
+        page_options: dict[str, Any] = {"wait_ms": 4000}
+        if _settings.chrome_compat == "windows":
+            page_options["ozon_windows_compat"] = True
+        async with _cdp_lock, open_page("https://www.ozon.ru/", **page_options) as page:
             raw = await asyncio.wait_for(
                 page.evaluate(
                     """async (args) => {
