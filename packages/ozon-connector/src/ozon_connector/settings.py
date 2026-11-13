@@ -5,6 +5,7 @@ Env vars (all optional, defaults match the pre-settings constants):
   OZON_MAX_BODY_BYTES  - hard cap on any HTTP response body, default 50 MiB
   OZON_MIN_GAP         - polite inter-request gap seconds, default 2.5
   OZON_IMPERSONATE     - curl_cffi fingerprint profile, default "chrome"
+  OZON_CHROME_COMPAT   - native (default) or windows OS identity for owned Ozon CDP tabs
   OZON_SELFCHECK_SKU   - golden-fixture SKU for ozon_selfcheck, default 3015796642
   OZON_CACHE_TTL       - seconds to cache upstream reads, 0 disables, default 120
   OZON_PROXY           - proxy URL for the tier-1 fetch, default unset (honours HTTPS_PROXY)
@@ -17,6 +18,7 @@ before. This module is the single source of truth for env-driven defaults.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,6 +39,10 @@ class OzonSettings(BaseSettings):
     max_body_bytes: int = Field(default=_DEFAULT_MAX_BODY_BYTES, gt=0)
     min_gap: float = Field(default=2.5, ge=0)
     impersonate: str = Field(default="chrome", min_length=1)
+    chrome_compat: Literal["native", "windows"] = Field(
+        default="native",
+        description="Opt-in Windows OS identity for Ozon-owned CDP tabs; native preserves the browser identity.",
+    )
     selfcheck_sku: str = Field(default="3015796642", min_length=1)
     cache_ttl: float = Field(
         default=120.0,

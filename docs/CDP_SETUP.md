@@ -13,7 +13,9 @@ and Avito search use CDP as a **tier-2 fallback**: tier 1 (TLS impersonation) us
 from a Russian residential IP, and CDP only kicks in when the anonymous tier is
 challenged; Avito cards and seller profiles always read the rendered page in Chrome
 (since 2026-10-12). Lamoda is split — cards try anonymous GraphQL first and fall back
-to Chrome when it is refused (the 307 loop, 2026-10-12), search needs CDP. Wildberries, Yandex Market and Detsky Mir never touch it.
+to Chrome when it is refused (the 307 loop, 2026-10-12), search needs CDP.
+Wildberries search and cards also use CDP in `WB_TRANSPORT=dom`, or when their
+configured API-to-DOM fallback runs. Yandex Market and Detsky Mir do not use CDP.
 
 ## Read this before you enable it
 
@@ -108,6 +110,36 @@ holding *this* profile, which would refuse to start a second time. If a CDP
 endpoint already answers on the port, the launcher says so and exits without
 starting anything.
 
+### Linux server without a physical display
+
+A server can run normal, headed Chrome on a virtual X display; a monitor and a
+browser on the MCP client's computer are not required. For example, on Debian or
+Ubuntu with Chrome already installed, choose an unused display and run as your
+ordinary user:
+
+```bash
+sudo apt-get install xvfb xauth
+umask 077
+export DISPLAY=:99
+export XAUTHORITY="${XDG_DATA_HOME:-$HOME/.local/share}/chrome-scraping.Xauthority"
+mkdir -p "$(dirname "$XAUTHORITY")"
+touch "$XAUTHORITY"
+xauth -f "$XAUTHORITY" add "$DISPLAY" . "$(mcookie)"
+Xvfb "$DISPLAY" -screen 0 1280x900x24 -nolisten tcp -noreset -auth "$XAUTHORITY" &
+export CHROME_HEADLESS=0
+```
+
+When Xvfb is ready, run `./scripts/start_chrome_cdp.sh` in that shell.
+Keep `DISPLAY`, `XAUTHORITY`
+and the same `CHROME_SCRAPING_PROFILE` in the environment of the MCP server too.
+For unattended operation, supervise Xvfb and Chrome with your service manager,
+starting Chrome after Xvfb. Run Chrome as an ordinary user with its sandbox.
+
+If a site needs human interaction, view this server display through a VNC/noVNC
+service bound to loopback and an authenticated SSH tunnel. Keep CDP and the viewer
+off the public network. The browser and its persistent profile stay on the Linux
+server. A virtual display does not guarantee that a site's browser check will pass.
+
 ### 2. The window and the two ways to reach it
 
 The launcher scripts start the manual Chrome **on-screen** so you can log in.
@@ -176,6 +208,7 @@ payload shape and the connector needs updating.
 | `CHROME_BINARY` | auto-detected | Explicit path to Chrome/Chromium/Edge |
 | `CHROME_STEALTH` | `1` | Windows: park the window off-screen; macOS: open tabs in the background and keep the app hidden (⌘H) so it never steals focus or switches your Space |
 | `CHROME_HEADLESS` | `0` | Headless mode — detectable, use only on a display-less host |
+| `OZON_CHROME_COMPAT` | `native` | `windows` opts owned Ozon CDP tabs into Windows OS identity; no change to other sources or manually opened tabs |
 
 Auto-detection covers Chrome, Chromium and Edge in the standard locations for all
 three platforms. On Linux it also consults `PATH`.
@@ -196,6 +229,38 @@ extraction and teardown have separate bounds. `compare_prices` still applies
 AliExpress selfchecks keep their 90-second outer limit. A larger navigation setting
 does not override those ceilings. If a normal page needs more time, increase the
 appropriate budgets rather than blocking the site's anti-bot resources.
+
+### Optional Ozon compatibility on Linux
+
+In a November 2026 Linux-server check, Ozon returned HTTP 403 with a suggestion to
+disable VPN even on a direct Russian residential connection. On the same server
+and public IP, a fresh dedicated Chrome profile with Windows OS identity could
+read the catalog, search and a current product card. This is an observation from
+one environment, not proof that every such 403 is caused by the OS identity.
+
+To try that mode, set this in the **MCP server's** environment and restart its
+process. Reconnecting a stdio client is sufficient only if it starts a new server
+process; reconnecting to an already running HTTP server does not reload settings:
+
+```bash
+export OZON_CHROME_COMPAT=windows
+```
+
+Only the Ozon connector's owned CDP tabs opt in, before their first navigation.
+The override presents Windows in the user agent, `navigator.platform` and UA client
+hints while retaining the actual browser's version and brands and leaving language
+unchanged. It applies in both Playwright and raw-CDP fallback. Initial and final
+origins must be exactly HTTPS `ozon.ru` or `www.ozon.ru` on the default HTTPS port.
+Other sources, existing tabs and manually opened `unblock` pages keep their native
+identity. The anonymous HTTP tier is unchanged.
+
+An already rejected scraping profile may still fail. To compare, stop only that
+dedicated Chrome and start it with a **new, separate** `CHROME_SCRAPING_PROFILE`;
+keep the original profile intact, and use the same new path for the launcher and
+MCP process. This is a diagnostic option, not a promise of access. Real 403s,
+CAPTCHAs, host-policy checks, pacing and cooldowns still apply; this mode neither
+changes your IP nor solves a challenge. Set `OZON_CHROME_COMPAT=native` and restart
+the MCP process to restore the default behavior.
 
 ## How it behaves at runtime
 
@@ -224,16 +289,19 @@ same profile directory. Close it, or use a different `--profile`.
 
 **Ozon still blocked with CDP running** — confirm you are logged into ozon.ru *in
 the scraping profile* (not your main browser), and that the session has not
-expired. Open the page manually in that window to check.
+expired. Open the page manually in that window to check. A generic "disable VPN"
+message is not a routing diagnosis: check the actual egress/proxy settings first.
+On Linux, see the optional Ozon compatibility mode above.
 
 **Running in a container as root** — Chrome's sandbox refuses to run as root; the
 launcher adds `--no-sandbox` automatically when it detects that case.
 
 ## Should you use this at all?
 
-If you only need Wildberries, Yandex Market and Detsky Mir: **no**. All three work
-over plain anonymous HTTP, and `compare_prices` will report every CDP source it
-can't reach as blocked and rank the rest.
+If your Wildberries API requests work and you only need Wildberries, Yandex Market
+and Detsky Mir, plain anonymous HTTP may be enough. If WB's API is refused while
+the rendered website works, use the DOM transport. `compare_prices` reports CDP
+sources it cannot reach as blocked and ranks the sources it can read.
 
 You need it the moment Taobao, Megamarket, DNS, Citilink, AliExpress or Cian matter —
 those six have no anonymous tier, so without a logged-in Chrome they return nothing at all. For

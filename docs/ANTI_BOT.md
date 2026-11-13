@@ -14,6 +14,28 @@ inside a real browser.
 
 ## Summary
 
+### Linux server follow-up, November 2026
+
+From one direct Russian residential connection, native Linux Chrome received an
+Ozon 403 page suggesting that VPN be disabled. The same server/IP could read Ozon
+search and a current product card using a fresh persistent Chrome profile and
+Windows OS identity. This does not identify Ozon's internal rejection rule, nor
+does the page's wording prove that a VPN is present. The opt-in
+`OZON_CHROME_COMPAT=windows` mode, its scope and rollback are documented in
+[CDP_SETUP.md](CDP_SETUP.md#optional-ozon-compatibility-on-linux); native identity
+remains the default. No account login or CAPTCHA solving was needed in this check.
+
+WB's API can also return 403 while rendered search/cards remain readable. For that
+case use `WB_TRANSPORT=dom` or the existing API-to-DOM fallback. During WB's
+automatic browser check a reload can destroy Playwright's execution context;
+the DOM renderer reopens the page once for that specific navigation race and
+repeats readiness, status and host checks with the normal polite gap. An actual
+HTTP refusal, CAPTCHA, suspicious-activity page or timeout is still an error and
+does not trigger that retry.
+
+The historical table below records the earlier probes, not a guarantee for every
+network, OS or session.
+
 | Marketplace | Datacenter IP | Anti-bot | In release |
 |---|---|---|---|
 | Wildberries | ✅ works | none observed | ✅ |
