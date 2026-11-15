@@ -42,6 +42,11 @@ def gh(path: str) -> Any:
     return json.loads(done.stdout)
 
 
+def repo_counts() -> dict[str, int]:
+    meta = gh(f"repos/{REPO}")
+    return {k: meta[k] for k in ("stargazers_count", "forks_count")}
+
+
 def traffic(kind: str) -> dict[str, Any]:
     data = gh(f"repos/{REPO}/traffic/{kind}")
     daily = {row["timestamp"][:10]: [row["count"], row["uniques"]] for row in data[kind]}
@@ -82,7 +87,7 @@ def collect() -> dict[str, Any]:
             row[key] = None
             row["errors"][key] = f"{type(exc).__name__}: {exc}"[:200]
 
-    take("repo", lambda: {k: gh(f"repos/{REPO}")[k] for k in ("stargazers_count", "forks_count")})
+    take("repo", repo_counts)
     take("views", lambda: traffic("views"))
     take("clones", lambda: traffic("clones"))
     take("authors", lambda: external_authors(all_issues()))
