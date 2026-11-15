@@ -54,6 +54,20 @@ uv run python scripts/mcp_wire.py compare-mcp decision-mcp marketplace-mcp \
 потом проверяет `check_versions.py`, — и сразу запускает эту проверку.
 `--dry-run` печатает `файл:строка старое -> новое` и ничего не пишет.
 
+### CHANGELOG fragment
+
+Если PR меняет `packages/`, добавь `changes/<номер PR>.md`: готовый Markdown для
+CHANGELOG под заголовками `### Added/Changed/Deprecated/Removed/Fixed/Security`,
+русский пункт, затем английский. Можно несколько разделов; в каждом нужен хотя бы
+один пункт. PR от Dependabot освобождены; для изменений без заметки (в том числе
+только переноса файлов) используй метку `no-changelog`. Пример `changes/230.md`:
+
+```markdown
+### Fixed
+- Исправлено чтение карточки (#230).
+- Fixed product card reading (#230).
+```
+
 CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13.
 
 **Кросс-платформенный прогон mypy обязателен, если трогаешь платформозависимый
@@ -195,6 +209,20 @@ Bump a release version with `uv run python scripts/bump_version.py NEW`. It
 rewrites every declaration from the one table in `scripts/version_sites.py` —
 exactly the set `check_versions.py` checks — and then runs that check.
 `--dry-run` prints `file:line old -> new` and writes nothing.
+
+### CHANGELOG fragment
+
+If a PR changes `packages/`, add `changes/<PR number>.md`: release-ready Markdown
+under `### Added/Changed/Deprecated/Removed/Fixed/Security` headings, with a Russian
+bullet followed by its English bullet. Multiple sections are allowed; each needs
+at least one bullet. Dependabot PRs are exempt; use the `no-changelog` label for
+changes without an entry (including move-only PRs). Example `changes/230.md`:
+
+```markdown
+### Fixed
+- Исправлено чтение карточки (#230).
+- Fixed product card reading (#230).
+```
 
 CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,
 types and the no-print and version checks run once, on Ubuntu — mypy covers the other
