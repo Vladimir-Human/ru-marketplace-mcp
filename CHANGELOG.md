@@ -9,6 +9,16 @@
 
 ## [Unreleased]
 
+### Fixed
+- DNS: поиск и карточки через Chrome со scraping-профилем больше не падают
+  сразу на проверке Qrator. Она отвечает HTTP 401 и сама перезагружает страницу через
+  пару секунд; теперь на это даётся до 10 с, как и на 403-проверку Ozon. Открыть
+  сайт вручную нужно, только если проверка так и не прошла (#232).
+- DNS: search and product cards through the scraping Chrome no longer fail at
+  once on the Qrator check. It answers HTTP 401 and reloads the page by itself within a
+  few seconds; that reload now gets up to 10 s, like Ozon's 403 check. A manual
+  visit is needed only when the check does not clear (#232).
+
 ## [2.9.2] - 2026-11-12
 
 ### Added

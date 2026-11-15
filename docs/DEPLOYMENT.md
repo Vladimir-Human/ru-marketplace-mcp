@@ -349,6 +349,10 @@ search (redirect loop), DNS and Citilink (Qrator proof-of-work). One Chrome
 sidecar serves them all — log each marketplace into the same dedicated profile
 once, and `CHROME_CDP_HOST=chrome` lets every connector reach it.
 
+DNS does not need a manual visit first: the transport waits up to about 10 s for
+Qrator's HTTP 401 check to reload into the real page. If it does not clear, open
+dns-shop.ru in that scraping-profile Chrome, pass the check, then retry.
+
 ### Any Russian marketplace needs a Russian-friendly IP
 
 Tier 1 is anonymous HTTP, but Ozon, Avito and others commonly refuse non-Russian

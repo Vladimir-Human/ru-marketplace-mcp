@@ -1,78 +1,68 @@
 {
-  "release": "2.9.1",
-  "phase": "issue_225_fixed_full_offline_gate_passed",
-  "base_commit": "8445e30",
-  "branch": "fix/compare-mounted-sources",
+  "release": "2.9.2",
+  "phase": "unreleased_issue232_fixed_full_offline_gate_passed_live_dns_ab_passed",
+  "base_commit": "2ca619dcf241eb58c672e7fcfc9cf4c7e23eaf47",
+  "branch": "fix/qrator-401-recheck",
   "requirements": [
-    "R-COMPARE-SOURCE-SELECTION",
+    "R-CDP-NAV-TIMEOUT.antibot-recheck",
     "R-OFFLINE",
     "R-TOOL-SCHEMA"
   ],
   "source_hashes": {
-    "packages/compare-connector/src/compare_connector/server.py": "b58fe3d1b35005a86a4337d7709cc21553624c84f89e94af657090306e015fbc",
-    "packages/compare-connector/tests/test_source_selection.py": "2bca9fdeaa809cbc614e4ea008cc97db23aae8a6a72728f0250e5cde23f2d92c",
-    "packages/mcp-core/src/mcp_core/resources.py": "fba62a206defdbab010fc2b458de289d6882199c20b76883b6c08eca25a28345",
-    ".grace/context/requirements.xml": "17b1612025b8fe5c77a70c985680329339a12fc95a330777ea45938cc407b830",
-    ".grace/graph/index.xml": "3dbb2c96981464b0cbc32e095cd423aa1a709ea3d16f97cfa2b7af2d09d11722",
-    ".grace/verification/index.xml": "870902068a329ba8e962a782f3f4516938b1513f4a9f176ba543827ef8ba1a77"
+    ".grace/context/requirements.xml": "055cec63287b0cd62cc75e6078594f99004b6c58efb87d815f24e6c02acb42f9",
+    ".grace/verification/index.xml": "c3ef174d943fe5a003c549e6a7fba764add52157f3ae3a69f4cb95cf839c02a8",
+    "CHANGELOG.md": "6c4afdfe28d2f7b25f031b146b86687d72b993ac83b78cba1da5c68e557819ff",
+    "CONTRIBUTORS.md": "2c16a89216988f5fcbd0b1a5e00a4adee26fe47421910780a86f7c2c3cdc7e13",
+    "README.en.md": "8c9b2c548954d41dc1930c2bcbbe11f01d26598911472517e366ccc29bb14f06",
+    "README.md": "e20d5b215c008d9f92c7ec36b8ab9c2b76a692d093fe38b4b6c86e03d9a67c68",
+    "docs/ANTI_BOT.md": "69353f63ed55e93d8cf1634dd507f23f57a90914172375a618e52886ca6a30c5",
+    "docs/ARCHITECTURE.md": "543f00c0fe1cf818a92c564215d62be82a71fbc4b47c279977a1a80146b151d9",
+    "docs/CDP_SETUP.md": "096b242f85861ba06af24bac3d5f34c7361f7c6f316889e11f2ecd9e5bf4a6ee",
+    "docs/DEPLOYMENT.md": "711d677b6686aabf37b01e053d250b51f83a586224361b001ded173b07982821",
+    "packages/dns-connector/src/dns_connector/server.py": "8b4977359765cf101c7bccfb177b0b4bdc0f992cc947da37a3e0561c1a328138",
+    "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": "02faf3c304b85dc255187d29bd20daa0ef84e04fdd2b5390413086811a23b552",
+    "packages/mcp-core/tests/test_chrome_cdp.py": "06fbf5334135a7f11bd63417e36241c9e3d1e80fa02dce4f5f78e80205295aa6"
+  },
+  "red_checks": {
+    "method": "chrome_cdp.py copied aside, _ANTIBOT_RECHECK_STATUSES set back to frozenset({403}), focused tests run, file restored from the copy",
+    "failed_on_403_only": [
+      "test_goto_and_status_waits_out_an_antibot_reload[401]",
+      "test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200[401]",
+      "test_playwright_antibot_stays_a_block_without_a_good_reload[*-401] (no-reload and history-api cases shown)"
+    ],
+    "controls_pass_on_old_code": [
+      "test_playwright_429_is_not_rechecked",
+      "test_raw_429_is_not_rechecked"
+    ]
   },
   "checks": {
-    "baseline_fd36678": "4 failed, 6 passed: extra disabled discovery imports, stale installed inventory, compare_verify_offer and decision_inspect called disabled AliExpress instead of returning bad_request. Default-price cold/preloaded/unset/blank controls passed. Log: tmp/issue225-baseline-mounted.log",
-    "fixed_selection": "10 passed. Log: tmp/issue225-fixed.log",
-    "final_focused": "160 passed, 6 MCP logging deprecation warnings. Log: tmp/issue225-focused-final.log",
-    "uv sync --locked --all-packages": "pass with worktree-local UV_CACHE_DIR after global cache access was denied; uv.lock unchanged",
-    "uv run ruff check .": "pass; warning for unreadable generated pytest cache directory",
-    "uv run ruff format --check .": "fail: generated pytest-cache-files-md2ygbqy directory is unreadable; 455 files already formatted",
-    "changed_python_ruff_check_and_format": "pass for server.py, test_source_selection.py and resources.py",
-    "uv run mypy": "pass: 116 source files",
-    "uv run mypy --platform win32": "pass: 116 source files",
-    "uv run pytest -q -m \"not live and not cdp\"": "fail: 97 failed, 2868 passed, 5 deselected, 487 errors; temporary-folder Windows permission failures despite TEMP/TMP under tmp/. Log: tmp/issue225-pytest.log",
-    "uv run python scripts/check_no_print.py": "pass: 100 files",
-    "uv run python scripts/check_test_count.py": "pass: 3452 in 6 documented places",
-    "uv run python scripts/gen_tools_doc.py --check": "pass",
-    "uv run python scripts/check_provenance.py": "pass: 41 pins, 49 sidecars, 13 pre-existing completeness exceptions",
-    "uv run python scripts/check_versions.py": "pass: 2.9.1 in 93 declarations",
-    "uv run python scripts/check_lock_revision.py": "pass: revision 5",
-    "GRACE_XML_and_git_diff_check": "pass before this evidence update",
-    "full_offline_gate_before_merge": "3450 passed, 2 skipped (uv run pytest -q -m 'not live and not cdp'); ruff format --check pass. Run by Claude on f0f047d.",
-    "merge_with_main_8445e30": "Merged origin/main 8445e30 (#227) into f0f047d; test-count docs 3464. ruff check/format, mypy (native and win32), check_no_print, check_test_count, check_provenance, check_versions, check_lock_revision, gen_tools_doc --check: pass; pytest offline 3462 passed, 2 skipped. Run by Claude."
+    "uv run ruff check .": "All checks passed!",
+    "uv run ruff format --check .": "458 files already formatted",
+    "uv run mypy (host, linux, win32, darwin)": "Success: no issues found in 116 source files (each)",
+    "scripts/check_test_count.py": "documented test count agrees in 6 places: 3549",
+    "pytest -q -m 'not live and not cdp'": "3547 passed, 2 skipped, 5 deselected",
+    "pytest -q scripts": "320 passed",
+    "pytest test_chrome_cdp.py -k 'antibot or 429_is_not'": "26 passed"
   },
-  "published_wheel": {
-    "url": "https://files.pythonhosted.org/packages/1e/31/db811b44941429e5bf5e4e44cdf7d5f66fbd8e6bea057bfe9feda96a0fe8/ru_marketplace_mcp-2.9.1-py3-none-any.whl",
-    "sha256": "a1a8120b3e6c7067698fe1137fc8547b69dad6d99afc6ed3cee7f4870cb46439",
-    "observation": "Archive digest verified; compare_prices and selected() source inspected, not installed/executed. Both already filter the explicit environment per call."
+  "live": {
+    "date_utc": "2026-11-15 00:04-00:08",
+    "setup": "scraping Chrome 157 over CDP on 127.0.0.1:9222, residential IP; only qrator_* cookies of dns-shop.ru deleted before each run; requests counted in the shared live-budget ledger",
+    "A_old_code_main_2ca619d": "dns_search('наушники') -> transport_down 'DNS navigation blocked (HTTP 401)'; afterwards qrator_jsr, qrator_ssid2 only (no qrator_jsid2)",
+    "B_fixed_code_this_branch": "dns_search('наушники') -> 24 items, _meta.healthy true, real products with prices; qrator cookies absent before, qrator_jsid2 + qrator_jsr after (the challenge ran and cleared inside the call)",
+    "diagnosis_probe": "plain Playwright goto in the same Chrome: main document 401, 120 product links after 2 s",
+    "ledger_after": "total 13/40; citilink 1/8, dns 3/8, ozon 6/8, wildberries 3/8"
   },
-  "not_proven": [
-    "The reporter full-price fan-out under a stable explicit environment was not reproduced; no causal browser-show or registry-widening path was established.",
-    "Live marketplace/CDP behavior was not tested."
+  "unchanged": [
+    "uv.lock",
+    "package-lock.json",
+    ".grace/graph/index.xml (no boundary, dependency or export change)",
+    "public types and signatures",
+    "Citilink code and messages"
   ],
-  "checked_on_utc": "2026-11-12T21:03:39.900962+00:00",
-  "previous_evidence": {
-    "release": "2.9.1",
-    "phase": "issue_214_ozon_review_item_id_fixed_and_verified",
-    "base_commit": "dea4865",
-    "branch": "fix/ozon-review-item-id-214",
-    "requirements": [
-      "R-OZON-REVIEW-ITEM-ID",
-      "R-NO-FABRICATION",
-      "R-DRIFT",
-      "R-OFFLINE",
-      "R-TOOL-SCHEMA",
-      "R-VERSION"
-    ],
-    "source_hashes": {
-      "packages/ozon-connector/src/ozon_connector/server.py": "f08e3b6b8c4c78a3e6aa9dca42dfa9b73ba5fa1a70fd19a31f4cbbe1a12d79dc",
-      "packages/ozon-connector/tests/test_server.py": "6981772de7ac9671c2fb24f7d344c393a62e80e9b0a96fd219a683dfd4a5935b",
-      "packages/ozon-connector/tests/test_shape_reference.py": "56b705851a01dec79089dbddb96e644ef6d6cb8e42e4b87f02bee0c2ce6eeeb2"
-    },
-    "checks": {
-      "baseline_dea4865_regression_selection": "4 failed at the exact reported spots: None == 3157082368, [None, 3157082368, None, 1] != [3157082368, 3157082368, 3157082999, None], healthy True != False on all-null sample, selfcheck success != drift_detected",
-      "fixed_ozon_and_guide_contracts_selection": "141 passed in 5.70s",
-      "mypy": "Success: no issues found in 6 source files (packages/ozon-connector/src)",
-      "ruff": "format and check clean on packages/ozon-connector",
-      "repository_gates": "check_no_print (100 files), check_versions (93 places at 2.9.1), gen_tools_doc --check, and .grace XML parsing all exit 0"
-    },
-    "not_proven": "Live Ozon network/CDP calls were not executed in this offline verification run; live webListReviews decimal-string itemId payload was provided in issue #214.",
-    "checked_on_utc": "2026-11-08"
-  }
+  "not_proven": [
+    "Ozon and WB on the reporter's connection: on this machine both already worked on main (Ozon 403 recheck since 2.5.4, WB DOM fallback since 2.7.0)",
+    "Citilink: live it answered Qrator 429 / a 45 s navigation timeout, not 401; this change does not cover it and claims nothing for it",
+    "A Qrator check that takes longer than _ANTIBOT_RECHECK_S (10 s) still ends as NavBlocked(401)"
+  ],
+  "checked_on_utc": "2026-11-15T00:08:19+00:00"
 }

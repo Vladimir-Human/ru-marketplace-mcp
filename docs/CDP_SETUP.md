@@ -147,8 +147,8 @@ The launcher scripts start the manual Chrome **on-screen** so you can log in.
 app with ⌘H on macOS and changes nothing on Linux, and
 `-Visible` is still accepted as a no-op. The connector's own autostart is
 different: on Windows it deliberately parks the window off-screen so it never
-takes focus. That is the window you cannot see, and logging in or passing a
-site's check needs a human. These verbs answer that:
+takes focus. That is the window you cannot see. Logging in or clearing a check
+that does not clear itself needs a human. These verbs answer that:
 
 ```console
 marketplace-mcp browser start    # launch the scraping Chrome on-screen (--hidden: off-screen)
@@ -168,6 +168,10 @@ In the window that opens, sign into whichever CDP sources you use — `ozon.ru`,
 `avito.ru`, `taobao.com`, `megamarket.ru`, `lamoda.ru`, `dns-shop.ru`,
 `citilink.ru`, `aliexpress.ru`, `cian.ru`. One profile serves them all. **Do not** sign into banking, email, or
 work accounts here. Keeping it single-purpose is what bounds the risk.
+
+DNS does not need a manual visit first. The transport waits up to about 10 s for
+Qrator's HTTP 401 page to reload itself into the real page. If the check does not
+clear, open dns-shop.ru in this scraping-profile Chrome, pass the check, then retry.
 
 When `doctor` reports a wall, `marketplace-mcp unblock <source>` opens that
 source's page in a new tab and waits while you pass the check or log in; it then

@@ -398,7 +398,9 @@ async def dns_search(
             except NavBlocked as exc:
                 raise_tool_error(
                     TransportDownError(
-                        f"DNS navigation blocked (HTTP {exc.status}). The Qrator challenge must pass in the scraping-profile Chrome — open dns-shop.ru there once, then retry."
+                        f"DNS navigation blocked (HTTP {exc.status}). "
+                        "If the Qrator check does not clear on its own within about 10 s, "
+                        "open dns-shop.ru in the scraping-profile Chrome, pass the check, then retry."
                     )
                 )
             tier = "cdp"
