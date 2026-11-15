@@ -57,6 +57,11 @@ scratch/
 # Live-run request ledger (scripts/live_check.py and pytest -m live share it).
 .live-budget*.json
 
+# Local history the maintainer keeps (scripts/metrics_snapshot.py, the live matrix).
+.live-metrics.jsonl
+.live-history.jsonl
+.claude/settings.local.json
+
 # Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
 *.zip
 
