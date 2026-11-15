@@ -15,7 +15,11 @@ Usage:
 
 `doctor` runs the marketplace CLI's own doctor round - every selfcheck, live -
 under the same budget as the other commands, so the release checklist's doctor
-round cannot pass the caps.
+round cannot pass the caps. Before call/doctor install any budget hooks or import
+connectors, preflight verifies writable temp space, the Playwright driver and a
+bare CDP attachment. It repairs TEMP/TMP or selects system Node when needed;
+it never navigates or starts Chrome. Setup failure exits 4 without spending a
+ledger entry.
 
 Exit codes, and why 4 is separate: 0 the command ran (for doctor, everything
 healthy), 1 doctor's drift alarm, 2 doctor's acknowledged blocked/inconclusive
@@ -27,10 +31,14 @@ a blocked source. Doctor preserves budget refusal as unverified, never health.
 
 START_MODULE_CONTRACT
 PURPOSE: Run marketplace checks under the shared live budget without masking checker/doctor failure as a blocked source.
-SCOPE: Argument parsing, budget install, selfcheck dispatch, tool call, doctor verdict propagation (0/1/2/3/4), result and ledger output.
-DEPENDS: scripts/live_budget.py; marketplace_connector.cli._SELFCHECKS and its doctor command; connector modules loaded by name.
-LINKS: M-LIVE-CHECK, R-LIVE-BUDGET, R-DOCTOR-EXIT-CODES.
+SCOPE: Temp/driver/bare-CDP preflight before call/doctor budget install, dispatch, doctor verdicts (0/1/2/3/4), result and ledger output.
+DEPENDS: scripts/live_budget.py; mcp_core.transport.chrome_cdp endpoint; Playwright; stdlib tempfile,shutil,dataclasses; marketplace CLI and connector modules after preflight.
+LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
+  _check_temp          verify writable temp space, repairing TEMP/TMP inside the repo
+  _check_driver        start/stop Playwright, retrying with system node on failure
+  _check_cdp           bare attach/detach; on artifact EPERM: repo temp, then system node; never navigate/autostart
+  _preflight           print one result per check and stop before budget/connector imports
   _dump                JSON-shaped result for a model, structured content or plain value
   _reset               archive the ledger under a timestamped name to start a new run
   _doctor              run the CLI's doctor round under the budget and report the ledger
@@ -46,9 +54,13 @@ import asyncio
 import datetime as dt
 import json
 import os
+import shlex
+import shutil
 import sys
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import live_budget
 
@@ -57,6 +69,180 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Hard checker/doctor and live_check setup/usage failures share 4, never the
 # doctor's non-alarm 2. Unknown doctor sources are CLI usage failures too.
 USAGE_EXIT = 4
+
+# START_BLOCK_PREFLIGHT
+
+
+@dataclass(frozen=True)
+class _PreflightResult:
+    status: Literal["ok", "fixed", "failed"]
+    detail: str = ""
+
+
+def _shell_quote(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'" if sys.platform == "win32" else shlex.quote(value)
+
+
+def _temp_command(path: Path) -> str:
+    quoted = _shell_quote(str(path))
+    if sys.platform == "win32":
+        return (
+            f"New-Item -ItemType Directory -Force {quoted}; "
+            f"$env:TEMP = {quoted}; $env:TMP = {quoted}; $env:TMPDIR = {quoted}"
+        )
+    return f"mkdir -p {quoted}; export TEMP={quoted} TMP={quoted} TMPDIR={quoted}"
+
+
+def _node_command(node: str | None) -> str:
+    if sys.platform == "win32":
+        value = _shell_quote(node) if node else "(Get-Command node -CommandType Application).Source"
+        return f"$env:PLAYWRIGHT_NODEJS_PATH = {value}"
+    value = _shell_quote(node) if node else '"$(command -v node)"'
+    return f"export PLAYWRIGHT_NODEJS_PATH={value}"
+
+
+def _probe_temp(temp_root: Path | None = None) -> None:
+    directory = Path(tempfile.mkdtemp(prefix="live-preflight-", dir=temp_root))
+    try:
+        (directory / "write-check").write_text("preflight\n", encoding="utf-8")
+    finally:
+        shutil.rmtree(directory)
+
+
+def _check_temp() -> _PreflightResult:
+    """R-LIVE-PREFLIGHT.temp: use the configured temp, or repair inside the repo."""
+    tempfile.tempdir = None
+    try:
+        _probe_temp()
+        return _PreflightResult("ok")
+    except OSError:
+        pass
+    fallback = REPO_ROOT / ".tmp" / "live"
+    # TMPDIR takes precedence in Python (and on POSIX Node), so repair it too.
+    os.environ["TEMP"] = os.environ["TMP"] = os.environ["TMPDIR"] = str(fallback)
+    tempfile.tempdir = None
+    try:
+        fallback.mkdir(parents=True, exist_ok=True)
+        _probe_temp(fallback)
+    except OSError as exc:
+        return _PreflightResult("failed", f"{type(exc).__name__}; run: {_temp_command(fallback)}")
+    return _PreflightResult("fixed", f"TEMP=TMP=TMPDIR={fallback}")
+
+
+async def _probe_driver() -> None:
+    from playwright.async_api import async_playwright
+
+    # Starting the public API proves the Node protocol handshake, not just --version.
+    manager = async_playwright()
+    try:
+        await asyncio.wait_for(manager.start(), timeout=10)
+    finally:
+        # Also clean up a failed/timed-out handshake before retrying another Node.
+        await asyncio.wait_for(manager.__aexit__(), timeout=10)
+
+
+async def _check_driver() -> _PreflightResult:
+    """R-LIVE-PREFLIGHT.driver: retry a failed Node handshake using system Node."""
+    try:
+        await _probe_driver()
+        return _PreflightResult("ok")
+    except Exception:
+        pass
+    node = shutil.which("node")
+    if node:
+        os.environ["PLAYWRIGHT_NODEJS_PATH"] = node
+        try:
+            await _probe_driver()
+            return _PreflightResult("fixed", f"PLAYWRIGHT_NODEJS_PATH={node}")
+        except Exception as exc:
+            reason = type(exc).__name__
+    else:
+        reason = "system node not found on PATH"
+    return _PreflightResult("failed", f"{reason}; run: {_node_command(node)}")
+
+
+async def _probe_cdp() -> None:
+    from mcp_core.transport.chrome_cdp import CDP_URL
+    from playwright.async_api import async_playwright
+
+    manager = async_playwright()
+    try:
+        driver = await asyncio.wait_for(manager.start(), timeout=10)
+        browser = await asyncio.wait_for(driver.chromium.connect_over_cdp(CDP_URL, timeout=10_000), timeout=12)
+        # A CDP-connected browser's close detaches; no contexts/pages are created or navigated.
+        await asyncio.wait_for(browser.close(), timeout=10)
+    finally:
+        await asyncio.wait_for(manager.__aexit__(), timeout=10)
+
+
+def _artifact_failure(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "mkdtemp" in text and ("eperm" in text or "eacces" in text)
+
+
+def _repo_temp_fix() -> str | None:
+    fallback = REPO_ROOT / ".tmp" / "live"
+    if os.environ.get("TEMP") == str(fallback):
+        return None
+    fallback.mkdir(parents=True, exist_ok=True)
+    os.environ["TEMP"] = os.environ["TMP"] = os.environ["TMPDIR"] = str(fallback)
+    tempfile.tempdir = None
+    return f"TEMP=TMP=TMPDIR={fallback}"
+
+
+def _system_node_fix() -> str | None:
+    node = shutil.which("node")
+    if not node or os.environ.get("PLAYWRIGHT_NODEJS_PATH") == node:
+        return None
+    os.environ["PLAYWRIGHT_NODEJS_PATH"] = node
+    return f"PLAYWRIGHT_NODEJS_PATH={node}"
+
+
+async def _check_cdp() -> _PreflightResult:
+    """R-LIVE-PREFLIGHT.cdp: bare connect without Chrome autostart or requests to sites."""
+    try:
+        await _probe_cdp()
+        return _PreflightResult("ok")
+    except Exception as exc:
+        failure = exc
+    # Node can start yet get EPERM creating playwright-artifacts in a %TEMP% that
+    # Python itself writes to (measured 2026-11-15: any node failed there, every node
+    # passed with TEMP inside the repo). So move TEMP first, then try system node.
+    applied: list[str] = []
+    for fix in (_repo_temp_fix, _system_node_fix):
+        if not _artifact_failure(failure):
+            break
+        change = fix()
+        if change is None:
+            continue
+        applied.append(change)
+        try:
+            await _probe_cdp()
+            return _PreflightResult("fixed", "; ".join(applied) + "; connected and disconnected")
+        except Exception as exc:
+            failure = exc
+    reason = type(failure).__name__
+    if _artifact_failure(failure):
+        commands = f"{_temp_command(REPO_ROOT / '.tmp' / 'live')}; {_node_command(shutil.which('node'))}"
+        return _PreflightResult("failed", f"{reason}; run: {commands}")
+    return _PreflightResult("failed", f"{reason}; run: marketplace-mcp browser start")
+
+
+async def _preflight() -> bool:
+    """Finish every check before budget installation imports connector code."""
+    temp = _check_temp()
+    print(f"preflight temp: {temp.status}" + (f"; {temp.detail}" if temp.detail else ""), file=sys.stderr)
+    if temp.status == "failed":
+        return False
+    for name, check in (("driver", _check_driver), ("cdp", _check_cdp)):
+        result = await check()
+        print(f"preflight {name}: {result.status}" + (f"; {result.detail}" if result.detail else ""), file=sys.stderr)
+        if result.status == "failed":
+            return False
+    return True
+
+
+# END_BLOCK_PREFLIGHT
 
 
 def _dump(result: Any) -> Any:
@@ -177,6 +363,8 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
 def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
+        return USAGE_EXIT
+    if argv[0] in {"call", "doctor"} and not asyncio.run(_preflight()):
         return USAGE_EXIT
     if not os.environ.get("LIVE_BUDGET_LEDGER"):
         os.environ["LIVE_BUDGET_LEDGER"] = str(REPO_ROOT / ".live-budget.json")

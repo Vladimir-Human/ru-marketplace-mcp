@@ -7,10 +7,11 @@ check before drawing conclusions.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Describe comparison offers, everyday-price ranking and per-source outcomes.
-# SCOPE: Additive typed outputs; preserve native conditional prices without ranking them.
-# DEPENDS: Pydantic; compare_connector.identity.
-# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
-#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION.
+# SCOPE: Additive typed outputs; preserve native conditional prices without ranking them;
+#        describe comparison sources from the registry without changing field types or behavior.
+# DEPENDS: Pydantic; compare_connector.identity; mcp_core.sources.
+# LINKS: M-COMPARE; M-SOURCES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
+#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
@@ -20,6 +21,7 @@ check before drawing conclusions.
 
 from __future__ import annotations
 
+from mcp_core.sources import COMPARE_SOURCE_NAMES
 from pydantic import BaseModel, Field, model_validator
 
 from compare_connector.identity import OfferEvidence, ProductIdentity
@@ -29,7 +31,7 @@ from compare_connector.identity import OfferEvidence, ProductIdentity
 class MarketOffer(BaseModel):
     """One offer, normalised across marketplaces so prices are comparable."""
 
-    source: str = Field(default="", description="Marketplace the offer came from (wildberries, yandex_market, ozon).")
+    source: str = Field(default="", description=f"Marketplace the offer came from ({COMPARE_SOURCE_NAMES}).")
     product_id: str = Field(default="", description="Marketplace-native product id, for a follow-up card lookup.")
     variant_id: str = Field(default="", description="Sellable variant/SKU id when the source exposes one separately.")
     title: str = Field(default="", description="Product title as the marketplace names it.")

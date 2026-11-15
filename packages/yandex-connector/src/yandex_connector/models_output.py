@@ -5,15 +5,28 @@ prominently, and quoting only that would misstate what most people pay — so
 ``price_rub`` (everyday) and ``price_with_plus`` (requires Yandex Plus) are always
 reported separately.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Describe Yandex outputs and qualify the shown discount without claiming verified price history.
+# SCOPE: Schema descriptions only; preserve separate everyday/subscription prices and all public field types.
+# DEPENDS: mcp_core.models/sources; Pydantic; stdlib typing.
+# LINKS: M-YANDEX; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# YandexProduct/YandexSearchResponse: Describe native search offers and distinct price roles.
+# YandexCardResponse/YandexReview: Describe card details, shown discount and reviews.
+# MetaOut/YandexSelfcheckResponse: Preserve shared diagnostics and selfcheck outputs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 from typing import Any
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """Yandex reports which extraction path produced the payload.
 
@@ -121,7 +134,9 @@ class YandexCardResponse(BaseModel):
     price_rub: float | None = Field(default=None, description="Everyday price in roubles, without a subscription.")
     price_with_plus: float | None = Field(default=None, description="Price requiring a Yandex Plus/Pay subscription.")
     price_before_discount_rub: float | None = Field(default=None, description="Pre-discount reference price.")
-    discount_percent: int | None = Field(default=None, description="Discount percentage as reported upstream.")
+    discount_percent: int | None = Field(
+        default=None, description=f"Discount percentage as reported upstream — {MARKETPLACE_PRICE_WORDING}."
+    )
     currency: str = Field(default="RUR", description="Currency code.")
     offers_count: int | None = Field(default=None, description="How many competing offers exist for this product.")
     rating: float | None = Field(default=None, description="Average rating, 1..5.")
@@ -147,3 +162,6 @@ class YandexSelfcheckResponse(SelfCheckResponseBase):
     connector: str = Field(default="yandex", description="Connector name.")
     checks: dict[str, YandexSelfcheckEntry] = Field(default_factory=dict, description="Per-page-type results.")
     cache_stats: dict[str, Any] = Field(default_factory=dict, description="TTL cache counters for this process.")
+
+
+# END_BLOCK_OUTPUT_MODELS

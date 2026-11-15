@@ -26,10 +26,11 @@ shipping.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Declare every shipped source once and derive the tables its callers read.
-# SCOPE: Static data (names, packages, scripts, access metadata, URLs, counts) plus the
-#        configuration-aware route of a source; no imports of connectors.
+# SCOPE: Static source data, configuration-aware routes and shared schema descriptions;
+#        no imports of connectors and no changes to source selection or public types.
 # DEPENDS: stdlib dataclasses,os,typing.
-# LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE.
+# LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE;
+#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # SourceSpec: One shipped server's identity, wiring and access facts.
@@ -47,6 +48,8 @@ shipping.
 # LOGIN_UNBLOCK_SOURCES: Sources whose wall is a login rather than a bot check.
 # DRIFT_PROBE_SOURCES: Sources scripts/diagnose_drift.py can probe.
 # COMPARE_SOURCES: Sources compare_prices searches, in registry order.
+# COMPARE_SOURCE_NAMES: Text-search comparison source names for import-time schema descriptions.
+# MARKETPLACE_PRICE_WORDING: One qualification for marketplace old-price and discount descriptions.
 # CARD_TOOL_NAMES: Source -> card tool compare uses to inspect one offer.
 # FOREIGN_CURRENCY_SOURCES: Compare sources that do not quote roubles.
 # MOUNT_GATED_SOURCES: Sources the unified server mounts only when configured.
@@ -65,10 +68,12 @@ __all__ = [
     "CAPABILITIES",
     "CARD_TOOL_NAMES",
     "COMPARE_SOURCES",
+    "COMPARE_SOURCE_NAMES",
     "CONFIG_SERVERS",
     "DRIFT_PROBE_SOURCES",
     "FOREIGN_CURRENCY_SOURCES",
     "LOGIN_UNBLOCK_SOURCES",
+    "MARKETPLACE_PRICE_WORDING",
     "MOUNTABLE",
     "MOUNTS",
     "MOUNT_GATED_SOURCES",
@@ -570,3 +575,14 @@ CARD_TOOL_NAMES: dict[str, str] = _card_tools()
 FOREIGN_CURRENCY_SOURCES: tuple[str, ...] = tuple(spec.name for spec in _comparable() if spec.currency != "rub")
 
 MOUNT_GATED_SOURCES: frozenset[str] = frozenset(spec.name for spec in _mounted() if spec.mount_gated)
+
+
+# START_BLOCK_SCHEMA_DESCRIPTIONS
+# Card-only sources remain available for verification, but compare_prices cannot
+# query them by text. Describe the queryable registry subset at import time.
+COMPARE_SOURCE_NAMES: str = ", ".join(name for name in COMPARE_SOURCES if BY_NAME[name].text_search)
+
+# Models keep their native field meanings (including computed discount fallback)
+# and share this qualification: a displayed reference is not verified history.
+MARKETPLACE_PRICE_WORDING: str = "as the marketplace shows it; not a verified previous price"
+# END_BLOCK_SCHEMA_DESCRIPTIONS

@@ -6,8 +6,8 @@ make these checks offline; neither client configs nor temporary files are used.
 
 START_MODULE_CONTRACT
 PURPOSE: Prove R17's hard-failure, blocked, drift, healthy and budget-refusal verdicts at the operator entries.
-SCOPE: All doctor sources, CLI/live runner, status counts, unblock discovery/re-check and setup health/re-check.
-DEPENDS: marketplace_connector.cli; scripts/live_check.py; scripts/live_budget.py; pytest; stdlib contextlib,io,json,pathlib,sys,types.
+SCOPE: All doctor sources, CLI/live runner with offline Playwright preflight edges, status counts, unblock discovery/re-check and setup health/re-check.
+DEPENDS: marketplace_connector.cli; scripts/live_check.py; scripts/live_budget.py; scripts/conftest.py offline Playwright edges; pytest; stdlib contextlib,io,json,pathlib,sys,types.
 LINKS: M-MARKETPLACE, M-LIVE-CHECK, R-DOCTOR-EXIT-CODES.
 END_MODULE_CONTRACT
 START_MODULE_MAP
@@ -36,6 +36,7 @@ import live_check
 
 SELFCHECKS = tuple(cli._SELFCHECKS)
 ENTRIES = pytest.mark.parametrize("entry", [cli, live_check], ids=["cli", "live-check"])
+pytestmark = pytest.mark.usefixtures("offline_playwright")
 
 # START_BLOCK_OFFLINE_RUNTIME
 
