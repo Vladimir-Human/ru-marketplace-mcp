@@ -5,18 +5,20 @@ GitHub keeps repository traffic for 14 days only, so a daily line is the only
 history there will be. Each line holds stars and forks, 14-day views and clones
 with their daily rows, distinct external authors of issues and PRs, and PyPI
 downloads of the bundle over the last month (pypistats "recent"). At most one
-line a day unless --force. A source that fails is written as null with its error;
+line a day unless --force; a lock file next to it keeps two runs started together
+from both writing. A source that fails is written as null with its error;
 the other sources still count.
 
 START_MODULE_CONTRACT
 PURPOSE: Keep a local daily record of reach numbers (plan baseline T5).
 SCOPE: gh api reads (repo, traffic, issues), one pypistats read, one JSONL line per day.
-DEPENDS: gh on PATH with the maintainer's token; stdlib argparse,datetime,json,subprocess,urllib.request,pathlib.
+DEPENDS: gh on PATH with the maintainer's token; stdlib argparse,datetime,json,os,subprocess,time,urllib.request,pathlib.
 LINKS: M-METRICS, R-METRICS.
 START_MODULE_MAP
   external_authors   distinct non-owner, non-bot authors of issues, of PRs, and of either
   collect            one row; a failing source becomes null plus an errors entry
-  main               once-a-day append to .live-metrics.jsonl
+  take_lock          atomic lock file; a stale one (crashed run) is taken over
+  main               once-a-day append to .live-metrics.jsonl under the lock
 END_MODULE_MAP
 END_MODULE_CONTRACT
 """
@@ -26,7 +28,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import subprocess
+import time
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -35,6 +39,7 @@ REPO = "Vladimir-Human/ru-marketplace-mcp"
 OWNER = "Vladimir-Human"
 PYPI_RECENT = "https://pypistats.org/api/packages/ru-marketplace-mcp/recent"
 OUT = Path(__file__).resolve().parent.parent / ".live-metrics.jsonl"
+LOCK_STALE_S = 300
 
 
 def gh(path: str) -> Any:
@@ -102,16 +107,39 @@ def last_date(path: Path) -> str | None:
     return json.loads(lines[-1])["date"] if lines else None
 
 
+def take_lock(lock: Path) -> bool:
+    """Create the lock file atomically; one older than LOCK_STALE_S is a crashed run and is taken over once."""
+    for _ in range(2):
+        try:
+            os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            return True
+        except FileExistsError:
+            try:
+                if time.time() - lock.stat().st_mtime < LOCK_STALE_S:
+                    return False
+                lock.unlink()
+            except FileNotFoundError:
+                pass
+    return False
+
+
 def main(argv: list[str] | None = None, out: Path = OUT) -> int:
     parser = argparse.ArgumentParser(description="Append one daily line of reach numbers to .live-metrics.jsonl.")
     parser.add_argument("--force", action="store_true", help="write even if today's line exists")
     args = parser.parse_args(argv)
-    if not args.force and last_date(out) == dt.date.today().isoformat():
-        print(f"already recorded today in {out.name}")
+    lock = out.with_suffix(".lock")
+    if not take_lock(lock):  # two sessions starting together must not both write today's line
+        print(f"another snapshot holds {lock.name}")
         return 0
-    row = collect()
-    with out.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    try:
+        if not args.force and last_date(out) == dt.date.today().isoformat():
+            print(f"already recorded today in {out.name}")
+            return 0
+        row = collect()
+        with out.open("a", encoding="utf-8", newline="\n") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    finally:
+        lock.unlink(missing_ok=True)
     print(json.dumps({k: v for k, v in row.items() if k not in ("views", "clones")}, ensure_ascii=False))
     return 1 if len(row["errors"]) == 5 else 0
 

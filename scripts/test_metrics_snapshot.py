@@ -77,3 +77,24 @@ def test_every_source_failing_exits_non_zero(tmp_path, monkeypatch):
     monkeypatch.setattr(ms, "pypi_last_month", boom)
 
     assert ms.main(["--force"], out=tmp_path / "m.jsonl") == 1
+
+
+def test_a_fresh_lock_stops_a_second_run_and_a_stale_one_is_taken_over(tmp_path, monkeypatch):
+    import os
+    import time
+
+    out = tmp_path / "metrics.jsonl"
+    lock = out.with_suffix(".lock")
+    calls = []
+    monkeypatch.setattr(ms, "collect", lambda: calls.append(1) or {"date": dt.date.today().isoformat(), "errors": {}})
+
+    lock.write_text("")
+    assert ms.main([], out=out) == 0
+    assert calls == [] and not out.exists() and lock.exists()
+
+    old = time.time() - ms.LOCK_STALE_S - 60
+    os.utime(lock, (old, old))
+    assert ms.main([], out=out) == 0
+    assert calls == [1]
+    assert len(out.read_text(encoding="utf-8").splitlines()) == 1
+    assert not lock.exists()
