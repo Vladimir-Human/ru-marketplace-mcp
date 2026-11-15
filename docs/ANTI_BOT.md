@@ -446,7 +446,7 @@ residential IP to tell a layout drift from a block before you conclude anything.
 
 ### DNS — proof-of-work challenge
 
-Every dynamic page returns **HTTP 401** with a Qrator JS challenge
+A dynamic page can first return **HTTP 401** with a Qrator JS challenge
 (`/__qrator/qauth_utm_v2d_v9118.js`, ~349 KB). The valid `qrator_jsr` cookie is
 only issued after executing that proof-of-work in a real JS engine; loading the
 script does not set it.
@@ -461,6 +461,10 @@ script does not set it.
 **Verdict:** shipped in v1.2.0 via the CDP tier. Qrator's proof-of-work executes
 natively in a real Chrome, so the `dns-connector` renders the page and reads the
 DOM rather than touching the CSRF-gated ajax routes.
+
+The transport waits up to about 10 s for the HTTP 401 check to reload itself into
+the real page. If it clears, no manual visit is needed. If it does not, open
+dns-shop.ru in the scraping-profile Chrome, pass the check, then retry.
 
 Getting there took two separate fixes, and the first one only looked like a win.
 The product-id regex demanded 24 hex while the real id is 16

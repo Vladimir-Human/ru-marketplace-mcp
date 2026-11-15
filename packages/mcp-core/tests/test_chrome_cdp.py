@@ -798,18 +798,22 @@ def test_goto_and_status_reports_a_block_page(monkeypatch):
     assert asyncio.run(page.goto_and_status("https://x/")) == 403
 
 
-def test_goto_and_status_waits_out_an_antibot_reload():
-    """Ozon's 403 + self-reloading JS check ends on the real page, not a block."""
+@pytest.mark.parametrize("status", [401, 403])
+def test_goto_and_status_waits_out_an_antibot_reload(status):
+    """R-CDP-NAV-TIMEOUT.antibot-recheck: a self-clearing main-frame check returns the real page."""
     import asyncio
 
     ws = _FakeWs(
         [
             {"id": 1, "result": {"frameId": "F"}},
-            {"method": "Network.responseReceived", "params": {"type": "Document", "response": {"status": 403}}},
+            {
+                "method": "Network.responseReceived",
+                "params": {"type": "Document", "frameId": "F", "response": {"status": status}},
+            },
             {"method": "Page.loadEventFired", "params": {}},
             {
                 "method": "Network.responseReceived",
-                "params": {"type": "Document", "response": {"status": 200, "url": "https://x/real"}},
+                "params": {"type": "Document", "frameId": "F", "response": {"status": 200, "url": "https://x/real"}},
             },
             {"method": "Page.loadEventFired", "params": {}},
         ]
@@ -871,17 +875,18 @@ class _FakeNavigation:
 
 
 class _FakeNavPage:
-    """Just enough of a Playwright page for _playwright_page's 403 recheck."""
+    """Just enough of a Playwright page for the bounded anti-bot recheck."""
 
-    def __init__(self, outcome):
+    def __init__(self, outcome, *, status=403):
         self.url = "https://shop.test/p"
+        self._status = status
         self._outcome = outcome
         self.waits: list[dict] = []
 
     async def goto(self, url, **_kwargs):
         from types import SimpleNamespace
 
-        return SimpleNamespace(status=403)
+        return SimpleNamespace(status=self._status)
 
     def expect_navigation(self, **kwargs):
         self.waits.append(kwargs)
@@ -897,6 +902,11 @@ class _FakeNavPage:
 def _patch_playwright_tab(monkeypatch, fake_page):
     from contextlib import asynccontextmanager
 
+    from mcp_core.transport.cdp_budget import NavigationBudget
+
+    budget = NavigationBudget()
+    monkeypatch.setattr(chrome_cdp, "navigation_budget", lambda: budget)
+
     @asynccontextmanager
     async def fake_context():
         yield object()
@@ -909,24 +919,125 @@ def _patch_playwright_tab(monkeypatch, fake_page):
     monkeypatch.setattr(chrome_cdp, "_new_tab", fake_new_tab)
 
 
-async def test_playwright_403_recovers_when_the_main_frame_reloads_to_200(monkeypatch):
-    """The recheck waits for the new document to land, so page.url is already the new one."""
-    fake_page = _FakeNavPage(outcome=200)
+@pytest.mark.parametrize("status", [401, 403])
+async def test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200(monkeypatch, status):
+    """R-CDP-NAV-TIMEOUT.antibot-recheck: the new document lands before the final host check."""
+    fake_page = _FakeNavPage(outcome=200, status=status)
     _patch_playwright_tab(monkeypatch, fake_page)
 
-    async with chrome_cdp._playwright_page("https://shop.test/p", wait_ms=0) as page:
+    async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0) as page:
         assert page.url == "https://shop.test/real"
 
     assert fake_page.waits == [{"wait_until": "domcontentloaded", "timeout": chrome_cdp._ANTIBOT_RECHECK_S * 1000}]
 
 
-@pytest.mark.parametrize("outcome", ["timeout", None, 403], ids=["no-reload", "history-api", "reload-403"])
-async def test_playwright_403_stays_a_block_without_a_good_reload(monkeypatch, outcome):
-    """No navigation, a History API change or another 403 all end as NavBlocked(403)."""
-    _patch_playwright_tab(monkeypatch, _FakeNavPage(outcome=outcome))
+@pytest.mark.parametrize("status", [401, 403])
+@pytest.mark.parametrize(
+    "outcome",
+    ["timeout", None, 401, 403, 407, 429, 500, 502, 503, 504],
+    ids=[
+        "no-reload",
+        "history-api",
+        "reload-401",
+        "reload-403",
+        "reload-407",
+        "reload-429",
+        "reload-500",
+        "reload-502",
+        "reload-503",
+        "reload-504",
+    ],
+)
+async def test_playwright_antibot_stays_a_block_without_a_good_reload(monkeypatch, status, outcome):
+    """R-CDP-NAV-TIMEOUT.antibot-recheck: wait once, then preserve the known failed status."""
+    fake_page = _FakeNavPage(outcome=outcome, status=status)
+    _patch_playwright_tab(monkeypatch, fake_page)
 
     with pytest.raises(chrome_cdp.NavBlocked) as blocked:
-        async with chrome_cdp._playwright_page("https://shop.test/p", wait_ms=0):
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
             pass
 
-    assert blocked.value.status == 403
+    assert fake_page.waits == [{"wait_until": "domcontentloaded", "timeout": chrome_cdp._ANTIBOT_RECHECK_S * 1000}]
+    assert blocked.value.status == (outcome if isinstance(outcome, int) else status)
+
+
+async def test_playwright_429_is_not_rechecked(monkeypatch):
+    """R-CDP-NAV-TIMEOUT.antibot-recheck: refuse a 429 without waiting for a navigation."""
+    fake_page = _FakeNavPage(outcome=200, status=429)
+    _patch_playwright_tab(monkeypatch, fake_page)
+
+    with pytest.raises(chrome_cdp.NavBlocked) as blocked:
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
+            pass
+
+    assert blocked.value.status == 429
+    assert blocked.value.final_url == "https://shop.test/p"
+    assert fake_page.waits == []
+
+
+async def test_raw_429_is_not_rechecked(monkeypatch):
+    """R-CDP-NAV-TIMEOUT.antibot-recheck: raw fallback refuses 429 before reading a later reload."""
+    import json
+    import urllib.request
+    from contextlib import asynccontextmanager
+    from io import BytesIO
+    from types import SimpleNamespace
+
+    browser_ws = _FakeWs([{"id": 1, "result": {"targetId": "T1"}}, {"id": 2, "result": {}}])
+    page_ws = _FakeWs(
+        [
+            {"id": 1, "result": {}},
+            {"id": 2, "result": {}},
+            {"id": 3, "result": {}},
+            {"id": 4, "result": {"frameId": "F"}},
+            {
+                "method": "Network.responseReceived",
+                "params": {
+                    "type": "Document",
+                    "frameId": "F",
+                    "response": {"status": 429, "url": "https://shop.test/p"},
+                },
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+            {
+                "method": "Network.responseReceived",
+                "params": {
+                    "type": "Document",
+                    "frameId": "F",
+                    "response": {"status": 200, "url": "https://shop.test/real"},
+                },
+            },
+            {"method": "Page.loadEventFired", "params": {}},
+        ]
+    )
+
+    @asynccontextmanager
+    async def connect(url, **_kwargs):
+        yield browser_ws if url.endswith("/browser") else page_ws
+
+    async def attach_timeout(_ctx):
+        raise chrome_cdp._CdpConnectTimeout("fake attach timeout")
+
+    _patch_playwright_tab(monkeypatch, None)
+    monkeypatch.setattr(chrome_cdp, "_new_tab", attach_timeout)
+    monkeypatch.setattr(chrome_cdp, "_browser_ws_url", lambda: "ws://localhost/browser")
+    monkeypatch.setattr(chrome_cdp, "_websockets", SimpleNamespace(connect=connect))
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: BytesIO(
+            json.dumps([{"id": "T1", "webSocketDebuggerUrl": "ws://localhost/page"}]).encode()
+        ),
+    )
+
+    with pytest.raises(chrome_cdp.NavBlocked) as blocked:
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
+            pass
+
+    assert blocked.value.status == 429
+    assert blocked.value.final_url == "https://shop.test/p"
+    # The 200 reload is never read: the 429 is refused at its own load event.
+    assert len(page_ws._responses) == 2
+    assert [message["method"] for message in page_ws.sent].count("Page.navigate") == 1
+    assert browser_ws.sent[-1]["method"] == "Target.closeTarget"
+    assert browser_ws.sent[-1]["params"] == {"targetId": "T1"}

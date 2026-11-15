@@ -707,8 +707,11 @@ async def get_context() -> AsyncIterator[BrowserContext]:
 # goto() for these instead of raising, so we must refuse to hand a block page or
 # login wall to a parser as though it were data.
 _NAV_FAIL_STATUSES = frozenset({401, 403, 407, 429, 500, 502, 503, 504})
-# Ozon answers the first request with 403 and a JS check that reloads the page
-# by itself; only a 403 that survives this window is a block.
+# Self-clearing anti-bot checks answer the first request with a fail status and
+# then reload the page by themselves: Ozon's JS check with 403, DNS's Qrator
+# proof-of-work with 401 (#232). Only a status that survives this window is a
+# block.
+_ANTIBOT_RECHECK_STATUSES = frozenset({401, 403})
 _ANTIBOT_RECHECK_S = 10.0
 _TAB_OP_TIMEOUT_S = 25.0
 
@@ -1030,7 +1033,7 @@ class _RawCdpPage:
                 # document to wait for; otherwise the deadline still bounds the wait.
                 if not statuses and not nav_failed:
                     continue
-                if statuses and statuses[-1] == 403 and not rechecking:
+                if statuses and statuses[-1] in _ANTIBOT_RECHECK_STATUSES and not rechecking:
                     rechecking = True
                     deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
                     continue
@@ -1981,11 +1984,11 @@ async def _playwright_page(
                 )
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             status = resp.status if resp is not None else None
-            if status == 403:
+            if status in _ANTIBOT_RECHECK_STATUSES:
                 # Wait for the main frame's next navigation to land, not just for a
                 # response: page.url must be the new document's before the host
                 # check, and a redirect must resolve to its final status. None (a
-                # History API change) proves nothing, so the 403 stands.
+                # History API change) proves nothing, so the original status stands.
                 try:
                     async with page.expect_navigation(
                         wait_until="domcontentloaded", timeout=_ANTIBOT_RECHECK_S * 1000
@@ -2050,6 +2053,7 @@ class NavigationPolicyError(RuntimeError):
 # PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
 # INPUTS: HTTP(S) URL, settle delay, optional allowed hosts and positive finite navigation timeout in ms.
 # TIMEOUT: Source override wins over CHROME_NAV_TIMEOUT_MS; absent global default is 20000ms.
+# RECHECK: Main-document 401/403 get one bounded main-frame reload wait (R-CDP-NAV-TIMEOUT.antibot-recheck).
 # OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
 # SIDE_EFFECTS: Acquire/release navigation permits; attach/autostart Chrome and create/close one tab.
 # END_CONTRACT: open_page
@@ -2071,8 +2075,12 @@ async def open_page(
 
     Guarantees:
       * non-http(s) schemes are refused outright (scheme guard);
-      * a block/auth/5xx main document raises ``NavBlocked`` rather than
-        yielding a page that only looks like content;
+      * a 401 (Qrator) or 403 main document gets at most ``_ANTIBOT_RECHECK_S``
+        seconds for the main frame's next navigation; a good reload succeeds
+        subject to the final-URL host policy, while no reload, a None reload or
+        another fail status stays blocked; other fail statuses are not rechecked;
+      * a block/auth/5xx main document that has not cleared raises ``NavBlocked``
+        rather than yielding a page that only looks like content;
       * a host whose breaker is open raises ``rate_limited`` with the remaining
         pause in ``retry_after_s`` (R-CDP-HOST-PAUSE), so an agent waits out the
         cooldown instead of retrying at once;
