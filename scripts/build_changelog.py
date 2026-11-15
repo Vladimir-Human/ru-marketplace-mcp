@@ -280,6 +280,10 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
             changelog.read_text(encoding="utf-8"), fragments, args.version, args.date or dt.date.today().isoformat()
         )
         if args.dry_run:
+            # The section is Russian first; a Windows console code page (cp1252) cannot
+            # encode it, so print UTF-8 whatever the console default is.
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8")
             print(section, end="")
             return 0
         with changelog.open("w", encoding="utf-8", newline="\n") as stream:
