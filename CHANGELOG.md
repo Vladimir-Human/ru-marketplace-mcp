@@ -9,7 +9,29 @@
 
 ## [Unreleased]
 
+## [2.9.3] - 2026-11-15
+
+### Added
+- Ozon: новая настройка `OZON_CHROME_COMPAT=native|windows`, по умолчанию `native`.
+  Значение `windows` показывает Ozon в собственных вкладках коннектора Chrome с
+  Windows в User-Agent, `navigator.platform` и UA Client Hints; версия Chrome и язык
+  остаются настоящими. Другие площадки и открытые вручную вкладки не меняются.
+  В `docs/CDP_SETUP.md` описан Chrome на сервере без монитора (Xvfb) (#230).
+- Ozon: new setting `OZON_CHROME_COMPAT=native|windows`, default `native`. With
+  `windows` the connector's own Chrome tabs present Windows in the User-Agent,
+  `navigator.platform` and UA Client Hints to Ozon; the real Chrome version and
+  language stay. Other sources and manually opened tabs are unchanged.
+  `docs/CDP_SETUP.md` covers Chrome on a server without a monitor (Xvfb) (#230).
+
 ### Fixed
+- Wildberries: чтение страницы через Chrome больше не падает с ошибкой
+  `Execution context was destroyed`, когда сайт сам переходит на другую страницу
+  во время проверки браузера. В этом случае страница открывается ещё один раз;
+  отказы, капчи и таймауты по-прежнему не повторяются (#230).
+- Wildberries: reading a page through Chrome no longer fails with
+  `Execution context was destroyed` when the site navigates by itself during its
+  browser check. The page is then opened once more; refusals, captchas and
+  timeouts are still not retried (#230).
 - DNS: поиск и карточки через Chrome со scraping-профилем больше не падают
   сразу на проверке Qrator. Она отвечает HTTP 401 и сама перезагружает страницу через
   пару секунд; теперь на это даётся до 10 с, как и на 403-проверку Ozon. Открыть
