@@ -51,6 +51,7 @@ def unified(monkeypatch):
     importlib.reload(marketplace_server)
 
 
+@pytest.mark.req("R-MPSTATS-MOUNT-GATE")
 def test_mpstats_tools_are_not_mounted_without_the_token(unified, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", "")
     server = unified()
@@ -58,6 +59,7 @@ def test_mpstats_tools_are_not_mounted_without_the_token(unified, monkeypatch):
     assert _MPSTATS_TOOLS.isdisjoint(_tool_names(server))
 
 
+@pytest.mark.req("R-MPSTATS-MOUNT-GATE")
 def test_mpstats_tools_are_mounted_with_the_token(unified, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", "test.jwt.token")
     server = unified()
@@ -65,6 +67,7 @@ def test_mpstats_tools_are_mounted_with_the_token(unified, monkeypatch):
     assert _tool_names(server) >= _MPSTATS_TOOLS
 
 
+@pytest.mark.req("R-MPSTATS-MOUNT-GATE")
 def test_the_skip_reason_names_the_missing_token(unified, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", "")
     server = unified()
@@ -76,6 +79,7 @@ def test_the_skip_reason_names_the_missing_token(unified, monkeypatch):
     assert response.capabilities["mpstats"]["mounted"] is False
 
 
+@pytest.mark.req("R-MPSTATS-MOUNT-GATE")
 def test_the_standalone_mpstats_server_keeps_its_tools(monkeypatch):
     """The gate lives in the unified mount, never in the standalone server."""
     monkeypatch.setenv("MPSTATS_MP_AUTH", "")

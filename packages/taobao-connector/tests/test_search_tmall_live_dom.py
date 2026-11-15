@@ -64,6 +64,7 @@ def _assert_product_fields(got, expected):
 
 
 # START_BLOCK_MIXED_GRID
+@pytest.mark.req("R-TAOBAO-TMALL-SEARCH")
 async def test_tmall_tiles_keep_real_host_and_product_fields(search_result):
     """R-TAOBAO-TMALL-SEARCH: both captured Tmall products retain identity, price and host."""
     expected = [it for it in GROUND_TRUTH if it["kind"] == "tmall"]
@@ -75,6 +76,7 @@ async def test_tmall_tiles_keep_real_host_and_product_fields(search_result):
     assert search_result.count == 4
 
 
+@pytest.mark.req("R-TAOBAO-TMALL-SEARCH")
 def test_ad_click_tracker_is_excluded(capture_payload):
     """R-TAOBAO-TMALL-SEARCH: an id-bearing real ad is not an ordinary product URL."""
     expected_ads = [it for it in GROUND_TRUTH if it["kind"] == "simba_ad"]
@@ -87,6 +89,7 @@ def test_ad_click_tracker_is_excluded(capture_payload):
     assert all("click.simba.taobao.com" not in it["url"] for it in capture_payload["items"])
 
 
+@pytest.mark.req("R-TAOBAO-TMALL-SEARCH")
 async def test_taobao_tiles_preserve_product_fields(search_result):
     """R-TAOBAO-TMALL-SEARCH: adding Tmall must leave ordinary Taobao values unchanged."""
     expected = [it for it in GROUND_TRUTH if it["kind"] == "taobao"]

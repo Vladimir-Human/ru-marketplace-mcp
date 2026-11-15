@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 import mcp_wire
 from mcp_wire import _check_gate, _snapshot
@@ -40,6 +42,7 @@ def test_wire_snapshot_is_machine_readable() -> None:
     json.dumps(snapshot, ensure_ascii=False)
 
 
+@pytest.mark.req("R-WIRE-GATE-FAIL-CLOSED")
 def test_wire_gate_fails_when_a_checked_profile_is_not_in_the_baseline() -> None:
     # Gate mode (a baseline comparison without --update-baseline) must fail
     # closed: a checked profile with no baseline entry has nothing to compare
@@ -107,6 +110,7 @@ def test_wire_update_baseline_still_creates_a_missing_baseline(tmp_path, monkeyp
     assert target.exists()
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_wire_snapshot_counts_initialize_instructions() -> None:
     """Instructions are paid once per session, so they are measured, not assumed free."""
     snapshot = _snapshot("demo", [{"name": "tool"}], 0.01, "Use the guide resources.")
@@ -117,6 +121,7 @@ def test_wire_snapshot_counts_initialize_instructions() -> None:
     assert mcp_wire.total_tokens(snapshot) == snapshot["wire_tokens"] + snapshot["instructions_tokens"]
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_wire_gate_fails_on_the_absolute_ceiling() -> None:
     """The relative gate only sees a change since the last hand-written baseline."""
     snapshot = _snapshot("compare-mcp", [{"name": "tool", "description": "x"}], 0.01)
@@ -130,6 +135,7 @@ def test_wire_gate_fails_on_the_absolute_ceiling() -> None:
     assert "ceiling_exceeded:" in " ".join(gate["failures"])
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_wire_gate_passes_under_the_ceiling() -> None:
     snapshot = _snapshot("compare-mcp", [{"name": "tool", "description": "x"}], 0.01, "instructions")
     baseline = {
@@ -148,6 +154,7 @@ def test_wire_gate_passes_under_the_ceiling() -> None:
     assert gate["total_tokens"] == mcp_wire.total_tokens(snapshot)
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_wire_gate_fails_when_a_checked_profile_has_no_ceiling() -> None:
     snapshot = _snapshot("compare-mcp", [{"name": "tool"}], 0.01)
     baseline = {
@@ -160,6 +167,7 @@ def test_wire_gate_fails_when_a_checked_profile_has_no_ceiling() -> None:
     assert any("missing_ceiling" in item for item in gate["failures"])
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_update_baseline_records_a_ceiling_and_keeps_one_already_set(tmp_path, monkeypatch) -> None:
     """Raising a ceiling is a decision: measuring must not undo it."""
     target = tmp_path / "baseline.json"
@@ -175,6 +183,7 @@ def test_update_baseline_records_a_ceiling_and_keeps_one_already_set(tmp_path, m
     assert json.loads(target.read_text(encoding="utf-8"))["ceilings"]["compare-mcp"] == 4242
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_model_tokens_catch_a_growing_description_behind_a_shrinking_output_schema() -> None:
     # The wire total is not what the model pays: the provider request carries
     # the description on every call, while the output schema it never receives
@@ -203,6 +212,7 @@ def test_model_tokens_catch_a_growing_description_behind_a_shrinking_output_sche
     assert any("model_tokens_regression" in item for item in gate["failures"])
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_wire_gate_fails_closed_when_the_baseline_has_no_model_token_budget() -> None:
     # A baseline file written before the model-paid measure carries no
     # model_tokens. In gate mode that fails exactly like a missing wire_tokens
@@ -220,6 +230,7 @@ def test_wire_gate_fails_closed_when_the_baseline_has_no_model_token_budget() ->
     assert _check_gate(snapshot, baseline, max_regression=10.0, max_latency_ms=None)["ok"] is True
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_model_tokens_exclude_the_output_schema_and_the_annotations() -> None:
     plain = {"name": "tool", "description": "what it answers", "inputSchema": {"type": "object"}}
     heavy = {
@@ -236,6 +247,7 @@ def test_model_tokens_exclude_the_output_schema_and_the_annotations() -> None:
     assert _snapshot("demo", [heavy], 0.01)["wire_tokens"] > _snapshot("demo", [plain], 0.01)["wire_tokens"]
 
 
+@pytest.mark.req("R-WIRE-MEASUREMENT")
 def test_update_baseline_writes_model_tokens_per_profile_and_per_tool(tmp_path, monkeypatch) -> None:
     # The committed baseline is regenerated with --update-baseline, so the new
     # figures must reach the file from the measurement, not from a hand edit.

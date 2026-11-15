@@ -135,6 +135,7 @@ def _install_fake_open_page(monkeypatch, payload: object) -> list[tuple]:
 # ------------------------------------------------------------------- pacing ----
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 async def test_polite_wait_passes_the_callers_live_gap():
     """A connector retunes the pace by patching its own ``_min_gap``."""
     recorder = _WaitRecorder()
@@ -147,6 +148,7 @@ async def test_polite_wait_passes_the_callers_live_gap():
 # ------------------------------------------------------------------ refusals ----
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 def test_blocked_error_appends_the_rotation_hint_and_bounds_the_detail():
     pacer = _pacer_after_refusals(5)
 
@@ -169,12 +171,14 @@ def test_blocked_error_is_the_bare_message_until_refusals_add_up():
 # --------------------------------------------------------------- id checking ----
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 def test_host_checked_id_accepts_bare_ids_and_our_own_hosts():
     assert _extract("B7A1667F9B19ED20") == "b7a1667f9b19ed20"
     assert _extract("https://www.dns-shop.ru/product/B7A1667F9B19ED20/x/") == "b7a1667f9b19ed20"
     assert _extract("dns-shop.ru/product/abc123/") == "abc123"
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 def test_host_checked_id_refuses_off_host_and_odd_shapes():
     assert _extract("") is None
     assert _extract("abc") is None
@@ -188,6 +192,7 @@ def test_host_checked_id_refuses_off_host_and_odd_shapes():
 # ------------------------------------------------------------ capped reading ----
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 def test_sync_curl_get_streams_decodes_and_closes():
     response = _FakeResponse([b"hello ", b"world"], status_code=201)
     fake = _fake_curl(response)
@@ -213,6 +218,7 @@ def test_sync_curl_get_streams_decodes_and_closes():
     assert kwargs["proxies"] == {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 def test_sync_curl_get_aborts_over_the_cap_and_closes():
     response = _FakeResponse([b"12345", b"67890"])
     fake = _fake_curl(response)
@@ -249,6 +255,7 @@ def test_sync_curl_get_falls_back_to_utf8_on_an_unknown_encoding():
 # -------------------------------------------------------------- cdp fetching ----
 
 
+@pytest.mark.req("R-CONNECTOR-KIT")
 async def test_render_json_waits_navigates_and_parses(monkeypatch):
     order = _install_fake_open_page(monkeypatch, json.dumps({"items": [1]}))
     waited: list[str] = []
@@ -326,6 +333,8 @@ async def test_render_json_rejects_a_non_object_or_non_json_payload(monkeypatch)
         )
 
 
+@pytest.mark.req("R-DRIFT")
+@pytest.mark.req("R-ERRORS")
 async def test_render_json_refusals_are_json_errors(monkeypatch):
     """Every render_json refusal must carry the shared error JSON the agent reads
     — the code and the retryable flag — not the bare message the ToolError used

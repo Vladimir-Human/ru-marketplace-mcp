@@ -80,6 +80,7 @@ def test_windows_profile_pids_ask_for_an_anchored_match(monkeypatch):
     assert chrome_cdp._windows_profile_match_expr(str(chrome_cdp.Path(r"C:\Users\op\Chrome-Scraping"))) in command
 
 
+@pytest.mark.req("R-CHROME-LAUNCHER")
 @pytest.mark.skipif(sys.platform != "win32", reason="runs Windows PowerShell for real")
 def test_windows_profile_pattern_takes_our_profile_only():
     """(audit S2-F6) Bare or quoted, our profile matches; a sibling profile never does."""

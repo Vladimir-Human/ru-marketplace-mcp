@@ -99,6 +99,7 @@ _PRICED_TITLED_PAGE = {
 # -------------------------------------------------------------- taobao_search ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_tiles_that_lost_their_prices_and_titles(monkeypatch):
     """A page of titleless, priceless tiles is named drift the agent can read.
 

@@ -353,6 +353,7 @@ def test_structured_error_code_takes_precedence_over_message(error, status, code
     assert result["requires_user_action"] is False
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE", "R-CHALLENGE-ACTION")
 async def test_recovery_fields_reach_the_source_outcome(monkeypatch):
     """R-CDP-HOST-PAUSE, R-CHALLENGE-ACTION: an open host breaker's remaining
     pause and the challenge's retry contract must survive _source_error into
@@ -987,6 +988,7 @@ async def test_taobao_adapter_never_ranks_yuan_as_rubles(monkeypatch):
     assert not server._ranks_in_rubles(got[0])
 
 
+@pytest.mark.req("R-COMPARE-FOREIGN-DETAIL")
 async def test_foreign_source_detail_counts_native_prices_without_changing_ranking(monkeypatch):
     """R-COMPARE-FOREIGN-DETAIL: 20 CNY prices are visible, never ranked as RUB."""
 
@@ -1009,6 +1011,7 @@ async def test_foreign_source_detail_counts_native_prices_without_changing_ranki
     assert [item.price_native for item in result.offers[2:]] == list(range(10, 30))
 
 
+@pytest.mark.req("R-COMPARE-FOREIGN-DETAIL")
 @pytest.mark.parametrize(
     ("prices", "expected"),
     [
@@ -1033,6 +1036,7 @@ async def test_foreign_source_detail_handles_missing_and_mixed_native_prices(mon
     assert result.total_offers == len(prices)
 
 
+@pytest.mark.req("R-COMPARE-FOREIGN-DETAIL")
 async def test_rouble_source_detail_still_counts_only_rouble_prices(monkeypatch):
     """R-COMPARE-FOREIGN-DETAIL: missing RUB prices do not change the old detail."""
 

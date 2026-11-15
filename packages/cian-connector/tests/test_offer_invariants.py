@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from cian_connector import server
 
 
@@ -65,6 +66,7 @@ def _titleless_offer(offer_id: int) -> dict:
 # ---------------------------------------------------------- cian_search ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_offers_that_lost_their_titles_and_prices(monkeypatch):
     """R-ITEM-HONESTY: a page whose every offer lost both its title sources and
     its price must answer unhealthy, not as a clean page of anonymous free flats.
@@ -162,6 +164,7 @@ async def test_card_warns_when_the_offer_lost_its_title(monkeypatch):
     assert any(w == "price_missing" for w in result.meta.warnings), result.meta.warnings
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_a_page_whose_every_price_died(monkeypatch):
     """Titled offers with no price key left: the price selector drifted.
 

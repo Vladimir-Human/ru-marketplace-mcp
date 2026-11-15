@@ -104,6 +104,7 @@ def stub_json(monkeypatch, mapping: dict[str, object]):
 # ------------------------------------------------------------------- tests ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_category_flags_products_that_lost_their_prices_and_titles(monkeypatch, no_delay):
     """A page of titleless, priceless tiles is drift, not a healthy listing.
 
@@ -158,6 +159,7 @@ async def test_category_a_priced_page_with_titles_stays_healthy(monkeypatch, no_
     assert result.items[0].price_rub is not None
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_category_flags_a_page_whose_every_price_died(monkeypatch, no_delay):
     """Titled products with no price: the price selector drifted.
 

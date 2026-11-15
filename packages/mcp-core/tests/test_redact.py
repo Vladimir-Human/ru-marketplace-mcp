@@ -220,6 +220,7 @@ def test_empty_input_is_safe():
 _NON_TOKEN_SECRET = "plain-paid-session-secret-7f3a"
 
 
+@pytest.mark.req("R-SECRET-ENV-VALUES")
 def test_a_non_token_shaped_env_secret_value_is_redacted(monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _NON_TOKEN_SECRET)
 
@@ -288,6 +289,7 @@ def test_env_value_redaction_is_idempotent(monkeypatch):
 # ---------------------------------------------------------------- idempotence ----
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 @pytest.mark.parametrize(
     "text",
     [

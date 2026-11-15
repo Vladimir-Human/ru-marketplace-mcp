@@ -51,6 +51,7 @@ def _patch_ozon(monkeypatch, tiles: list[dict]) -> None:
     ozon._cache.clear()
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.compare")
 @pytest.mark.parametrize("rating_text,priced", [("4.9", True), ("0.0", True), ("4.9", False)])
 async def test_numeric_search_fields_reach_compare_unchanged(monkeypatch, rating_text, priced):
     """R-OZON-SEARCH-NUMERIC: numeric/null prices, zero ratings and counts survive comparison."""
@@ -83,6 +84,7 @@ async def test_numeric_search_fields_reach_compare_unchanged(monkeypatch, rating
         assert any("price_unparseable" in w for w in result.warnings)
 
 
+@pytest.mark.req("R-COUNT-PARSE")
 async def test_a_magnitude_review_count_never_reaches_the_comparison_as_an_integer(monkeypatch):
     """R05: the compared offer carries no count, not a manufactured one."""
     _patch_ozon(monkeypatch, [_tile(123456, "1.2K отзывов")])

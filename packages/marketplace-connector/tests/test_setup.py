@@ -82,6 +82,7 @@ def blocked_selfchecks(monkeypatch):
     monkeypatch.setattr(cli, "_run_selfchecks", fake)
 
 
+@pytest.mark.req("R-CLI-SETUP")
 def test_setup_detects_a_claude_desktop_folder_and_writes_the_compare_profile(claude_config, no_claude_code, capfd):
     claude_config.parent.mkdir()
 
@@ -244,6 +245,7 @@ def test_setup_tty_yes_runs_unblock(claude_config, no_claude_code, fake_browser,
     assert calls == [["ozon"]]
 
 
+@pytest.mark.req("R-CLI-SETUP")
 def test_setup_tty_no_skips_the_unblock_pages(
     claude_config, no_claude_code, fake_browser, blocked_selfchecks, monkeypatch, capfd
 ):

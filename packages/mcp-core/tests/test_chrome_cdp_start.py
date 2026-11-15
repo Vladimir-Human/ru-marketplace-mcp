@@ -37,6 +37,7 @@ async def _bind_now(_timeout_s: float) -> bool:
     return True
 
 
+@pytest.mark.req("R-CLI-BROWSER-START")
 async def test_visible_launch_has_no_off_screen_arguments(monkeypatch, spawned):
     monkeypatch.setattr(chrome_cdp, "STEALTH", True)
     monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
@@ -106,6 +107,7 @@ async def test_a_remote_host_is_refused_without_spawning(monkeypatch):
     assert "loopback-only" in str(result["reason"])
 
 
+@pytest.mark.req("R-CLI-BROWSER-START")
 async def test_a_machine_without_chrome_is_told_to_set_the_binary(monkeypatch, spawned):
     """No Chrome is the most likely real `browser start` failure (audit S4-F22)."""
     monkeypatch.setattr(chrome_cdp, "_find_chrome", lambda: None)
@@ -154,6 +156,7 @@ async def test_a_port_that_never_binds_names_the_profile_and_remote_debugging(mo
     assert len(spawned) == 1
 
 
+@pytest.mark.req("R-CLI-BROWSER-START")
 async def test_hidden_launch_without_stealth_matches_the_autostart(monkeypatch, spawned):
     """CHROME_STEALTH=0 keeps the autostart on-screen, so --hidden must too."""
     monkeypatch.setattr(chrome_cdp, "STEALTH", False)
@@ -170,6 +173,7 @@ async def test_hidden_launch_without_stealth_matches_the_autostart(monkeypatch, 
     assert hidden == []
 
 
+@pytest.mark.req("R-CLI-BROWSER-START")
 @pytest.mark.parametrize("platform", ["darwin", "linux"])
 async def test_hidden_launch_outside_windows_is_not_reported_off_screen(monkeypatch, spawned, platform):
     """Parking the window is Windows-only, so --hidden elsewhere must not claim it (audit A4)."""
@@ -214,6 +218,7 @@ def _fake_channel(monkeypatch, channel: _TabChannel) -> None:
     monkeypatch.setattr(chrome_cdp, "_browser_cdp_channel", fake)
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 async def test_open_tabs_creates_one_new_target_per_url_and_navigates_nothing(monkeypatch):
     channel = _TabChannel()
     _fake_channel(monkeypatch, channel)
@@ -248,6 +253,7 @@ async def test_open_tabs_treats_a_reply_without_a_target_id_as_a_failure(monkeyp
     assert "no target id" in result["reason"]
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 @pytest.mark.parametrize(
     "url",
     [

@@ -12,6 +12,7 @@ browser is started or attached.
 
 from __future__ import annotations
 
+import pytest
 from mcp_core.transport import chrome_cdp
 
 PROXY = "http://proxy-user:proxy-secret@proxy.example:8080"
@@ -54,6 +55,7 @@ def _live_endpoint(path: str, *, timeout_s: float = 5.0) -> object:
     return [{"id": "page-1", "type": "page", "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/page-1"}]
 
 
+@pytest.mark.req("R-DIAGNOSTIC-REDACTION")
 async def test_the_probe_reason_does_not_carry_a_proxy_credential(monkeypatch):
     """The reachability probe answers a reason, and it must be scrubbed."""
     monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: True)

@@ -77,6 +77,8 @@ def _declared_files(root: Path) -> list[Path]:
     return sorted({declaration.path for declaration in version_sites.iter_declarations(root)})
 
 
+@pytest.mark.req("R-VERSION")
+@pytest.mark.req("R-RELEASE-BUMP")
 def test_the_expected_declaration_files_are_pinned_in_this_test(mini_tree: Path) -> None:
     """The table under test must not be allowed to shrink unnoticed (audit S4-F11).
 
@@ -132,6 +134,7 @@ def test_the_bump_reaches_the_dsh_bundle_readme_image_tag(mini_tree: Path) -> No
     assert OLD not in readme
 
 
+@pytest.mark.req("R-RELEASE-BUMP")
 def test_every_site_family_is_bumped(mini_tree: Path) -> None:
     assert bump_version.bump(mini_tree, NEW) == 0
 
@@ -176,6 +179,7 @@ def test_a_stale_deployment_guide_pin_fails_the_version_check(
     assert "DEPLOYMENT.md:2: 1.2.2 should be 1.2.3" in err
 
 
+@pytest.mark.req("R-RELEASE-BUMP")
 def test_dry_run_prints_the_plan_and_writes_nothing(mini_tree: Path, capsys: pytest.CaptureFixture[str]) -> None:
     before = {path: path.read_bytes() for path in _declared_files(mini_tree)}
 
@@ -187,6 +191,7 @@ def test_dry_run_prints_the_plan_and_writes_nothing(mini_tree: Path, capsys: pyt
     assert {path: path.read_bytes() for path in before} == before
 
 
+@pytest.mark.req("R-RELEASE-BUMP")
 @pytest.mark.parametrize("candidate", ["1.2", "1.2.3.4", "release", "v1.2.3-rc1", ""])
 def test_a_bad_version_exits_2(mini_tree: Path, candidate: str) -> None:
     before = (mini_tree / "pyproject.toml").read_bytes()
@@ -235,6 +240,7 @@ def test_formatting_and_json_key_order_are_preserved(tmp_path: Path) -> None:
     assert '"version": "0.0.1"' in expected_json, "the nested fixture version proves it was left alone"
 
 
+@pytest.mark.req("R-RELEASE-BUMP")
 def test_the_shared_site_table_is_what_both_scripts_use(
     mini_tree: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -250,6 +256,7 @@ def test_the_shared_site_table_is_what_both_scripts_use(
     assert OLD in (mini_tree / "pyproject.toml").read_text(encoding="utf-8")
 
 
+@pytest.mark.req("R-RELEASE-BUMP")
 def test_a_failed_post_write_check_makes_the_bump_fail(tmp_path: Path) -> None:
     _write(tmp_path, "pyproject.toml", '[project]\nversion = "1.2.3"\n')
     # A required manifest with no version makes check_versions fail after the
@@ -260,6 +267,7 @@ def test_a_failed_post_write_check_makes_the_bump_fail(tmp_path: Path) -> None:
     assert 'version = "1.3.0"' in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
 
 
+@pytest.mark.req("R-VERSION")
 def test_the_version_check_fails_on_a_file_that_kept_the_old_version(
     mini_tree: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -279,6 +287,7 @@ def test_the_version_check_fails_on_a_file_that_kept_the_old_version(
     assert "__init__.py:1: 1.2.2 should be 1.2.3" in err
 
 
+@pytest.mark.req("R-VERSION")
 def test_the_version_check_passes_when_every_declaration_agrees(
     mini_tree: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -300,6 +309,7 @@ def test_the_version_check_refuses_a_version_the_root_does_not_say(
     assert "agreed in" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-VERSION")
 def test_deleting_one_plugin_manifest_fails_the_version_check(
     mini_tree: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

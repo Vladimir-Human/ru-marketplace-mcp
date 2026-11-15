@@ -42,6 +42,7 @@ def _probe_server() -> FastMCP:
 # --- through the client, the way production serves a call -------------------
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 async def test_unexpected_exception_reaches_the_client_redacted(monkeypatch):
     """The raw ValueError carries both the env-var secret and a proxy URL; the
     agent must not see the credential, and the host stays readable."""
@@ -59,6 +60,7 @@ async def test_unexpected_exception_reaches_the_client_redacted(monkeypatch):
     assert "proxy.test" in text
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 async def test_json_tool_error_from_raise_tool_error_passes_through(monkeypatch):
     """An error the project raised itself is already redacted JSON, so the
     boundary must hand it to the agent byte-identical."""
@@ -84,6 +86,7 @@ async def test_json_tool_error_from_raise_tool_error_passes_through(monkeypatch)
 # --- the middleware contract on its own -------------------------------------
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 async def test_middleware_redacts_and_keeps_the_original_as_cause():
     middleware = runtime.ToolErrorRedactionMiddleware()
     original = ToolError("Bearer abc.def.ghi was refused")
@@ -156,6 +159,7 @@ class _RecordingMCP:
         self.runs.append(kwargs)
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 @pytest.mark.parametrize("transport", ["stdio", "http"])
 def test_run_server_installs_the_redaction_boundary(monkeypatch, transport):
     monkeypatch.setenv(runtime.ENV_TRANSPORT, transport)

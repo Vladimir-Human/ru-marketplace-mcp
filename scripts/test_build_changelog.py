@@ -44,6 +44,7 @@ def _snapshot(root: Path) -> dict[str, bytes]:
 # START_BLOCK_RELEASE_TESTS
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.dry-run", "R-CHANGELOG-FRAGMENTS.fold")
 def test_two_fragments_fold_in_section_and_numeric_pr_order(tmp_path: Path) -> None:
     root = _tree(tmp_path)
     _fragment(
@@ -67,6 +68,7 @@ def test_two_fragments_fold_in_section_and_numeric_pr_order(tmp_path: Path) -> N
     assert b"\r" not in (root / "CHANGELOG.md").read_bytes()
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold")
 def test_hand_text_is_preserved_before_fragment_entries(tmp_path: Path) -> None:
     hand = "Заметка вручную.\nManual note.\n\n### Fixed\n- Ручное.\n- Manual.\n\n"
     root = _tree(tmp_path, hand)
@@ -79,6 +81,7 @@ def test_hand_text_is_preserved_before_fragment_entries(tmp_path: Path) -> None:
     assert text.endswith(OLD_RELEASE)
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold")
 def test_all_keep_a_changelog_sections_use_the_standard_order(tmp_path: Path) -> None:
     root = _tree(tmp_path)
     sections = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
@@ -92,6 +95,7 @@ def test_all_keep_a_changelog_sections_use_the_standard_order(tmp_path: Path) ->
     assert positions == sorted(positions)
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.dry-run")
 def test_dry_run_prints_the_same_section_and_touches_nothing(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -108,6 +112,7 @@ def test_dry_run_prints_the_same_section_and_touches_nothing(
     assert (root / "CHANGELOG.md").read_text(encoding="utf-8") == HEADER + section + "\n" + OLD_RELEASE
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize(
     ("text", "line"),
     [
@@ -132,6 +137,7 @@ def test_bad_fragment_names_the_file_and_line_without_writing(
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold", "R-CHANGELOG-FRAGMENTS.validation")
 def test_odd_bullet_counts_and_continuations_are_kept(tmp_path: Path) -> None:
     root = _tree(tmp_path)
     fragment = "### Changed\n- Нечётная заметка (#12).\n  continuation with `code`.\n  - nested detail\n"
@@ -141,6 +147,7 @@ def test_odd_bullet_counts_and_continuations_are_kept(tmp_path: Path) -> None:
     assert fragment in (root / "CHANGELOG.md").read_text(encoding="utf-8")
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_an_existing_version_is_refused_without_writing(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], dry_run: bool
@@ -155,12 +162,14 @@ def test_an_existing_version_is_refused_without_writing(
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.dry-run")
 def test_no_fragments_builds_an_empty_section(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     root = _tree(tmp_path)
     assert builder.main([*RELEASE_ARGS, "--dry-run"], root=root) == 0
     assert capsys.readouterr().out == "## [3.0.0] - 2026-11-16\n"
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("name", ["oops.md", "0.md"])
 def test_non_pr_fragment_names_are_refused(tmp_path: Path, capsys: pytest.CaptureFixture[str], name: str) -> None:
     root = _tree(tmp_path)
@@ -171,6 +180,7 @@ def test_non_pr_fragment_names_are_refused(tmp_path: Path, capsys: pytest.Captur
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("args", [["--version", "1.2"], ["--version", "1.2.3", "--date", "2026-02-30"]])
 def test_bad_release_arguments_are_refused(tmp_path: Path, args: list[str]) -> None:
     root = _tree(tmp_path)
@@ -179,6 +189,7 @@ def test_bad_release_arguments_are_refused(tmp_path: Path, args: list[str]) -> N
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 def test_missing_unreleased_heading_is_refused(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     root = _tree(tmp_path)
     (root / "CHANGELOG.md").write_text("# Changelog\n\n" + OLD_RELEASE, encoding="utf-8", newline="\n")
@@ -188,6 +199,7 @@ def test_missing_unreleased_heading_is_refused(tmp_path: Path, capsys: pytest.Ca
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold")
 @pytest.mark.parametrize("fence", ["```", "~~~~"])
 def test_fenced_manual_headings_stay_inside_their_example(fence: str) -> None:
     """R-CHANGELOG-FRAGMENTS.fold: Markdown examples must not split or reorder hand text."""
@@ -201,6 +213,7 @@ def test_fenced_manual_headings_stay_inside_their_example(fence: str) -> None:
     assert updated == HEADER + expected + "\n" + OLD_RELEASE
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("fence", ["```", "~~~~"])
 def test_fenced_fragment_examples_are_not_headings_or_top_level_bullets(fence: str) -> None:
     """R-CHANGELOG-FRAGMENTS.validation: literal code is neither a section nor a bullet."""
@@ -211,6 +224,7 @@ def test_fenced_fragment_examples_are_not_headings_or_top_level_bullets(fence: s
         builder.parse_fragment(f"### Changed\n{fence}\n- Example only.\n{fence}\n", "changes/12.md")
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.pr", "R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("mode", ["release", "pr"])
 def test_invalid_utf8_fragment_reports_its_name_and_line(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], mode: str
@@ -244,6 +258,7 @@ def test_invalid_utf8_fragment_reports_its_name_and_line(
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("indent", ["", " ", "  ", "   "])
 @pytest.mark.parametrize("marker", ["-", "+", "*"])
 def test_top_level_bullet_indentation_uses_markdown_rules(indent: str, marker: str) -> None:
@@ -254,6 +269,7 @@ def test_top_level_bullet_indentation_uses_markdown_rules(indent: str, marker: s
         builder.parse_fragment(f"### Fixed\n    {marker} Only indented code.\n", "changes/12.md")
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold", "R-CHANGELOG-FRAGMENTS.validation")
 @pytest.mark.parametrize("fence", ["```", "~~~~"])
 def test_fences_in_list_items_keep_their_literal_headings(fence: str) -> None:
     """R-CHANGELOG-FRAGMENTS.fold/validation: a list-item example is not a new section."""
@@ -270,6 +286,7 @@ def test_fences_in_list_items_keep_their_literal_headings(fence: str) -> None:
 # START_BLOCK_PR_TESTS
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.pr")
 @pytest.mark.parametrize(
     ("paths", "labels", "author", "fragment", "passes"),
     [
@@ -295,6 +312,7 @@ def test_pure_pr_decision_branches(
         assert "\n" not in problem
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.pr")
 @pytest.mark.parametrize(
     ("paths", "labels", "author", "fragment", "expected"),
     [
@@ -336,6 +354,7 @@ def test_check_pr_cli_inputs(
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.dry-run")
 def test_real_cli_uses_its_copied_tree(tmp_path: Path) -> None:
     root = _tree(tmp_path)
     _fragment(root)
@@ -381,6 +400,7 @@ def _assert_ci_fragment_step(text: str) -> None:
         assert option in step
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.pr")
 def test_ci_fragment_step_and_label_events() -> None:
     """The workflow gathers git/PR inputs only and reruns the final lint step for labels."""
     workflow = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "ci.yml"

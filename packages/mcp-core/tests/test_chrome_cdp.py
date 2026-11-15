@@ -80,6 +80,7 @@ def test_an_ipv6_host_with_colons_is_kept(monkeypatch):
     assert chrome_cdp._host_from_env() == "::1"
 
 
+@pytest.mark.req("R-CI-TAG-WORKFLOWS")
 @pytest.mark.parametrize("spelling", ["::1", "[::1]"])
 def test_an_ipv6_host_dials_in_brackets_and_stays_loopback(monkeypatch, spelling):
     """(audit S1-F7) Bare ::1 used to build http://::1:9222; [::1] used to count as remote."""
@@ -798,6 +799,7 @@ def test_goto_and_status_reports_a_block_page(monkeypatch):
     assert asyncio.run(page.goto_and_status("https://x/")) == 403
 
 
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.antibot-recheck")
 @pytest.mark.parametrize("status", [401, 403])
 def test_goto_and_status_waits_out_an_antibot_reload(status):
     """R-CDP-NAV-TIMEOUT.antibot-recheck: a self-clearing main-frame check returns the real page."""
@@ -919,6 +921,7 @@ def _patch_playwright_tab(monkeypatch, fake_page):
     monkeypatch.setattr(chrome_cdp, "_new_tab", fake_new_tab)
 
 
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.antibot-recheck")
 @pytest.mark.parametrize("status", [401, 403])
 async def test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200(monkeypatch, status):
     """R-CDP-NAV-TIMEOUT.antibot-recheck: the new document lands before the final host check."""
@@ -931,6 +934,7 @@ async def test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200(mo
     assert fake_page.waits == [{"wait_until": "domcontentloaded", "timeout": chrome_cdp._ANTIBOT_RECHECK_S * 1000}]
 
 
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.antibot-recheck")
 @pytest.mark.parametrize("status", [401, 403])
 @pytest.mark.parametrize(
     "outcome",
@@ -961,6 +965,7 @@ async def test_playwright_antibot_stays_a_block_without_a_good_reload(monkeypatc
     assert blocked.value.status == (outcome if isinstance(outcome, int) else status)
 
 
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.antibot-recheck")
 async def test_playwright_429_is_not_rechecked(monkeypatch):
     """R-CDP-NAV-TIMEOUT.antibot-recheck: refuse a 429 without waiting for a navigation."""
     fake_page = _FakeNavPage(outcome=200, status=429)
@@ -975,6 +980,7 @@ async def test_playwright_429_is_not_rechecked(monkeypatch):
     assert fake_page.waits == []
 
 
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.antibot-recheck")
 async def test_raw_429_is_not_rechecked(monkeypatch):
     """R-CDP-NAV-TIMEOUT.antibot-recheck: raw fallback refuses 429 before reading a later reload."""
     import json

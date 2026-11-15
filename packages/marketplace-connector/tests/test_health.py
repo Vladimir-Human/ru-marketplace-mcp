@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
+import pytest
 from marketplace_connector import server
 from marketplace_connector.unblock import UNBLOCK_PAGES
 from mcp_core import transport as core_transport
@@ -49,6 +50,7 @@ def _forbid_browser(monkeypatch) -> None:
     monkeypatch.setattr(chrome_cdp, "probe_session", explode)
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_reports_unreachable_cdp_without_autostart_or_navigation(monkeypatch):
     _forbid_browser(monkeypatch)
     _dead_cdp(monkeypatch)
@@ -71,6 +73,7 @@ def test_health_reports_unreachable_cdp_without_autostart_or_navigation(monkeypa
     assert browser_handoff.handoff_diagnostics() == handoffs_before
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_reads_only_the_version_and_target_endpoints(monkeypatch):
     """The probe is two bounded GETs; the version is what Chrome answers with."""
     reads: list[tuple[str, float]] = []
@@ -97,6 +100,7 @@ def test_health_reads_only_the_version_and_target_endpoints(monkeypatch):
     assert all(timeout_s <= 2.0 for _, timeout_s in reads)
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_reports_an_open_breaker_with_its_remaining_pause(monkeypatch):
     _dead_cdp(monkeypatch)
     budget = cdp_budget.NavigationBudget(breaker_threshold=1, breaker_cooldown_s=60.0, clock=lambda: 100.0)
@@ -120,6 +124,7 @@ def test_health_reports_an_open_breaker_with_its_remaining_pause(monkeypatch):
     assert result.budget["in_flight"] == 0
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_reports_a_failing_part_inside_the_answer(monkeypatch):
     """A broken part must not take the whole pre-flight answer down with it."""
 
@@ -144,6 +149,7 @@ def test_health_reports_a_failing_part_inside_the_answer(monkeypatch):
     assert result.server_version == server.SERVER_VERSION
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_survives_a_missing_optional_browser_tier(monkeypatch):
     """With no Playwright installed the cdp extra is absent, not a crash."""
     monkeypatch.delattr(core_transport, "chrome_cdp", raising=False)
@@ -157,6 +163,7 @@ def test_health_survives_a_missing_optional_browser_tier(monkeypatch):
     assert isinstance(result.handoffs, dict)
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_names_the_page_that_unblocks_a_mounted_source(monkeypatch):
     _dead_cdp(monkeypatch)
     monkeypatch.setattr(server, "_MOUNTED", ["ozon", "cian", "wildberries", "compare"])
@@ -166,6 +173,7 @@ def test_health_names_the_page_that_unblocks_a_mounted_source(monkeypatch):
     assert result.unblock == {"cian": UNBLOCK_PAGES["cian"], "ozon": UNBLOCK_PAGES["ozon"]}
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_is_advertised_as_read_only():
     tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
 
@@ -178,6 +186,7 @@ def test_health_is_advertised_as_read_only():
     assert annotations.open_world_hint is False
 
 
+@pytest.mark.req("R-CDP-CAPABILITY-TRUTH", "R-TRANSPORT-HEALTH")
 def test_needs_cdp_lists_exactly_the_browser_backed_mounted_sources():
     result = asyncio.run(server.marketplace_sources())
 
@@ -201,6 +210,7 @@ def test_needs_cdp_lists_exactly_the_browser_backed_mounted_sources():
     assert result.capabilities["ozon"]["access"] == "http_or_cdp"
 
 
+@pytest.mark.req("R-CDP-CAPABILITY-TRUTH", "R-TRANSPORT-HEALTH")
 def test_needs_cdp_follows_the_mounted_set(monkeypatch):
     """Derived from what mounted, not a copy of the capability table."""
     monkeypatch.setattr(server, "_MOUNTED", ["wildberries", "cian", "compare", "yandex"])
@@ -211,6 +221,7 @@ def test_needs_cdp_follows_the_mounted_set(monkeypatch):
     assert result.needs_cdp == ["cian", "wildberries"]
 
 
+@pytest.mark.req("R-CDP-CAPABILITY-TRUTH", "R-TRANSPORT-HEALTH")
 def test_needs_cdp_reads_a_mount_name_through_its_canonical_source(monkeypatch):
     """A mount name that differs from its capability key still finds its row.
 
@@ -230,6 +241,7 @@ def test_needs_cdp_reads_a_mount_name_through_its_canonical_source(monkeypatch):
     assert result.needs_cdp == ["yandex"]
 
 
+@pytest.mark.req("R-TRANSPORT-HEALTH")
 def test_health_keeps_the_profile_path_and_url_tokens_out_of_the_answer(monkeypatch):
     """A retained lease is reported without the OS user name or a URL token."""
     lease = {

@@ -92,6 +92,7 @@ def test_card_extractor_shape_matches_the_capture() -> None:
     assert shape_signature(payload) == list(shape_reference.CARD_SHAPE_REFERENCE)
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Tiles that still parse without a parser-critical key are structural
     drift the agent must see in the tool's own response, not only via doctor."""
@@ -121,6 +122,7 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_reports_shape_drift_when_a_required_path_vanishes(monkeypatch):
     """A page that still yields tiles but lost a parser-critical field is
     structural drift — loud, with the missing path named."""

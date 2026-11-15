@@ -85,6 +85,7 @@ def assert_dom_calls(fakes):
     }
 
 
+@pytest.mark.req("R-WB-SELFCHECK-DOM")
 async def test_dom_selfcheck_uses_the_tools_parsers_and_avoids_api_hosts(monkeypatch, selfcheck_fakes):
     """R-WB-SELFCHECK-DOM: captured named/priced products prove both DOM paths."""
     parsed = []

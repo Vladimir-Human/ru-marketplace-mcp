@@ -291,6 +291,7 @@ def test_a_failed_popup_open_still_returns_the_permit(monkeypatch):
     assert state.budget.events[-1] == ("release",)
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 def test_an_open_host_breaker_refuses_the_popup_before_it_opens(monkeypatch):
     from fastmcp.exceptions import ToolError
 

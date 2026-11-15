@@ -80,6 +80,11 @@ def load_server(monkeypatch, connector_calls):
 
 # END_BLOCK_OFFLINE_SERVERS
 # START_BLOCK_SOURCE_SELECTION
+@pytest.mark.req(
+    "R-COMPARE-SOURCE-SELECTION.discovery",
+    "R-COMPARE-SOURCE-SELECTION.inventory",
+    "R-COMPARE-SOURCE-SELECTION.refusal",
+)
 async def test_compare_cold_discovery_skips_deselected_connectors(monkeypatch, load_server):
     """R-COMPARE-SOURCE-SELECTION.discovery: cold startup never imports disabled connectors."""
     monkeypatch.setenv(ENV_VAR, SELECTION)
@@ -100,6 +105,7 @@ async def test_compare_cold_discovery_skips_deselected_connectors(monkeypatch, l
     assert set(imported) == ALLOWED
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-SELECTION.defaults")
 @pytest.mark.parametrize("discovery", ["cold", "preloaded", "unset", "blank"])
 async def test_compare_prices_uses_selected_sources_regardless_of_discovery_state(
     monkeypatch, load_server, connector_calls, discovery
@@ -143,6 +149,11 @@ async def test_compare_prices_uses_selected_sources_regardless_of_discovery_stat
             assert sorted(connector_calls) == sorted((name, "search") for name in expected)
 
 
+@pytest.mark.req(
+    "R-COMPARE-SOURCE-SELECTION.discovery",
+    "R-COMPARE-SOURCE-SELECTION.inventory",
+    "R-COMPARE-SOURCE-SELECTION.refusal",
+)
 async def test_compare_sources_filters_preloaded_deselected_connectors(monkeypatch, load_server):
     """R-COMPARE-SOURCE-SELECTION.inventory: cached availability cannot override deselection."""
     monkeypatch.delenv(ENV_VAR, raising=False)
@@ -156,6 +167,11 @@ async def test_compare_sources_filters_preloaded_deselected_connectors(monkeypat
     assert report["not_installed"] == []
 
 
+@pytest.mark.req(
+    "R-COMPARE-SOURCE-SELECTION.discovery",
+    "R-COMPARE-SOURCE-SELECTION.inventory",
+    "R-COMPARE-SOURCE-SELECTION.refusal",
+)
 @pytest.mark.parametrize("tool", ["compare_prices", "compare_verify_offer", "decision_inspect"])
 async def test_compare_tools_refuse_explicit_deselected_source(monkeypatch, load_server, connector_calls, tool):
     """R-COMPARE-SOURCE-SELECTION.refusal: an explicit disabled alias never reaches native I/O."""
@@ -183,6 +199,11 @@ async def test_compare_tools_refuse_explicit_deselected_source(monkeypatch, load
     assert connector_calls == []
 
 
+@pytest.mark.req(
+    "R-COMPARE-SOURCE-SELECTION.discovery",
+    "R-COMPARE-SOURCE-SELECTION.inventory",
+    "R-COMPARE-SOURCE-SELECTION.refusal",
+)
 async def test_compare_verification_still_reads_an_allowed_source(monkeypatch, load_server, connector_calls):
     """R-COMPARE-SOURCE-SELECTION.refusal: an allowed alias still dispatches and verifies."""
     monkeypatch.setenv(ENV_VAR, SELECTION)

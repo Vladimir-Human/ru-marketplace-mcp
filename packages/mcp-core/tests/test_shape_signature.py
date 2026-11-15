@@ -8,6 +8,7 @@ be caught. Each test below pins one half of that distinction.
 
 from __future__ import annotations
 
+import pytest
 from mcp_core.resilience import diff_keys, shape_drift_warning, shape_signature
 
 # A trimmed stand-in for a search payload: the parts a parser binds to.
@@ -20,6 +21,7 @@ BASELINE = {
 }
 
 
+@pytest.mark.req("R-DRIFT")
 def test_the_same_shape_with_different_values_fingerprints_identically():
     changed_values = {
         "total": 3,
@@ -50,6 +52,7 @@ def test_a_renamed_field_shows_up_as_missing():
     assert "items[].cost:float" in delta["added"]
 
 
+@pytest.mark.req("R-DRIFT")
 def test_a_retyped_field_shows_up_even_when_the_name_survives():
     """price arriving as "52 999 ₽" instead of a number is exactly how a
     tolerant reader starts returning None without anyone noticing."""
@@ -112,6 +115,7 @@ def test_a_scalar_payload_is_handled():
     assert shape_signature([]) == [".:empty_array"]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 def test_a_lost_family_yields_the_compact_drift_warning():
     """The runtime half of the family check: one warning string naming the
     lost family's aliases, not a raise — the tool's answer stays usable and
@@ -137,6 +141,7 @@ def test_a_null_value_still_counts_as_a_present_family_member():
     assert shape_drift_warning(nulled, (("items[].price_rub",),), source="test_search") is None
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 def test_an_empty_container_is_not_a_lost_element_family():
     """Vacuity, not drift: a delisted WB page arrives with "sizes": [] on every
     product, and a key inside an array that holds no elements cannot have been

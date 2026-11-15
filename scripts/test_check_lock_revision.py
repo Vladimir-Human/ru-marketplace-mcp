@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 import check_lock_revision as gate
 
@@ -13,6 +15,7 @@ def _lock(revision: str) -> str:
     return f'version = 1\n{revision}\nrequires-python = ">=3.12"\n\n[[package]]\nname = "x"\n'
 
 
+@pytest.mark.req("R-LOCK-REVISION")
 def test_the_committed_lockfile_is_at_or_above_the_floor():
     """The repository's own lockfile must pass the gate it defines."""
     ok, message = gate.check_lock_revision(gate.LOCK_FILE)
@@ -58,6 +61,7 @@ def test_a_missing_lockfile_fails(tmp_path):
     assert "not found" in message
 
 
+@pytest.mark.req("R-LOCK-REVISION")
 def test_main_returns_one_on_a_downgraded_lockfile(tmp_path, capsys):
     lock = tmp_path / "uv.lock"
     lock.write_text(_lock("revision = 3"), encoding="utf-8")

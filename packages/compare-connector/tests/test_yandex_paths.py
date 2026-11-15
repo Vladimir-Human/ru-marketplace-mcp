@@ -22,6 +22,7 @@ import html
 import json
 from pathlib import Path
 
+import pytest
 from compare_connector import server as compare_server
 from yandex_connector import server as yandex_server
 
@@ -75,6 +76,7 @@ def _serve_yandex(monkeypatch, page: str) -> None:
 # ------------------------------------------------------------------- R01 ------
 
 
+@pytest.mark.req("R-YANDEX-MONEY-PARSING")
 async def test_the_adapter_never_quotes_an_ambiguous_yandex_price(monkeypatch):
     """R01: '1 999 2 999' is not a price, and the comparison must not carry it.
 
@@ -107,6 +109,7 @@ async def test_the_adapter_keeps_a_real_yandex_price(monkeypatch):
 # ------------------------------------------------------------------- R02 ------
 
 
+@pytest.mark.req("R-YANDEX-PRICE-ROLE")
 async def test_verify_offer_refuses_to_certify_a_plus_only_card(monkeypatch):
     """R02: a card with only the subscriber price certifies nothing.
 
@@ -146,6 +149,7 @@ async def test_verify_offer_measures_the_delta_against_the_explicit_regular_pric
 # ------------------------------------------------------------------- R04 ------
 
 
+@pytest.mark.req("R-YANDEX-HONEST-EMPTY")
 async def test_an_explicit_empty_result_is_a_healthy_source(monkeypatch):
     """R04: the page's own "nothing found" banner is an honest answer.
 

@@ -56,6 +56,7 @@ def fake_browser(monkeypatch):
     return channel, events
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 def test_the_map_covers_exactly_the_browser_backed_doctor_sources():
     doctor_browser_sources = {
         name for name, _module, _tool in cli._SELFCHECKS if browser_backed(CAPABILITIES.get(name))
@@ -64,6 +65,7 @@ def test_the_map_covers_exactly_the_browser_backed_doctor_sources():
     assert set(unblock.UNBLOCK_PAGES) == doctor_browser_sources
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 def test_unblock_without_a_wall_has_nothing_to_do(monkeypatch, capsys):
     """No source reports a wall: the command says so and opens nothing (audit S4-F20)."""
     from mcp_core.transport import chrome_cdp

@@ -14,6 +14,7 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
 from mcp_core.resilience import shape_signature
 from wb_connector import server, shape_reference
 
@@ -83,6 +84,7 @@ def test_no_results_output_schema_keeps_its_fields() -> None:
     assert {"status", "query", "page", "total_ids", "meta"} <= set(schema["properties"])
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Products that still flatten after losing the whole price family are
     structural drift the agent must see in the tool's own response."""
@@ -133,6 +135,7 @@ async def test_search_still_cries_drift_when_sizes_lost_their_price_keys(monkeyp
     ]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_a_delisted_page_carries_no_shape_drift_warning(monkeypatch):
     """card/v4 answers an all-delisted page with "sizes": [] on every product —
     the state the legacy-fallback docstring describes. The sizes array is
@@ -153,6 +156,7 @@ async def test_search_a_delisted_page_carries_no_shape_drift_warning(monkeypatch
     assert any("no_prices" in w for w in result.meta.warnings)
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     payload = json.loads((FIXTURES / "search_v9_live.json").read_text(encoding="utf-8"))

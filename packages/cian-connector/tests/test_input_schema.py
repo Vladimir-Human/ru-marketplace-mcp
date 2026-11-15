@@ -27,6 +27,7 @@ async def _input_schema(tool_name: str) -> dict:
     raise AssertionError(f"{tool_name} is not advertised")
 
 
+@pytest.mark.req("R-SCHEMA-LIMITS")
 async def test_the_advertised_schema_states_the_room_enum() -> None:
     """The closed set of room counts is an enum in the schema."""
     schema = await _input_schema("cian_search")

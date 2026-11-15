@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from avito_connector import shape_reference
 from mcp_core.resilience import shape_signature
 
@@ -102,6 +103,7 @@ def test_the_pre_2026_08_top_level_envelope_still_passes_the_families() -> None:
     assert shape_reference.missing_required_families(shape_signature(legacy_payload)) == []
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 def test_the_data_items_envelope_passes_the_families() -> None:
     """The third envelope ``_parse_search_items`` reads: a payload whose
     listings live only under data.items must satisfy the same families, or

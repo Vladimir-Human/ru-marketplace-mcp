@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import builtins
 
+import pytest
 from fastmcp import Client
 from marketplace_connector import cli, server
 from mcp_core.transport import browser_handoff
@@ -46,6 +47,7 @@ async def _skipped_reason(monkeypatch, message: str) -> str:
     return outcome["skipped"]["wildberries"]
 
 
+@pytest.mark.req("R-DIAGNOSTIC-REDACTION")
 async def test_the_skipped_reason_does_not_carry_a_bearer_token(monkeypatch):
     """The public tool's answer must not echo the credential."""
     reason = await _skipped_reason(monkeypatch, f"cannot import wildberries: {TOKEN}")

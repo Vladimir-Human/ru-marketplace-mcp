@@ -195,6 +195,7 @@ async def test_card_matched_popup_challenge_redirect_keeps_owned_cleanup(popups,
     assert popups.operator.close_calls == 0
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION", "R-ERRORS")
 async def test_card_popup_challenge_is_json_with_the_challenge_contract(popups, monkeypatch):
     """The x5sec verdict must reach the agent through the public card tool as the
     shared JSON challenge error, not a bare string: before the fix the challenge

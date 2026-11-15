@@ -535,6 +535,7 @@ def test_render_captcha_requires_the_operator(monkeypatch: pytest.MonkeyPatch) -
     assert body["error"] == "challenge_required" and body["requires_user_action"] is True
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 def test_render_captcha_action_does_not_promise_a_tab(monkeypatch: pytest.MonkeyPatch) -> None:
     """R-CHALLENGE-ACTION: retention is off, so no field may claim a visible page."""
     page = _FakePage([{"state": "blocked", "captcha": True}], {})
@@ -603,6 +604,7 @@ def _patch_page_sequence(monkeypatch: pytest.MonkeyPatch, pages: list[Any]) -> t
     return opened, closed
 
 
+@pytest.mark.req("R-WB-DOM-NAVIGATION-RETRY")
 @pytest.mark.parametrize("expression", [D.PROBE_JS, D.SEARCH_EXTRACT_JS], ids=["readiness", "extract"])
 def test_render_reopens_once_after_navigation_destroys_evaluation(
     monkeypatch: pytest.MonkeyPatch, expression: str
@@ -729,6 +731,7 @@ def test_dom_search_empty_grid_is_drift_unless_the_page_says_empty(
         assert _run(server.wb_search(query="UPD2018", page=page)).status == "no_results"
 
 
+@pytest.mark.req("R-EMPTY-NOT-SUCCESS")
 def test_dom_search_unmarked_empty_page_past_the_first_is_not_healthy(monkeypatch: pytest.MonkeyPatch) -> None:
     """A page past the first with no tiles AND no «nothing found» notice cannot
     be told apart from selector drift, so it must not answer healthy=true.
@@ -818,10 +821,12 @@ def test_card_dom_caps_navigations(monkeypatch: pytest.MonkeyPatch) -> None:
     assert any("read the first 2" in w for w in card.meta.warnings)
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_dom_fallback_is_on_by_default() -> None:
     assert type(server._settings).model_fields["dom_fallback"].default is True
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 @pytest.mark.parametrize(
     ("status_code", "text", "expected"),
     [
@@ -841,6 +846,7 @@ def test_dom_fallback_reason_only_covers_refusals(
     assert server._dom_fallback_reason(status_code, text) == expected
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_card_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -874,6 +880,7 @@ def test_card_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.Monke
     )
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_card_api_edge_wall_falls_back_to_dom(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -898,6 +905,7 @@ def test_card_api_edge_wall_falls_back_to_dom(monkeypatch: pytest.MonkeyPatch) -
     assert any("(HTML wall, HTTP 200)" in warning for warning in card.meta.warnings)
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_card_rate_limit_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -920,6 +928,7 @@ def test_card_rate_limit_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> N
     assert json.loads(str(exc.value))["error"] == "rate_limited"
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_card_network_failure_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -944,6 +953,7 @@ def test_card_network_failure_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch)
     assert "timeout" in payload["message"]
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_card_api_refusal_with_fallback_off_keeps_the_api_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", False)
@@ -969,6 +979,7 @@ def test_card_api_refusal_with_fallback_off_keeps_the_api_error(monkeypatch: pyt
     assert "wb_card HTTP 403" in payload["message"]
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_dom_failure_after_an_api_refusal_names_the_refusal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -994,6 +1005,7 @@ def test_dom_failure_after_an_api_refusal_names_the_refusal(monkeypatch: pytest.
     assert "WB API refused this address (HTTP 403) first" in payload["message"]
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 @pytest.mark.parametrize("tool", ["wb_card", "wb_search"])
 def test_a_driver_failure_after_an_api_refusal_still_names_the_refusal(
     tool: str, monkeypatch: pytest.MonkeyPatch
@@ -1025,6 +1037,7 @@ def test_a_driver_failure_after_an_api_refusal_still_names_the_refusal(
     assert payload["message"].endswith("(WB API refused this address (HTTP 403) first)")
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_search_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -1054,6 +1067,7 @@ def test_search_api_403_falls_back_to_dom_once_and_warns(monkeypatch: pytest.Mon
     assert any("(HTTP 403)" in warning for warning in search.meta.warnings)
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_search_rate_limit_is_not_a_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server._settings, "transport", "api")
     monkeypatch.setattr(server._settings, "dom_fallback", True)
@@ -1450,6 +1464,7 @@ def test_search_tile_with_unproven_price_roles_is_null_and_warned() -> None:
     assert any("without a struck mark" in w for w in warnings)
 
 
+@pytest.mark.req("R-WB-DOM-FALLBACK")
 def test_dom_search_keeps_a_tile_with_unproven_price_roles(monkeypatch: pytest.MonkeyPatch) -> None:
     """One ambiguous tile used to fail model validation and lose the whole page (audit A1)."""
     monkeypatch.setattr(server._settings, "transport", "dom")

@@ -14,6 +14,7 @@ import urllib.request
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
+import pytest
 from mcp_core.transport import chrome_cdp
 
 VERSION_JSON = {
@@ -172,6 +173,7 @@ async def test_browser_status_keeps_the_version_when_the_target_list_fails(monke
 # --------------------------------------------------------------------- show ----
 
 
+@pytest.mark.req("R-CLI-BROWSER")
 async def test_show_moves_the_window_on_screen_and_activates_the_first_tab(monkeypatch):
     fake_http(monkeypatch)
     socket = fake_websocket(
@@ -205,6 +207,7 @@ async def test_show_moves_the_window_on_screen_and_activates_the_first_tab(monke
     assert result["ok"] is True
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 async def test_show_uses_the_target_it_is_given(monkeypatch):
     """`unblock` shows the tab it just opened, not the first one (audit S4-F3).
 
@@ -233,6 +236,7 @@ async def test_show_uses_the_target_it_is_given(monkeypatch):
     assert activate == [{"targetId": "page-2"}]
 
 
+@pytest.mark.req("R-CLI-BROWSER")
 async def test_the_browser_websocket_is_dialed_on_the_host_that_answers(monkeypatch):
     """The endpoint's own loopback address must not be dialled (audit S4-F5).
 

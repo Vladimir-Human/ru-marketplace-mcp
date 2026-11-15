@@ -51,6 +51,7 @@ def test_the_registry_declares_the_spellings_from_the_issue():
     assert ("wb", "wildberries") in _SPELLINGS
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-ALIASES")
 @pytest.mark.parametrize(("spelling", "canonical"), _SPELLINGS)
 async def test_compare_prices_resolves_aliases_and_mount_names(monkeypatch, spelling, canonical):
     calls: list[str] = []
@@ -62,6 +63,7 @@ async def test_compare_prices_resolves_aliases_and_mount_names(monkeypatch, spel
     assert {offer.source for offer in result.offers} == {canonical}
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-ALIASES")
 async def test_an_alias_and_its_canonical_name_query_the_source_once(monkeypatch):
     calls: list[str] = []
     _stub_all(monkeypatch, calls)
@@ -71,6 +73,7 @@ async def test_an_alias_and_its_canonical_name_query_the_source_once(monkeypatch
     assert calls == ["wildberries", "yandex_market"]
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-ALIASES")
 async def test_an_unknown_name_is_still_refused(monkeypatch):
     _stub_all(monkeypatch, [])
 
@@ -82,6 +85,7 @@ async def test_an_unknown_name_is_still_refused(monkeypatch):
     assert "amazon" in payload["message"]
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-ALIASES")
 async def test_verify_offer_and_decision_inspect_accept_an_alias(monkeypatch):
     seen: list[list[int]] = []
 
@@ -100,6 +104,7 @@ async def test_verify_offer_and_decision_inspect_accept_an_alias(monkeypatch):
     assert len(seen) == 2
 
 
+@pytest.mark.req("R-COMPARE-SOURCE-ALIASES")
 async def test_yandex_variant_check_accepts_the_mount_name(monkeypatch):
     async def yandex_card(**kwargs):
         return {"sku_id": "777", "price_rub": 10}

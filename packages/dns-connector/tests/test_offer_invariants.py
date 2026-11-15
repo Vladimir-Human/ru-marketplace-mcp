@@ -96,6 +96,7 @@ def _patch_render(monkeypatch, payload):
 # ------------------------------------------------------------------ dns_search ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_tiles_that_lost_their_prices_and_titles(monkeypatch):
     """R-ITEM-HONESTY: a page of titleless, priceless tiles answers loud.
 

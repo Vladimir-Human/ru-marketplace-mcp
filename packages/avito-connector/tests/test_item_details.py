@@ -94,6 +94,7 @@ async def test_private_seller_gets_city_and_stations_but_no_address(monkeypatch)
     assert "Тестовая" not in result.model_dump_json()
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(("state", "dom"), [(True, "Компания"), (True, None), (None, "Компания"), (None, "Магазин")])
 async def test_address_only_when_every_stated_source_says_company(monkeypatch, state, dom):
     """Unit test of the rule on an edited private capture, not a company-page fixture."""
@@ -106,6 +107,7 @@ async def test_address_only_when_every_stated_source_says_company(monkeypatch, s
     assert result.location == "Москва"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("state", "dom"),
     [
@@ -130,6 +132,7 @@ async def test_contradicting_or_private_seller_types_never_expose_the_address(mo
     assert result.location == "Москва"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_top_level_buyer_item_is_company_is_not_a_fallback():
     """Review #198 P1: buyerItem.isCompany is no longer read as a seller type."""
     assert item_state.is_company({"isCompany": True, "seller": {}}) is None
@@ -150,6 +153,7 @@ def test_unknown_seller_type_is_treated_as_private():
     assert [m.name for m in card["metro"]] == ["Станция-один", "Станция-два"]
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
@@ -174,6 +178,7 @@ def test_bargain_only_from_explicit_words(text, expected):
     assert item_state.bargain(text, []) is expected
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("value", "text", "expected"),
     [
@@ -193,6 +198,7 @@ def test_bargain_reads_the_explicit_parameter_first(value, text, expected):
     assert item_state.bargain(None, [{"name": "Торг", "value": "Да"}, {"name": "Торг", "value": "Нет"}]) is None
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("value", ["false", "pending", {"status": "pending"}, ["x"], 1])
 def test_only_a_true_verification_flag_is_a_seller_check(value):
     """Review #198 P1: any truthy value used to read as «ИНН подтверждён»."""
@@ -213,6 +219,7 @@ def _details_with(**safe_deal_or_offer) -> dict:
     return item_state.card_details(html, 1, None)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("safe_deal", "expected"),
     [
@@ -229,6 +236,7 @@ def test_safe_deal_is_not_false_without_a_title(safe_deal, expected):
     assert _details_with(safeDealDesktop=safe_deal)["safe_deal"] is expected
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("offer", "expected"), [({"buttonTitle": "Отправить"}, True), ("form", None), (None, None), ([], None)]
 )
@@ -237,6 +245,7 @@ def test_price_offer_enabled_is_never_a_guessed_false(offer, expected):
     assert _details_with(bargainOffer=offer)["price_offer_enabled"] is expected
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_delivery_services_are_deduplicated_and_bounded():
     """Review #198 P2: an inflated services array went to the answer unbounded."""
     services = [{"type": kind, "available": True, "enabled": True} for kind in ["delivery", "deliveryCourier"] * 50]
@@ -249,6 +258,7 @@ def test_delivery_services_are_deduplicated_and_bounded():
     assert len(result) == len(set(result))
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_seller_checks_are_deduplicated_and_bounded():
     badges = [{"title": "Данные подтверждены"}] * 30 + [{"title": f"Документы проверены {n}"} for n in range(30)]
     item = {"sellerBadgeBar": {"iconsBadges": badges, "badges": badges}}
@@ -287,6 +297,7 @@ def test_a_page_without_state_leaves_every_detail_empty():
 COMPANY = "item_details_company_9000000033.html"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_a_real_company_page_returns_the_address_and_its_deal_terms(monkeypatch):
     """Review #198 P2: a captured company page instead of a synthetic isCompany flip."""
     _serve_page(monkeypatch, _page(COMPANY))
@@ -309,6 +320,7 @@ async def test_a_real_company_page_returns_the_address_and_its_deal_terms(monkey
     assert result.meta.healthy is True
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_a_real_company_page_with_a_private_dom_label_hides_the_address(monkeypatch):
     html = _page(COMPANY).replace(
         "<body>",

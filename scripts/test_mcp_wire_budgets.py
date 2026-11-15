@@ -72,6 +72,7 @@ SMALL_TOOL = [{"name": "tool", "description": "x"}]
 GROWN_TOOL = [{"name": "tool", "description": "x" * 4_000_000}]
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_an_infinite_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """1e999 is inf: the delta becomes nan and the gate used to pass anything."""
     baseline = _baseline(tmp_path, 1e999, 1e999, 1e999)
@@ -87,6 +88,7 @@ def test_an_infinite_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> No
     assert "not a finite positive number" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_boolean_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """True is not a number, although Python says it is an int."""
     baseline = _baseline(tmp_path, True, True, True)
@@ -104,6 +106,7 @@ def test_a_boolean_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None
     assert "regression" not in error
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_nan_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """nan compares false against everything: it cannot be a limit."""
     baseline = _baseline(tmp_path, float("nan"), float("nan"), float("nan"))
@@ -119,6 +122,7 @@ def test_a_nan_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     assert "not a finite positive number" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_string_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """A quoted number is not a number."""
     baseline = _baseline(tmp_path, "1000", "1000", "1000")
@@ -134,6 +138,7 @@ def test_a_string_budget_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     assert "not a finite positive number" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_an_infinite_ceiling_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """A ceiling of inf bounds nothing, so the check must not trust it."""
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 1e999)
@@ -149,6 +154,7 @@ def test_an_infinite_ceiling_fails_the_check(tmp_path, monkeypatch, capsys) -> N
     assert "not a finite positive number" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_the_gate_helper_itself_refuses_an_unusable_budget() -> None:
     """The helper must be safe on its own, not only through main()."""
     snapshot = mcp_wire._snapshot("compare-mcp", [{"name": "tool", "description": "x"}], 0.01)
@@ -163,6 +169,7 @@ def test_the_gate_helper_itself_refuses_an_unusable_budget() -> None:
     assert any("invalid_token_budget" in failure for failure in gate["failures"])
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_non_finite_threshold_option_fails_the_run(tmp_path, monkeypatch, capsys) -> None:
     """A nan threshold never fires: the gate would pass every snapshot."""
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 10_000_000)
@@ -178,6 +185,7 @@ def test_a_non_finite_threshold_option_fails_the_run(tmp_path, monkeypatch, caps
     assert "--max-token-regression-percent" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_an_infinite_threshold_option_fails_the_run(tmp_path, monkeypatch, capsys) -> None:
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 10_000_000)
 
@@ -192,6 +200,7 @@ def test_an_infinite_threshold_option_fails_the_run(tmp_path, monkeypatch, capsy
     assert "--max-token-regression-percent" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_negative_threshold_option_fails_the_run(tmp_path, monkeypatch, capsys) -> None:
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 10_000_000)
 
@@ -206,6 +215,7 @@ def test_a_negative_threshold_option_fails_the_run(tmp_path, monkeypatch, capsys
     assert "--max-token-regression-percent" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_non_numeric_threshold_option_fails_the_run(tmp_path, monkeypatch, capsys) -> None:
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 10_000_000)
 
@@ -223,6 +233,7 @@ def test_a_non_numeric_threshold_option_fails_the_run(tmp_path, monkeypatch, cap
 # --- the positive controls: the valid cases still work --------------------
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_measurement_run_without_a_baseline_still_works(tmp_path, monkeypatch) -> None:
     """A plain measurement compares against nothing and stays permissive."""
     code = _run(["compare-mcp"], tmp_path, monkeypatch, SMALL_TOOL)
@@ -230,6 +241,7 @@ def test_a_measurement_run_without_a_baseline_still_works(tmp_path, monkeypatch)
     assert code == 0
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_the_explicit_baseline_creation_still_works(tmp_path, monkeypatch) -> None:
     """--update-baseline is the documented way to create a baseline."""
     target = tmp_path / "baseline.json"
@@ -243,6 +255,7 @@ def test_the_explicit_baseline_creation_still_works(tmp_path, monkeypatch) -> No
     assert written["profiles"]["compare-mcp"]["wire_tokens"] > 0
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_a_valid_threshold_option_still_works(tmp_path, monkeypatch) -> None:
     """A finite positive threshold is accepted, as before."""
     baseline = _baseline(tmp_path, 10_000_000, 10_000_000, 10_000_000)
@@ -257,6 +270,7 @@ def test_a_valid_threshold_option_still_works(tmp_path, monkeypatch) -> None:
     assert code == 0
 
 
+@pytest.mark.req("R-WIRE-GATE-FAIL-CLOSED")
 def test_a_missing_budget_still_fails_the_check(tmp_path, monkeypatch, capsys) -> None:
     """The fail-closed rule of the earlier fix keeps working."""
     target = tmp_path / "baseline.json"
@@ -276,6 +290,7 @@ def test_a_missing_budget_still_fails_the_check(tmp_path, monkeypatch, capsys) -
     assert "missing_token_budget" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-WIRE-BUDGET-VALIDATION")
 def test_the_committed_baseline_passes_the_gate(tmp_path, monkeypatch) -> None:
     """The real baseline of the repository is valid and stays green."""
     committed = REPO_ROOT / "work" / "performance" / "wire-baseline.json"

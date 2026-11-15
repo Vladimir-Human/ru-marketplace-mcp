@@ -80,6 +80,7 @@ def _patch_render(monkeypatch, payload):
 # ------------------------------------------------------------------ citilink_search ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_tiles_that_lost_their_prices_and_titles(monkeypatch):
     """A page where every tile lost both its price and its title is systemic
     selector drift, and validate_items must say so in meta.warnings.

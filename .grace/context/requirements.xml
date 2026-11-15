@@ -324,4 +324,7 @@
   <requirement id="R-WB-DOM-NAVIGATION-RETRY" source="Linux server WB automatic-check navigation race, 2026-11-13">
     WB DOM rendering retries at most once when a Playwright Error says the execution context was destroyed most likely because of a navigation. The retry reopens an owned tab and repeats navigation/status/host/readiness checks under the existing DOM lock and polite gap; every attempt records its navigation time. Repeated navigation errors, unrelated Playwright errors, target closure, ordinary exceptions, HTTP refusals, challenges and timeouts are not retried by this mechanism. Failed attempts never populate the successful-result cache; extraction and output contracts remain unchanged.
   </requirement>
+  <requirement id="R-GRACE-INDEX" status="accepted" source="Execution plan v3 A5 job 1, 2026-11-15">
+    <says>Generate the verification index and gap list from AST-read pytest req markers without importing tests. Gate untraced requirements, unknown IDs and a stale committed index in lint; preserve existing mappings and declared gaps without hand bookkeeping.</says>
+  </requirement>
 </requirements>

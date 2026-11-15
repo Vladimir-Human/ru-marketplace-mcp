@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from compare_connector import server
 from wb_connector.models_output import MetaOut, WbCardItem, WbSearchResponse
 
@@ -30,6 +31,7 @@ async def _compare_with_warnings(monkeypatch, warnings: list[str]):
     return await server.compare_prices("Kettle", sources=["wildberries"])
 
 
+@pytest.mark.req("R-WARNING-BUDGET")
 async def test_a_cut_warning_list_names_the_number_it_suppressed(monkeypatch):
     """R18: the delivery stays bounded and says how much it dropped."""
     result = await _compare_with_warnings(monkeypatch, TWELVE_WARNINGS)

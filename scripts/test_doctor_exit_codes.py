@@ -261,6 +261,7 @@ def test_status_report_counts_failed_checkers(fake_selfchecks, monkeypatch):
     assert report["failed"] == 0
 
 
+@pytest.mark.req("R-DOCTOR-EXIT-CODES")
 @ENTRIES
 @pytest.mark.parametrize("status", ["success", "drift_detected", "inconclusive"])
 @pytest.mark.parametrize(
@@ -282,6 +283,7 @@ def test_supplied_invalid_subcheck_is_hard_under_every_outer_status(entry, statu
     assert module.calls == 1
 
 
+@pytest.mark.req("R-DOCTOR-EXIT-CODES")
 @ENTRIES
 @pytest.mark.parametrize("representation", ["empty", "dict", "model"])
 @pytest.mark.parametrize(

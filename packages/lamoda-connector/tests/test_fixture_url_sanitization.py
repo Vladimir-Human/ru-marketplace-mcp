@@ -43,6 +43,7 @@ def _tracking_keys(text: str) -> set[str]:
     return found
 
 
+@pytest.mark.req("R-FIXTURES", "R-LAMODA-FIXTURE-URL-HYGIENE")
 def test_retained_html_fixture_urls_have_no_signed_advertising_tracking():
     """R-LAMODA-FIXTURE-URL-HYGIENE: scan all captures without exposing tokens."""
     fixtures = sorted(FIXTURES.rglob("*.html"))
@@ -54,6 +55,7 @@ def test_retained_html_fixture_urls_have_no_signed_advertising_tracking():
         assert not forbidden, f"{fixture.name}: remove tracking query keys {', '.join(sorted(forbidden))}"
 
 
+@pytest.mark.req("R-LAMODA-FIXTURE-URL-HYGIENE")
 @pytest.mark.parametrize(
     "markup,expected",
     [

@@ -126,6 +126,7 @@ async def test_search_a_pricelss_item_is_none_never_zero(monkeypatch):
     assert result.items[1].price_rub != 0
 
 
+@pytest.mark.req("R-EMPTY-NOT-SUCCESS")
 async def test_search_warns_when_no_item_kept_a_price(monkeypatch):
     """Every finalPrice/price/currentPrice alias dying at once is drift.
 
@@ -212,6 +213,7 @@ async def test_search_maps_code7_to_transport_down(monkeypatch):
         await server.megamarket_search("телефон")
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
     with retry_after_s through the real _post path, from the first CDP step
@@ -240,6 +242,7 @@ async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeyp
     assert server._address_cache == {}
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_search_reports_the_host_pause_from_the_catalog_redirect(monkeypatch):
     """R-CDP-HOST-PAUSE: with the delivery address already resolved, the pause
     must still reach the caller from the real catalog-redirect probe. The other
@@ -307,6 +310,7 @@ async def test_card_maps_an_empty_card_to_not_found(monkeypatch):
         await server.megamarket_card("1234567")
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: the card path takes no degrade detours, so this pins
     the contract that the mapped pause reaches the tool boundary intact —

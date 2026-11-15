@@ -68,6 +68,7 @@ class _AnsweringSocket:
         return json.dumps({"id": self.last["id"], "result": {"frameId": "main"}})
 
 
+@pytest.mark.req("R-CDP-COMMAND-DEADLINE")
 async def test_foreign_events_do_not_extend_the_command_deadline():
     """A stream of unrelated events must not buy the command more time."""
     socket = _NoisySocket()
@@ -82,6 +83,7 @@ async def test_foreign_events_do_not_extend_the_command_deadline():
     assert elapsed < FOREIGN_EVENTS * EVENT_DELAY_S
 
 
+@pytest.mark.req("R-CDP-COMMAND-DEADLINE")
 async def test_the_attach_command_has_the_same_absolute_deadline():
     """Target.createTarget is an attach command, not an evaluate: same rule."""
     socket = _NoisySocket()
@@ -228,6 +230,7 @@ def _install_raw_lifecycle_transport(monkeypatch, *, slow_method=None, send_mode
     return cdp, commands, browser, page
 
 
+@pytest.mark.req("R-CDP-COMMAND-DEADLINE")
 @pytest.mark.parametrize("slow_method", ["Target.createTarget", "Page.enable"])
 @pytest.mark.parametrize("send_mode", ["delayed", "blocked"])
 async def test_public_raw_fallback_bounds_outbound_send(monkeypatch, slow_method, send_mode):
@@ -264,6 +267,7 @@ async def test_public_raw_fallback_bounds_outbound_send(monkeypatch, slow_method
         assert commands[-1][1]["params"] == {"targetId": OWNED_TARGET}
 
 
+@pytest.mark.req("R-CDP-COMMAND-DEADLINE")
 @pytest.mark.parametrize("noisy", [False, True], ids=["immediate-response", "foreign-events"])
 async def test_public_raw_fallback_still_navigates_and_closes_only_its_target(monkeypatch, noisy):
     """R-CDP-COMMAND-DEADLINE: immediate sends/noisy recv keep the owned lifecycle."""

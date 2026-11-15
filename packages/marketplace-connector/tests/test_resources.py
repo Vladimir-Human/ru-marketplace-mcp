@@ -48,6 +48,7 @@ def _components(module_name: str) -> list[object]:
     return list(provider._components.values())
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 @pytest.mark.parametrize("module_name", sorted(PROFILES.values()))
 def test_every_mounted_tool_has_a_listed_guide(module_name: str) -> None:
     module = importlib.import_module(module_name)
@@ -60,6 +61,7 @@ def test_every_mounted_tool_has_a_listed_guide(module_name: str) -> None:
     assert not missing, f"{module_name}: tools without a guide resource: {missing}"
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 @pytest.mark.parametrize("module_name", sorted(PROFILES.values()))
 def test_every_listed_guide_has_reference_text(module_name: str) -> None:
     """A URI that lists but reads as a silent stub is the failure this catches.
@@ -78,6 +80,7 @@ def test_every_listed_guide_has_reference_text(module_name: str) -> None:
         assert "## Error Format" in text, (module_name, uri)
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 @pytest.mark.parametrize("module_name", sorted(PROFILES.values()))
 def test_shared_error_reference_is_listed_exactly_once(module_name: str) -> None:
     uris = asyncio.run(_listed_uris(module_name))
@@ -85,6 +88,7 @@ def test_shared_error_reference_is_listed_exactly_once(module_name: str) -> None
     assert uris.count(ERROR_REFERENCE_URI) == 1, uris
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 @pytest.mark.parametrize("module_name", sorted(PROFILES.values()))
 def test_shared_error_reference_lists_every_error_code(module_name: str) -> None:
     text = asyncio.run(_read_text(module_name, ERROR_REFERENCE_URI))
@@ -93,6 +97,7 @@ def test_shared_error_reference_lists_every_error_code(module_name: str) -> None
     assert not missing, f"{module_name}: error reference misses {missing}"
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_the_core_still_carries_the_wb_never_zero_invariant() -> None:
     """The moved sections carried decision-changing facts; the core keeps them.
 
@@ -112,6 +117,7 @@ def test_the_core_still_carries_the_wb_never_zero_invariant() -> None:
     assert "price_rub is None\nwhen the SKU has no sellable price — never 0" in guide
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_a_standalone_connector_keeps_its_own_shared_reference() -> None:
     """Mounting must not strip a child's resource: one process runs four servers.
 

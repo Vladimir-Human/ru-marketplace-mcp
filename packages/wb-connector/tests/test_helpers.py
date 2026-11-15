@@ -848,6 +848,7 @@ def test_wb_search_unrecoverable_fallback_ids_without_positive_empty_are_drift(m
     assert _tool_error_payload(excinfo)["error"] == "parser_drift"
 
 
+@pytest.mark.req("R-EMPTY-NOT-SUCCESS")
 @pytest.mark.parametrize("body, total", [('{"products": [], "total": 0}', 0), ('{"products": []}', None)])
 def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, total):
     """R-ITEM-HONESTY: v9's own empty list answers no_results, but the legacy
@@ -872,6 +873,7 @@ def test_wb_search_positive_empty_survives_fallback_failure(monkeypatch, body, t
     assert "HTTP 500" in data["meta"]["warnings"][0]
 
 
+@pytest.mark.req("R-EMPTY-NOT-SUCCESS")
 def test_wb_search_positive_empty_survives_a_tool_error_fallback(monkeypatch):
     """R-EMPTY-NOT-SUCCESS: the legacy path raises a plain ToolError on a
     refusal (through raise_tool_error), which the old ``except ConnectorError``

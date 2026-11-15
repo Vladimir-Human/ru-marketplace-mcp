@@ -70,6 +70,7 @@ def autostart(monkeypatch):
     return {"clock": clock, "state": state, "entered": entered, "release": release}
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_concurrent_callers_after_a_failure_make_exactly_one_attempt(autostart):
     results = await asyncio.gather(*(chrome_cdp._ensure_cdp_running() for _ in range(5)))
 
@@ -81,6 +82,7 @@ async def test_concurrent_callers_after_a_failure_make_exactly_one_attempt(autos
     assert len(hinted) == 4
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_a_caller_already_waiting_on_the_lock_does_not_retry(autostart):
     autostart["release"].clear()
     first = asyncio.create_task(chrome_cdp._ensure_cdp_running())
@@ -99,6 +101,7 @@ async def test_a_caller_already_waiting_on_the_lock_does_not_retry(autostart):
     assert "remembered autostart failure" in second_result[1]
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_a_caller_after_the_window_tries_again(autostart):
     await chrome_cdp._ensure_cdp_running()
     within = await chrome_cdp._ensure_cdp_running()
@@ -113,6 +116,7 @@ async def test_a_caller_after_the_window_tries_again(autostart):
     assert "remembered autostart failure" not in second[1]
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_the_remembered_failure_keeps_the_message_and_names_the_age(autostart):
     _ok, fresh = await chrome_cdp._ensure_cdp_running()
     autostart["clock"].advance(7)
@@ -124,6 +128,7 @@ async def test_the_remembered_failure_keeps_the_message_and_names_the_age(autost
     assert autostart["state"]["attempts"] == 1
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_get_browser_surfaces_the_age_hint_on_a_remembered_failure(autostart):
     await chrome_cdp._ensure_cdp_running()
 
@@ -137,6 +142,7 @@ async def test_get_browser_surfaces_the_age_hint_on_a_remembered_failure(autosta
     assert autostart["state"]["attempts"] == 1
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_success_clears_the_remembered_failure(autostart):
     await chrome_cdp._ensure_cdp_running()
     assert autostart["state"]["attempts"] == 1
@@ -162,6 +168,7 @@ async def test_success_clears_the_remembered_failure(autostart):
     assert "remembered autostart failure" not in msg
 
 
+@pytest.mark.req("R-CDP-AUTOSTART-NEGATIVE-CACHE")
 async def test_the_explicit_start_still_tries_while_a_failure_is_remembered(autostart):
     await chrome_cdp._ensure_cdp_running()
     _ok, remembered = await chrome_cdp._ensure_cdp_running()

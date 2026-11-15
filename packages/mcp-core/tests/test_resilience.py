@@ -80,6 +80,7 @@ def test_coerce_rating_keeps_a_five_denominator_written_in_words():
     assert coerce_rating("4,5 из 5") == pytest.approx(4.5)
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize(
     "value",
     [
@@ -158,6 +159,7 @@ def test_non_prices_are_none(value):
     assert coerce_price(value) is None
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize(
     "value",
     [
@@ -194,6 +196,7 @@ def test_price_shapes_the_stricter_parse_must_keep(value, expected):
     assert coerce_price(value) == pytest.approx(expected)
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize(
     "value",
     [
@@ -218,6 +221,7 @@ def test_price_from_texts_skips_a_decoy_and_takes_the_real_price():
     assert price_from_texts("в 1356 пунктов", "58 999 ₽") == pytest.approx(58999.0)
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize("value", ["12万", "1.2万", "1.2K", "15 тыс. ₽", "15 ТЫС. ₽", "2 Млн ₽"])
 def test_a_magnitude_suffix_is_not_a_price(value):
     """R-NO-FABRICATION: coerce_int refuses a magnitude suffix, the price path
@@ -226,6 +230,7 @@ def test_a_magnitude_suffix_is_not_a_price(value):
     assert coerce_price(value) is None
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize("value", ["1 2999", "1\u00a02999"])
 def test_coerce_rating_rejects_a_grouped_count_without_its_own_separator(value):
     """The count guard ended on a word boundary, so a run longer than three
@@ -234,6 +239,7 @@ def test_coerce_rating_rejects_a_grouped_count_without_its_own_separator(value):
     assert coerce_rating(value) is None
 
 
+@pytest.mark.req("R-COERCE-AMBIGUOUS")
 @pytest.mark.parametrize(
     "value,expected",
     [
@@ -262,6 +268,7 @@ def test_validate_offer_flags_an_ambiguous_price():
     assert any("price" in warning for warning in warnings)
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 def test_validate_offer_flags_a_blank_or_unparseable_price_string():
     """R-ITEM-HONESTY: a price field that is present but useless is drift.
 
@@ -317,6 +324,7 @@ def test_validate_items_is_silent_on_an_empty_page():
     assert validate_items([]) == []
 
 
+@pytest.mark.req("R-HEALTH-CONTRACT")
 def test_attach_meta_keeps_an_informational_note_out_of_health():
     """R-ITEM-HONESTY: healthy is False for any doubt about the data, and an
     `info:` note is context, not a doubt (audit 2026-11-01: WB hardcoded
@@ -481,6 +489,7 @@ def test_selfcheck_entry_unknown_state_is_inconclusive_never_ok():
     assert entry["ok"] is None
 
 
+@pytest.mark.req("R-DRIFT")
 def test_selfcheck_result_drift_dominates():
     checks = {
         "search": selfcheck_entry("healthy"),
@@ -492,6 +501,7 @@ def test_selfcheck_result_drift_dominates():
     assert result["healthy"] is False
 
 
+@pytest.mark.req("R-DRIFT")
 def test_selfcheck_result_inconclusive_beats_all_healthy():
     checks = {"search": selfcheck_entry("healthy"), "card": selfcheck_entry("inconclusive")}
     result = selfcheck_result("x", checks)
@@ -499,6 +509,7 @@ def test_selfcheck_result_inconclusive_beats_all_healthy():
     assert result["healthy"] is None
 
 
+@pytest.mark.req("R-DRIFT")
 def test_selfcheck_result_all_healthy_is_success():
     checks = {"search": selfcheck_entry("healthy"), "card": selfcheck_entry("healthy")}
     result = selfcheck_result("x", checks)

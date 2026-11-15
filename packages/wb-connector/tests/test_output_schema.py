@@ -7,7 +7,7 @@ conversion and in-process MCP protocol all run for success/no_results/error.
 # PURPOSE: Verify wb_search's advertised schema against its actual MCP replies.
 # SCOPE: Offline v9 success, positively empty v9/legacy search, and typed HTTP 429.
 # DEPENDS: FastMCP Client; jsonschema; wb_connector.server; stdlib contextlib/json.
-# LINKS: M-WB; M-OUTPUT-SCHEMA; R-OUTPUT-SCHEMA-WRAPPING; V-M-WB.
+# LINKS: M-WB; M-OUTPUT-SCHEMA; R-OUTPUT-SCHEMA-WRAPPING; .grace/verification/index.xml.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # test_wb_search_mcp_answers_match_advertised_schema: Exercise tools/list and tools/call for all outcomes.
@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 from contextlib import asynccontextmanager
 
+import pytest
 from fastmcp import Client
 from jsonschema import validate
 from mcp.types import TextContent
@@ -27,6 +28,7 @@ from wb_connector import server
 # START_BLOCK_WB_MCP_CONTRACT_TESTS
 
 
+@pytest.mark.req("R-OUTPUT-SCHEMA-WRAPPING")
 async def test_wb_search_mcp_answers_match_advertised_schema(monkeypatch):
     """R-OUTPUT-SCHEMA-WRAPPING: no phantom result field; errors stay MCP errors."""
     reads = []

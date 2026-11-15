@@ -45,6 +45,7 @@ async def _call_tool(owner, tool_name: str, monkeypatch, dependency: str, error:
     return json.loads(str(caught.value))
 
 
+@pytest.mark.req("R-ERROR-PASSTHROUGH")
 @pytest.mark.parametrize(("name", "owner", "dependency", "tool"), SOURCES)
 async def test_a_busy_handoff_keeps_its_status_and_retry_delay(monkeypatch, name, owner, dependency, tool):
     """409 and the delay are what the caller acts on: they must survive."""
@@ -109,6 +110,7 @@ async def test_an_already_serialized_error_is_untouched(monkeypatch, name, owner
     assert payload["retry_after_s"] == 5
 
 
+@pytest.mark.req("R-ERROR-PASSTHROUGH")
 async def test_compare_keeps_the_busy_delay_of_a_source(monkeypatch):
     """Through compare, the machine fields reach the outcome as well."""
 

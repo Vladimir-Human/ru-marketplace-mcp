@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from ozon_connector import server
 
 
@@ -52,6 +53,7 @@ def _patch_composer(monkeypatch, tiles: list[dict]) -> None:
     server._cache.clear()
 
 
+@pytest.mark.req("R-COUNT-PARSE")
 async def test_a_magnitude_review_count_is_not_read_as_a_plausible_integer(monkeypatch):
     """R05: "1.2K отзывов" must not become 12.
 
@@ -76,6 +78,7 @@ async def test_a_grouped_review_count_still_parses(monkeypatch):
     assert result.items[0].rating_count == 1200
 
 
+@pytest.mark.req("R-SEARCH-COUNT-HONEST")
 async def test_the_search_count_is_the_number_of_returned_items(monkeypatch):
     """R06: count is len(items), and a cut page says so.
 

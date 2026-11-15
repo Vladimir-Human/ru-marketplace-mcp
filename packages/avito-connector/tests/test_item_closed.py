@@ -46,6 +46,7 @@ async def _error(monkeypatch, html: str, item_id: str) -> dict:
     return json.loads(str(excinfo.value))
 
 
+@pytest.mark.req("R-ERRORS")
 async def test_a_gone_ad_page_is_not_found_not_parser_drift(monkeypatch):
     """«Объявление закрыто.» (loader type notFound) used to be parser_drift: no Product, no DOM item id."""
     error = await _error(monkeypatch, _page("item_gone_9000000032.html"), "9000000032")
@@ -55,6 +56,7 @@ async def test_a_gone_ad_page_is_not_found_not_parser_drift(monkeypatch):
     assert error["retryable"] is False
 
 
+@pytest.mark.req("R-ERRORS")
 async def test_a_closed_ad_page_is_not_found_with_avitos_closure_text(monkeypatch):
     error = await _error(monkeypatch, _page("item_closed_9000000031.html"), "9000000031")
 
@@ -63,6 +65,7 @@ async def test_a_closed_ad_page_is_not_found_with_avitos_closure_text(monkeypatc
     assert "sold" not in error["message"].lower()
 
 
+@pytest.mark.req("R-ERRORS")
 def test_closed_state_reads_service_data_only():
     assert item_state.closed_state(_page("item_closed_9000000031.html"), 9000000031) == (
         True,
@@ -90,6 +93,7 @@ def test_closed_state_reads_service_data_only():
     assert item_state.closed_state(page_inactive, 42) == (False, None)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_closed_state_of_another_item_is_not_this_ads():
     """Another id's closed buyerItem and its banner are not attributed to the requested ad.
 
@@ -107,6 +111,7 @@ def test_a_closed_state_of_another_item_is_not_this_ads():
     assert "contradicting status signals" not in evidence
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_another_items_closed_page_is_an_identity_mismatch_not_a_closure(monkeypatch):
     """main read «снято с публикации» in the visible text and answered not_found for the requested id."""
     error = await _error(monkeypatch, _page("item_closed_9000000031.html"), "9000000099")
@@ -126,6 +131,7 @@ def _state_edited(name: str, edit) -> str:
     return html[: match.start(1)] + encoded + html[match.end(1) :]
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_closure_flags_against_an_active_flag_are_not_a_closure():
     def reopen(bi):
         bi["item"]["isActive"] = True
@@ -133,6 +139,7 @@ def test_closure_flags_against_an_active_flag_are_not_a_closure():
     assert item_state.closed_state(_state_edited("item_closed_9000000031.html", reopen), 9000000031) == (True, None)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_an_open_card_with_closure_flags_is_unknown_with_both_sides(monkeypatch):
     def close(bi):
         bi["closedItem"] = True
@@ -147,6 +154,7 @@ async def test_an_open_card_with_closure_flags_is_unknown_with_both_sides(monkey
     assert "item.isActive=true" in result.availability_evidence
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_a_closure_banner_on_an_open_page_is_unknown_not_not_found(monkeypatch):
     banner = '<div data-marker="item-view/closed-warning"><p>Объявление снято с публикации.</p></div>'
     html = _page("item_state_active_9000000012.html").replace("</h1>", "</h1>" + banner, 1)
@@ -169,6 +177,7 @@ def _open_page_without_product(description: str) -> str:
     return html.replace("</h1>", "</h1>" + dom, 1)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     "description",
     [
@@ -187,6 +196,7 @@ async def test_seller_text_never_closes_an_open_ad(monkeypatch, description):
     assert result.availability == "active"
 
 
+@pytest.mark.req("R-ERRORS")
 async def test_a_page_without_any_state_still_falls_back_to_the_visible_text(monkeypatch):
     error = await _error(monkeypatch, "<html><body><h1>Объявление не найдено</h1></body></html>", "9000000016")
 

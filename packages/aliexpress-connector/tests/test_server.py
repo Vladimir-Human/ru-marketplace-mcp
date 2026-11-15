@@ -159,6 +159,7 @@ def _patch_search_extract(monkeypatch, raw):
     monkeypatch.setattr(server, "_cdp_render_search", fake_render)
 
 
+@pytest.mark.req("R-ERRORS", "R-SECRET-REDACTION")
 async def test_search_extract_drift_is_json_with_a_redacted_preview(monkeypatch):
     """A failed extract must reach the agent as the shared JSON error, not a bare
     string: the code and the retryable flag were invisible before, and the
@@ -175,6 +176,7 @@ async def test_search_extract_drift_is_json_with_a_redacted_preview(monkeypatch)
     assert "<redacted>" in error["message"]
 
 
+@pytest.mark.req("R-ERRORS")
 async def test_search_extract_over_the_body_cap_is_json(monkeypatch):
     """The same for the oversized-extract refusal: a code, not plain text."""
     _patch_search_extract(monkeypatch, "x" * (server.MAX_BODY_BYTES + 1))
