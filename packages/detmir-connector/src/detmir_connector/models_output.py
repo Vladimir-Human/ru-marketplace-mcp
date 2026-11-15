@@ -3,15 +3,29 @@
 Every field is described because these schemas are what an LLM sees when it
 decides whether a tool answers the question in front of it.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Describe Detsky Mir outputs and qualify shown old prices and discounts as unverified history.
+# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and serialization.
+# DEPENDS: mcp_core.models/sources; Pydantic; stdlib typing.
+# LINKS: M-DETMIR; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# DetmirProduct: Describe native product prices, discounts, ratings and availability.
+# DetmirCardResponse/DetmirListResponse: Describe product response envelopes.
+# DetmirCategory/DetmirCategoriesResponse: Describe category discovery outputs.
+# MetaOut/DetmirSelfcheckResponse: Preserve shared diagnostics and selfcheck outputs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 from typing import Any
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """Detsky Mir flags cache hits so a caller can tell fresh data from a replay."""
 
@@ -29,9 +43,12 @@ class DetmirProduct(BaseModel):
         default=None, description="Current price in roubles. None when absent — never 0 as a stand-in."
     )
     old_price_rub: float | None = Field(
-        default=None, description="Pre-discount price in roubles, when the item is on sale."
+        default=None,
+        description=f"Pre-discount price in roubles, when the item is on sale — {MARKETPLACE_PRICE_WORDING}.",
     )
-    discount_percent: int | None = Field(default=None, description="Discount percentage as reported upstream.")
+    discount_percent: int | None = Field(
+        default=None, description=f"Discount percentage as reported upstream — {MARKETPLACE_PRICE_WORDING}."
+    )
     rating: float | None = Field(default=None, description="Average rating, 1..5.")
     review_count: int | None = Field(default=None, description="Number of reviews.")
     questions_count: int | None = Field(default=None, description="Number of buyer questions.")
@@ -99,3 +116,6 @@ class DetmirSelfcheckResponse(SelfCheckResponseBase):
     connector: str = Field(default="detmir", description="Connector name.")
     checks: dict[str, DetmirSelfcheckEntry] = Field(default_factory=dict, description="Per-endpoint-family results.")
     cache_stats: dict[str, Any] = Field(default_factory=dict, description="TTL cache counters for this process.")
+
+
+# END_BLOCK_OUTPUT_MODELS

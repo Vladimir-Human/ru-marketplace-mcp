@@ -4,15 +4,29 @@ Every tool returns a typed Pydantic model instead of a raw dict. The ``meta``
 field is populated from the ``_meta`` key that ``resilience.attach_meta``
 writes, and serializes back to ``meta`` on the wire.
 """
+# START_MODULE_CONTRACT
+# PURPOSE: Describe Avito outputs and distinguish shown sale references from verified price history.
+# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and computed-percent meaning.
+# DEPENDS: mcp_core.models/sources; Pydantic; stdlib typing.
+# LINKS: M-AVITO; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# AvitoSearchItemOut/AvitoSearchResponse: Describe listings, availability and shown sale fields.
+# AvitoCardResponse: Describe the card, sale fields, evidence and photos.
+# AvitoSellerOut/AvitoSellerResponse: Describe native seller evidence.
+# MetaOut/AvitoSelfcheckResponse: Preserve shared diagnostics and selfcheck outputs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 from typing import Literal
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, ConfigDict, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """Avito carries the shared envelope unchanged."""
 
@@ -25,10 +39,14 @@ class AvitoSearchItemOut(BaseModel):
         description="Price a buyer pays now, after an Avito sale discount; None when absent or the discount does not add up.",
     )
     old_price_rub: float | None = Field(
-        default=None, description="Struck-through price during an Avito sale, else None."
+        default=None, description=f"Struck-through price during an Avito sale, else None — {MARKETPLACE_PRICE_WORDING}."
     )
     discount_percent: int | None = Field(
-        default=None, description="Avito's sale percent (computed from the two prices only when Avito shows none)."
+        default=None,
+        description=(
+            "Avito's sale percent (computed from the two prices only when Avito shows none) — "
+            f"{MARKETPLACE_PRICE_WORDING}."
+        ),
     )
     url: str | None = Field(default=None, description="Canonical avito.ru listing URL.")
     location: str | None = Field(default=None, description="Seller location string.")
@@ -130,10 +148,14 @@ class AvitoCardResponse(BaseModel):
         description="Price a buyer pays now, after an Avito sale discount; None when absent or the discount does not add up.",
     )
     old_price_rub: float | None = Field(
-        default=None, description="Struck-through price during an Avito sale, else None."
+        default=None, description=f"Struck-through price during an Avito sale, else None — {MARKETPLACE_PRICE_WORDING}."
     )
     discount_percent: int | None = Field(
-        default=None, description="Avito's sale percent (computed from the two prices only when Avito shows none)."
+        default=None,
+        description=(
+            "Avito's sale percent (computed from the two prices only when Avito shows none) — "
+            f"{MARKETPLACE_PRICE_WORDING}."
+        ),
     )
     description: str | None = Field(default=None, description="Listing description text.")
     location: str | None = Field(default=None, description="Item location string.")
@@ -238,3 +260,6 @@ class AvitoSelfcheckCheckOut(SelfCheckEntryBase):
 class AvitoSelfcheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
     checks: dict[str, AvitoSelfcheckCheckOut] = Field(default_factory=dict, description="Per-subcheck results.")
+
+
+# END_BLOCK_OUTPUT_MODELS

@@ -1,11 +1,24 @@
 """Pydantic output models for the Lamoda MCP connector."""
+# START_MODULE_CONTRACT
+# PURPOSE: Describe Lamoda outputs and qualify shown old prices without claiming verified history.
+# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and serialization.
+# DEPENDS: mcp_core.models/sources; Pydantic.
+# LINKS: M-LAMODA; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# LamodaSearchItemOut/LamodaSearchResponse: Describe native search items and their envelope.
+# LamodaCardResponse/LamodaSizeOut: Describe the card, reference price and size availability.
+# MetaOut/LamodaSelfcheckResponse: Preserve shared diagnostics and selfcheck outputs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, ConfigDict, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """Lamoda carries the shared envelope unchanged."""
 
@@ -15,7 +28,9 @@ class LamodaSearchItemOut(BaseModel):
     title: str | None = Field(default=None, description="Product title.")
     brand: str | None = Field(default=None, description="Brand name.")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
-    old_price_rub: float | None = Field(default=None, description="Strikethrough price in rubles.")
+    old_price_rub: float | None = Field(
+        default=None, description=f"Strikethrough price in rubles — {MARKETPLACE_PRICE_WORDING}."
+    )
     url: str | None = Field(default=None, description="Canonical product URL.")
 
 
@@ -43,7 +58,9 @@ class LamodaCardResponse(BaseModel):
     title: str | None = Field(default=None, description="Product title.")
     brand: str | None = Field(default=None, description="Brand name.")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
-    old_price_rub: float | None = Field(default=None, description="Strikethrough price in rubles.")
+    old_price_rub: float | None = Field(
+        default=None, description=f"Strikethrough price in rubles — {MARKETPLACE_PRICE_WORDING}."
+    )
     is_available: bool | None = Field(default=None, description="Whether the product is sellable now.")
     sizes: list[LamodaSizeOut] = Field(default_factory=list, description="Per-size availability.")
     url: str = Field(default="", description="Canonical product URL.")
@@ -60,3 +77,6 @@ class LamodaSelfcheckCheckOut(SelfCheckEntryBase):
 class LamodaSelfcheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
     checks: dict[str, LamodaSelfcheckCheckOut] = Field(default_factory=dict, description="Per-subcheck results.")
+
+
+# END_BLOCK_OUTPUT_MODELS

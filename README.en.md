@@ -102,7 +102,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3549 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # 3552 offline tests, no network needed
 ```
 
 Client configuration mirrors the [Russian section](README.md#подключение-к-mcp-клиенту). The shortest path is the
@@ -183,7 +183,7 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 That gives you 15 skills immediately and **no** MCP tools: all three MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
-A mounted server is paid on every request — ≈1.7k tokens for the
+A mounted server is paid on every request — ≈1.8k tokens for the
 recommended price-comparison profile, ≈2.0k for the decision profile and
 ≈13.4k for the full set (estimated from `tools/list`; details in
 [docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
@@ -579,7 +579,7 @@ disabled source: that request returns `bad_request`, as does inspecting its card
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3549 offline tests
+uv run pytest -q -m "not live and not cdp"    # 3552 offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -641,7 +641,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 3549 offline
+are confidently wrong, so the project is arranged around verification: 3552 offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

@@ -29,7 +29,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
 # REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
-# DEPENDS: FastMCP; mcp_core runtime/source_selection; identity; models_output; vision_policy; source servers.
+# DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); identity; models_output; vision_policy; source servers.
+# SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
 # LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -81,7 +82,7 @@ from mcp_core.source_selection import canonical, selected
 # SEARCHABLE below is the one per-source list compare still spells out, because
 # an existing test parses that literal; a parity test keeps it equal to the
 # registry's text-search sources.
-from mcp_core.sources import BY_NAME, CARD_TOOL_NAMES, COMPARE_SOURCES, FOREIGN_CURRENCY_SOURCES
+from mcp_core.sources import BY_NAME, CARD_TOOL_NAMES, COMPARE_SOURCE_NAMES, COMPARE_SOURCES, FOREIGN_CURRENCY_SOURCES
 from pydantic import Field
 
 from compare_connector.identity import (
@@ -1096,7 +1097,7 @@ async def compare_prices(
         list[str] | None,
         Field(
             default=None,
-            description="Restrict to specific marketplaces (wildberries, yandex_market, ozon). Omit to query all.",
+            description=f"Restrict to specific marketplaces ({COMPARE_SOURCE_NAMES}). Omit to query all.",
         ),
     ] = None,
     in_stock_only: Annotated[

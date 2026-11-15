@@ -1,11 +1,24 @@
 """Pydantic output models for the AliExpress MCP connector."""
+# START_MODULE_CONTRACT
+# PURPOSE: Describe AliExpress outputs and qualify shown old prices without claiming verified history.
+# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and serialization.
+# DEPENDS: mcp_core.models/sources; Pydantic.
+# LINKS: M-ALIEXPRESS; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# AliSearchItemOut/AliSearchResponse: Describe native search items and their envelope.
+# AliCardResponse: Describe the requested card and marketplace reference price.
+# MetaOut/AliSelfcheckResponse: Preserve shared diagnostics and selfcheck outputs.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
+from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, ConfigDict, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """AliExpress carries the shared envelope unchanged."""
 
@@ -14,7 +27,9 @@ class AliSearchItemOut(BaseModel):
     item_id: str | None = Field(default=None, description="AliExpress item id (12-digit).")
     title: str | None = Field(default=None, description="Product title from the search tile.")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
-    old_price_rub: float | None = Field(default=None, description="Strikethrough/base price in rubles.")
+    old_price_rub: float | None = Field(
+        default=None, description=f"Strikethrough/base price in rubles — {MARKETPLACE_PRICE_WORDING}."
+    )
     rating: float | None = Field(default=None, description="Tile rating, 0..5.")
     orders_count: int | None = Field(default=None, description="'N купили' from the tile — orders, not reviews.")
     sku_id: str | None = Field(default=None, description="sku_id query parameter, when the tile carries one.")
@@ -39,7 +54,9 @@ class AliCardResponse(BaseModel):
     item_id: str | None = Field(default=None, description="AliExpress item id (12-digit).")
     title: str | None = Field(default=None, description="Product title (the card h1).")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
-    old_price_rub: float | None = Field(default=None, description="Base/strikethrough price in rubles.")
+    old_price_rub: float | None = Field(
+        default=None, description=f"Base/strikethrough price in rubles — {MARKETPLACE_PRICE_WORDING}."
+    )
     rating: float | None = Field(default=None, description="Product rating from the card module.")
     orders_count: int | None = Field(
         default=None, description="Order count from the page SEO block; None when drift-prone meta absent."
@@ -58,3 +75,6 @@ class AliSelfcheckCheckOut(SelfCheckEntryBase):
 class AliSelfcheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
     checks: dict[str, AliSelfcheckCheckOut] = Field(default_factory=dict, description="Per-subcheck results.")
+
+
+# END_BLOCK_OUTPUT_MODELS
