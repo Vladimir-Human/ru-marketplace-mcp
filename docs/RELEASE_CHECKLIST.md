@@ -196,6 +196,10 @@ Chrome. `doctor-status.json` — снимок одного прогона с о�
 
 ## 6. Заметки релиза
 
+Запустить `python scripts/build_changelog.py --version <new>`: скрипт собирает
+фрагменты `changes/<PR>.md` и ручной текст `[Unreleased]` под версией релиза и
+удаляет собранные фрагменты. `--dry-run` печатает раздел и ничего не меняет.
+
 Написать `docs/releases/RELEASE_NOTES_<тег>.md` — например `RELEASE_NOTES_v1.3.0.md`. Workflow
 релиза берёт файл с этим именем; если его нет, релиз выйдет с короткой
 заглушкой.
@@ -350,7 +354,10 @@ entered a rouble ranking; a clean install, image build or CI is red.
    (`price_native` in yuan, `price_rub` null).
 5. **Keep the commit clean** — no `.venv`, caches, `.coverage`,
    `doctor-status.json`, `.python-version`, `*.zip` or Chrome profile.
-6. **Write `docs/releases/RELEASE_NOTES_<tag>.md`** and say plainly which sources were
+6. Run `python scripts/build_changelog.py --version <new>` to fold `changes/<PR>.md`
+   and hand-written `[Unreleased]` text into the release section and delete the
+   folded fragments (`--dry-run` only prints the section).
+   **Write `docs/releases/RELEASE_NOTES_<tag>.md`** and say plainly which sources were
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
 7. **Branch, PR, green CI, squash merge, tag.** On the release commit, before

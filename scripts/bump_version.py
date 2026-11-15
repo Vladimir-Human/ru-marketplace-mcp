@@ -51,7 +51,7 @@ def _next_steps(new: str) -> str:
     return (
         "next steps this script does not do:\n"
         f"  1. relock the workspace (uv.lock carries the 17 workspace versions): {RELOCK_COMMAND}\n"
-        f"  2. move CHANGELOG [Unreleased] under [{new}] - {today}\n"
+        f"  2. build CHANGELOG: python scripts/build_changelog.py --version {new} --date {today}\n"
         "  3. run the release checklist: docs/RELEASE_CHECKLIST.md\n"
     )
 

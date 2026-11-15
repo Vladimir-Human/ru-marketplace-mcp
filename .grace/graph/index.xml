@@ -73,6 +73,12 @@
     <module id="M-LIVE-CONFTEST" file="conftest.py" purpose="Session-wide budget install for pytest -m live and a no-op for offline selections" depends="M-LIVE-BUDGET only when a selected item carries the live marker; pytest,stdlib os,sys,pathlib" exports="pytest_collection_modifyitems">
       <note>An offline selection imports no extra module and creates no ledger.</note>
     </module>
+    <module id="M-CHANGELOG-FRAGMENTS" file="scripts/build_changelog.py" purpose="Fold bilingual PR fragments into a release and enforce fragments for package PRs" depends="stdlib argparse,datetime,json,re,sys,collections.abc,pathlib" exports="parse_fragment,check_pr,build_release,main">
+      <file path="changes/" note="Reads numeric PR Markdown fragments, ignores .gitkeep and README.md; deletes only successfully folded fragments." />
+      <file path="CHANGELOG.md" note="Preserves historical releases, moves hand-written Unreleased entries first, writes LF; dry-run is read-only." />
+      <file path=".github/workflows/ci.yml" note="Final lint step supplies NUL-separated git paths and PR metadata; no permissions widened and label events re-run the check." />
+      <note>Not shipped or imported by packages. Release checklist and bump_version's next-step hint name the builder; the PR decision has no I/O.</note>
+    </module>
     <module id="M-METRICS" file="scripts/metrics_snapshot.py" purpose="Maintainer-only daily reach record (stars, forks, traffic, external authors, PyPI) in .live-metrics.jsonl" depends="gh CLI; stdlib argparse,datetime,json,subprocess,urllib.request,pathlib" exports="external_authors,collect,main">
       <note>Not shipped and not imported by any package; run from the maintainer's SessionStart hook, at most one line a day.</note>
     </module>

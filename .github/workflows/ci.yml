@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
   schedule:
     # Nightly live canary: catches endpoint drift on its own timetable instead
@@ -41,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -132,6 +135,18 @@ jobs:
         # __version__ strings behind — installed packages would have reported
         # the previous release. Nothing was comparing them; now something is.
         run: uv run python scripts/check_versions.py
+
+      - name: CHANGELOG fragment
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          git diff --name-only --no-renames -z "$PR_BASE_SHA...$PR_HEAD_SHA" > "$RUNNER_TEMP/changelog-paths"
+          uv run python scripts/build_changelog.py --check-pr --pr-number "$PR_NUMBER" --changed-files "$RUNNER_TEMP/changelog-paths" --labels "$PR_LABELS" --author "$PR_AUTHOR"
 
   test:
     name: Tests (${{ matrix.os }}, py${{ matrix.python }})
