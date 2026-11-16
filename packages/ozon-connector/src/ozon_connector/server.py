@@ -11,14 +11,14 @@ SECURITY: Tier-2 fetch() runs INSIDE the operator's authenticated ozon.ru sessio
 sku_or_path inputs are normalized + allowlisted to prevent SSRF that would
 exfiltrate /api/v3/personal/orders or navigate to /i/logout.
 
-NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
+NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Ozon product cards, reviews and search through composer data.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -46,6 +46,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import logging
 import os
 import pickle
 import posixpath
@@ -570,11 +571,10 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
             if _cacheable_composer(body, safe_path):
                 _cache.set(safe_path, (status, body))
             return status, body, "curl_cffi"
-        if ctx and status == 403:
-            await ctx.debug("Ozon Tier-1 403 (Cloudflare __cf_bm); trying CDP")
+        if status == 403:
+            log_event("Ozon Tier-1 403 (Cloudflare __cf_bm); trying CDP", level=logging.DEBUG, logger_name=__name__)
     except Exception as exc:
-        if ctx:
-            await ctx.debug(_redact(f"Ozon Tier-1 exception: {exc}; trying CDP"))
+        log_event(_redact(f"Ozon Tier-1 exception: {exc}; trying CDP"), level=logging.DEBUG, logger_name=__name__)
 
     try:
         status, body = await _cdp_fetch_json(api_url, ctx)
@@ -700,8 +700,7 @@ async def ozon_card(
             log_event("ozon_card.invalid_input", error=error.get("type"))
             raise_tool_error(BadRequestError(error.get("message", "invalid sku_or_path")))
 
-        if ctx is not None:
-            await ctx.info(f"ozon_card: {target_path}")
+        log_event(f"ozon_card: {target_path}", logger_name=__name__)
 
         # _canonical_product_path_from_input returns (path, None) or (None, error),
         # and the error branch above raises — so the path is set by here.
@@ -961,8 +960,7 @@ async def _ozon_reviews_impl(
     if not PRODUCT_REVIEWS_PAGED_RE.match(target_path):
         raise_tool_error(BadRequestError("SSRF guard: bad reviews path"))
 
-    if ctx is not None:
-        await ctx.info(f"ozon_reviews: {target_path} (limit={limit}, sort={api_sort})")
+    log_event(f"ozon_reviews: {target_path} (limit={limit}, sort={api_sort})", logger_name=__name__)
 
     def _widget(widgets: dict, prefix: str) -> dict:
         for k, v in widgets.items():
@@ -1472,8 +1470,7 @@ async def _ozon_search_impl(
 
     search_params = httpx.QueryParams({"text": query, "page": str(page)})
     search_path = f"/search/?{search_params}"
-    if ctx is not None:
-        await ctx.info(f"ozon_search: {query} page={page}")
+    log_event(f"ozon_search: {query} page={page}", logger_name=__name__)
 
     status_code, body, tier = await _fetch_composer(search_path, ctx)
 

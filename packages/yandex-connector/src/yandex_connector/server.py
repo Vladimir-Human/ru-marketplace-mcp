@@ -71,13 +71,13 @@ an immediate retry succeeds. Handled by the transport's retry budget.
 false positives. Only SmartCaptcha markers count.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
-``log_event`` (stderr) or the ``Context`` logging methods.
+``log_event`` (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Yandex Market search and cards from server-rendered state.
 # SCOPE: Read-only paced HTML fetches; distinct everyday, Plus and old prices.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; ssr; models_output; settings.
-# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/yandex-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-YANDEX; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/yandex-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch_html: Retry bounded page reads and classify HTTP/transport refusals.
@@ -95,6 +95,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 import urllib.parse
 from collections.abc import Callable
@@ -176,8 +177,7 @@ async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
     """GET a Yandex Market page and return its HTML, cached and retry-aware."""
 
     async def fetch() -> str:
-        if ctx is not None:
-            await ctx.debug(f"{label}: {url}")
+        log_event(f"{label}: {url}", level=logging.DEBUG, logger_name=__name__)
         client = build_client(timeout_s=_settings.timeout, headers=HEADERS, proxy=_proxy())
         async with client:
             try:
@@ -425,8 +425,6 @@ async def yandex_search(
         raise_tool_error(BadRequestError("query must be at least 2 characters"))
 
     log_event("yandex_search.start", query=text, page=page, limit=limit)
-    if ctx is not None:
-        await ctx.info(f"yandex_search: {text!r} page={page}")
 
     params = {"text": text}
     if page > 1:
@@ -580,8 +578,6 @@ async def yandex_card(
         )
 
     log_event("yandex_card.start", product_id=pid, include_reviews=include_reviews)
-    if ctx is not None:
-        await ctx.info(f"yandex_card: product_id={pid}")
 
     url = ssr.card_url(pid)
     parsed = await _fetch_parsed(url, "yandex_card", ctx, ssr.parse_card)
@@ -712,8 +708,6 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
     reliable and the SSR parsers were never exercised.
     """
     log_event("yandex_selfcheck.start")
-    if ctx is not None:
-        await ctx.info("yandex_selfcheck: probing search and card pages")
 
     checks: dict[str, YandexSelfcheckEntry] = {}
     probe_product_id: str | None = None

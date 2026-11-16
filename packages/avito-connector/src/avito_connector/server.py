@@ -45,13 +45,13 @@ fallback. Card navigation refusals are classified before parsing; a page with
 neither Product nor usable item DOM is drift, never an empty successful card.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
-``log_event`` (stderr) or the ``Context`` logging methods.
+``log_event`` (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -89,6 +89,7 @@ import asyncio
 import base64
 import datetime
 import json
+import logging
 import re
 import urllib.parse
 from html.parser import HTMLParser
@@ -322,13 +323,12 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
         if status == 200 and _looks_like_json(body):
             _pacer.record_success()
             return status, body, "curl_cffi"
-        if ctx and status in (401, 403, 429):
-            await ctx.debug(f"Avito tier-1 HTTP {status} (firewall); trying CDP")
+        if status in (401, 403, 429):
+            log_event(f"Avito tier-1 HTTP {status} (firewall); trying CDP", level=logging.DEBUG, logger_name=__name__)
     except Exception as exc:
-        if ctx:
-            # A connect failure quotes the proxy URL, credentials included —
-            # the same redaction every other error path gets, not an exception.
-            await ctx.debug(_redact(f"Avito tier-1 exception: {exc}; trying CDP"))
+        # A connect failure quotes the proxy URL, credentials included —
+        # the same redaction every other error path gets, not an exception.
+        log_event(_redact(f"Avito tier-1 exception: {exc}; trying CDP"), level=logging.DEBUG, logger_name=__name__)
 
     try:
         status, body = await _cdp_fetch(url, ctx)

@@ -1,25 +1,25 @@
 {
   "files": {
     "packages/avito-connector/src/avito_connector/server.py": 1700,
-    "packages/compare-connector/src/compare_connector/server.py": 1700,
+    "packages/compare-connector/src/compare_connector/server.py": 1677,
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
-    "packages/ozon-connector/src/ozon_connector/server.py": 1800,
-    "packages/wb-connector/src/wb_connector/server.py": 2800
+    "packages/ozon-connector/src/ozon_connector/server.py": 1797,
+    "packages/wb-connector/src/wb_connector/server.py": 2754
   },
   "functions": {
     "packages/aliexpress-connector/src/aliexpress_connector/server.py::_aliexpress_selfcheck_impl": 174,
     "packages/cian-connector/src/cian_connector/server.py::cian_search": 161,
-    "packages/compare-connector/src/compare_connector/server.py::compare_prices": 219,
+    "packages/compare-connector/src/compare_connector/server.py::compare_prices": 208,
     "packages/marketplace-connector/src/marketplace_connector/cli.py::cmd_setup": 191,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py::_raw_owned_popup": 181,
-    "packages/ozon-connector/src/ozon_connector/server.py::_ozon_reviews_impl": 247,
+    "packages/ozon-connector/src/ozon_connector/server.py::_ozon_reviews_impl": 243,
     "packages/ozon-connector/src/ozon_connector/server.py::_ozon_selfcheck_impl": 194,
-    "packages/wb-connector/src/wb_connector/server.py::wb_category_products": 209,
-    "packages/wb-connector/src/wb_connector/server.py::wb_questions": 201,
-    "packages/wb-connector/src/wb_connector/server.py::wb_reviews": 170,
-    "packages/wb-connector/src/wb_connector/server.py::wb_search": 255,
-    "packages/yandex-connector/src/yandex_connector/server.py::yandex_selfcheck": 161,
+    "packages/wb-connector/src/wb_connector/server.py::wb_category_products": 200,
+    "packages/wb-connector/src/wb_connector/server.py::wb_questions": 195,
+    "packages/wb-connector/src/wb_connector/server.py::wb_reviews": 161,
+    "packages/wb-connector/src/wb_connector/server.py::wb_search": 249,
+    "packages/yandex-connector/src/yandex_connector/server.py::yandex_selfcheck": 157,
     "packages/yandex-connector/src/yandex_connector/ssr.py::parse_search": 233
   },
   "pure": []

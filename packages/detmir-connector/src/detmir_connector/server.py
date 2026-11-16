@@ -27,13 +27,13 @@ Three upstream quirks worth knowing, each verified live:
 Sporadic 502s and read timeouts are normal here; transport retries absorb them.
 
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
-``log_event`` (stderr) or the ``Context`` logging methods.
+``log_event`` (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
 # SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings; shape_reference.
-# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/detmir-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/detmir-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import re
 import urllib.parse
@@ -157,8 +158,7 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
     """GET ``url`` and parse it as JSON, with caching and bounded retries."""
 
     async def fetch() -> Any:
-        if ctx is not None:
-            await ctx.debug(f"{label}: {url}")
+        log_event(f"{label}: {url}", level=logging.DEBUG, logger_name=__name__)
         client = build_client(timeout_s=_settings.timeout, headers=HEADERS, proxy=_proxy())
         async with client:
             try:
@@ -209,8 +209,7 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
 
     cached = _cache.get(url)
     if cached is not None:
-        if ctx is not None:
-            await ctx.debug(f"{label}: cache hit")
+        log_event(f"{label}: cache hit", level=logging.DEBUG, logger_name=__name__)
         return cached
     # Public tools store only after their body-status, parse and output checks.
     return await fetch()
@@ -378,8 +377,6 @@ async def detmir_card(
     """
     region_used = _resolve_region(region)
     log_event("detmir_card.start", product_id=product_id, region=region_used)
-    if ctx is not None:
-        await ctx.info(f"detmir_card: product_id={product_id} region={region_used}")
 
     # The region MUST travel as filter=withregion:..., not ?withregion=...:
     # verified live that the query-parameter form is silently ignored, which left
@@ -492,8 +489,6 @@ async def detmir_category(
 
     region_used = _resolve_region(region)
     log_event("detmir_category.start", alias=slug, limit=limit, offset=offset, region=region_used)
-    if ctx is not None:
-        await ctx.info(f"detmir_category: {slug} limit={limit} offset={offset} region={region_used}")
 
     filter_expr = f"categories[].alias:{slug};withregion:{region_used}"
     query = urllib.parse.urlencode(
@@ -629,8 +624,6 @@ async def detmir_categories(
         raise AssertionError("unreachable")  # pragma: no cover
 
     log_event("detmir_categories.start", parent=resolved, limit=limit, region=region_used)
-    if ctx is not None:
-        await ctx.info(f"detmir_categories: parent={resolved} limit={limit} region={region_used}")
 
     query = urllib.parse.urlencode({"filter": filter_expr, "limit": limit, "meta": "*"})
     url = f"{API_BASE}/v2/categories?{query}"
@@ -717,8 +710,6 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
     payloads to drift entries.
     """
     log_event("detmir_selfcheck.start")
-    if ctx is not None:
-        await ctx.info("detmir_selfcheck: probing endpoint families")
 
     checks: dict[str, DetmirSelfcheckEntry] = {}
 

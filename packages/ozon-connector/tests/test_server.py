@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import time
 import tomllib
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from fastmcp.exceptions import ToolError
+from mcp_core.logging import make_stderr_logger
 from mcp_core.transport import chrome_cdp
 from mcp_core.transport.cdp_budget import NavigationBudget
 from ozon_connector import server
@@ -841,15 +843,9 @@ def test_reviews_redacts_the_failing_page_body_in_last_error(monkeypatch):
     _run(scenario())
 
 
-@pytest.mark.req("R-SECRET-REDACTION")
-def test_fetch_composer_redacts_a_tier1_exception_in_the_client_log(monkeypatch):
-    """ctx.debug goes to the client's log, so the Tier-1 exception quoted there
-    must be redacted: a proxy or auth failure can carry the credential."""
-    logged = []
-
-    class RecordingContext:
-        async def debug(self, message):
-            logged.append(message)
+@pytest.mark.req("R-SECRET-REDACTION", "R-NO-MCP-LOGGING.diagnostics")
+def test_fetch_composer_redacts_a_tier1_exception_in_the_stderr_log(monkeypatch, caplog):
+    """Tier-1 diagnostics use redacted stdlib stderr logging, even without Context."""
 
     async def exploding_bounded(func, *args, timeout_s):
         raise RuntimeError("proxy htp://user:Bearer abc.def.ghi@host refused")
@@ -862,10 +858,19 @@ def test_fetch_composer_redacts_a_tier1_exception_in_the_client_log(monkeypatch)
         monkeypatch.setattr(server, "_run_sync_bounded", exploding_bounded)
         monkeypatch.setattr(server, "_cdp_fetch_json", fake_cdp)
 
-        status, body, tier = await server._fetch_composer("/product/123/", RecordingContext())
+        logger = make_stderr_logger(server.__name__)
+        logger.addHandler(caplog.handler)
+        try:
+            with caplog.at_level(logging.DEBUG, logger=server.__name__):
+                status, body, tier = await server._fetch_composer("/product/123/", None)
+        finally:
+            logger.removeHandler(caplog.handler)
 
         assert (status, tier) == (200, "cdp")
         assert json.loads(body) == {"from": "cdp"}
+        records = [record for record in caplog.records if record.name == server.__name__]
+        assert records and all(record.levelno == logging.DEBUG for record in records)
+        logged = [json.loads(record.getMessage())["event"] for record in records]
         assert logged and "abc.def.ghi" not in " ".join(logged)
         assert "<redacted>" in logged[0]
 
