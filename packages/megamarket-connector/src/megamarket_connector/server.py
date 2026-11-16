@@ -21,17 +21,20 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Megamarket search and cards from its mobile catalog API.
-# SCOPE: Read-only browser POSTs; delivery context; explicit ServicePipe refusals.
-# INVARIANTS: Reject failed API envelopes before success pacing/cache; preserve empty results.
+# SCOPE: Read-only single-tab browser fetches; delivery context; explicit browser/ServicePipe refusals.
+# INVARIANTS: One home load per uncached search/selfcheck; same-tab hidden-redirect fallback; preserve caps/caches.
+# INVARIANTS: Reject failures before success pacing/cache; 401/403/429 stop with cooldown; /xpvnsulc/ needs a human.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; packages/megamarket-connector/tests.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# _raise_if_host_pause: Re-raise the mapped CDP host pause out of the degrade handlers that swallow other failures.
+# _browser_session / _session_page: Lazily own one tab and source lock for dependent reads.
+# _check_browser_response: Map browser refusals and the human check before any further request.
+# _raise_if_host_pause: Keep host pauses, refusals, challenges and host-policy failures out of degrade.
 # _post: Issue browser API reads; cache only envelopes without explicit failures.
 # _raise_failed_envelope: Distinguish not-found, refusal/service failures and malformed errors.
 # _resolve_address_id: Resolve delivery context; profile access requires opt-in.
-# _final_catalog_url: Resolve the catalog redirect before reading search parameters.
+# _final_catalog_url / _navigate_catalog: Fetch redirect metadata; navigate the same tab only if hidden.
 # _is_ip_block: Detect code-7 ServicePipe refusals rather than treating them as data.
 # megamarket_search: Normalize paginated mobile catalog offers and drift states,
 #                    plus a runtime shape-drift warning when a required key family vanishes.
@@ -47,6 +50,10 @@ import json
 import os
 import re
 import urllib.parse
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
@@ -55,6 +62,9 @@ from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
+    ConnectorError,
+    ErrorCode,
     NotFoundError,
     ParserDriftError,
     ToolError,
@@ -62,13 +72,14 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, polite_wait
+from mcp_core.http import parse_retry_after
+from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
-from mcp_core.transport.chrome_cdp import NavBlocked, open_page
+from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, PageLike, _check_final_host, open_page
 from pydantic import Field
 
 from megamarket_connector.models_output import (
@@ -165,6 +176,81 @@ def _extract_item_id(raw: str) -> str | None:
     return match.group(1) if match else None
 
 
+# START_BLOCK_BROWSER_SESSION
+@dataclass
+class _BrowserSession:
+    stack: AsyncExitStack
+    page: PageLike | None = None
+    error: Exception | None = None
+
+
+_browser: ContextVar[_BrowserSession | None] = ContextVar("megamarket_browser", default=None)
+
+
+@asynccontextmanager
+async def _browser_session() -> AsyncIterator[None]:
+    """Own one lazy tab and the source lock until all dependent reads finish."""
+    if _browser.get() is not None:
+        yield
+        return
+    async with AsyncExitStack() as stack:
+        token = _browser.set(_BrowserSession(stack))
+        try:
+            yield
+        finally:
+            _browser.reset(token)
+
+
+async def _session_page() -> PageLike:
+    session = _browser.get()
+    if session is None:
+        raise RuntimeError("Megamarket browser session is not active")
+    if session.error is not None:
+        raise session.error
+    if session.page is None:
+        await session.stack.enter_async_context(_cdp_lock)
+        try:
+            await _polite_wait()
+            session.page = await session.stack.enter_async_context(open_page(f"{SITE_BASE}/", wait_ms=4000))
+            _check_browser_response(200, session.page.url)
+        except asyncio.CancelledError:
+            session.error = TimeoutError("Megamarket home-page load was interrupted")
+            raise
+        except Exception as exc:
+            session.error = exc
+            if isinstance(exc, NavBlocked):
+                _check_browser_response(exc.status, exc.final_url)
+            raise
+    return session.page
+
+
+def _check_browser_response(status: int | None, url: str = "", retry_after: str | None = None) -> None:
+    """R-MEGAMARKET-ONE-LOAD: distinguish a human check from a standing refusal."""
+    if url:
+        _check_final_host(url, {"megamarket.ru"})
+    if on_bot_check_page(url):
+        _pacer.record_refusal()
+        raise_tool_error(
+            ChallengeRequiredError("Megamarket requires the /xpvnsulc/ browser check.", provider="megamarket")
+        )
+    if status in (401, 403, 429):
+        _pacer.record_refusal()
+        delay = parse_retry_after(retry_after)
+        raise_tool_error(
+            ConnectorError(
+                ErrorCode.RATE_LIMITED,
+                "Megamarket refused this browser after repeated page loads; a human step will not lift this refusal. "
+                "Wait for the cooldown before retrying.",
+                provider="megamarket",
+                status_code=status,
+                retry_after_s=1200 if delay is None else delay,
+            )
+        )
+
+
+# END_BLOCK_BROWSER_SESSION
+
+
 async def _cdp_post_json(api_path: str, body: dict[str, Any], ctx: Context | None) -> tuple[int, str]:
     """POST JSON to the mobile API from inside the operator's Chrome.
 
@@ -174,19 +260,28 @@ async def _cdp_post_json(api_path: str, body: dict[str, Any], ctx: Context | Non
     """
     url = f"{API_BASE}{api_path}"
 
+    if _browser.get() is None:
+        async with _browser_session():
+            return await _cdp_post_json(api_path, body, ctx)
+
     async def _attempt() -> tuple[int, str]:
-        async with _cdp_lock:
-            await _polite_wait()
-            async with open_page(f"{SITE_BASE}/", wait_ms=4000) as page:
-                raw = await asyncio.wait_for(
-                    page.evaluate(
-                        """async (args) => {
+        page = await _session_page()
+        await _polite_wait()
+        raw = await asyncio.wait_for(
+            page.evaluate(
+                """async (args) => {
                         const res = await fetch(args.url, {
                             method: 'POST',
                             credentials: 'include',
                             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
                             body: JSON.stringify(args.body)
                         });
+                        const metadata = {status: res.status, url: res.url,
+                            retry_after: res.headers.get('Retry-After')};
+                        if (res.url && new URL(res.url).pathname.startsWith('/xpvnsulc/')) {
+                            if (res.body) await res.body.cancel();
+                            return JSON.stringify({...metadata, text: ''});
+                        }
                         const reader = res.body.getReader();
                         let total = 0;
                         let chunks = [];
@@ -203,13 +298,15 @@ async def _cdp_post_json(api_path: str, body: dict[str, Any], ctx: Context | Non
                         let off = 0;
                         for (const c of chunks) { buf.set(c, off); off += c.length; }
                         const text = new TextDecoder().decode(buf);
-                        return JSON.stringify({status: res.status, text: text});
+                        return JSON.stringify({...metadata, text: text});
                     }""",
-                        {"url": url, "body": body, "cap": MAX_BODY_BYTES},
-                    ),
-                    timeout=30.0,
-                )
+                {"url": url, "body": body, "cap": MAX_BODY_BYTES},
+            ),
+            timeout=30.0,
+        )
         result = json.loads(raw) if isinstance(raw, str) else raw
+        if not _is_code7_text(result["text"]):  # code 7 keeps its ServicePipe verdict in _post
+            _check_browser_response(result["status"], result.get("url", url), result.get("retry_after"))
         return result["status"], result["text"]
 
     try:
@@ -222,7 +319,14 @@ def _is_ip_block(payload: Any) -> bool:
     """The code-7 VPN/IP refusal is a transport verdict, not data."""
     if not isinstance(payload, dict):
         return False
-    return payload.get("code") == 7 or "VPN" in str(payload.get("error") or "")
+    return payload.get("code") in (7, "7")
+
+
+def _is_code7_text(text: object) -> bool:
+    try:
+        return _is_ip_block(json.loads(text)) if isinstance(text, str) else False
+    except ValueError:
+        return False
 
 
 def _blocked_error(detail: str = "") -> TransportDownError:
@@ -236,26 +340,23 @@ def _blocked_error(detail: str = "") -> TransportDownError:
 
 
 def _raise_if_host_pause(exc: Exception) -> None:
-    """R-CDP-HOST-PAUSE: re-raise ``exc`` when it is the mapped CDP host pause.
+    """Re-raise browser refusals, challenges and policy failures; keep ordinary degrade.
 
-    The degrade handlers around address resolution, the catalog redirect and
-    url/parse are deliberately non-fatal for endpoint failures — a weaker
-    search is better than none, and offline tests pin that for ordinary
-    ToolErrors. A timed refusal is different: swallowing it hides the pause
-    from the agent and caches a bogus "no address" verdict that outlives the
-    cooldown, so only the rate_limited-with-retry_after_s ToolError passes
-    through; every other failure keeps the existing degrade.
+    R-CDP-HOST-PAUSE and R-MEGAMARKET-ONE-LOAD: a refused dependency must
+    never turn into a weaker search, another request or a cached no-address verdict.
     """
+    if isinstance(exc, NavigationPolicyError):
+        raise exc
     if not isinstance(exc, ToolError):
         return
     try:
         payload = json.loads(str(exc))
     except json.JSONDecodeError:
         return
-    if (
-        isinstance(payload, dict)
-        and payload.get("error") == "rate_limited"
-        and payload.get("retry_after_s") is not None
+    if isinstance(payload, dict) and (
+        (payload.get("error") == "rate_limited" and payload.get("retry_after_s") is not None)
+        or payload.get("error") == "challenge_required"
+        or "ServicePipe code 7" in str(payload.get("message", ""))
     ):
         raise exc
 
@@ -288,13 +389,12 @@ def _raise_failed_envelope(payload: dict[str, Any], what: str) -> None:
 
     # Preserve the existing ServicePipe/HTTP refusal verdict and pacing even
     # when the API puts the refusal inside an HTTP-200 errors envelope.
-    if (
-        any(_is_ip_block(entry) for entry in entries)
-        or _is_ip_block({"error": detail})
-        or any(code in ("401", "403", "429") for code in codes)
-    ):
+    if any(_is_ip_block(entry) for entry in entries):
         _pacer.record_refusal()
         raise_tool_error(_blocked_error(detail))
+    for code in codes:
+        if code in ("401", "403", "429"):
+            _check_browser_response(int(code))
     if "404" in codes or re.search(r"(?:^|[\s_-])not[\s_-]*found\b|не\s+найден", detail, re.IGNORECASE):
         raise_tool_error(NotFoundError(f"Megamarket {what} not found: {detail[:200]}"))
     if not detail.strip():
@@ -311,11 +411,13 @@ async def _post(api_path: str, body: dict[str, Any], ctx: Context | None, what: 
     try:
         status, text = await _cdp_post_json(api_path, body, ctx)
     except NavBlocked as exc:
+        _check_browser_response(exc.status, exc.final_url)
         raise_tool_error(TransportDownError(f"Megamarket navigation blocked (HTTP {exc.status})."))
     if status != 200:
-        if status in (401, 403, 429):
+        if _is_code7_text(text):
             _pacer.record_refusal()
             raise_tool_error(_blocked_error(text))
+        _check_browser_response(status)
         raise_tool_error(TransportDownError(f"Megamarket {what} fetch failed: HTTP {status}. {text[:120]}"))
     try:
         payload = json.loads(text)
@@ -389,8 +491,8 @@ async def _resolve_address_id(ctx: Context | None) -> str | None:
                     log_event("megamarket.address", source="profile", region=str(preferred.get("region") or "")[:40])
                     return _address_id
         except Exception as exc:
-            # Not logged in, or the profile endpoint refused. Fall through —
-            # unless the host itself is paused (R-CDP-HOST-PAUSE).
+            # Ordinary profile failures fall through; browser refusals and
+            # human checks stop the call (R-MEGAMARKET-ONE-LOAD).
             _raise_if_host_pause(exc)
             log_event("megamarket.address_profile_failed", error=_redact(str(exc))[:120])
     else:
@@ -464,30 +566,68 @@ def _address_warnings() -> list[str]:
 _search_params_cache: dict[str, dict[str, Any]] = {}
 
 
+async def _navigate_catalog(page: PageLike, catalog_url: str) -> str:
+    """Fallback navigation on the owned Playwright or raw-CDP tab, never a new tab."""
+    _check_final_host(catalog_url, {"megamarket.ru"})
+    await _polite_wait()
+    raw_goto = getattr(page, "goto_and_status", None)
+    if raw_goto is not None:
+        status = await raw_goto(catalog_url)
+        retry_after = None  # Raw-CDP navigation exposes status, not response headers.
+        _check_browser_response(status, page.url)
+        await asyncio.sleep(4)
+    else:
+        playwright_page: Any = page
+        response = await playwright_page.goto(catalog_url, wait_until="domcontentloaded", timeout=20000)
+        status = response.status if response is not None else None
+        retry_after = response.headers.get("retry-after") if response is not None else None
+        _check_browser_response(status, page.url, retry_after)
+        await playwright_page.wait_for_timeout(4000)
+    _check_browser_response(status, page.url, retry_after)
+    if status in (407, 500, 502, 503, 504):
+        raise NavBlocked(status, page.url)
+    return page.url
+
+
 async def _final_catalog_url(catalog_url: str, ctx: Context | None) -> str:
-    """Follow Megamarket's search-to-category redirect and return where it lands.
+    """Fetch the redirect first; only a hidden redirect navigates the same tab.
 
-    ``/catalog/?q=ноутбук`` redirects to ``/catalog/noutbuki/``. That matters
-    because url/parse answers ``collection: None`` for the generic search URL and
-    a real collection for the category it redirects to — and without a collection
-    the search returns listingSize>0 with an empty items array.
-
-    Only a browser follows this redirect the way the site intends, so the probe
-    runs over CDP. The lock is released before the caller's API request: holding
-    it across both would deadlock against the non-reentrant lock that
-    _cdp_post_json takes.
-
-    A failure returns the original URL. The search then runs without collection
-    hints, which is weaker but not broken.
+    Ordinary probe failures keep the original URL. Refusals, human checks and
+    escaped host policies terminate the search instead of weakening it.
     """
     try:
-        async with _cdp_lock:
+        async with _browser_session():
+            page = await _session_page()
             await _polite_wait()
-            async with open_page(catalog_url, wait_ms=4000) as page:
-                final_url = page.url
+            raw = await asyncio.wait_for(
+                page.evaluate(
+                    """async (args) => {
+                const res = await fetch(args.url, {credentials: 'include'});
+                const metadata = {status: res.status, url: res.url,
+                    retry_after: res.headers.get('Retry-After')};
+                if (res.body) await res.body.cancel();
+                return metadata;
+            }""",
+                    {"url": catalog_url},
+                ),
+                timeout=max(0.01, float(TIMEOUT)),
+            )
+            result = json.loads(raw) if isinstance(raw, str) else raw
+            final_url = result.get("url") or catalog_url
+            if final_url == "about:blank":
+                _check_browser_response(result["status"], retry_after=result.get("retry_after"))
+                return catalog_url
+            _check_browser_response(result["status"], final_url, result.get("retry_after"))
+            if result["status"] != 200:
+                return catalog_url
+            if final_url == catalog_url:
+                final_url = await asyncio.wait_for(
+                    _navigate_catalog(page, catalog_url), timeout=max(0.01, float(TIMEOUT))
+                )
+    except NavBlocked as exc:
+        _check_browser_response(exc.status, exc.final_url)
+        return catalog_url
     except Exception as exc:
-        # R-CDP-HOST-PAUSE: let a host pause through; other probe failures
-        # keep the documented degrade (weaker search, not a failed one).
         _raise_if_host_pause(exc)
         log_event("megamarket.redirect_failed", error=_redact(str(exc))[:120])
         return catalog_url
@@ -522,7 +662,7 @@ async def _resolve_search_params(query: str, ctx: Context | None) -> dict[str, A
     try:
         parsed = await _post("/urlService/url/parse", {"url": catalog_url}, ctx, "url parse")
     except Exception as exc:
-        # R-CDP-HOST-PAUSE: same as _final_catalog_url — only the pause passes.
+        # R-MEGAMARKET-ONE-LOAD: a refused url/parse must end the search.
         _raise_if_host_pause(exc)
         log_event("megamarket.url_parse_failed", error=_redact(str(exc))[:120])
         return {}
@@ -716,14 +856,15 @@ async def megamarket_search(
     """
     log_event("megamarket_search.start", query=query[:60])
     try:
-        address_id = await _resolve_address_id(ctx)
-        resolved = await _resolve_search_params(query, ctx)
-        payload = await _post(
-            "/catalogService/catalog/search",
-            _search_body(query, 1, address_id, resolved),
-            ctx,
-            "search",
-        )
+        async with _browser_session():
+            address_id = await _resolve_address_id(ctx)
+            resolved = await _resolve_search_params(query, ctx)
+            payload = await _post(
+                "/catalogService/catalog/search",
+                _search_body(query, 1, address_id, resolved),
+                ctx,
+                "search",
+            )
         items_raw, total, container_found = _parse_items(payload)
         listing_size = R.coerce_int(payload.get("listingSize"))
         items = [MegamarketSearchItemOut(**it) for it in items_raw]
@@ -923,7 +1064,7 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
     checks: dict[str, dict] = {}
     baseline = "mobile-api-search-v1"
     try:
-        async with asyncio.timeout(90):
+        async with asyncio.timeout(90), _browser_session():
             address_id = await _resolve_address_id(ctx)
             resolved = await _resolve_search_params("телефон", ctx)
             payload = await _post(
@@ -933,7 +1074,18 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
                 "selfcheck",
             )
     except ToolError as exc:
-        reason = "blocked" if "IP reputation" in str(exc) else "transport_down"
+        try:
+            error = json.loads(str(exc))
+        except json.JSONDecodeError:
+            error = {}
+        code = error.get("error") if isinstance(error, dict) else None
+        reason = (
+            code
+            if code in ("rate_limited", "challenge_required")
+            else "blocked"
+            if "IP reputation" in str(exc)
+            else "transport_down"
+        )
         checks["search"] = R.selfcheck_entry("inconclusive", baseline=baseline, reason=reason, notes=[str(exc)[:160]])
     except Exception as exc:
         checks["search"] = R.selfcheck_entry(
