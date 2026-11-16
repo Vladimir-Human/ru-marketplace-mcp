@@ -457,7 +457,10 @@ async def _probe_search_v9(checks: dict[str, dict], use_dom: bool, sq: str) -> N
                                     or (isinstance(item.get("nmId"), int) and not isinstance(item.get("nmId"), bool))
                                 )
                             ]
-                            priced = [item for item in identified if item.get("salePriceU") or item.get("priceU")]
+                            # R-SELFCHECK-GATES-PRICE: the search tool's own price extraction,
+                            # not a second reader (v9 carries prices in sizes[].price, and the old
+                            # salePriceU/priceU check counted 0 on every real page).
+                            priced = [item for item in identified if S._extract_price_rub(item)[0] is not None]
                             if not identified:
                                 checks["search_v9"] = S.R.selfcheck_entry(
                                     "drift",
@@ -482,6 +485,15 @@ async def _probe_search_v9(checks: dict[str, dict], use_dom: bool, sq: str) -> N
                                         recovered_ids=len(identified),
                                         priced=len(priced),
                                         notes=[drift],
+                                    )
+                                elif len(identified) >= 3 and not priced:
+                                    checks["search_v9"] = S.R.selfcheck_entry(
+                                        "drift",
+                                        baseline=sq,
+                                        reason="no_prices",
+                                        recovered_ids=len(identified),
+                                        priced=0,
+                                        notes=["v9 products carry no price the search tool can read"],
                                     )
                                 else:
                                     checks["search_v9"] = S.R.selfcheck_entry(
