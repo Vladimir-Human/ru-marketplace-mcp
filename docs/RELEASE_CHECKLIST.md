@@ -133,6 +133,11 @@ ledger` показывает, сколько уже израсходовано. 
 `python scripts/live_check.py reset`: журнал прошлого прогона не удаляется, а
 переименовывается в `.live-budget-<время>.json`.
 
+`python scripts/live_check.py matrix` проверяет каждый источник один раз: список
+по фиксированному запросу и первую карточку из него. После живой проверки
+перед релизом обновите в [LIVE_STATUS.md](LIVE_STATUS.md) раздел «Последняя
+проверка перед релизом», а после полного прогона `matrix` и таблицу.
+
 ```powershell
 pwsh scripts\start_chrome_cdp.ps1     # Chrome с CDP на 127.0.0.1:9222
 python scripts\live_check.py selfcheck dns
@@ -347,7 +352,10 @@ entered a rouble ranking; a clean install, image build or CI is red.
    `.live-budget.json` at the repository root; `python scripts/live_check.py
    ledger` reports what one run has spent. A request over a cap stops the run
    before it is sent. `python scripts/live_check.py reset` starts a new run; the
-   old ledger is kept as `.live-budget-<time>.json`, not deleted. Run each `*_selfcheck`: `success` means the transport
+   old ledger is kept as `.live-budget-<time>.json`, not deleted. `python scripts/live_check.py matrix`
+   checks every source once (a fixed-query listing and its first card). After the pre-release
+   live check, update "Последняя проверка перед релизом" in `docs/LIVE_STATUS.md`, and after a
+   full `matrix` run its table too. Run each `*_selfcheck`: `success` means the transport
    answered, `drift_detected` means the page arrived and the parser did not
    understand it (the only case that calls for a selector fix), `inconclusive`
    means IP, captcha or session got in the way and the source stays unverified.

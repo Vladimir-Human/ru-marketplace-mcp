@@ -253,7 +253,7 @@ than for a JSON API. Drift is a question of when.
 
 **Dated correction (2026-09-21).** The "genuinely open" premise below was
 measured from a Russian residential address and no longer holds from every
-vantage point. From a European hosting address (Frankfurt, a hosting ASN),
+vantage point. From a hosting (datacenter) address,
 `api.detmir.ru` answered **HTTP 418 from DDoS-Guard for the whole domain** — for
 httpx carrying this connector's exact headers, for httpx with no headers at all,
 and for curl_cffi's Chrome impersonation alike. The refusal arrives before any
