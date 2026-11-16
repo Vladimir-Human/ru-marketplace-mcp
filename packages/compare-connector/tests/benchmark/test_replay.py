@@ -139,6 +139,34 @@ async def test_a_recorded_image_replays_as_the_same_offer_image(source: str, mon
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recorded_ozon_card_price_tile_replays_as_conditional_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price."""
+    from types import SimpleNamespace
+
+    plan = replay.RECORDING.SOURCE_PLANS["ozon"]
+    item = replay._model(plan.item_model)(sku=2796072502, title="Synthetic kettle", price=32296.0, price_kind="card")
+    response = replay._model(plan.response_model)(items=[item], meta={"healthy": True, "warnings": []})
+
+    async def search(**kwargs):
+        return response
+
+    monkeypatch.setattr(replay.server, "SOURCES", {"ozon": SimpleNamespace(**{plan.tool: search})})
+    live = await replay.server.compare_prices("kettle", sources=["ozon"])
+    document = replay.RECORDING.build_recording(
+        "kettle", "2026-11-16T10:00:00Z", {"ozon": {"response": replay.RECORDING.cut_response("ozon", response)}}
+    )
+    result = await replay.replay(document)
+
+    assert live.offers[0].price_kind == "card" and live.offers[0].price_rub is None
+    assert (result.offers[0].price_kind, result.offers[0].price_rub, result.offers[0].price_native) == (
+        live.offers[0].price_kind,
+        live.offers[0].price_rub,
+        live.offers[0].price_native,
+    )
+    assert result.cheapest is None
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
 async def test_a_recorded_avito_region_reaches_the_replayed_outcome() -> None:
     from avito_connector.models_output import AvitoSearchResponse
 

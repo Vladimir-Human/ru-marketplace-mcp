@@ -128,7 +128,7 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
     "ozon": SourcePlan(
         source="ozon",
         tool="ozon_search",
-        item_fields=("sku", "title", "price", "rating", "rating_count", "stock", "url", "image_url"),
+        item_fields=("sku", "title", "price", "price_kind", "rating", "rating_count", "stock", "url", "image_url"),
         response_model="ozon_connector.models_output:OzonSearchResponse",
         item_model="ozon_connector.models_output:OzonSearchItemOut",
     ),
