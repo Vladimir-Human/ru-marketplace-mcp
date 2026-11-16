@@ -380,6 +380,7 @@
   </requirement>
   <requirement id="R-GRACE" kind="rule" state="gap" gaps="G-GRACE-UNTESTED" />
   <requirement id="R-GRACE-INDEX" kind="requirement" state="tested">
+    <test file="scripts/test_grace_index.py" name="test_a_repeated_registry_id_fails_write_and_check" requirements="R-GRACE-INDEX.unique-ids" title="A pasted-twice requirement is one ID with two texts that can drift apart: it fails, by name." />
     <test file="scripts/test_grace_index.py" name="test_branch_evidence_passes_on_main_after_squash_merge" requirements="R-GRACE-INDEX.evidence" />
     <test file="scripts/test_grace_index.py" name="test_comma_separated_manual_gaps_pass_and_tests_take_precedence" requirements="R-GRACE-INDEX" />
     <test file="scripts/test_grace_index.py" name="test_discovery_covers_package_and_script_tests_but_not_arbitrary_python" requirements="R-GRACE-INDEX" />
