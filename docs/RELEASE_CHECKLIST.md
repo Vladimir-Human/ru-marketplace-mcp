@@ -226,7 +226,12 @@ git add -A
 git commit
 git push -u origin release/vX.Y.Z
 gh pr create --base main --head release/vX.Y.Z --body-file RELEASE_NOTES_vX.Y.Z.md
+gh pr edit --add-label no-changelog
 ```
+
+Метка `no-changelog` нужна релизному PR: он меняет `packages/` и удаляет
+фрагменты, которые только что собрал в `CHANGELOG.md`, поэтому проверка
+фрагмента без метки падает.
 
 Мерж только с зелёным CI. Затем — на коммите релиза, до тега — прогнать
 workflow `Image check`: он собирает оба образа и проводит stdio-образ через
@@ -372,7 +377,10 @@ entered a rouble ranking; a clean install, image build or CI is red.
    **Write `docs/releases/RELEASE_NOTES_<tag>.md`** and say plainly which sources were
    verified against live pages and which were not. Any reader can open a
    marketplace and check.
-7. **Branch, PR, green CI, squash merge, tag.** On the release commit, before
+7. **Branch, PR, green CI, squash merge, tag.** Label the release PR
+   `no-changelog`: it changes `packages/` and deletes the fragments it has just
+   folded into `CHANGELOG.md`, so the fragment check fails without the label.
+   On the release commit, before
    tagging, run the `Image check` workflow: it builds both images and drives the
    stdio image through a real MCP session. Without it a broken Dockerfile or a
    missing package surfaces only after the tag push, once the image is already
