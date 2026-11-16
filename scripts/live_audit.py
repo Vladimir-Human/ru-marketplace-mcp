@@ -2,7 +2,8 @@
 
 START_MODULE_CONTRACT
 PURPOSE: Plan and run P1-4 through budgeted full-profile MCP stdio; retain private evidence.
-SCOPE: Pure A/B/C plans, child-hook refusal, sequential ledger guards, owned raw-CDP captures,
+SCOPE: Pure A/B/C plans, cost splits, source pauses/skip, child-hook refusal, sequential ledger guards,
+       owned raw-CDP captures,
        schema/catalogue/guide/PII/host checks, compare timing, compare recordings and offline cycle summary.
 DEPENDS: live_matrix helpers (costs, items, ids, history); live_budget; e2e_stdio_check client;
          compare_recording (the compare recorder); mcp_core.sources,resources,transport.chrome_cdp; jsonschema; stdlib.
@@ -113,10 +114,19 @@ def _phase_a(
                 args = _card_args(cases, source, (ids.get(source) or [None])[0])
             cost = costs.get((source, kind), live_matrix.SEED_COSTS.get((source, kind), 1))
             bundle.append(_call("A:" + spec["tool"], spec["tool"], source, kind, args, {_group(cases, source): cost}))
-        chunks = [bundle[:5], bundle[5:]] if source == "wildberries" else [bundle]
+        chunks = [bundle]
+        if source == "wildberries":
+            split = amount = 0
+            for call in bundle:
+                cost = sum(call["costs"].values())
+                if amount + cost > guard[1]:
+                    break
+                amount += cost
+                split += 1
+            chunks = [bundle[:split], bundle[split:]]
         for i, chunk in enumerate(chunks):
             amount = sum(sum(c["costs"].values()) for c in chunk)
-            # Stable membership across runs, even when run 1 changes measured costs.
+            # Keep other source bundles whole and WB chunks in their assigned runs.
             candidates = [i] if source == "wildberries" else [min(range(2), key=lambda n: len(bins[n]))]
             selected = next(
                 (
@@ -193,46 +203,42 @@ def _phase_c(
     query_costs = {
         _group(cases, s): costs.get((s, "listing"), live_matrix.SEED_COSTS.get((s, "listing"), 1)) for s in sources
     }
-    if any(2 * value > guard[1] for value in query_costs.values()):
-        raise ValueError("two compare queries cannot fit source guard")
+    if any(value > guard[1] for value in query_costs.values()):
+        raise ValueError("compare query cannot fit source guard")
     max_card = max(costs.get((s, "card"), 1) for s in sources)
-    plan = []
-    for index in range((run - 1) * 2, run * 2):
-        key = f"C:{index}"
+    index = run - 1
+    key = f"C:{index}"
+    plan = [
+        _call(key, "compare_prices", "compare", "compare", {"query": queries[index], "sources": sources}, query_costs)
+    ]
+    for winner in ("cheapest", "cheapest_comparable"):
         plan.append(
             _call(
-                key, "compare_prices", "compare", "compare", {"query": queries[index], "sources": sources}, query_costs
-            )
-        )
-        for winner in ("cheapest", "cheapest_comparable"):
-            plan.append(
-                _call(
-                    key + ":" + winner,
-                    "compare_verify_offer",
-                    "$winner",
-                    "verify",
-                    {},
-                    {"$winner": max_card},
-                    depends=key,
-                    winner=winner,
-                )
-            )
-        plan.append(
-            _call(
-                key + ":capture",
-                "capture",
+                key + ":" + winner,
+                "compare_verify_offer",
                 "$winner",
-                "capture",
+                "verify",
                 {},
-                {"$winner": 1},
+                {"$winner": max_card},
                 depends=key,
-                winner="cheapest_comparable",
+                winner=winner,
             )
         )
+    plan.append(
+        _call(
+            key + ":capture",
+            "capture",
+            "$winner",
+            "capture",
+            {},
+            {"$winner": 1},
+            depends=key,
+            winner="cheapest_comparable",
+        )
+    )
     if sum(sum(c["costs"].values()) for c in plan) > guard[0]:
         raise ValueError("compare plan cannot fit total guard")
-    # Preserve both fixed query measurements before winner cards consume source headroom.
-    return [c for c in plan if c["kind"] == "compare"] + [c for c in plan if c["kind"] != "compare"]
+    return plan
 
 
 def plan_run(
@@ -246,7 +252,7 @@ def plan_run(
     guard: tuple[int, int] = GUARD,
 ) -> list[dict[str, Any]]:
     """Pure plan; winner slots are resolved and source-guarded only after the answer."""
-    if phase not in {"A", "B", "C"} or not 1 <= run <= {"A": 2, "B": 3, "C": 4}[phase] or cycle < 1:
+    if phase not in {"A", "B", "C"} or not 1 <= run <= {"A": 2, "B": 3, "C": 8}[phase] or cycle < 1:
         raise ValueError("invalid audit phase/run/cycle")
     if phase == "A":
         if cycle != 1:
@@ -545,12 +551,12 @@ def check_answer(
     nodes = list(_nodes(value))
     personal = [field for node in nodes for field in cases["personal_data_fields"] if node.get(field) is not None]
     urls = [
-        v
+        (key, v)
         for node in nodes
         for key, v in node.items()
         if (key == "url" or key.endswith("_url")) and isinstance(v, str) and v
     ]
-    hosts = sorted({urlsplit(url).hostname or "" for url in urls})
+    hosts = sorted({urlsplit(url).hostname or "" for _key, url in urls})
     domains = _domains(cases, source)
     return {
         "schema": schema_ok,
@@ -558,7 +564,11 @@ def check_answer(
         "error_catalogue": code is None or code in _catalogue(errors),
         "personal_data": not personal,
         "personal_data_fields": sorted(set(personal)),
-        "hosts": all(_valid_url(url, domains) for url in urls),
+        # Page links stay on the source's domains; images come from CDNs on other hosts
+        # (AliExpress: aliexpress-media.com) and are not navigated, so only their scheme is checked.
+        "hosts": all(
+            urlsplit(url).scheme == "https" if key == "image_url" else _valid_url(url, domains) for key, url in urls
+        ),
         "final_hosts": hosts,
     }
 
@@ -683,6 +693,20 @@ def _resolved(
     return resolved
 
 
+def _filter_paused_compare(call: dict[str, Any], cases: dict[str, Any], paused: dict[str, float]) -> dict[str, Any]:
+    """Copy the resolved compare call, dropping paused sources before its ledger guard."""
+    now = time.time()
+    sources = call["args"]["sources"]
+    dropped = sorted(source for source in sources if paused.get(source, 0) > now)
+    remaining = [source for source in sources if source not in dropped]
+    return {
+        **call,
+        "args": {**call["args"], "sources": remaining},
+        "costs": {_group(cases, source): call["costs"][_group(cases, source)] for source in remaining},
+        "dropped_sources": dropped,
+    }
+
+
 def _record(call: dict[str, Any], code: str | None = None) -> dict[str, Any]:
     return {
         "key": call["key"],
@@ -700,6 +724,7 @@ def _record(call: dict[str, Any], code: str | None = None) -> dict[str, Any]:
         "capture_files": [],
         "checks": {},
         "result": None,
+        **({"dropped_sources": call["dropped_sources"]} if "dropped_sources" in call else {}),
     }
 
 
@@ -901,6 +926,7 @@ async def execute_plan(
     *,
     previous: list[dict[str, Any]] | None = None,
     costs: dict[tuple[str, str], int] | None = None,
+    skip: set[str] | None = None,
     record_dir: Path | None = None,
     capture_dir: Path | None = None,
     record_prefix: str = "",
@@ -908,7 +934,7 @@ async def execute_plan(
     """Sequential I/O shell; forecast and actual spending always come from shared ledger.
 
     START_CONTRACT: execute_plan
-    PURPOSE: Execute only resolved, unpaused calls that fit the current 36/7 ledger guard.
+    PURPOSE: Drop paused compare sources; execute only resolved, unpaused calls within the current 36/7 guard.
     INPUTS: Pure plan, initialized/attested stdio session, file budget, trusted cases, private directory.
     OUTPUTS: Per-call evidence; skipped calls explicitly say budget/dependency/pause, never health.
     SIDE_EFFECTS: MCP calls, owned captures, atomic private checkpoints, refresh matrix ids, safe stdout.
@@ -924,7 +950,7 @@ async def execute_plan(
     ids = _load(REPO_ROOT / ".live-ids.json", {})
     context = {row["tool"]: row.get("result") for row in previous or [] if row.get("result") is not None}
     completed: dict[str, Any] = {}
-    paused: dict[str, float] = {}
+    paused: dict[str, float] = {source: float("inf") for source in skip or set()}
     for row in previous or []:
         _pause_from(row, paused)
     rows = []
@@ -933,10 +959,11 @@ async def execute_plan(
         call = _resolved(original, cases, ids, context, completed, measured)
         reason = "missing_dependency" if call is None else None
         call = call or original
-        if reason is None and any(
-            paused.get(source, 0) > time.time()
-            for source in ([call["source"]] if call["source"] != "compare" else call["args"]["sources"])
-        ):
+        if call["kind"] == "compare":
+            call = _filter_paused_compare(call, cases, paused)
+            if not call["args"]["sources"]:
+                reason = "source_paused"
+        elif paused.get(call["source"], 0) > time.time():
             reason = "source_paused"
         if reason is None and not _allowed(budget, call["costs"]):
             reason = "budget_skipped"
@@ -1021,6 +1048,7 @@ def select_options(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--run", type=int)
     parser.add_argument("--cycle", type=int, default=1)
     parser.add_argument("--summary", action="store_true")
+    parser.add_argument("--skip", metavar="SOURCES", help="comma-separated sources to pause for the whole run")
     parser.add_argument(
         "--record",
         type=Path,
@@ -1033,14 +1061,21 @@ def select_options(argv: list[str]) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if (
         args.cycle < 1
-        or (args.summary and (args.phase or args.run is not None or args.record is not None))
+        or (args.summary and (args.phase or args.run is not None or args.record is not None or args.skip is not None))
         or (not args.summary and (args.phase is None or args.run is None))
         or (args.record is not None and args.phase != "C")
         or (args.record is not None and not _private_record_dir(args.record))
     ):
         raise ValueError("invalid audit options")
     if not args.summary:
-        plan_run(load_cases(), _load(REPO_ROOT / ".live-ids.json", {}), {}, args.phase, args.run, cycle=args.cycle)
+        from mcp_core.sources import ALIASES
+
+        cases = load_cases()
+        names = [part.strip() for part in args.skip.split(",")] if args.skip is not None else []
+        args.skip = {ALIASES.get(name, name) for name in names}
+        if (names and not all(names)) or not args.skip <= cases["fixed_queries"].keys():
+            raise ValueError("invalid audit options")
+        plan_run(cases, _load(REPO_ROOT / ".live-ids.json", {}), {}, args.phase, args.run, cycle=args.cycle)
     return args
 
 
@@ -1103,15 +1138,18 @@ async def run(argv: list[str], budget: live_budget.Budget) -> int:
     capture_dir = (directory / "captures") if args.record is not None else None
     previous = _cycle_records(args.cycle)
     costs = _cost_table(cases, previous)
-    plan = plan_run(
-        cases,
-        _load(REPO_ROOT / ".live-ids.json", {}),
-        costs,
-        args.phase,
-        args.run,
-        cycle=args.cycle,
-        guard=(min(GUARD[0], budget.total), min(GUARD[1], budget.per_source)),
-    )
+    ids = _load(REPO_ROOT / ".live-ids.json", {})
+    guard = (min(GUARD[0], budget.total), min(GUARD[1], budget.per_source))
+    # Phase A's two runs split one inventory by cost. Both plan from history alone, so the
+    # other run's measurements cannot move a tool between them (a repeat or a miss).
+    plan_costs = _cost_table(cases, []) if args.phase == "A" else costs
+    plan = plan_run(cases, ids, plan_costs, args.phase, args.run, cycle=args.cycle, guard=guard)
+    if args.phase == "A":
+        done = {row["key"] for row in previous if str(row.get("key", "")).startswith("A:")}
+        keys = {call["key"] for call in plan}
+        whole = {call["key"] for n in (1, 2) for call in plan_run(cases, ids, plan_costs, "A", n, guard=guard)}
+        if done and (done & keys or done | keys != whole):
+            raise ValueError("phase A split changed since the other run; start a new cycle")
     async with open_session(budget, directory, capture_dir=capture_dir) as session:
         rows = await execute_plan(
             plan,
@@ -1122,6 +1160,7 @@ async def run(argv: list[str], budget: live_budget.Budget) -> int:
             args.phase,
             previous=previous,
             costs=costs,
+            skip=args.skip,
             record_dir=args.record,
             capture_dir=capture_dir,
             record_prefix=f"c{args.cycle}-",
