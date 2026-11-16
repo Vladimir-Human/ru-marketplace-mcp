@@ -12,6 +12,13 @@
 # test_non_connector_json_stays_non_connector: Do not classify arbitrary SDK JSON as a connector error.
 # test_a_standalone_server_names_no_tool_it_does_not_list: Never send the agent to a tool the server lacks.
 # test_bad_request_without_a_named_parameter_guesses_none: No parameter named when the message names none.
+# test_bad_request_names_the_parameter_the_message_names: Name the parameter the message names, and no neighbour.
+# test_bad_request_names_one_parameter_by_two_of_its_parts: Two name parts qualify, one part never does.
+# test_bad_request_names_no_parameter_when_two_qualify: Two candidates name neither.
+# test_bad_request_names_no_parameter_on_one_shared_part: A shared name part names no parameter.
+# test_a_block_needing_a_person_gets_no_invented_delay: A 403 transport_down waits for a person.
+# test_a_block_keeps_the_delay_its_source_supplied: A supplied delay stays and is quoted.
+# test_a_transport_failure_still_gets_the_pacing_floor: Every other transport failure keeps the floor.
 # test_error_reference_describes_outgoing_fields: Publish the new fields and generated code guidance.
 # END_MODULE_MAP
 
@@ -23,7 +30,14 @@ import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.exceptions import ToolError
 from mcp_core import runtime
-from mcp_core.errors import BadRequestError, ConnectorError, ErrorCode, PermissionDeniedError, raise_tool_error
+from mcp_core.errors import (
+    BadRequestError,
+    ConnectorError,
+    ErrorCode,
+    PermissionDeniedError,
+    TransportDownError,
+    raise_tool_error,
+)
 from mcp_core.resources import render_error_reference
 
 # START_BLOCK_BOUNDARY_EDGE_CASES
@@ -153,6 +167,149 @@ async def test_bad_request_without_a_named_parameter_guesses_none() -> None:
 
 
 # END_BLOCK_BOUNDARY_EDGE_CASES
+# START_BLOCK_PARAMETER_NAMING
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.guidance")
+async def test_bad_request_names_the_parameter_the_message_names() -> None:
+    """The message names location_id: that parameter alone, never a neighbour."""
+    server = FastMCP("named-parameter-probe")
+
+    @server.tool
+    def probe(query: str, location_id: str = "", category_id: str = "", page: int = 1) -> str:
+        raise_tool_error(BadRequestError("location_id must be digits (e.g. 637640), got 'abc'"))
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {"query": "x"}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["next_step"] == "Correct the location_id parameter using `probe`'s schema, then call `probe` again."
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.guidance")
+async def test_bad_request_names_one_parameter_by_two_of_its_parts() -> None:
+    """Two name parts qualify; a parameter that shares one part never does."""
+    server = FastMCP("two-parts-probe")
+
+    @server.tool
+    def probe(query: str = "", item_id_or_url: str = "", url_limit: int = 0) -> str:
+        raise_tool_error(BadRequestError("invalid item URL"))
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["next_step"] == "Correct the item_id_or_url parameter using `probe`'s schema, then call `probe` again."
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.guidance")
+async def test_bad_request_names_no_parameter_when_two_qualify() -> None:
+    """Two parameters match on two name parts each: neither of them is named."""
+    server = FastMCP("two-candidates-probe")
+
+    @server.tool
+    def probe(query: str = "", item_id_or_url: str = "", item_page_url: str = "") -> str:
+        raise_tool_error(BadRequestError("invalid item URL"))
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["next_step"] == (
+        "Correct the arguments the message describes, using `probe`'s schema, then call `probe` again."
+    )
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.guidance")
+async def test_bad_request_names_no_parameter_on_one_shared_part() -> None:
+    """One shared name part names no parameter: the message says "source"."""
+    server = FastMCP("shared-part-probe")
+
+    @server.tool
+    def probe(query: str = "", per_source_limit: int = 5, sources: str = "", in_stock_only: bool = False) -> str:
+        raise_tool_error(BadRequestError("unknown source(s) ['foo']: valid options are ['avito', 'ozon']"))
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["next_step"] == (
+        "Correct the arguments the message describes, using `probe`'s schema, then call `probe` again."
+    )
+
+
+# END_BLOCK_PARAMETER_NAMING
+# START_BLOCK_PERSON_BLOCK
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.pacing", "R-ERROR-NEXT-STEP.guidance")
+async def test_a_block_needing_a_person_gets_no_invented_delay() -> None:
+    """A 403 transport_down is cleared by a person: no pacing floor, no retry now."""
+    server = FastMCP("block-probe")
+
+    @server.tool
+    def probe() -> str:
+        raise_tool_error(
+            TransportDownError(
+                "Avito refused this browser: clear the check in Chrome", provider="avito", status_code=403
+            )
+        )
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert "retry_after_s" not in error
+    assert error["next_step"] == (
+        "A person must clear the block first, as the message says; then call `probe` again with the same arguments."
+    )
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.pacing", "R-ERROR-NEXT-STEP.guidance")
+async def test_a_block_keeps_the_delay_its_source_supplied() -> None:
+    """The source's own delay stays and is quoted as a wait, not as permission."""
+    server = FastMCP("block-delay-probe")
+
+    @server.tool
+    def probe() -> str:
+        raise_tool_error(
+            TransportDownError(
+                "Lamoda refused this browser: clear the check in Chrome",
+                provider="lamoda",
+                status_code=403,
+                retry_after_s=1200,
+            )
+        )
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["retry_after_s"] == 1200
+    assert error["next_step"] == (
+        "A person must clear the block first, as the message says; "
+        "then call `probe` again with the same arguments, not before 1200 seconds."
+    )
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.pacing")
+async def test_a_transport_failure_still_gets_the_pacing_floor() -> None:
+    """Every other transport failure keeps the floor and today's sentence."""
+    server = FastMCP("floor-probe")
+
+    @server.tool
+    def probe() -> str:
+        raise_tool_error(TransportDownError("the browser is busy", provider="chrome", status_code=409))
+
+    runtime.install_tool_error_middleware(server)
+    async with Client(server) as client:
+        result = await client.call_tool("probe", {}, raise_on_error=False)
+    error = json.loads(result.content[0].text)
+    assert error["retry_after_s"] == 3.0
+    assert error["next_step"] == "Call `probe` again with the same arguments after 3 seconds."
+
+
+# END_BLOCK_PERSON_BLOCK
 # START_BLOCK_ERROR_REFERENCE
 
 

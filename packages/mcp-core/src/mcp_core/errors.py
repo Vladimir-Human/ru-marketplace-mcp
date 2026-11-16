@@ -18,6 +18,7 @@
 # PermissionDeniedError: Represent forbidden access with status 403.
 # ChallengeRequiredError: Add retry timing, user action, challenge and optional handoff metadata.
 # error_next_step: Derive one recovery sentence for every ErrorCode from supplied context.
+# needs_a_person: Tell a block only a person can clear from a transient transport failure.
 # raise_tool_error: Redact and raise a FastMCP ToolError from a serialized connector error.
 # raise_tool_error_from: Raise the ToolError for any exception, keeping a ConnectorError's fields.
 # END_MODULE_MAP
@@ -214,6 +215,26 @@ class ChallengeRequiredError(ConnectorError):
 
 # START_BLOCK_NEXT_STEP
 
+# A transport_down with this status is the marketplace refusing us, not a hiccup:
+# Avito, Cian, Megamarket, Ozon and Lamoda raise it when a check appears, and the
+# connector's own message says a person has to clear it in Chrome.
+BLOCK_STATUS_CODE = 403
+
+# Name parts that mean nothing on their own when a parameter name is split on
+# "_": "item_id_or_url" is one parameter, not four words to look for.
+_NAME_STOP_PARTS = frozenset({"or", "and", "of", "to"})
+
+
+def needs_a_person(code: ErrorCode, payload: Mapping[str, Any]) -> bool:
+    """Whether this error is a block only a person can clear.
+
+    A transport_down with status 403 is the marketplace refusing us. The delay
+    such an error carries is the source's own advice (Lamoda: 1200); a pacing
+    floor of our own would invent one and read as permission to hammer a blocked
+    source a couple of seconds later.
+    """
+    return code == ErrorCode.TRANSPORT_DOWN and payload.get("status_code") == BLOCK_STATUS_CODE
+
 
 def error_next_step(
     code: ErrorCode,
@@ -232,6 +253,12 @@ def error_next_step(
     server has no `compare_prices` or `marketplace_health`) is never named;
     ``available=None`` means every tool is listed. The challenge's existing
     user_action stays authoritative and unmodified.
+
+    Two rules keep the sentence honest. A block only a person can clear
+    (:func:`needs_a_person`) says so instead of quoting a delay of our own, and
+    a bad request names a parameter the message actually mentions: its full name,
+    or — when the message names no full name — the one parameter of which it
+    mentions two distinct name parts. A single shared part names no parameter.
     """
 
     def listed(name: str | None) -> bool:
@@ -241,6 +268,19 @@ def error_next_step(
         if code == ErrorCode.RATE_LIMITED and source is not None and not source.retry_rate_limit:
             cover = "`compare_prices` covers the other sources; " if listed("compare_prices") else ""
             return f"Do not retry `{tool}` now; {cover}tell the user this source is limited."
+        if needs_a_person(code, payload):
+            # The block is cleared by a person, not by waiting: the message says
+            # what to clear. Only a delay the source supplied is quoted.
+            delay = payload.get("retry_after_s")
+            wait = (
+                f", not before {delay:g} seconds"
+                if isinstance(delay, (int, float)) and not isinstance(delay, bool)
+                else ""
+            )
+            return (
+                f"A person must clear the block first, as the message says; "
+                f"then call `{tool}` again with the same arguments{wait}."
+            )
         return f"Call `{tool}` again with the same arguments after {payload['retry_after_s']:g} seconds."
     if code == ErrorCode.PARSER_DRIFT:
         health = "call `marketplace_health` for the source state; " if listed("marketplace_health") else ""
@@ -258,16 +298,23 @@ def error_next_step(
     if code == ErrorCode.BAD_REQUEST:
         message = str(payload.get("message", ""))
         words = {word.lower() for word in re.findall(r"[A-Za-z0-9]+", message)}
-        mentioned = [
-            name
-            for name in parameters
-            if re.search(rf"\b{re.escape(name)}\b", message)
-            or any(part in words for part in name.lower().split("_") if part not in {"or", "and", "of", "to"})
-        ]
+        # (a) The message names a parameter outright: that is the one to fix.
+        mentioned = [name for name in parameters if re.search(rf"\b{re.escape(name)}\b", message)]
         if not mentioned:
-            # The message names no parameter, not even a part of one ("invalid
-            # item URL" names item_id_or_url): guessing would send the agent to
-            # fix the wrong argument.
+            # (b) One name part is not enough: "source" belongs to
+            # per_source_limit and to sources alike, and naming the wrong one
+            # sends the agent to fix an argument the message never mentioned.
+            # Two distinct parts are, and only when exactly one parameter has them.
+            candidates = [
+                name
+                for name in parameters
+                if len({part for part in name.lower().split("_") if part not in _NAME_STOP_PARTS} & words) >= 2
+            ]
+            if len(candidates) == 1:
+                mentioned = candidates
+        if not mentioned:
+            # The message names no parameter, not even two parts of one ("too many
+            # filters"): guessing would send the agent to fix the wrong argument.
             return f"Correct the arguments the message describes, using `{tool}`'s schema, then call `{tool}` again."
         parameter = ", ".join(mentioned)
         return f"Correct the {parameter} parameter using `{tool}`'s schema, then call `{tool}` again."
