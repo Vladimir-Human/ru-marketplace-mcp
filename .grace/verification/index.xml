@@ -238,6 +238,7 @@
   <requirement id="R-COMPARE-BENCHMARK-REPLAY" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_avito_region_reaches_the_replayed_outcome" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_image_replays_as_the_same_offer_image" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Synthetic typed search answers exercise the real adapters before and after recording." />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_ozon_card_price_tile_replays_as_conditional_only" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_timeout_replays_with_the_timeout_error_code" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_committed_payloads_contain_only_what_the_recorder_can_produce" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Re-cut every typed payload: the corpus must not invent response/item fields." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_replay_refuses_an_unknown_or_missing_recording_schema" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
