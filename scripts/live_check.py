@@ -9,14 +9,20 @@ repository root, so several commands run one budget instead of forty each.
 Usage:
     python scripts/live_check.py selfcheck <source>
     python scripts/live_check.py call <module> <tool> '<json kwargs>'
+    python scripts/live_check.py matrix [--only a,b] [--skip c]
+    python scripts/live_check.py preflight  # the setup checks alone; no request
     python scripts/live_check.py doctor [source ...]
     python scripts/live_check.py ledger
     python scripts/live_check.py reset      # archive the ledger and start a new run
 
 `doctor` runs the marketplace CLI's own doctor round - every selfcheck, live -
 under the same budget as the other commands, so the release checklist's doctor
-round cannot pass the caps. Before call/doctor install any budget hooks or import
-connectors, preflight verifies writable temp space, the Playwright driver and a
+round cannot pass the caps. Matrix uses the same call machinery sequentially,
+with whitelisted local history and a previous-release diff; any recorded states
+exit 0, whole-run budget refusal exits 3. Matrix defaults
+CHROME_CHALLENGE_HANDOFF_S=0 if unset and suppresses raw diagnostics.
+Before call/matrix/doctor install any budget hooks or import connectors,
+preflight verifies writable temp space, the Playwright driver and a
 bare CDP attachment. It repairs TEMP/TMP or selects system Node when needed;
 it never navigates or starts Chrome. Setup failure exits 4 without spending a
 ledger entry.
@@ -31,15 +37,18 @@ a blocked source. Doctor preserves budget refusal as unverified, never health.
 
 START_MODULE_CONTRACT
 PURPOSE: Run marketplace checks under the shared live budget without masking checker/doctor failure as a blocked source.
-SCOPE: Temp/driver/bare-CDP preflight before call/doctor budget install, dispatch, doctor verdicts (0/1/2/3/4), result and ledger output.
-DEPENDS: scripts/live_budget.py; mcp_core.transport.chrome_cdp endpoint; Playwright; stdlib tempfile,shutil,dataclasses; marketplace CLI and connector modules after preflight.
-LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-DOCTOR-EXIT-CODES.
+SCOPE: Temp/driver/bare-CDP preflight before call/matrix/doctor budget install, shared tool call, dispatch, doctor verdicts (0/1/2/3/4), result and ledger output.
+DEPENDS: scripts/live_matrix.py; scripts/live_budget.py; mcp_core.transport.chrome_cdp endpoint; Playwright; stdlib contextlib,io,logging,tempfile,shutil,dataclasses; marketplace CLI and connector modules after preflight.
+LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-MATRIX, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
   _check_temp          verify writable temp space, repairing TEMP/TMP inside the repo
   _check_driver        start/stop Playwright, retrying with system node on failure
   _check_cdp           bare attach/detach; on artifact EPERM: repo temp, then system node; never navigate/autostart
   _preflight           print one result per check and stop before budget/connector imports
   _dump                JSON-shaped result for a model, structured content or plain value
+  _quiet_diagnostics   suppress raw prints and prebound logs for matrix; restore logging afterward
+  _call_tool           one shared connector invocation for call and matrix
+  matrix               dispatch guarded fixed-query probes with whitelisted local output
   _reset               archive the ledger under a timestamped name to start a new run
   _doctor              run the CLI's doctor round under the budget and report the ledger
   _run                 dispatch one live command with the budget installed
@@ -51,13 +60,17 @@ END_MODULE_CONTRACT
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
+import io
 import json
+import logging
 import os
 import shlex
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -254,6 +267,24 @@ def _dump(result: Any) -> Any:
     return result
 
 
+@contextlib.contextmanager
+def _quiet_diagnostics() -> Iterator[None]:
+    """Matrix whitelist: suppress prints and even loggers bound to an old stderr."""
+    previous = logging.root.manager.disable
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        logging.disable(max(previous, logging.CRITICAL))
+        try:
+            yield
+        finally:
+            logging.disable(previous)
+
+
+async def _call_tool(module_path: str, tool_name: str, kwargs: dict[str, Any]) -> Any:
+    """One invocation/serialization path shared by call and the matrix."""
+    tool = getattr(__import__(module_path, fromlist=[tool_name]), tool_name)
+    return _dump(await tool(**kwargs))
+
+
 def _ledger_report(budget: live_budget.Budget) -> int:
     entries = budget.ledger.load()
     counts: dict[str, int] = {}
@@ -323,6 +354,10 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
         return _reset(budget)
     if mode == "doctor":
         return await _doctor(argv[1:], budget)
+    if mode == "matrix":
+        import live_matrix
+
+        return await live_matrix.run(argv[1:], budget)
     if mode == "selfcheck":
         if len(argv) != 2:
             print("usage: live_check.py selfcheck <source>", file=sys.stderr)
@@ -350,8 +385,7 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
         if not isinstance(kwargs, dict):
             print("kwargs must be a JSON object", file=sys.stderr)
             return USAGE_EXIT
-        tool = getattr(__import__(module_path, fromlist=[tool_name]), tool_name)
-        result = await tool(**kwargs)
+        result = await _call_tool(module_path, tool_name, kwargs)
     else:
         print(__doc__, file=sys.stderr)
         return USAGE_EXIT
@@ -364,20 +398,55 @@ def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
         return USAGE_EXIT
-    if argv[0] in {"call", "doctor"} and not asyncio.run(_preflight()):
-        return USAGE_EXIT
+    matrix_mode = argv[0] == "matrix"
+    if matrix_mode:
+        import live_matrix
+
+        try:
+            live_matrix.select_cases(argv[1:])
+        except (ValueError, OSError):
+            print("matrix: invalid selection or fixed-query registry", file=sys.stderr)
+            return USAGE_EXIT
+        os.environ.setdefault("CHROME_CHALLENGE_HANDOFF_S", "0")
+    if argv[0] == "preflight":
+        return 0 if asyncio.run(_preflight()) else USAGE_EXIT
+    if argv[0] in {"call", "matrix", "doctor"}:
+        # Matrix diagnostics may contain local paths; retain the shared preflight
+        # behavior, but expose only a fixed safe failure line in this mode.
+        try:
+            with _quiet_diagnostics() if matrix_mode else contextlib.nullcontext():
+                ready = asyncio.run(_preflight())
+        except Exception:
+            if not matrix_mode:
+                raise
+            ready = False
+        if not ready:
+            if matrix_mode:
+                print(
+                    "matrix: preflight failed; `python scripts/live_check.py preflight` shows the fix", file=sys.stderr
+                )
+            return USAGE_EXIT
     if not os.environ.get("LIVE_BUDGET_LEDGER"):
         os.environ["LIVE_BUDGET_LEDGER"] = str(REPO_ROOT / ".live-budget.json")
     try:
-        budget = live_budget.install()
-    except AttributeError as exc:
-        print(f"live budget cannot be installed: {exc}", file=sys.stderr)
+        with _quiet_diagnostics() if matrix_mode else contextlib.nullcontext():
+            budget = live_budget.install()
+    except Exception as exc:
+        if not matrix_mode and not isinstance(exc, AttributeError):
+            raise
+        message = "matrix: budget setup failed" if matrix_mode else f"live budget cannot be installed: {exc}"
+        print(message, file=sys.stderr)
         return USAGE_EXIT
     try:
         return asyncio.run(_run(argv, budget))
     except live_budget.BudgetExhausted as exc:
-        print(f"stopped: {exc}", file=sys.stderr)
+        print("matrix: budget refused" if matrix_mode else f"stopped: {exc}", file=sys.stderr)
         return 3
+    except Exception:
+        if not matrix_mode:
+            raise
+        print("matrix: setup or output failed", file=sys.stderr)
+        return USAGE_EXIT
 
 
 if __name__ == "__main__":
