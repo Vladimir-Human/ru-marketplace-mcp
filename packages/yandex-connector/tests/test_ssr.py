@@ -232,7 +232,7 @@ def test_card_extracts_reviews_with_pros_cons_and_votes(card_washer):
 
     assert reviews
     first = reviews[0]
-    assert first["author"]
+    assert all("author" not in review for review in reviews)
     assert 1 <= first["rating"] <= 5
     assert first["date"]
     assert first["pros"] or first["cons"] or first["comment"]

@@ -768,7 +768,7 @@ def test_reviews_marks_partial_when_later_page_fails(monkeypatch):
     first_page_review = {
         "uuid": "r1",
         "content": {"score": 5, "comment": "good"},
-        "author": {"firstName": "Ann"},
+        "author": {"firstName": "Placeholder Person"},
         "usefulness": {"useful": 1},
         "publishedAt": 0,
     }
@@ -811,7 +811,7 @@ def test_reviews_redacts_the_failing_page_body_in_last_error(monkeypatch):
     first_page_review = {
         "uuid": "r1",
         "content": {"score": 5, "comment": "good"},
-        "author": {"firstName": "Ann"},
+        "author": {"firstName": "Placeholder Person"},
         "usefulness": {"useful": 1},
         "publishedAt": 0,
     }
@@ -1316,6 +1316,31 @@ def test_ozon_proxy_falls_back_to_standard_variables(monkeypatch):
 # The product page's current cursor (live 2026-11-06): sortings offered
 # usefulness_desc / score_desc / score_asc and nextButton carried this sort.
 _CURRENT_NEXT = "?page=2&page_key=CLW0iv0QEgwI-__YzwYQyIylugMYBQ&sort=usefulness_desc"
+
+
+@pytest.mark.req("R-NO-PERSONAL-DATA.removed")
+async def test_public_reviews_omit_author(monkeypatch):
+    from fastmcp import Client
+
+    review = {
+        "uuid": "placeholder",
+        "itemId": 123,
+        "content": {"comment": "Useful", "score": 5},
+        "author": {"firstName": "Placeholder", "lastName": "Person"},
+    }
+
+    async def fake_fetch(path, ctx):
+        return 200, _reviews_body(reviews=[review]), "fixture"
+
+    monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
+    async with Client(server.mcp) as client:
+        result = (await client.call_tool("ozon_reviews", {"sku_or_path": "123", "limit": 1})).structured_content
+    assert result is not None
+    assert len(result["reviews"]) == 1
+    assert "author" not in result["reviews"][0]
+    assert result["reviews"][0]["text"] == "Useful"
+    assert result["reviews"][0]["item_id"] == 123
+    assert "Placeholder" not in json.dumps(result)
 
 
 def _thirty(page):

@@ -6,12 +6,23 @@ decide whether the tool answers the question. Prices are rubles and ``None``
 when Cian shows no price — never 0 (see ``mcp_core.resilience.coerce_price``).
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Define CIAN public output models without private-person identity.
+# SCOPE: Property data, organisation publisher names and shared metadata.
+# DEPENDS: Pydantic; mcp_core.models.
+# LINKS: M-CIAN; R-NO-PERSONAL-DATA.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# Output models: Typed public responses; private names removed or nullable by parser rule.
+# END_MODULE_MAP
+
 from __future__ import annotations
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
 from pydantic import BaseModel, ConfigDict, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """Validation metadata attached to every response."""
 
@@ -83,7 +94,9 @@ class CianSearchItemOut(BaseModel):
     metro: CianMetroOut | None = Field(default=None, description="Nearest metro station by travel time, if any.")
     newbuilding_name: str | None = Field(default=None, description="Residential complex (ЖК) name for new buildings.")
     url: str | None = Field(default=None, description="Canonical cian.ru offer URL (tracking parameters stripped).")
-    agency_name: str | None = Field(default=None, description="Agency or developer name that published the offer.")
+    agency_name: str | None = Field(
+        default=None, description="Agency/developer name from the publisher's own organisation signals; otherwise None."
+    )
     seller_type: str | None = Field(
         default=None,
         description="Publisher type as Cian codes it: 'developer', 'realtor_based', 'agency', 'homeowner' etc.",
@@ -115,7 +128,10 @@ class CianSearchResponse(BaseModel):
 
 
 class CianAgentOut(BaseModel):
-    name: str | None = Field(default=None, description="Agent, agency or developer display name.")
+    name: str | None = Field(
+        default=None,
+        description="Agency/developer display name; None for a private specialist, homeowner or unknown publisher.",
+    )
     agent_id: int | None = Field(default=None, description="Cian user id of the publisher.")
     account_type: str | None = Field(default=None, description="Cian account type, e.g. 'agency', 'specialist'.")
     user_type: str | None = Field(
@@ -184,7 +200,9 @@ class CianCardResponse(BaseModel):
     metro: list[CianMetroOut] = Field(default_factory=list, description="Nearby metro stations with travel time.")
     newbuilding_name: str | None = Field(default=None, description="Residential complex (ЖК) name, if any.")
     description: str | None = Field(default=None, description="Full offer description text.")
-    agency_name: str | None = Field(default=None, description="Agency or developer name that published the offer.")
+    agency_name: str | None = Field(
+        default=None, description="Agency/developer name from the publisher's own organisation signals; otherwise None."
+    )
     seller_type: str | None = Field(
         default=None,
         description="Publisher type as Cian codes it: 'developer', 'realtor_based', 'agency', 'homeowner' etc.",
@@ -217,3 +235,6 @@ class CianSelfcheckCheckOut(SelfCheckEntryBase):
 class CianSelfcheckResponse(SelfCheckResponseBase):
     healthy: bool | None = Field(default=None, description="Whether all checks are healthy.")
     checks: dict[str, CianSelfcheckCheckOut] = Field(default_factory=dict, description="Per-subcheck results.")
+
+
+# END_BLOCK_OUTPUT_MODELS

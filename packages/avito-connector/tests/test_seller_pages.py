@@ -84,7 +84,7 @@ def test_item_seller_never_uses_operator_header_profile(include_seller):
 
 
 def test_captured_profile_matches_exact_ground_truth():
-    assert server.parse_seller_profile(_fixture("seller_profile_brands_27696b66.html")) == {
+    assert server.parse_seller_profile(_fixture("seller_profile_brands_27696b66.html"), PROFILE_URL) == {
         "name": NAME,
         "rating_score": 5.0,
         "rating_count": 563,
@@ -107,11 +107,11 @@ def test_absent_item_seller_is_all_null_not_invented():
 def test_item_seller_company_flag_comes_from_label_not_brands_path(label, expected):
     html = (
         '<div data-marker="seller-info/name"><a data-marker="seller-link/link" '
-        'href="/brands/shop?from=item">Иван</a></div>'
+        'href="/brands/shop?from=item">Placeholder Shop</a></div>'
         f'<div data-marker="seller-info/label">{label}</div>'
     )
     assert server.parse_item_seller(html) == {
-        "name": "Иван",
+        "name": "Placeholder Shop",
         "rating_score": None,
         "rating_count": None,
         "is_company": expected,
@@ -122,7 +122,10 @@ def test_item_seller_company_flag_comes_from_label_not_brands_path(label, expect
 @pytest.mark.parametrize(
     "html, expected",
     [
-        ("<title>Анна - отзывы на Авито</title>", {"name": "Анна", "rating_score": None, "rating_count": None}),
+        (
+            "<title>Placeholder Person - отзывы на Авито</title>",
+            {"name": None, "rating_score": None, "rating_count": None},
+        ),
         ('<span data-marker="profile/score">4,8</span>', {"name": None, "rating_score": 4.8, "rating_count": None}),
     ],
     ids=["name-without-rating", "rating-without-name"],
@@ -142,7 +145,7 @@ def test_item_review_count_never_includes_rating_decimal_digits():
     # Its final score digit must not be mistaken for a count thousands group.
     for text, expected in [("563 отзыва", 563), ("1 563 отзыва", 1563), ("1\u00a0563 отзыва", 1563)]:
         html = (
-            '<div data-marker="seller-info/name">Анна</div>'
+            '<div data-marker="seller-info/name">Placeholder Person</div>'
             '<div class="seller-info-rating">'
             '<span data-marker="rating-caption/rating">4,8</span>'
             f"<span>{text}</span></div>"
@@ -152,7 +155,7 @@ def test_item_review_count_never_includes_rating_decimal_digits():
         assert seller["rating_count"] == expected
 
     count_only = server.parse_item_seller(
-        '<div data-marker="seller-info/name">Анна</div><div class="seller-info-rating">1 отзыв</div>'
+        '<div data-marker="seller-info/name">Placeholder Person</div><div class="seller-info-rating">1 отзыв</div>'
     )
     assert count_only["rating_score"] is None
     assert count_only["rating_count"] == 1
@@ -161,12 +164,12 @@ def test_item_review_count_never_includes_rating_decimal_digits():
 def test_item_seller_never_takes_the_product_model_rating():
     """Review of #120: the item page also rates the product model; that is not the seller."""
     model = "<div><span>4,6</span><span>503 отзыва о модели</span></div>"
-    no_seller_rating = server.parse_item_seller(model + '<div data-marker="seller-info/name">Анна</div>')
+    no_seller_rating = server.parse_item_seller(model + '<div data-marker="seller-info/name">Placeholder Person</div>')
     assert no_seller_rating["rating_score"] is None
     assert no_seller_rating["rating_count"] is None
 
     seller_then_model = server.parse_item_seller(
-        '<div data-marker="seller-info/name">Анна</div><span>5,0</span>'
+        '<div data-marker="seller-info/name">Placeholder Person</div><span>5,0</span>'
         '<a data-marker="rating-caption/rating">563 отзыва</a>' + model
     )
     assert seller_then_model["rating_score"] == 5.0
@@ -218,7 +221,7 @@ async def test_seller_fetches_normalized_rendered_profile(monkeypatch, raw, expe
     assert calls == [expected_url]
     assert result.status == "success"
     assert result.seller is not None
-    assert result.seller.name == NAME
+    assert result.seller.name == (NAME if "/brands/" in expected_url else None)
     assert result.seller.rating_score == 5.0
     assert result.seller.rating_count == 563
     assert result.seller.profile_url == expected_url

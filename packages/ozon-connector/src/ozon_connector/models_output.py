@@ -10,9 +10,9 @@ The ``meta`` field is populated from the ``_meta`` key that
 
 # START_MODULE_CONTRACT
 # PURPOSE: Define typed Ozon card, review, search and selfcheck wire responses.
-# SCOPE: Nullable numeric RUB prices, 0..5 ratings and integer tile counts; unchanged aliases/envelopes.
+# SCOPE: Review author identity removed; nullable RUB prices, 0..5 ratings, integer counts and unchanged aliases/envelopes.
 # DEPENDS: Pydantic; mcp_core.models.
-# LINKS: M-OZON; R-OZON-SEARCH-NUMERIC.
+# LINKS: R-NO-PERSONAL-DATA; M-OZON; R-OZON-SEARCH-NUMERIC.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # OzonCardResponse/OzonReviewsResponse: Card and review response models.
@@ -62,7 +62,6 @@ class OzonReviewItemOut(BaseModel):
     negative: str = Field(default="", description="Negative review text (truncated to 500 chars).")
     useful: int | None = Field(default=None, description="Helpfulness vote count.")
     photos: int = Field(default=0, description="Number of photos attached.")
-    author: str = Field(default="", description="Author first name (truncated to 60 chars).")
     date: str | None = Field(default=None, description="Publication date as UTC ISO-8601.")
     item_id: int | None = Field(
         default=None,
