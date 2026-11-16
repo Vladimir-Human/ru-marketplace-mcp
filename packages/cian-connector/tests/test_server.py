@@ -781,3 +781,51 @@ async def test_the_server_exposes_exactly_the_two_read_tools():
     tools = sorted(t.name for t in await server.mcp.list_tools())
 
     assert tools == ["cian_card", "cian_search"]
+
+
+# R-CIAN-CARD-TRUTH: what the live run of 2026-11-16 (P0-2) showed. The rent
+# title is the real shape Cian serves ("Снять …"); the address part is generic.
+_RENT_TITLE = "Снять однокомнатную квартиру 38м² ул. Примерная, 1, Москва"
+
+
+def _card_js_on_title(tmp_path: Path, title: str) -> dict:
+    """Run the shipped card extractor on a page that has only this title."""
+    from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+    page = tmp_path / "card.html"
+    page.write_text(f"<html><head><title>{title}</title></head><body></body></html>", encoding="utf-8")
+    try:
+        return run_extractor(server._JS_CARD_CONFIG, page, page_url="https://www.cian.ru/rent/flat/1/")
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.mark.req("R-CIAN-CARD-TRUTH")
+def test_card_js_does_not_read_a_rent_title_as_removed(tmp_path):
+    assert _card_js_on_title(tmp_path, _RENT_TITLE)["kind"] != "not_found"
+
+
+@pytest.mark.req("R-CIAN-CARD-TRUTH")
+@pytest.mark.parametrize("title", ["Объявление снято с публикации", "Объявление удалено", "Объявление не найдено"])
+def test_card_js_still_reads_removed_titles_as_not_found(tmp_path, title):
+    assert _card_js_on_title(tmp_path, title)["kind"] == "not_found"
+
+
+@pytest.mark.req("R-CIAN-CARD-TRUTH")
+async def test_card_on_the_bot_check_page_is_challenge_required(monkeypatch):
+    body = json.dumps(
+        {
+            "kind": "no_config",
+            "title": "",
+            "url": "https://www.cian.ru/xpvnsulc/?back_location=https%3A%2F%2Fwww.cian.ru%2Frent%2Fflat%2F1%2F",
+        }
+    )
+    _patch_card(monkeypatch, (200, body, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_card("100000001")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["provider"] == "cian"
+    assert "marketplace-mcp unblock cian" in error["user_action"]

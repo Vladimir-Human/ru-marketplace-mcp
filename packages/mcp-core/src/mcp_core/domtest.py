@@ -78,6 +78,7 @@ _RUNNER_JS = textwrap.dedent(
     const dom = new JSDOM(html, { url: process.argv[4] });
     global.window = dom.window;
     global.document = dom.window.document;
+    global.location = dom.window.location;
     // The extractor is an arrow function expression; wrap it so eval yields the
     // function rather than parsing it as a block.
     const fn = dom.window.eval('(' + src + ')');
