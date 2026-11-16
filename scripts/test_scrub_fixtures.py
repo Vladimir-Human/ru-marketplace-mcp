@@ -305,9 +305,8 @@ def test_the_check_covers_committed_grace_evidence(tmp_path: Path) -> None:
     """.grace/evidence/latest.json is committed; an interpreter path in it names the operator's account."""
     evidence = tmp_path / ".grace" / "evidence"
     evidence.mkdir(parents=True)
-    (evidence / "latest.json").write_text(
-        '{"cmd": ["C:/Users/operator/w/x/.venv/Scripts/python.exe"]}', encoding="utf-8"
-    )
+    interpreter = "C:" + "/Users/operator/w/x/.venv/Scripts/python.exe"  # split: this file is scanned too
+    (evidence / "latest.json").write_text(json.dumps({"cmd": [interpreter]}), encoding="utf-8")
 
     problems = scrub.private_material_problems(tmp_path)
 

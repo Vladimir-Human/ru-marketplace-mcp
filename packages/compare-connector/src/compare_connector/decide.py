@@ -424,6 +424,12 @@ def decide_conditional_price(
 # END_BLOCK_PRICE_POLICY
 
 
+# Source warnings that keep their own prefix in the comparison's warnings: an info: note
+# stays a note, and conditional_price: keeps the documented top-level shape (v2.9.4)
+# whether the adapter or build_response's safety net named the conditional price.
+_UNWRAPPED_PREFIXES = ("info:", "conditional_price:")
+
+
 def _mixed_regions_notes(outcomes: list[SourceOutcome]) -> list[str]:
     """R-COMPARE-PRICE-CONTEXT: one info note when answered sources name different regions.
 
@@ -531,13 +537,10 @@ def build_response(
             warnings.append("stock_filter: no priced offers were returned")
     # A source's info: note stays a note: the prefix is what tells context from a
     # doubt about the data (mcp_core.health_warnings), and source_outcomes still
-    # attributes it. A conditional_price: warning keeps its documented top-level
-    # prefix too, wherever the helper ran (the adapter or the safety net below).
+    # attributes it. _UNWRAPPED_PREFIXES says which source warnings keep their prefix.
     for outcome in outcomes:
         warnings.extend(
-            warning
-            if warning.startswith(("info:", "conditional_price:"))
-            else f"source_warning:{outcome.source}: {warning}"
+            warning if warning.startswith(_UNWRAPPED_PREFIXES) else f"source_warning:{outcome.source}: {warning}"
             for warning in outcome.warnings
         )
     # An adapter that knows a conditional price names it with the shared helper
