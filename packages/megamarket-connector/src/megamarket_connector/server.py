@@ -73,7 +73,7 @@ from mcp_core.errors import (
     raise_tool_error_from,
 )
 from mcp_core.http import parse_retry_after
-from mcp_core.kit import blocked_error, polite_wait
+from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -228,8 +228,7 @@ def _check_browser_response(status: int | None, url: str = "", retry_after: str 
     """R-MEGAMARKET-ONE-LOAD: distinguish a human check from a standing refusal."""
     if url:
         _check_final_host(url, {"megamarket.ru"})
-    # TODO: use mcp_core.kit.on_bot_check_page once PR #247 is on this base.
-    if urllib.parse.urlsplit(url).path.startswith("/xpvnsulc/"):
+    if on_bot_check_page(url):
         _pacer.record_refusal()
         raise_tool_error(
             ChallengeRequiredError("Megamarket requires the /xpvnsulc/ browser check.", provider="megamarket")

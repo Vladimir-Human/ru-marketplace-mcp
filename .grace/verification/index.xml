@@ -456,6 +456,7 @@
   </requirement>
   <requirement id="R-MARKETPLACES" kind="requirement" state="gap" gaps="G-MARKETPLACES-UNTESTED" />
   <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_code_seven_body_on_an_http_refusal_keeps_its_servicepipe_verdict" requirements="R-MEGAMARKET-ONE-LOAD" />
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_failed_home_load_is_not_reopened_or_deadlocked" requirements="R-MEGAMARKET-ONE-LOAD" />
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_hidden_redirect_navigates_only_the_existing_tab" requirements="R-MEGAMARKET-ONE-LOAD" />
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_navigation_policy_failure_is_not_degraded_into_a_search" requirements="R-MEGAMARKET-ONE-LOAD" />
