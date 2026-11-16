@@ -39,7 +39,7 @@ survives CSS class churn; the JS side only collects text.
 # SCOPE: Readiness checks, bounded extraction, price-role parsing and successful-result caching.
 # INVARIANTS: Reopen once only for Playwright's navigation-destroyed execution context;
 #             recheck readiness/status/host and keep pacing; never retry a challenge or refusal.
-# LINKS: M-WB; M-CHROME-CDP; R-WB-DOM-NAVIGATION-RETRY.
+# LINKS: M-WB; M-CHROME-CDP; M-SOURCES; R-WB-DOM-NAVIGATION-RETRY; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # render: Under the DOM lock, pace and open an owned page, check readiness and extract;
@@ -64,13 +64,14 @@ from mcp_core.errors import (
 )
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text as _redact
+from mcp_core.sources import BY_NAME
 
 from wb_connector.settings import get_settings
 
 _settings = get_settings()
 
 SITE = "https://www.wildberries.ru"
-ALLOWED_HOSTS = frozenset({"www.wildberries.ru", "wildberries.ru"})
+ALLOWED_HOSTS = BY_NAME["wildberries"].hosts
 MAX_PAYLOAD_BYTES = 2_000_000
 
 # A Wallet price is a small discount on the regular price (2 % on the reference

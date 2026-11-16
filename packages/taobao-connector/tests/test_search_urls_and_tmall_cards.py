@@ -117,7 +117,8 @@ async def test_card_redirect_refusal_preserves_host_policy(monkeypatch, final_ur
     navigations = []
 
     @asynccontextmanager
-    async def refused_page(url, wait_ms):
+    async def refused_page(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         navigations.append(url)
         if final_url:
             raise NavigationPolicyError(final_url, {"item.taobao.com"})

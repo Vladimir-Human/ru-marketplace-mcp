@@ -23,7 +23,7 @@ from mcp_core.pacing import Pacer
 
 _PRODUCT_ID_RE = re.compile(r"/product/([A-Za-z0-9_-]+)")
 _BARE_ID_RE = re.compile(r"[A-Za-z0-9_-]{4,}")
-_HOSTS = ("dns-shop.ru",)
+_HOSTS = ("dns-shop.ru", "www.dns-shop.ru")
 
 
 def _extract(raw: str) -> str | None:
@@ -113,7 +113,8 @@ def _install_fake_open_page(monkeypatch, payload: object) -> list[tuple]:
     order: list[tuple] = []
 
     class _FakeOpenPage:
-        def __init__(self, url: str, wait_ms: int) -> None:
+        def __init__(self, url: str, wait_ms: int, *, allowed_hosts) -> None:
+            assert allowed_hosts == {"example.test"}
             order.append(("open", url, wait_ms))
             self.page = _FakePage(payload, order)
 
@@ -189,10 +190,32 @@ def test_host_checked_id_refuses_off_host_and_odd_shapes():
     assert _extract("https://notdns-shop.ru/product/abc123/") is None
 
 
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+@pytest.mark.parametrize(
+    ("url", "hosts", "accepted"),
+    [
+        ("https://shop.test/x", ("shop.test",), True),
+        ("http://SHOP.TEST./x", ("shop.test",), True),
+        ("https://region.shop.test/x", ("shop.test",), False),
+        ("https://region.shop.test/x", (".shop.test",), True),
+        ("https://shop.test/x", (".shop.test",), False),
+        ("https://shop.test.example.com/x", (".shop.test",), False),
+        ("https://shop.test@example.com/x", ("shop.test",), False),
+        ("https://shop.test\\\\@example.com/x", ("shop.test",), False),
+        ("file:///c:/x", ("shop.test",), False),
+        ("https://[::1]/x", ("shop.test",), False),
+    ],
+)
+def test_host_policy_exact_names_and_explicit_subdomains(url, hosts, accepted):
+    from mcp_core.kit import url_on_hosts
+
+    assert url_on_hosts(url, hosts) is accepted
+
+
 # ------------------------------------------------------------ capped reading ----
 
 
-@pytest.mark.req("R-CONNECTOR-KIT")
+@pytest.mark.req("R-CONNECTOR-KIT", "R-NAV-HOSTS.invariant")
 def test_sync_curl_get_streams_decodes_and_closes():
     response = _FakeResponse([b"hello ", b"world"], status_code=201)
     fake = _fake_curl(response)
@@ -215,6 +238,7 @@ def test_sync_curl_get_streams_decodes_and_closes():
     assert kwargs["impersonate"] == "chrome"
     assert kwargs["timeout"] == 5.0
     assert kwargs["stream"] is True
+    assert kwargs.get("allow_redirects") is False, "HTTP redirects must not leave the source's hosts"
     assert kwargs["proxies"] == {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
 
 
@@ -267,6 +291,7 @@ async def test_render_json_waits_navigates_and_parses(monkeypatch):
         "https://example.test/search",
         "() => 1",
         8000,
+        allowed_hosts={"example.test"},
         lock=_OrderLock(order),
         wait=wait,
         max_body_bytes=1024,
@@ -287,6 +312,7 @@ async def test_render_json_rejects_a_missing_or_oversized_payload(monkeypatch):
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -299,6 +325,7 @@ async def test_render_json_rejects_a_missing_or_oversized_payload(monkeypatch):
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -313,6 +340,7 @@ async def test_render_json_rejects_a_non_object_or_non_json_payload(monkeypatch)
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -327,6 +355,7 @@ async def test_render_json_rejects_a_non_object_or_non_json_payload(monkeypatch)
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -347,6 +376,7 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -364,6 +394,7 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,
@@ -381,6 +412,7 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
             "https://example.test/search",
             "() => 1",
             8000,
+            allowed_hosts={"example.test"},
             lock=_OrderLock([]),
             wait=_no_wait,
             max_body_bytes=1024,

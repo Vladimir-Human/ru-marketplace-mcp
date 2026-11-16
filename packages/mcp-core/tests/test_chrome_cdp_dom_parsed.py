@@ -213,7 +213,9 @@ def navigation(monkeypatch, request):
 @pytest.mark.parametrize("ready", ["interactive", "complete"])
 async def test_parsed_dom_without_load_events_yields_owned_page(navigation, ready):
     navigation.ready = ["loading", ready]
-    async with chrome_cdp.open_page(URL, 800, navigation_timeout_ms=200, wait_for_dom_parsed=True) as page:
+    async with chrome_cdp.open_page(
+        URL, 800, navigation_timeout_ms=200, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+    ) as page:
         assert page.url == URL
         assert navigation.parsed_reads >= 2
         assert navigation.settled == [800]
@@ -226,7 +228,9 @@ async def test_parsed_dom_without_load_events_yields_owned_page(navigation, read
 async def test_parsed_dom_keeps_final_host_policy(navigation):
     navigation.final = "https://outside.example/search"
     with pytest.raises(chrome_cdp.NavigationPolicyError):
-        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+        async with chrome_cdp.open_page(
+            URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+        ):
             pytest.fail("off-host page yielded")
     assert navigation.closed
     assert navigation.permit == ["neutral", "release"]
@@ -237,12 +241,16 @@ async def test_parsed_dom_keeps_final_host_policy(navigation):
 async def test_parsed_dom_preserves_antibot_recheck(navigation, status, reload):
     navigation.status, navigation.reload = status, reload
     if reload == 200:
-        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+        async with chrome_cdp.open_page(
+            URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+        ):
             assert navigation.parsed_reads
         assert navigation.permit == ["ok", "release"]
     else:
         with pytest.raises(chrome_cdp.NavBlocked) as caught:
-            async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+            async with chrome_cdp.open_page(
+                URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+            ):
                 pytest.fail("blocked reload yielded")
         assert caught.value.status == reload
         assert navigation.permit == [("refused", reload), "release"]
@@ -256,7 +264,9 @@ async def test_unparsed_dom_is_bounded_and_never_yielded(navigation, commits):
     start = asyncio.get_running_loop().time()
     with pytest.raises((TimeoutError, chrome_cdp.TransportDownError, chrome_cdp._PlaywrightTimeoutError)):
         async with asyncio.timeout(1):
-            async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True):
+            async with chrome_cdp.open_page(
+                URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+            ):
                 pytest.fail("loading DOM yielded")
     assert asyncio.get_running_loop().time() - start < 0.5, "the navigation budget, not the outer watchdog, must fire"
     assert navigation.closed
@@ -268,7 +278,9 @@ async def test_unparsed_dom_is_bounded_and_never_yielded(navigation, commits):
 async def test_parsed_dom_recheck_without_reload_preserves_block(navigation, status):
     navigation.status = status
     with pytest.raises(chrome_cdp.NavBlocked) as caught:
-        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+        async with chrome_cdp.open_page(
+            URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+        ):
             pytest.fail("unrecovered block yielded")
     assert caught.value.status == status
     assert not navigation.parsed_reads
@@ -282,7 +294,7 @@ async def test_429_without_load_events_is_refused_before_parse_or_settle(navigat
     start = asyncio.get_running_loop().time()
     with pytest.raises(chrome_cdp.NavBlocked) as caught:
         async with asyncio.timeout(12):
-            async with chrome_cdp.open_page(URL, 800, wait_for_dom_parsed=True):
+            async with chrome_cdp.open_page(URL, 800, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}):
                 pytest.fail("429 yielded")
     assert asyncio.get_running_loop().time() - start < 12
     assert caught.value.status == 429
@@ -294,7 +306,7 @@ async def test_429_without_load_events_is_refused_before_parse_or_settle(navigat
 @pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
 async def test_default_wait_does_not_enable_parsed_dom(navigation):
     navigation.dcl = True
-    async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200):
+    async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, allowed_hosts={"www.citilink.ru"}):
         assert not navigation.parsed_reads
     assert navigation.closed
 
@@ -303,7 +315,9 @@ async def test_default_wait_does_not_enable_parsed_dom(navigation):
 async def test_unparsed_dom_timeout_says_the_page_was_still_parsing(navigation):
     navigation.ready, navigation.commits = ["loading"], True
     with pytest.raises((TimeoutError, chrome_cdp.TransportDownError)) as excinfo:
-        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True):
+        async with chrome_cdp.open_page(
+            URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
+        ):
             pytest.fail("loading DOM yielded")
     assert chrome_cdp._UNPARSED_MSG in str(excinfo.value)
 

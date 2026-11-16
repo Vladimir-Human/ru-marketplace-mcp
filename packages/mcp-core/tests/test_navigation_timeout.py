@@ -114,8 +114,8 @@ def _install_playwright(patches, cdp, **page_options):
 
 def _open(cdp, source_ms=OMITTED):
     if source_ms is OMITTED:
-        return cdp.open_page(URL, wait_ms=0)
-    return cdp.open_page(URL, wait_ms=0, navigation_timeout_ms=source_ms)
+        return cdp.open_page(URL, wait_ms=0, allowed_hosts={"shop.example"})
+    return cdp.open_page(URL, wait_ms=0, navigation_timeout_ms=source_ms, allowed_hosts={"shop.example"})
 
 
 def _assert_page_cleanup(native):

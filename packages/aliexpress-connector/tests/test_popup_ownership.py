@@ -342,7 +342,7 @@ async def test_card_reads_an_owned_raw_cdp_popup(raw_popup):
     result = await server._cdp_card(ITEM_URL, None)
 
     assert result["title"] == ITEM_URL
-    assert raw_popup.calls == [(raw_popup.landing, ITEM_URL, {"aliexpress.ru", "www.aliexpress.ru"})]
+    assert raw_popup.calls == [(raw_popup.landing, ITEM_URL, {"aliexpress.ru", ".aliexpress.ru"})]
     assert raw_popup.popup.reads == 1
     assert raw_popup.exited
     assert not server._cdp_lock.locked()

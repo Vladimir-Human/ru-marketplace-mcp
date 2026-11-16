@@ -48,7 +48,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Taobao/Tmall search and Taobao-only item cards with prices kept in CNY.
 # SCOPE: Read-only DOM/state; no ad-click trackers; bounded loading polls; explicit Tmall card refusal; challenge handoffs.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-TAOBAO; M-KIT; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING; R-SELFCHECK-GATES-PRICE.
+# LINKS: M-TAOBAO; M-KIT; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING; R-SELFCHECK-GATES-PRICE; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _search_url: Build canonical percent-encoded search/cache/handoff URLs.
@@ -90,13 +90,14 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait
+from mcp_core.kit import polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, open_page
 from pydantic import Field
@@ -121,6 +122,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["taobao"].hosts
 SEARCH_BASE = "https://s.taobao.com/search"
 ITEM_BASE = "https://item.taobao.com/item.htm"
 _TMALL_CARD_MESSAGE = (
@@ -203,8 +205,7 @@ def _extract_item_id(raw: str) -> str | None:
     if parts.scheme:
         if parts.scheme not in ("http", "https"):
             return None
-        host = (parts.hostname or "").rstrip(".").lower()
-        if host != "taobao.com" and not host.endswith(".taobao.com"):
+        if not url_on_hosts(raw, ALLOWED_HOSTS):
             return None
     elif raw.startswith("//"):
         # Scheme-relative: the authority belongs to someone else, so the host
@@ -570,7 +571,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     async with _cdp_lock:
         await _polite_wait()
         if scope is None:
-            async with open_page(url, wait_ms=wait_ms) as page:
+            async with open_page(url, wait_ms=wait_ms, allowed_hosts=ALLOWED_HOSTS) as page:
                 return await read(page)
         note: dict[str, Any] = {}
         data, expires_at = await read_with_handoff(
@@ -578,6 +579,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
             wait_ms=wait_ms,
             scope=scope,
             operation="taobao_card" if url.startswith(ITEM_BASE) else "taobao_search",
+            allowed_hosts=ALLOWED_HOSTS,
             read=read,
             challenge=_page_challenge_kind,
             note_out=note,

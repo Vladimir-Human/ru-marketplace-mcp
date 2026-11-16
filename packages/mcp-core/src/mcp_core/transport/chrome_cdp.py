@@ -35,7 +35,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy, snapshots and opt-in Ozon OS identity.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -2119,15 +2119,10 @@ async def _playwright_page(
 
 def _check_final_host(url: str, allowed_hosts: Collection[str]) -> None:
     """Reject a navigation that escaped the caller's host policy."""
-    parsed = urlsplit(url)
-    host = (parsed.hostname or "").lower().rstrip(".")
-    allowed = {str(item).lower().rstrip(".") for item in allowed_hosts}
-    # A leading dot (".cian.ru") admits any subdomain of that host — for sites
-    # that geo-redirect www to regional subdomains (rostov.cian.ru, spb.cian.ru).
-    suffixes = tuple(item for item in allowed if item.startswith("."))
-    in_policy = host in allowed or (bool(suffixes) and host.endswith(suffixes))
-    if parsed.scheme not in {"http", "https"} or not host or not in_policy:
-        raise NavigationPolicyError(url, allowed)
+    from mcp_core.kit import url_on_hosts
+
+    if not url_on_hosts(url, allowed_hosts):
+        raise NavigationPolicyError(url, allowed_hosts)
 
 
 class NavigationPolicyError(RuntimeError):
@@ -2152,7 +2147,7 @@ async def open_page(
     url: str,
     wait_ms: int = 5000,
     *,
-    allowed_hosts: Collection[str] | None = None,
+    allowed_hosts: Collection[str] | None,
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
     wait_for_dom_parsed: bool = False,
@@ -2184,8 +2179,9 @@ async def open_page(
       * when Playwright times out initializing existing tabs during attach,
         the same tab lifecycle runs over raw CDP instead.
 
-    Host allowlisting stays the caller's responsibility — each connector knows
-    which paths are legitimate for its marketplace.
+    The caller supplies its source's registered hosts; the policy is required.
+    None or an empty collection fails closed, never trusting the input's origin.
+    Each connector still validates the legitimate paths for its marketplace.
 
     Concurrency is bounded here rather than by each connector: a fan-out over
     several CDP sources used to drive every tab through one Chrome at once and
@@ -2203,11 +2199,11 @@ async def open_page(
         raise ValueError("open_page refuses a non-http(s) URL (scheme guard)")
     if ozon_windows_compat:
         _validate_ozon_compat_url(url)
-    # Default to the origin host. Callers may list a small explicit set for
-    # marketplace aliases (for example www + bare host), but redirects to an
-    # arbitrary host are never allowed to drive the authenticated profile.
+    # Never infer authorization from an agent-controlled input URL; an empty
+    # policy denies everything before permits, browser attach or navigation.
+    host_policy = frozenset(allowed_hosts or ())
+    _check_final_host(url, host_policy)
     initial_host = urlsplit(url).hostname
-    host_policy = frozenset(allowed_hosts or ({initial_host} if initial_host else set()))
 
     timeout_ms = _navigation_timeout_ms(navigation_timeout_ms)
     # An open host breaker is rate_limited with retry_after_s (R-CDP-HOST-PAUSE).

@@ -159,7 +159,7 @@ async def test_card_opens_full_url_without_query_and_reads_page_content(monkeypa
     @asynccontextmanager
     async def fake_open_page(url, **kwargs):
         assert events == ["paced"]
-        assert set(kwargs["allowed_hosts"]) == {"avito.ru", "www.avito.ru"}
+        assert kwargs["allowed_hosts"] == server.ALLOWED_HOSTS
         if url == ITEM_URL:
             page = Page()
         else:

@@ -25,7 +25,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # INVARIANTS: One home load per uncached search/selfcheck; same-tab hidden-redirect fallback; preserve caps/caches.
 # INVARIANTS: Reject failures before success pacing/cache; 401/403/429 stop with cooldown; /xpvnsulc/ needs a human.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/megamarket-connector/tests.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/megamarket-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _browser_session / _session_page: Lazily own one tab and source lock for dependent reads.
@@ -73,12 +73,13 @@ from mcp_core.errors import (
     raise_tool_error_from,
 )
 from mcp_core.http import parse_retry_after
-from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait
+from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, PageLike, _check_final_host, open_page
 from pydantic import Field, ValidationError
 
@@ -97,6 +98,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["megamarket"].hosts
 SITE_BASE = "https://megamarket.ru"
 API_BASE = f"{SITE_BASE}/api/mobile/v1"
 
@@ -171,11 +173,7 @@ async def _polite_wait() -> None:
 
 def _extract_item_id(raw: str) -> str | None:
     """Pull a goods id out of a megamarket.ru URL or a bare numeric id."""
-    raw = raw.strip()
-    if raw.isdigit():
-        return raw
-    match = _ITEM_ID_RE.search(raw)
-    return match.group(1) if match else None
+    return host_checked_id(raw, hosts=ALLOWED_HOSTS, path_re=_ITEM_ID_RE, bare_re=re.compile(r"\d+"))
 
 
 # START_BLOCK_BROWSER_SESSION
@@ -213,7 +211,9 @@ async def _session_page() -> PageLike:
         await session.stack.enter_async_context(_cdp_lock)
         try:
             await _polite_wait()
-            session.page = await session.stack.enter_async_context(open_page(f"{SITE_BASE}/", wait_ms=4000))
+            session.page = await session.stack.enter_async_context(
+                open_page(f"{SITE_BASE}/", wait_ms=4000, allowed_hosts=ALLOWED_HOSTS)
+            )
             _check_browser_response(200, session.page.url)
         except asyncio.CancelledError:
             session.error = TimeoutError("Megamarket home-page load was interrupted")
@@ -229,7 +229,7 @@ async def _session_page() -> PageLike:
 def _check_browser_response(status: int | None, url: str = "", retry_after: str | None = None) -> None:
     """R-MEGAMARKET-ONE-LOAD: distinguish a human check from a standing refusal."""
     if url:
-        _check_final_host(url, {"megamarket.ru"})
+        _check_final_host(url, ALLOWED_HOSTS)
     if on_bot_check_page(url):
         _pacer.record_refusal()
         raise_tool_error(
@@ -583,7 +583,7 @@ _search_params_cache: dict[str, dict[str, Any]] = {}
 
 async def _navigate_catalog(page: PageLike, catalog_url: str) -> str:
     """Fallback navigation on the owned Playwright or raw-CDP tab, never a new tab."""
-    _check_final_host(catalog_url, {"megamarket.ru"})
+    _check_final_host(catalog_url, ALLOWED_HOSTS)
     await _polite_wait()
     raw_goto = getattr(page, "goto_and_status", None)
     if raw_goto is not None:

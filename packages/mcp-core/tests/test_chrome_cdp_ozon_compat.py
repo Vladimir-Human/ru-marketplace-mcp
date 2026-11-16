@@ -86,7 +86,7 @@ async def test_windows_identity_rejects_other_origins_before_any_navigation(monk
 
     monkeypatch.setattr(C, "_acquire_navigation_permit", forbidden_permit)
     with pytest.raises(ValueError, match="exact HTTPS"):
-        async with C.open_page(url, 0, ozon_windows_compat=True):
+        async with C.open_page(url, 0, ozon_windows_compat=True, allowed_hosts={"www.ozon.ru"}):
             pytest.fail("unsupported origin was yielded")
 
 
@@ -274,7 +274,7 @@ async def test_open_page_forwards_compat_to_raw_fallback_and_still_checks_final_
     monkeypatch.setattr(C, "_raw_cdp_page", raw)
 
     async def read():
-        async with C.open_page(OZON, 0, ozon_windows_compat=True):
+        async with C.open_page(OZON, 0, ozon_windows_compat=True, allowed_hosts={"www.ozon.ru"}):
             seen.append("read")
 
     if final_url == OZON:
