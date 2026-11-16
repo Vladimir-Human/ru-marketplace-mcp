@@ -1,9 +1,9 @@
 # START_MODULE_CONTRACT
 # PURPOSE: Encode provider-neutral failures as machine-readable MCP ToolErrors.
 # SCOPE: Error taxonomy, retryability, optional status and user-action/challenge metadata;
-#        optional old-build information; message and string fields are redacted on the way out.
-# DEPENDS: M-REDACT,M-BUILD-AGE; FastMCP ToolError; stdlib json,enum,typing.
-# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF; M-REDACT; R-OLD-BUILD-INFO.
+#        optional old-build information and pure next-call guidance; outgoing string fields are redacted.
+# DEPENDS: M-REDACT,M-BUILD-AGE,M-SOURCES; FastMCP ToolError; stdlib json,re,collections.abc,enum,typing.
+# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF; M-REDACT; R-OLD-BUILD-INFO; R-ERROR-NEXT-STEP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # ErrorCode: Enumerate stable wire codes and their retryability.
@@ -17,19 +17,23 @@
 # NotFoundError: Represent unavailable resources with status 404.
 # PermissionDeniedError: Represent forbidden access with status 403.
 # ChallengeRequiredError: Add retry timing, user action, challenge and optional handoff metadata.
+# error_next_step: Derive one recovery sentence for every ErrorCode from supplied context.
 # raise_tool_error: Redact and raise a FastMCP ToolError from a serialized connector error.
 # raise_tool_error_from: Raise the ToolError for any exception, keeping a ConnectorError's fields.
 # END_MODULE_MAP
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Collection, Mapping, Sequence
 from enum import StrEnum
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from fastmcp.exceptions import ToolError
 
 from mcp_core.build_age import old_build_info
 from mcp_core.redact import redact_value
+from mcp_core.sources import SourceSpec
 
 
 class ErrorCode(StrEnum):
@@ -208,6 +212,80 @@ class ChallengeRequiredError(ConnectorError):
         }
 
 
+# START_BLOCK_NEXT_STEP
+
+
+def error_next_step(
+    code: ErrorCode,
+    tool: str,
+    payload: Mapping[str, Any],
+    *,
+    source: SourceSpec | None = None,
+    parameters: Sequence[str] = (),
+    available: Collection[str] | None = None,
+) -> str:
+    """R-ERROR-NEXT-STEP: one recovery sentence, purely from supplied error/context data.
+
+    No clock, environment, connector import or I/O: the middleware supplies the
+    source, the tool's real parameter names and the tools this server lists, and
+    fills a missing retry delay. A tool the server does not list (a standalone
+    server has no `compare_prices` or `marketplace_health`) is never named;
+    ``available=None`` means every tool is listed. The challenge's existing
+    user_action stays authoritative and unmodified.
+    """
+
+    def listed(name: str | None) -> bool:
+        return name is not None and (available is None or name in available)
+
+    if code in (ErrorCode.RATE_LIMITED, ErrorCode.TIMEOUT, ErrorCode.TRANSPORT_DOWN):
+        if code == ErrorCode.RATE_LIMITED and source is not None and not source.retry_rate_limit:
+            cover = "`compare_prices` covers the other sources; " if listed("compare_prices") else ""
+            return f"Do not retry `{tool}` now; {cover}tell the user this source is limited."
+        return f"Call `{tool}` again with the same arguments after {payload['retry_after_s']:g} seconds."
+    if code == ErrorCode.PARSER_DRIFT:
+        health = "call `marketplace_health` for the source state; " if listed("marketplace_health") else ""
+        step = f"Do not retry; {health}this source is unavailable until a fix."
+        if payload.get("old_build"):
+            step = "Run `uvx ru-marketplace-mcp@latest` if a newer version exists; " + step
+        return step
+    if code == ErrorCode.NOT_FOUND:
+        listing = source.listing_tool if source is not None else None
+        if listed(listing):
+            return f"Check the id or URL; call `{listing}` to find the item."
+        if listed("compare_prices"):
+            return "Check the id or URL and source; call `compare_prices` to find an available item."
+        return "Check the id or URL; this item is not available from this source."
+    if code == ErrorCode.BAD_REQUEST:
+        message = str(payload.get("message", ""))
+        words = {word.lower() for word in re.findall(r"[A-Za-z0-9]+", message)}
+        mentioned = [
+            name
+            for name in parameters
+            if re.search(rf"\b{re.escape(name)}\b", message)
+            or any(part in words for part in name.lower().split("_") if part not in {"or", "and", "of", "to"})
+        ]
+        if not mentioned:
+            # The message names no parameter, not even a part of one ("invalid
+            # item URL" names item_id_or_url): guessing would send the agent to
+            # fix the wrong argument.
+            return f"Correct the arguments the message describes, using `{tool}`'s schema, then call `{tool}` again."
+        parameter = ", ".join(mentioned)
+        return f"Correct the {parameter} parameter using `{tool}`'s schema, then call `{tool}` again."
+    if code == ErrorCode.PERMISSION_DENIED:
+        refused = re.sub(r"[.!?]+(?:\s+|$)", "; ", str(payload.get("message", "access"))).strip(" ;")
+        return f"Access for `{tool}` is refused ({refused}); do not retry because a retry will not help."
+    if code == ErrorCode.AUTH_MISSING:
+        setting = source.auth_setting if source is not None else None
+        action = (
+            f"set `{setting}` in the server environment" if setting else "restore the source's authenticated session"
+        )
+        return f"Ask the user to {action}, then call `{tool}` again; the agent must not set keys."
+    if code == ErrorCode.CHALLENGE_REQUIRED:
+        return f"Follow `user_action` and wait until the user confirms completion, then call `{tool}` again."
+    raise ValueError(f"No next_step policy for {code}")
+
+
+# END_BLOCK_NEXT_STEP
 # START_BLOCK_TOOL_ERROR_MAPPING
 
 

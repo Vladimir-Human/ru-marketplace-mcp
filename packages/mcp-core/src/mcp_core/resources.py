@@ -34,7 +34,7 @@ contract tests check these guides against synthetic upstream answers.
 # PURPOSE: Serve behavioral guides with generated serialized fields and the error taxonomy.
 # SCOPE: Wire aliases/envelopes, field schemas, resource registration, one shared error URI per profile.
 # DEPENDS: mcp_core.errors, mcp_core.output_schema; Pydantic, FastMCP resources/tools/transforms; json, typing.
-# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC; R-OLD-BUILD-INFO.
+# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC; R-OLD-BUILD-INFO; R-ERROR-NEXT-STEP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # GUIDE_SCHEME: URI scheme of the per-tool guides.
@@ -80,6 +80,7 @@ from mcp_core.errors import (
     RateLimitedError,
     TransportDownError,
     UpstreamTimeoutError,
+    error_next_step,
 )
 from mcp_core.output_schema import registered_tools
 
@@ -98,7 +99,7 @@ REFERENCE_POINTER = f"The full error taxonomy, with retryability: `{ERROR_REFERE
 # retryability and status come from the taxonomy; this is the only prose.
 _CODE_NOTES = {
     "auth_missing": "the operator has to configure the credential this source needs",
-    "rate_limited": "the marketplace throttled us; `retry_after_s` may say for how long",
+    "rate_limited": "the marketplace throttled us; `retry_after_s` always gives the delay; follow `next_step`",
     "timeout": "our own deadline expired before the marketplace answered",
     "transport_down": "refused or blocked, not answered — a different source or route may work",
     "parser_drift": "the payload changed shape; the connector needs updating, retrying will not help",
@@ -1012,7 +1013,16 @@ def render_error_reference() -> str:
         ERROR_REFERENCE_HEADING,
         "",
         "Every marketplace tool reports a failure as one FastMCP ToolError whose message is a",
-        "JSON object: `{error, message, retryable, provider?, retry_after_s?, status_code?, old_build?}`.",
+        "JSON object: `{error, message, retryable, tool, next_step, provider?, retry_after_s?, status_code?, old_build?}`.",
+        "`tool` is the requested tool name; `next_step` is one sentence naming the next call or human action.",
+        "For `rate_limited`, `timeout` and `transport_down`, `retry_after_s` is always present: the supplied",
+        "delay, otherwise the source's live pacing floor (3 seconds for an unknown/profile transport).",
+        "A source whose rate limit is policy, not a pause (Citilink), says not to retry now; the delay stays.",
+        "A tool this server does not list is never named (a standalone server has no `compare_prices`).",
+        "`not_found` names the source's registry listing tool (`detmir_category` where there is no search).",
+        "`bad_request` names the schema parameters its message mentions; `auth_missing` names the configured setting",
+        "where one is required (MPStats: `MPSTATS_MP_AUTH`); only the user sets keys.",
+        "`challenge_required` keeps its existing `user_action`; follow it before calling the named tool again.",
         "Optional `old_build` is informational (`info:old_build`): `version`, `released`, `age_days`, `upgrade`.",
         "Only `parser_drift`, `transport_down`, `challenge_required` and `rate_limited` add it for a build",
         "older than 30 days. An unparseable release date adds nothing. No network call is made.",
@@ -1022,13 +1032,17 @@ def render_error_reference() -> str:
         "`user_action` and `challenge_type`; while the browser handoff is open it adds",
         "`handoff_id` together with `handoff_expires_at`.",
         "",
-        "| code | http | retryable | what it means |",
-        "| --- | --- | --- | --- |",
+        "For old-build parser drift, `next_step` starts with the conditional upgrade command above.",
+        "Examples below use `<tool>` and a 3-second pacing floor; actual answers name the requested tool.",
+        "",
+        "| code | http | retryable | what it means | next_step example |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for code, status in _error_rows():
         lines.append(
             f"| `{code.value}` | {status if status is not None else '—'} | "
-            f"{'yes' if code.retryable else 'no'} | {_CODE_NOTES.get(code.value, '')} |"
+            f"{'yes' if code.retryable else 'no'} | {_CODE_NOTES.get(code.value, '')} | "
+            f"{error_next_step(code, '<tool>', {'retry_after_s': 3.0, 'message': 'access refused'}, parameters=('<parameter>',))} |"
         )
     return "\n".join(lines) + "\n"
 
