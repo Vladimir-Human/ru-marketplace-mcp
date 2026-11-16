@@ -35,7 +35,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
 # SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests; unified-mount availability gate.
 # DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction/kit; models_output; settings.
-# LINKS: M-MPSTATS; M-KIT; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; packages/mpstats-connector/tests.
+# LINKS: M-MPSTATS; M-KIT; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; R-CACHE-VALIDATED; packages/mpstats-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # mount_unavailable_reason: Why the unified server must not mount these tools, or None.
@@ -48,6 +48,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # mpstats_item: Read per-SKU sales/stock analytics.
 # mpstats_warehouses: Read per-SKU warehouse stock splits.
 # mpstats_selfcheck: Probe operator auth/quota/parser health; not an MCP tool.
+# _cacheable_rpc: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -416,9 +417,38 @@ async def _call(body: dict[str, Any], *, label: str) -> dict[str, Any]:
         # Only a call that reached the wire and came back good clears the
         # backoff; a cache hit proves nothing about the upstream's current mood.
         _pacer.record_success()
-    if not was_cached and text is not None:
+    if not was_cached and text is not None and _cacheable_rpc(data, body):
         _cache.set(cache_key, (status_code, text, None))
     return data
+
+
+# START_BLOCK_VALIDATED_CACHE
+
+
+def _cacheable_rpc(data: dict[str, Any], body: dict[str, Any]) -> bool:
+    """Require the requested rows to pass the same parsers as the public tool."""
+    skus = body.get("Sku")
+    if skus is None:
+        return True  # An envelope-only RPC has no requested SKU rows to validate.
+    skus = skus if isinstance(skus, list) else [skus]
+    warehouses = body.get("Request") == "getWarehouses"
+    rows = data.get("data" if warehouses else "items")
+    if not isinstance(rows, dict):
+        return False
+    rows = {str(key): value for key, value in rows.items()}
+    try:
+        parsed = [
+            _parse_warehouses_entry(rows.get(str(sku)))
+            if warehouses
+            else _parse_item_entry(rows.get(str(sku)), body["Place"])
+            for sku in skus
+        ]
+        return any(row is not None for row in parsed)
+    except Exception:
+        return False  # The tool reports its original row-validation error.
+
+
+# END_BLOCK_VALIDATED_CACHE
 
 
 def _last_nonzero(graph: list[Any]) -> float | None:

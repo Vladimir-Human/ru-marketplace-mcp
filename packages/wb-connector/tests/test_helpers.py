@@ -1526,8 +1526,12 @@ def _clear_wb_cache():
     server._cache.clear()
 
 
-def test_cache_serves_a_repeated_successful_read(monkeypatch):
-    """An agent walks the same SKU repeatedly; the second look must not re-hit WB."""
+@pytest.mark.req("R-CACHE-VALIDATED")
+def test_cache_serves_a_repeated_validated_read(monkeypatch):
+    """An agent walks the same SKU repeatedly; the second look must not re-hit WB.
+
+    The raw read stores nothing: the tool stores a response once it validated it.
+    """
     calls = {"n": 0}
 
     class FakeResponse:
@@ -1556,9 +1560,12 @@ def test_cache_serves_a_repeated_successful_read(monkeypatch):
         monkeypatch.setattr(server, "_polite_wait", no_wait)
         url = "https://cache-hit.test/a"
         first = await server._safe_get_text(FakeClient(), url)
+        await server._safe_get_text(FakeClient(), url)
+        assert calls["n"] == 2, "a read no tool has validated is not replayed"
+        server._cache_validated(url, first[1])
         second = await server._safe_get_text(FakeClient(), url)
         assert first == second == (200, '{"ok":true}', None)
-        assert calls["n"] == 1, "second read must come from the cache"
+        assert calls["n"] == 2, "a validated read must come from the cache"
 
     asyncio.run(scenario())
     _clear_wb_cache()

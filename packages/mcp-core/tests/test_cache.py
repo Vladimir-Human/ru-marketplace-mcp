@@ -135,6 +135,26 @@ async def test_get_or_fetch_bypasses_a_disabled_cache():
     assert len(calls) == 2
 
 
+@pytest.mark.req("R-CACHE-VALIDATED")
+async def test_get_or_fetch_stores_only_what_cache_if_accepts():
+    cache: TTLCache[str] = TTLCache(ttl_s=60)
+    values = iter(["rejected", "good"])
+    calls = []
+
+    async def factory() -> str:
+        calls.append(1)
+        return next(values)
+
+    def accept(value: str) -> bool:
+        return value == "good"
+
+    assert await cache.get_or_fetch("k", factory, cache_if=accept) == "rejected"
+    assert cache.get("k") is None
+    assert await cache.get_or_fetch("k", factory, cache_if=accept) == "good"
+    assert await cache.get_or_fetch("k", factory, cache_if=accept) == "good"
+    assert len(calls) == 2
+
+
 def test_stats_hit_rate_is_safe_when_empty():
     cache: TTLCache[str] = TTLCache(ttl_s=60)
     assert cache.stats.hit_rate == 0.0

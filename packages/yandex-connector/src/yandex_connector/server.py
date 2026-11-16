@@ -77,7 +77,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Yandex Market search and cards from server-rendered state.
 # SCOPE: Read-only paced HTML fetches; distinct everyday, Plus and old prices.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; ssr; models_output; settings.
-# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; packages/yandex-connector/tests.
+# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/yandex-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch_html: Retry bounded page reads and classify HTTP/transport refusals.
@@ -89,6 +89,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # yandex_search: Return SSR/zone/fallback offers with explicit price and SKU identity.
 # yandex_card: Read product details and the card's embedded review sample.
 # yandex_selfcheck: Probe operator transport/parser health; not an MCP tool.
+# _cacheable_html: Pass a page to the cache only if the tool would accept it.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -214,7 +215,30 @@ async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
             raise_tool_error(TransportDownError(f"{label}: empty response body", provider="yandex"))
         return html
 
-    return await _cache.get_or_fetch(url, fetch)
+    return await _cache.get_or_fetch(url, fetch, cache_if=lambda html: _cacheable_html(html, url, label))
+
+
+# START_BLOCK_VALIDATED_CACHE
+
+
+def _cacheable_html(html: str, url: str, label: str) -> bool:
+    """Run the tool's parser and guards before an HTML cache write (R-CACHE-VALIDATED).
+
+    A card page must also carry a title: yandex_card rejects an ``ok`` card
+    without one, so caching it would replay that failure for the whole TTL.
+    """
+    try:
+        is_card = urllib.parse.urlsplit(url).path.startswith(("/card/", "/product/", "/product--"))
+        parsed = ssr.parse_card(html) if is_card else ssr.parse_search(html)
+        _guard_values_drift(parsed, label)
+        _guard_parse_status(parsed["status"], label)
+        return _is_usable_page(parsed["status"]) and (not is_card or bool(parsed.get("title")))
+    except Exception:
+        # The public tool parses the uncached body and reports its original error.
+        return False
+
+
+# END_BLOCK_VALIDATED_CACHE
 
 
 def _is_usable_page(status: str) -> bool:

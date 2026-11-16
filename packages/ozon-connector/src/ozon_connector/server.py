@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; packages/ozon-connector/tests.
+# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -38,6 +38,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 #              separately and warn when the 30-item cap cut the page; a runtime
 #              shape-drift warning fires when a required key family vanishes.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
+# _cacheable_composer: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -508,6 +509,36 @@ def _parse_widgets(payload: dict) -> dict[str, Any]:
     return out
 
 
+# START_BLOCK_VALIDATED_CACHE
+
+
+def _cacheable_composer(body: str, path: str) -> bool:
+    """Use the public parsers and output types before storing composer data."""
+    try:
+        payload = json.loads(body)
+        if not isinstance(payload, dict) or not isinstance(payload.get("widgetStates"), dict):
+            return False
+        if "/reviews/" in path:
+            return False  # Paginated reviews commit after their final output validates.
+        if path.startswith("/search/"):
+            items = _search_items_from_payload(payload)[:SEARCH_ITEM_LIMIT]
+            OzonSearchResponse.model_validate(
+                {"status": "success", "query": "", "page": 1, "tier_used": "cache", "count": len(items), "items": items}
+            )
+        else:
+            parsed = _parse_widgets(payload)
+            OzonCardResponse(
+                **{**parsed, "status": "success", "url": f"https://www.ozon.ru{path}", "tier_used": "cache"}
+            )
+        return True
+    except Exception:
+        # Return the body unchanged: the tool owns the existing failure response.
+        return False
+
+
+# END_BLOCK_VALIDATED_CACHE
+
+
 async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str, str]:
     """Try Tier-1 (curl_cffi); fall back to Tier-2 (CDP) on 403/non-200.
 
@@ -536,7 +567,8 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
     try:
         status, body = await _run_sync_bounded(_sync_curl_get, api_url, _proxy(), timeout_s=max(0.01, float(TIMEOUT)))
         if status == 200 and body and not body.lstrip().startswith("<"):
-            _cache.set(safe_path, (status, body))
+            if _cacheable_composer(body, safe_path):
+                _cache.set(safe_path, (status, body))
             return status, body, "curl_cffi"
         if ctx and status == 403:
             await ctx.debug("Ozon Tier-1 403 (Cloudflare __cf_bm); trying CDP")
@@ -546,7 +578,7 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
 
     try:
         status, body = await _cdp_fetch_json(api_url, ctx)
-        if status == 200 and body and not body.lstrip().startswith("<"):
+        if status == 200 and body and not body.lstrip().startswith("<") and _cacheable_composer(body, safe_path):
             _cache.set(safe_path, (status, body))
         return status, body, "cdp"
     except NavBlocked as exc:
@@ -946,6 +978,7 @@ async def _ozon_reviews_impl(
 
     MAX_PAGES = 10  # 10 * 30 ≈ 300 reviews ceiling regardless of limit
     collected: list[dict[str, Any]] = []
+    pending_cache: list[tuple[str, str]] = []
     pool_variants: dict[str, str] = {}
     seen_uuids: set[str] = set()
     score_first: dict[str, Any] = {}
@@ -1044,6 +1077,7 @@ async def _ozon_reviews_impl(
                 seen_uuids.add(uuid)
             collected.append(_parse_review_item(r))
 
+        pending_cache.append((next_path, body))
         if len(collected) >= limit:
             # Enough texts: the next page will not be fetched, so its cursor is
             # not validated either — a cursor we never follow is not a partial.
@@ -1053,6 +1087,7 @@ async def _ozon_reviews_impl(
         if nb:
             candidate_next = _safe_review_page_path(sku, nb)
             if not candidate_next:
+                pending_cache.pop()
                 partial = True
                 stop_reason = "invalid_next_button"
                 last_error = {"type": "invalid_next_button"}
@@ -1098,7 +1133,7 @@ async def _ozon_reviews_impl(
                 f"info:review_item_id_missing: {unattributed}/{len(collected)} returned reviews have item_id=None"
             )
 
-    return OzonReviewsResponse(
+    result = OzonReviewsResponse(
         **R.attach_meta(
             {
                 "status": "success",
@@ -1125,6 +1160,10 @@ async def _ozon_reviews_impl(
             source="ozon_reviews",
         )
     )
+    for cache_path, cache_body in pending_cache:
+        if _cache.get(cache_path) is None:
+            _cache.set(cache_path, (200, cache_body))
+    return result
 
 
 # START_BLOCK_SEARCH

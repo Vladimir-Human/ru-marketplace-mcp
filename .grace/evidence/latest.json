@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-16T07:06:16.761248+00:00",
+  "checked_on_utc": "2026-11-16T09:01:08.816020+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -7,7 +7,7 @@
   "gates": [
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "ruff",
         "check",
@@ -15,12 +15,12 @@
       ],
       "exit": 0,
       "name": "Ruff (lint)",
-      "seconds": 0.234,
+      "seconds": 0.344,
       "summary": "All checks passed!"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "ruff",
         "format",
@@ -29,23 +29,23 @@
       ],
       "exit": 0,
       "name": "Ruff (format check)",
-      "seconds": 0.172,
-      "summary": "485 files already formatted"
+      "seconds": 0.297,
+      "summary": "489 files already formatted"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "mypy"
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 14.922,
-      "summary": "Success: no issues found in 116 source files"
+      "seconds": 9.015,
+      "summary": "Success: no issues found in 117 source files"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "mypy",
         "--platform",
@@ -53,12 +53,12 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform)",
-      "seconds": 1.0,
-      "summary": "Success: no issues found in 116 source files"
+      "seconds": 1.094,
+      "summary": "Success: no issues found in 117 source files"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "mypy",
         "--platform",
@@ -66,43 +66,43 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 14.922,
-      "summary": "Success: no issues found in 116 source files"
+      "seconds": 9.0,
+      "summary": "Success: no issues found in 117 source files"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/check_no_print.py"
       ],
       "exit": 0,
       "name": "No stdout writes in connector code",
-      "seconds": 0.422,
-      "summary": "checked 100 file(s): no stdout writes"
+      "seconds": 0.437,
+      "summary": "checked 101 file(s): no stdout writes"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/gen_tools_doc.py",
         "--check"
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 2.922,
-      "summary": "{\"ts\":\"2026-11-16T01:01:22\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 3.032,
+      "summary": "{\"ts\":\"2026-11-16T02:56:39\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/check_provenance.py"
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 0.171,
+      "seconds": 0.187,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/check_lock_revision.py"
       ],
       "exit": 0,
@@ -112,7 +112,7 @@
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/mcp_wire.py",
         "compare-mcp",
         "decision-mcp",
@@ -124,12 +124,12 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 10.5,
+      "seconds": 11.281,
       "summary": "dns           2 tools  ~   391 tok."
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/check_versions.py"
       ],
       "exit": 0,
@@ -139,28 +139,28 @@
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/grace_index.py",
         "--check"
       ],
       "exit": 0,
       "name": "Generated GRACE verification index is current",
-      "seconds": 0.547,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=96 gap=10 untraced=0 mappings=686 unmarked_tests=1939"
+      "seconds": 0.531,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=98 gap=10 untraced=0 mappings=692 unmarked_tests=1938"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "scripts/check_arch.py"
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.828,
+      "seconds": 0.812,
       "summary": ""
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "pytest",
         "-q",
@@ -172,12 +172,12 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 229.297,
-      "summary": "3651 passed, 2 skipped, 5 deselected, 132 warnings in 226.40s (0:03:46)"
+      "seconds": 207.329,
+      "summary": "3677 passed, 2 skipped, 5 deselected, 132 warnings in 204.48s (0:03:24)"
     },
     {
       "cmd": [
-        "C:\\Users\\vovap\\w\\cl2\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\vovap\\w\\p05\\.venv\\Scripts\\python.exe",
         "-m",
         "pytest",
         "-q",
@@ -188,16 +188,16 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 52.296,
-      "summary": "547 passed in 50.94s"
+      "seconds": 48.64,
+      "summary": "547 passed in 47.35s"
     }
   ],
   "index": {
     "gap": 10,
-    "tested": 96,
+    "tested": 98,
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "250e726a55dfa2f04c6de6141e3612c510a66a8d9d9b84b03fc79559236bc5e3",
+  "tree_digest": "bb494116d017d66f02ae10305c2ab792fa16c59d70d72b829d066b83ddffea0e",
   "version": "2.9.3"
 }

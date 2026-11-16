@@ -362,4 +362,8 @@
     <invariant id="R-ARCH-GATE.purity" owner="M-ARCH-GATE" proof="test">Pure-list modules import none of asyncio, httpx, fastmcp, subprocess, socket, mcp_core.transport or mcp_core.http and contain no await.</invariant>
     <invariant id="R-ARCH-GATE.exempt" owner="M-ARCH-GATE" proof="test">The arch-exempt label passes --exempt in lint and downgrades size-cap overruns only; boundary, purity, slack and missing-entry failures remain fatal.</invariant>
   </requirement>
+  <requirement id="R-CACHE-VALIDATED" status="accepted" source="Owner-provided P0-5 brief, 2026-11-16 (plan invariant I-CACHE-VALIDATED)">
+    <says>A connector writes its response cache only after the payload passed the parse and validation that make the tool call a success; a rejected payload is never served from the cache.</says>
+    <invariant id="R-CACHE-VALIDATED.recovery" owner="M-AVITO,M-ALIEXPRESS,M-YANDEX,M-WB,M-OZON,M-DETMIR,M-CIAN,M-MEGAMARKET,M-MPSTATS,M-LAMODA,M-DNS,M-CITILINK,M-TAOBAO" proof="test">After a rejected transport payload, the next identical public-tool call inside the TTL reads repaired data from transport; the two calls hit transport twice, and only validated data is cached. Every registry server with a module-level TTLCache has a conformance case or an explicit reasoned exemption.</invariant>
+  </requirement>
 </requirements>

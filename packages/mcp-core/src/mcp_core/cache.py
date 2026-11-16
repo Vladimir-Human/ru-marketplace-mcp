@@ -21,7 +21,7 @@ Set ``*_CACHE_TTL=0`` (per connector) to disable caching entirely.
 # START_MODULE_MAP
 # CacheStats: Count hits, misses, evictions and expirations; derive hit rate.
 # TTLCache: Manage disabled caching, LRU access, invalidation and expiry.
-# TTLCache.get_or_fetch: Serialize misses and await the supplied factory.
+# TTLCache.get_or_fetch: Serialize misses, await the factory, store what cache_if accepts.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -128,12 +128,19 @@ class TTLCache[T]:
         self.stats.expirations += len(stale)
         return len(stale)
 
-    async def get_or_fetch(self, key: Hashable, factory: Callable[[], Awaitable[T]]) -> T:
+    async def get_or_fetch(
+        self,
+        key: Hashable,
+        factory: Callable[[], Awaitable[T]],
+        *,
+        cache_if: Callable[[T], bool] | None = None,
+    ) -> T:
         """Return the cached value or await ``factory`` to produce it.
 
         A per-cache lock collapses concurrent misses for the same key into one
         upstream call, which matters when a tool fans out over several SKUs that
-        share a parent resource.
+        share a parent resource. ``cache_if`` keeps a value the caller would
+        reject out of the cache (R-CACHE-VALIDATED); it is still returned.
         """
         cached = self.get(key)
         if cached is not None:
@@ -143,5 +150,6 @@ class TTLCache[T]:
             if cached is not None:
                 return cached
             value = await factory()
-            self.set(key, value)
+            if cache_if is None or cache_if(value):
+                self.set(key, value)
             return value

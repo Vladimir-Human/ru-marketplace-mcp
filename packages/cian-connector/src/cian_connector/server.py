@@ -29,7 +29,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; packages/cian-connector/tests.
+# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
@@ -290,8 +290,8 @@ def _looks_like_json(body: str) -> bool:
 async def _fetch_search(json_query: dict[str, Any], ctx: Context | None) -> tuple[int, str, str]:
     """Run one search query over CDP. Returns (status, body, tier).
 
-    Only JSON-shaped 200s are cached — a cached block page would keep
-    reporting a block after the operator passed the check in the browser.
+    The public search tool commits cache entries only after its envelope,
+    offer parsing and output validation pass.
     """
     key = "search:" + json.dumps(json_query, sort_keys=True, ensure_ascii=False)
     cached = _cache.get(key)
@@ -313,7 +313,6 @@ async def _fetch_search(json_query: dict[str, Any], ctx: Context | None) -> tupl
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body):
         _pacer.record_success()
-        _cache.set(key, (status, body))
     return status, body, "cdp"
 
 
@@ -344,7 +343,6 @@ async def _fetch_card(offer_id: int, ctx: Context | None) -> tuple[int, str, str
         return 0, _redact(str(exc)), "cdp_failed"
     if status == 200 and _looks_like_json(body) and _CARD_OK_RE.search(body[:80]):
         _pacer.record_success()
-        _cache.set(key, (status, body))
     return status, body, "cdp"
 
 
@@ -886,6 +884,9 @@ async def cian_search(
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="cian_search")
         result.meta = MetaOut(**attached["_meta"])
+        if tier != "cache":
+            key = "search:" + json.dumps(query, sort_keys=True, ensure_ascii=False)
+            _cache.set(key, (status, body))
         return result
     except ToolError:
         raise
@@ -985,6 +986,8 @@ async def cian_card(
         warnings.extend(R.validate_offer(card, require_title=True))
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="cian_card")
         result.meta = MetaOut(**attached["_meta"])
+        if tier != "cache":
+            _cache.set(f"card:{offer_id}", (status, body))
         return result
     except ToolError:
         raise
