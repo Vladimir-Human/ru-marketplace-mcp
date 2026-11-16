@@ -250,6 +250,7 @@
   </requirement>
   <requirement id="R-COMPARE-CONDITIONAL-PRICE" kind="requirement" state="tested" gaps="G-COMPARE-CONDITIONAL-EXECUTION,G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_wb_wallet_only_price_is_not_certified" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.verify" title="R-COMPARE-CONDITIONAL-PRICE.verify, R-NO-FABRICATION: a DOM card whose price_rub" />
+    <test file="packages/compare-connector/tests/test_conditional_price_rule.py" name="test_an_adapter_conditional_price_warning_keeps_its_top_level_prefix" requirements="R-COMPARE-CONDITIONAL-PRICE.no-fabrication" title="v2.9.4 gave a wallet-only WB offer the top-level ``conditional_price: …`` warning the docs describe." />
     <test file="packages/compare-connector/tests/test_conditional_price_rule.py" name="test_build_response_ranks_by_the_everyday_price_and_never_the_conditional_one" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.no-fabrication" title="R-COMPARE-CONDITIONAL-PRICE.no-fabrication: the everyday price ranks, the conditional one never wins." />
     <test file="packages/compare-connector/tests/test_conditional_price_rule.py" name="test_ozon_search_keeps_todays_behaviour_and_the_gap_is_declared" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.adapters" title="R-COMPARE-CONDITIONAL-PRICE.adapters: the Ozon search payload exposes no card price." />
     <test file="packages/compare-connector/tests/test_conditional_price_rule.py" name="test_the_helper_ranks_by_the_everyday_price" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.rule" title="R-COMPARE-CONDITIONAL-PRICE.rule: the everyday price ranks; the cheaper amount is named." />
@@ -372,12 +373,22 @@
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_wb_search_positive_empty_survives_fallback_failure" requirements="R-EMPTY-NOT-SUCCESS" title="R-ITEM-HONESTY: v9's own empty list answers no_results, but the legacy" />
   </requirement>
   <requirement id="R-ERROR-NEXT-STEP" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_a_block_keeps_the_delay_its_source_supplied" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" title="A delay the source supplied stays, and is quoted as a wait, not as permission." />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_a_block_that_needs_a_person_gets_no_invented_delay" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" title="A 403 transport_down waits for a person: no pacing floor is invented." />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_bad_request_names_only_the_parameters_the_message_names" requirements="R-ERROR-NEXT-STEP.guidance" title="The real schemas: name the parameter the message mentions, and no other." />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_every_code_and_listed_tool_names_a_next_call" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_lamoda_fixture_public_rate_limit" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_live_pacing_floor_and_registry_listing" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_old_drift_starts_with_upgrade" requirements="R-ERROR-NEXT-STEP.guidance" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_retry_header_and_refusal_policies" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_a_block_keeps_the_delay_its_source_supplied" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" title="The source's own delay stays and is quoted as a wait, not as permission." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_a_block_needing_a_person_gets_no_invented_delay" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" title="A 403 transport_down is cleared by a person: no pacing floor, no retry now." />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_a_standalone_server_names_no_tool_it_does_not_list" requirements="R-ERROR-NEXT-STEP.guidance" title="A one-source server has no compare_prices, marketplace_health or (here) search tool to send the agent to." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_a_transport_failure_still_gets_the_pacing_floor" requirements="R-ERROR-NEXT-STEP.pacing" title="Every other transport failure keeps the floor and today's sentence." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_names_no_parameter_on_one_shared_part" requirements="R-ERROR-NEXT-STEP.guidance" title="One shared name part names no parameter: the message says &quot;source&quot;." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_names_no_parameter_when_two_qualify" requirements="R-ERROR-NEXT-STEP.guidance" title="Two parameters match on two name parts each: neither of them is named." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_names_one_parameter_by_two_of_its_parts" requirements="R-ERROR-NEXT-STEP.guidance" title="Two name parts qualify; a parameter that shares one part never does." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_names_the_parameter_the_message_names" requirements="R-ERROR-NEXT-STEP.guidance" title="The message names location_id: that parameter alone, never a neighbour." />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_without_a_named_parameter_guesses_none" requirements="R-ERROR-NEXT-STEP.guidance" />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_error_reference_describes_outgoing_fields" requirements="R-ERROR-NEXT-STEP.reference" />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_installation_is_shared_and_idempotent" requirements="R-ERROR-NEXT-STEP.boundary" />
@@ -413,6 +424,7 @@
     <test file="scripts/test_scrub_fixtures.py" name="test_an_email_becomes_the_fixed_address" requirements="R-FIXTURE-PERSONAL-DATA" title="An e-mail address is replaced by one fixed address." />
     <test file="scripts/test_scrub_fixtures.py" name="test_an_ozon_review_author_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="Ozon splits the author's name into firstName and lastName." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_accepts_a_planted_recording_with_a_placeholder_region" requirements="R-FIXTURE-PERSONAL-DATA" title="The placeholder form is what a scrubbed recording carries." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_the_check_covers_committed_grace_evidence" requirements="R-FIXTURE-PERSONAL-DATA" title=".grace/evidence/latest.json is committed; an interpreter path in it names the operator's account." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_profile_directory_name" requirements="R-FIXTURE-PERSONAL-DATA" title="Captured material may not carry the scraping profile's directory name." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_recording_with_a_real_region" requirements="R-FIXTURE-PERSONAL-DATA" title="A recording's region field holds a placeholder, never a real region." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_windows_user_path" requirements="R-FIXTURE-PERSONAL-DATA" title="No file under the covered trees may carry a Windows user path." />
@@ -621,7 +633,14 @@
     <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_every_result_carries_the_official_server_note" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the note is an info: note naming the server; it does not touch healthy." />
   </requirement>
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
+    <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_foreign_links_have_no_id" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_offer_links_keep_the_id" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_fetch_only_card_and_seller_hosts_never_reach_navigation" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_foreign_url_arguments_never_reach_transport" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_legacy_subdomain_card_inputs_keep_reaching_transport" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_page_hosts_are_covered_by_fetch_hosts" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_page_policy_keeps_fetch_only_hosts_out" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_url_inventory_includes_each_url_capable_source" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_valid_source_input_can_reach_the_transport" requirements="R-NAV-HOSTS.invariant" title="A reject-everything implementation must fail the same conformance suite." />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_host_policy_exact_names_and_explicit_subdomains" requirements="R-NAV-HOSTS.invariant" />
@@ -631,6 +650,8 @@
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_passes_policy_and_refuses_foreign_final_url" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_lookalike_domain_still_fails" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: only the source's own subdomains pass, never a lookalike or a foreign host." />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_subdomain_link_the_source_accepted_before_still_passes" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: a mobile or regional link on the source's own domain is not refused." />
+    <test file="packages/wb-connector/tests/test_page_hosts.py" name="test_wb_dom_keeps_its_page_alias" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/wb-connector/tests/test_page_hosts.py" name="test_wb_dom_refuses_fetch_only_redirects" requirements="R-NAV-HOSTS.invariant" />
   </requirement>
   <requirement id="R-NO-FABRICATION" kind="rule" state="tested">
     <test file="packages/avito-connector/tests/test_item_closed.py" name="test_a_closed_state_of_another_item_is_not_this_ads" requirements="R-NO-FABRICATION" title="Another id's closed buyerItem and its banner are not attributed to the requested ad." />

@@ -145,7 +145,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
-ALLOWED_HOSTS = BY_NAME["avito"].hosts
+ALLOWED_HOSTS = BY_NAME["avito"].page_hosts
 SITE_BASE = "https://www.avito.ru"
 ITEMS_API = f"{SITE_BASE}/web/1/js/items"
 
@@ -1230,7 +1230,7 @@ def _photo_magic_matches(content_type: str, data: bytes) -> bool:
 
 def _sync_photo_get(url: str) -> tuple[int, str, bytes]:
     """One listing photo over the curl_cffi tier, streamed with a hard size cap."""
-    if not url_on_hosts(url, ALLOWED_HOSTS) or not _state.photo_url_allowed(url):
+    if not url_on_hosts(url, BY_NAME["avito"].hosts) or not _state.photo_url_allowed(url):
         raise ValueError("disallowed photo URL")
     proxy = _proxy()
     kwargs: dict[str, Any] = {"proxies": {"http": proxy, "https": proxy}} if proxy else {}

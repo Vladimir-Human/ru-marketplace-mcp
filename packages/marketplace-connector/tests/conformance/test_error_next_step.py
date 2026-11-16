@@ -8,9 +8,13 @@
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # error_server: Build a mounted error shell from the real servers' runtime tool inventory.
+# real_schema_server: Mount the shipped compare and Avito servers with their real schemas.
 # test_every_code_and_listed_tool_names_a_next_call: Cross the taxonomy with every listed tool.
 # test_retry_header_and_refusal_policies: Preserve delays and the Citilink no-retry exception.
 # test_old_drift_starts_with_upgrade: Keep A6's conditional upgrade ahead of health guidance.
+# test_a_block_that_needs_a_person_gets_no_invented_delay: A 403 transport_down waits for a person.
+# test_a_block_keeps_the_delay_its_source_supplied: A supplied delay stays and is quoted as a wait.
+# test_bad_request_names_only_the_parameters_the_message_names: Name the real schemas' parameters exactly.
 # test_lamoda_fixture_public_rate_limit: Exercise the real public tool with captured refusal markup.
 # END_MODULE_MAP
 
@@ -27,6 +31,7 @@ from fastmcp import Client, FastMCP
 from mcp_core import runtime
 from mcp_core.domtest import JsdomUnavailable, run_extractor
 from mcp_core.errors import ChallengeRequiredError, ConnectorError, ErrorCode, raise_tool_error_from
+from mcp_core.resources import mount_child
 from mcp_core.sources import SOURCES
 
 # START_BLOCK_ERROR_SERVER
@@ -62,7 +67,13 @@ async def error_server(monkeypatch: pytest.MonkeyPatch):
     async with Client(inventory) as client:
         names = {tool.name for tool in await client.list_tools()}
     assert names
-    state: dict[str, Any] = {"code": ErrorCode.RATE_LIMITED, "provider": None, "delay": None, "old": False}
+    state: dict[str, Any] = {
+        "code": ErrorCode.RATE_LIMITED,
+        "provider": None,
+        "delay": None,
+        "old": False,
+        "status_code": None,
+    }
     monkeypatch.setattr(
         "mcp_core.errors.old_build_info",
         lambda: (
@@ -83,7 +94,13 @@ async def error_server(monkeypatch: pytest.MonkeyPatch):
         err = (
             ChallengeRequiredError("human challenge", provider=state["provider"])
             if code == ErrorCode.CHALLENGE_REQUIRED
-            else ConnectorError(code, "query must be valid", provider=state["provider"], retry_after_s=state["delay"])
+            else ConnectorError(
+                code,
+                "query must be valid",
+                provider=state["provider"],
+                retry_after_s=state["delay"],
+                status_code=state["status_code"],
+            )
         )
         raise_tool_error_from(err)
 
@@ -226,7 +243,109 @@ async def test_live_pacing_floor_and_registry_listing(error_server, source, code
     assert error["tool"] == name
 
 
+@pytest.mark.req("R-ERROR-NEXT-STEP.pacing", "R-ERROR-NEXT-STEP.guidance")
+async def test_a_block_that_needs_a_person_gets_no_invented_delay(error_server) -> None:
+    """A 403 transport_down waits for a person: no pacing floor is invented."""
+    server, _, state = error_server
+    state.update(code=ErrorCode.TRANSPORT_DOWN, status_code=403, delay=None)
+    async with Client(server) as client:
+        error = _payload(await client.call_tool("avito_search", {}, raise_on_error=False))
+    assert "retry_after_s" not in error, error
+    assert error["next_step"] == (
+        "A person must clear the block first, as the message says; then call `avito_search` again with the same arguments."
+    )
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.pacing", "R-ERROR-NEXT-STEP.guidance")
+async def test_a_block_keeps_the_delay_its_source_supplied(error_server) -> None:
+    """A delay the source supplied stays, and is quoted as a wait, not as permission."""
+    server, _, state = error_server
+    state.update(code=ErrorCode.TRANSPORT_DOWN, status_code=403, delay=1200)
+    async with Client(server) as client:
+        error = _payload(await client.call_tool("avito_search", {}, raise_on_error=False))
+    assert error["retry_after_s"] == 1200
+    assert error["next_step"] == (
+        "A person must clear the block first, as the message says; "
+        "then call `avito_search` again with the same arguments, not before 1200 seconds."
+    )
+
+
 # END_BLOCK_REGISTRY_CONFORMANCE
+# START_BLOCK_REAL_SCHEMA_PARAMETERS
+
+
+@pytest.fixture
+async def real_schema_server(monkeypatch: pytest.MonkeyPatch):
+    """The shipped compare and Avito servers, so the schemas are the real ones.
+
+    The fake tools of the taxonomy fixture carry one parameter each, which is
+    exactly what let a wrong parameter name pass: here every tool keeps the
+    schema it ships with, and the middleware reads the names from it.
+    """
+    compare = importlib.import_module("compare_connector.server")
+    avito = importlib.import_module("avito_connector.server")
+    monkeypatch.delenv("MARKETPLACE_SOURCES", raising=False)
+    server = FastMCP("real-schema-conformance")
+    mount_child(server, compare.mcp)
+    mount_child(server, avito.mcp)
+    _install(server, monkeypatch)
+    async with Client(server) as client:
+        names = {tool.name for tool in await client.list_tools()}
+    assert {"compare_prices", "compare_verify_offer", "avito_search", "avito_card"} <= names, names
+    yield server
+
+
+def _named_parameters(step: str) -> set[str]:
+    """The parameter names a bad-request sentence names; empty for the generic one."""
+    match = re.search(r"Correct the (.+?) parameter using", step)
+    return {name.strip() for name in match.group(1).split(",")} if match else set()
+
+
+@pytest.mark.req("R-ERROR-NEXT-STEP.guidance")
+@pytest.mark.parametrize(
+    ("tool", "arguments", "named", "expected"),
+    [
+        (
+            "compare_prices",
+            {"query": "чайник", "sources": ["foo"]},
+            set(),
+            "Correct the arguments the message describes, using `compare_prices`'s schema, "
+            "then call `compare_prices` again.",
+        ),
+        (
+            "avito_search",
+            {"query": "x", "location_id": "abc"},
+            {"location_id"},
+            "Correct the location_id parameter using `avito_search`'s schema, then call `avito_search` again.",
+        ),
+        (
+            "avito_card",
+            {"item_id_or_url": "http://[bad"},
+            {"item_id_or_url"},
+            "Correct the item_id_or_url parameter using `avito_card`'s schema, then call `avito_card` again.",
+        ),
+        (
+            "compare_verify_offer",
+            {"source": "ozon", "product_id_or_url": "123", "expected_variant_id": "42"},
+            {"expected_variant_id"},
+            "Correct the expected_variant_id parameter using `compare_verify_offer`'s schema, "
+            "then call `compare_verify_offer` again.",
+        ),
+    ],
+    ids=["compare_prices", "avito_search", "avito_card", "compare_verify_offer"],
+)
+async def test_bad_request_names_only_the_parameters_the_message_names(
+    real_schema_server, tool: str, arguments: dict[str, Any], named: set[str], expected: str
+) -> None:
+    """The real schemas: name the parameter the message mentions, and no other."""
+    async with Client(real_schema_server) as client:
+        error = _payload(await client.call_tool(tool, arguments, raise_on_error=False))
+    assert error["error"] == "bad_request"
+    assert error["next_step"] == expected
+    assert _named_parameters(error["next_step"]) == named
+
+
+# END_BLOCK_REAL_SCHEMA_PARAMETERS
 # START_BLOCK_PUBLIC_FIXTURE
 
 

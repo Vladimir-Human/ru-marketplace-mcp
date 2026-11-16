@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -101,7 +101,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
-ALLOWED_HOSTS = BY_NAME["aliexpress"].hosts
+ALLOWED_HOSTS = BY_NAME["aliexpress"].page_hosts
 SITE_BASE = "https://aliexpress.ru"
 SEARCH_URL = f"{SITE_BASE}/wholesale"
 # The landing page any card read starts from. It is a live search the site keeps
@@ -465,9 +465,7 @@ async def _read_card_target(target: Any, wants: re.Pattern[str]) -> dict[str, An
     if isinstance(extracted_url, str) and extracted_url:
         seen.append(extracted_url)
     for final_url in seen:
-        parts = urllib.parse.urlsplit(final_url)
-        host = (parts.hostname or "").lower()
-        if parts.scheme not in ("http", "https") or host not in _CARD_HOSTS:
+        if not url_on_hosts(final_url, _CARD_HOSTS):
             raise_tool_error(
                 TransportDownError("the item tab moved off the allowed AliExpress hosts while it was read")
             )

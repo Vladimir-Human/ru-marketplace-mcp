@@ -61,7 +61,7 @@ from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
-from mcp_core.errors import ErrorCode, error_next_step
+from mcp_core.errors import ErrorCode, error_next_step, needs_a_person
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text
 from mcp_core.sources import ALIASES, BY_NAME, SOURCES, SourceSpec
@@ -231,6 +231,10 @@ class ToolErrorRedactionMiddleware(Middleware):
                 if (
                     payload["error"] in ("rate_limited", "timeout", "transport_down")
                     and payload.get("retry_after_s") is None
+                    # A block only a person can clear gets no delay of our own:
+                    # a pacing floor would read as permission to retry a blocked
+                    # source in two seconds.
+                    and not needs_a_person(ErrorCode(payload["error"]), payload)
                 ):
                     payload["retry_after_s"] = _error_pacing_floor(source)
                 server = context.fastmcp_context.fastmcp if context.fastmcp_context else None
