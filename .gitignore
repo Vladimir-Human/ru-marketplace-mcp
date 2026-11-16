@@ -57,6 +57,10 @@ scratch/
 # Live-run request ledger (scripts/live_check.py and pytest -m live share it).
 .live-budget*.json
 
+# Compare benchmark recordings (scripts/live_check.py audit --phase C --record DIR).
+# A recording is private material: the default in-repository directory is ignored here.
+.live-recordings/
+
 # Local history the maintainer keeps (scripts/metrics_snapshot.py, the live matrix).
 .live-metrics.jsonl
 .live-metrics.lock

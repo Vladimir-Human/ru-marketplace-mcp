@@ -1,12 +1,13 @@
 """Offline requirement checks for the P1-4 outside-in harness.
 
 START_MODULE_CONTRACT
-PURPOSE: Prove wrapped-child accounting, plans, audit checks, captures, timing and private output.
+PURPOSE: Prove wrapped-child accounting, plans, audit checks, captures, timing, private output and the compare recorder.
 SCOPE: Real child wrapper and MCP protocol with fake server targets; fake CDP only; no sockets to sites.
-DEPENDS: live_audit, audit_server, live_budget, live_check; pytest; httpx; MCP; registry; stdlib.
-LINKS: M-LIVE-AUDIT, R-LIVE-AUDIT.
+DEPENDS: live_audit, audit_server, live_budget, live_check, compare_recording; pytest; httpx; MCP; registry; stdlib.
+LINKS: M-LIVE-AUDIT, M-COMPARE-RECORDING, R-LIVE-AUDIT, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   audit: Import the new implementation inside each test, retaining individual pre-implementation failures.
+  recorder: The recorder module, imported inside each test the same way.
   test_*: Requirement-derived acceptance checks with isolated temporary files and I/O edges.
 END_MODULE_MAP
 END_MODULE_CONTRACT
@@ -26,6 +27,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from fastmcp.exceptions import ToolError
 
 sys.path.insert(0, str(Path(__file__).parent))
 import live_budget
@@ -541,3 +543,261 @@ async def test_compare_records_wall_latency_sources_and_visibility(
 
 
 # END_BLOCK_RUNNER
+# START_BLOCK_COMPARE_RECORDING
+
+
+def recorder() -> Any:
+    """The recorder module, imported inside the test so a missing one fails here."""
+    return importlib.import_module("compare_recording")
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_the_recorder_stores_only_the_fields_the_adapters_read() -> None:
+    """The stored payload is the cut-down the adapters read, and nothing else."""
+    recording = recorder()
+    item = SimpleNamespace(
+        nm_id=101,
+        name="Чайник электрический 1.7 л",
+        brand="Бренд",
+        supplier="Магазин",
+        price_rub=1990.0,
+        price_kind="regular",
+        wallet_price_rub=None,
+        review_rating=4.8,
+        feedbacks=12,
+        in_stock=True,
+        total_quantity=3,
+        color="белый",
+        price_original_rub=2490.0,
+        delivery="11 октября",
+        seller_legal_name="ООО Ромашка",
+    )
+    response = SimpleNamespace(
+        items=[item],
+        meta=SimpleNamespace(healthy=True, warnings=["info:wb_dom"], source="wb_search", extraction="api"),
+    )
+
+    cut = recording.cut_response("wildberries", response)
+
+    assert set(cut["items"][0]) == {
+        "nm_id",
+        "name",
+        "brand",
+        "supplier",
+        "price_rub",
+        "price_kind",
+        "wallet_price_rub",
+        "review_rating",
+        "feedbacks",
+        "in_stock",
+        "total_quantity",
+    }
+    assert cut["items"][0]["price_rub"] == 1990.0
+    assert cut["items"][0]["price_kind"] == "regular"
+    assert cut["meta"] == {"healthy": True, "warnings": ["info:wb_dom"]}
+    # No reviewer, phone, e-mail, delivery or legal-entity field ever enters the file.
+    stored = json.dumps(cut, ensure_ascii=False)
+    assert "seller_legal_name" not in stored
+    assert "delivery" not in stored
+    assert "color" not in stored
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_the_scrub_replaces_regions_with_placeholders_in_order_of_appearance() -> None:
+    """Regions become R1, R2, ... in order of appearance, and equal regions stay equal."""
+    recording = recorder()
+    document = {
+        "query": "чайник",
+        "captured_at": "2026-11-16T10:00:00Z",
+        "schema": 1,
+        "sources": {
+            "wildberries": {"response": {"items": [], "region": "Москва", "observed_at": "2026-11-16T10:00:00Z"}},
+            "avito": {"response": {"items": [], "region": "Санкт-Петербург", "observed_at": "2026-11-16T10:00:00Z"}},
+            "ozon": {"response": {"items": [], "region": "Москва", "observed_at": "2026-11-16T10:00:00Z"}},
+        },
+    }
+
+    scrubbed = recording.scrub_regions(document)
+
+    regions = [entry["response"]["region"] for entry in scrubbed["sources"].values()]
+    assert regions == ["R1", "R2", "R1"]
+    assert "Москва" not in json.dumps(scrubbed, ensure_ascii=False)
+    assert "Санкт-Петербург" not in json.dumps(scrubbed, ensure_ascii=False)
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_the_recording_holds_the_query_the_time_and_each_source() -> None:
+    """One recording is one compare call: the query, the capture time, the sources."""
+    recording = recorder()
+    document = recording.build_recording(
+        "чайник электрический",
+        "2026-11-16T10:00:00Z",
+        {
+            "wildberries": {
+                "response": {
+                    "items": [{"nm_id": 101, "name": "Чайник", "price_rub": 1990.0}],
+                    "meta": {"healthy": True, "warnings": []},
+                    "region": "Москва",
+                    "observed_at": "2026-11-16T10:00:00Z",
+                }
+            },
+            "ozon": {"error": {"code": "rate_limited", "message": "ozon rate-limited"}},
+        },
+    )
+
+    assert set(document) == {"query", "captured_at", "sources", "schema"}
+    assert document["schema"] == 1
+    assert document["query"] == "чайник электрический"
+    assert document["captured_at"] == "2026-11-16T10:00:00Z"
+    assert document["sources"]["ozon"] == {"error": {"code": "rate_limited", "message": "ozon rate-limited"}}
+    assert document["sources"]["wildberries"]["response"]["region"] == "R1"
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+async def test_the_capture_hook_records_what_the_adapters_receive(tmp_path: Path) -> None:
+    """The hook sits on the search tool the adapters call and stores its answer."""
+    recording = recorder()
+    seen: list[tuple[str, int]] = []
+
+    class FakeWb:
+        async def wb_search(self, query: str, page: int = 1) -> Any:
+            seen.append((query, page))
+            return SimpleNamespace(
+                items=[SimpleNamespace(nm_id=101, name="Чайник", price_rub=1990.0, price_kind="regular")],
+                meta=SimpleNamespace(healthy=True, warnings=[]),
+            )
+
+    module = FakeWb()
+    recording.capture_sources(tmp_path, {"wildberries": module})
+
+    await module.wb_search(query="чайник", page=1)
+
+    assert seen == [("чайник", 1)]
+    files = sorted(tmp_path.glob("*.json"))
+    assert len(files) == 1
+    captured = json.loads(files[0].read_text(encoding="utf-8"))
+    assert captured["source"] == "wildberries"
+    assert captured["query"] == "чайник"
+    assert captured["response"]["items"][0]["nm_id"] == 101
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+async def test_a_failing_source_is_recorded_as_its_error_and_still_raises(tmp_path: Path) -> None:
+    """An errored source is stored as its error, and the error still reaches the caller."""
+    recording = recorder()
+
+    class FailingWb:
+        async def wb_search(self, query: str, page: int = 1) -> Any:
+            raise ToolError(json.dumps({"error": "rate_limited", "message": "wb rate-limited", "retryable": True}))
+
+    module = FailingWb()
+    recording.capture_sources(tmp_path, {"wildberries": module})
+
+    with pytest.raises(ToolError):
+        await module.wb_search(query="чайник")
+
+    captured = json.loads(sorted(tmp_path.glob("*.json"))[0].read_text(encoding="utf-8"))
+    assert captured["error"] == {"code": "rate_limited", "message": "wb rate-limited"}
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+async def test_the_audit_writes_one_recording_per_compare_call(audit: Any, tmp_path: Path) -> None:
+    """The compare call the audit measured is the comparison that gets recorded."""
+    cases, ids = inputs(audit)
+    monkey_capture = tmp_path / "captures"
+    record_dir = tmp_path / "records"
+    budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / "ledger.json"))
+
+    class CompareSession(FakeSession):
+        async def list_tools(self, **kwargs: Any) -> Any:
+            return SimpleNamespace(
+                tools=[SimpleNamespace(name="compare_prices", output_schema={"type": "object"})], next_cursor=None
+            )
+
+        async def call_tool(self, tool: str, arguments: dict[str, Any]) -> Any:
+            self.calls.append((tool, arguments))
+            # The child writes what the adapters received; the parent turns it
+            # into one recording per compare call.
+            monkey_capture.mkdir(parents=True, exist_ok=True)
+            (monkey_capture / "0001-wildberries.json").write_text(
+                json.dumps(
+                    {
+                        "source": "wildberries",
+                        "query": arguments["query"],
+                        "captured_at": "2026-11-16T09:00:00Z",
+                        "response": {
+                            "items": [{"nm_id": 1, "name": "Чайник", "price_rub": 1990.0}],
+                            "meta": {"healthy": True, "warnings": []},
+                            "region": "Москва",
+                            "observed_at": "2026-11-16T09:00:00Z",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = {
+                "source_outcomes": [
+                    {"source": "wildberries", "status": "ok", "offers_returned": 1, "elapsed_ms": 10},
+                    {
+                        "source": "ozon",
+                        "status": "blocked",
+                        "error_code": "rate_limited",
+                        "detail": "ozon rate-limited",
+                    },
+                ],
+                "cheapest": None,
+                "cheapest_comparable": None,
+            }
+            return SimpleNamespace(structured_content=result, content=[], is_error=False)
+
+    session = CompareSession(budget)
+    plan = [c for c in audit.plan_run(cases, ids, {}, "C", 1) if c["kind"] == "compare"][:1]
+    await audit.execute_plan(
+        plan,
+        session,
+        budget,
+        cases,
+        tmp_path,
+        "C",
+        record_dir=record_dir,
+        capture_dir=monkey_capture,
+        record_prefix="c1-",
+    )
+
+    files = sorted(record_dir.glob("*.json"))
+    assert len(files) == 1
+    document = json.loads(files[0].read_text(encoding="utf-8"))
+    assert set(document) == {"query", "captured_at", "sources", "schema"}
+    assert document["schema"] == 1
+    assert document["sources"]["wildberries"]["response"]["region"] == "R1"
+    assert document["sources"]["ozon"] == {"error": {"code": "rate_limited", "message": "ozon rate-limited"}}
+    # The capture files are private and unscrubbed: they do not survive the run.
+    assert not list(monkey_capture.glob("*.json"))
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_recording_is_a_phase_c_option_only(audit: Any) -> None:
+    """The recorder belongs to the compare phase; the other phases refuse it."""
+    outside = str(audit.REPO_ROOT.parent / "compare-recordings")
+    assert audit.select_options(["--phase", "C", "--run", "1", "--record", outside]).record is not None
+    with pytest.raises(ValueError):
+        audit.select_options(["--phase", "A", "--run", "1", "--record", outside])
+    with pytest.raises(ValueError):
+        audit.select_options(["--summary", "--record", outside])
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_a_record_dir_inside_the_repository_must_be_the_ignored_one(audit: Any) -> None:
+    """A recording is private material: inside the repository only .live-recordings/ (gitignored) takes it."""
+    ignored = str(audit.REPO_ROOT / ".live-recordings" / "cycle1")
+    assert audit.select_options(["--phase", "C", "--run", "1", "--record", ignored]).record is not None
+    for tracked in (
+        audit.REPO_ROOT,
+        audit.REPO_ROOT / "packages" / "compare-connector" / "tests" / "benchmark" / "recordings",
+        audit.REPO_ROOT / ".tmp" / "records",
+    ):
+        with pytest.raises(ValueError):
+            audit.select_options(["--phase", "C", "--run", "1", "--record", str(tracked)])
+
+
+# END_BLOCK_COMPARE_RECORDING

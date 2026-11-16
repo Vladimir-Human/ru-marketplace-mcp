@@ -235,6 +235,16 @@
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_coerce_rating_rejects_a_thousands_grouped_count" requirements="R-COERCE-AMBIGUOUS" title="A rating selector that lands on the review counter reads a grouped" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_price_shapes_the_decoy_and_magnitude_guards_must_keep" requirements="R-COERCE-AMBIGUOUS" title="The stricter guards must not eat the ordinary shapes: a currency glyph," />
   </requirement>
+  <requirement id="R-COMPARE-BENCHMARK-REPLAY" kind="requirement" state="tested">
+    <test file="scripts/test_live_audit.py" name="test_a_failing_source_is_recorded_as_its_error_and_still_raises" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="An errored source is stored as its error, and the error still reaches the caller." />
+    <test file="scripts/test_live_audit.py" name="test_a_record_dir_inside_the_repository_must_be_the_ignored_one" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A recording is private material: inside the repository only .live-recordings/ (gitignored) takes it." />
+    <test file="scripts/test_live_audit.py" name="test_recording_is_a_phase_c_option_only" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The recorder belongs to the compare phase; the other phases refuse it." />
+    <test file="scripts/test_live_audit.py" name="test_the_audit_writes_one_recording_per_compare_call" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The compare call the audit measured is the comparison that gets recorded." />
+    <test file="scripts/test_live_audit.py" name="test_the_capture_hook_records_what_the_adapters_receive" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The hook sits on the search tool the adapters call and stores its answer." />
+    <test file="scripts/test_live_audit.py" name="test_the_recorder_stores_only_the_fields_the_adapters_read" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The stored payload is the cut-down the adapters read, and nothing else." />
+    <test file="scripts/test_live_audit.py" name="test_the_recording_holds_the_query_the_time_and_each_source" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="One recording is one compare call: the query, the capture time, the sources." />
+    <test file="scripts/test_live_audit.py" name="test_the_scrub_replaces_regions_with_placeholders_in_order_of_appearance" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Regions become R1, R2, ... in order of appearance, and equal regions stay equal." />
+  </requirement>
   <requirement id="R-COMPARE-BUNDLE-NOUN-PHRASES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-BUNDLE-NOUN-PHRASES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
   </requirement>
