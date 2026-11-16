@@ -23,28 +23,27 @@ uses everyday prices; subscriber prices ride along in a separate field.
 which many users do not want. Each connector is imported defensively, and the
 comparison runs with whatever is present.
 
+**The decision lives in its own module.** This file queries the marketplaces and
+hands the gathered results to :mod:`compare_connector.decide`, where the
+ranking, the warnings and the winners are pure functions over those results.
+
 NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
 # REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
-# DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); identity; models_output; vision_policy; source servers.
+# DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); decide (the ranking decision); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
-# LINKS: R-NO-MCP-LOGGING; M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# LINKS: R-NO-MCP-LOGGING; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
 # _require_selected: Reject explicit search/card sources disabled by the operator.
-# _dedupe: Merge duplicate offers while preserving source identity.
-# _has_bundle_phrase_prefix: Recognize up to three local modifiers between an explicit bundle cue and this accessory.
-# _has_bundle_phrase_suffix: Recognize bounded lexical noun/modifier tails without crossing accessory clauses.
-# _has_unrequested_marker: Match Unicode words/phrases after occurrence-local bundle/negation checks.
-# _looks_like_an_accessory/_looks_like_another_condition: Share relevance rules for warnings and comparability.
 # OfferBatch: Carry normalized offers plus source warnings and health evidence.
 # _run_source: Bound each source query; report native price counts and structured partial failures.
 # _call_card_tool: Dispatch validated source-native card arguments.
-# compare_prices: Rank eligible RUB offers with per-source completeness and warnings.
+# compare_prices: Validate the query, gather the sources and hand the results to the decision module.
 # compare_verify_offer: Re-read a card and compare price, identity and stock evidence.
 # compare_sources: Report searchable/installed/deselected source capabilities.
 # compare_browser_snapshot: Deliver a controlled browser snapshot using vision policy.
@@ -85,13 +84,26 @@ from mcp_core.source_selection import canonical, selected
 from mcp_core.sources import BY_NAME, CARD_TOOL_NAMES, COMPARE_SOURCE_NAMES, COMPARE_SOURCES, FOREIGN_CURRENCY_SOURCES
 from pydantic import Field
 
+from compare_connector.decide import (  # noqa: F401
+    ResponseOptions,
+    _conditional_price_warning,
+    _dedupe,
+    _has_bundle_phrase_prefix,
+    _has_bundle_phrase_suffix,
+    _has_unrequested_marker,
+    _looks_like_an_accessory,
+    _looks_like_another_condition,
+    _marker_pattern,
+    _positive_marker_text,
+    _ranks_in_rubles,
+    _relevance_warnings,
+    _size_mismatch_warning,
+    build_response,
+)
 from compare_connector.identity import (
     ProductIdentity,
-    extract_size_tokens,
-    format_size_tokens,
     identity_from_mapping,
     match_product_identity,
-    sizes_conflict,
 )
 from compare_connector.models_output import (
     CompareResponse,
@@ -179,308 +191,6 @@ SEARCHABLE = (
     "aliexpress",
 )
 # END_BLOCK_SOURCE_SELECTION
-
-
-def _dedupe(offers: Iterable[MarketOffer]) -> list[MarketOffer]:
-    """Drop repeats of the same listing, retaining explicitly distinct variants.
-
-    A marketplace can return the same product twice — colour variants sharing
-    an id, a pagination overlap — and every copy would otherwise rank
-    separately. That inflates total_offers and, worse, lets one listing occupy
-    both the cheapest slot and the runner-up, making a single offer look like
-    two independent confirmations of a price.
-
-    Order is preserved so the per-source ordering the marketplaces chose
-    survives. Offers with no product_id cannot be compared this way and are all
-    kept: dropping them on a blank key would silently merge distinct listings.
-    """
-    seen: set[tuple[str, str, str]] = set()
-    out: list[MarketOffer] = []
-    for offer in offers:
-        if not offer.product_id:
-            out.append(offer)
-            continue
-        key = (offer.source, offer.product_id, offer.variant_id)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(offer)
-    return out
-
-
-# START_BLOCK_RELEVANCE_POLICY
-# Words that mark a listing as something you buy *for* a product rather than
-# the product itself. A search for "iphone 15" matches a case, a screen
-# protector and a cable, all of them cheaper than the phone, and whichever is
-# cheapest becomes the headline answer. Observed live in July 2026: a query for
-# iPhone 15 ranked a 34 224 ₽ listing above genuine 52 049 ₽ ones.
-_ACCESSORY_MARKERS = (
-    "чехол",
-    "чехол-книжка",
-    "бампер",
-    "накладка",
-    "защитное стекло",
-    "стекло",
-    "плёнка",
-    "пленка",
-    "кабель",
-    "адаптер",
-    "зарядка",
-    "зарядное",
-    "держатель",
-    "ремешок",
-    "подставка",
-    "наклейка",
-    "case",
-    "cover",
-    "screen protector",
-    "cable",
-    "charger",
-    "strap",
-)
-
-
-# Words that mark a listing as a different *condition* of the product, not a
-# different product. This is the case the accessory list above misses entirely
-# and the one that actually bit: checked live in July 2026, the cheap iPhone 15
-# rows on Wildberries were "Восстановленный" and "Витринный образец" — a
-# refurbished phone and a display unit, ranked against new ones from other
-# marketplaces. Nothing in the title looks like an accessory, and the price is
-# not low enough to trip a median check. Only the wording gives it away.
-_CONDITION_MARKERS = (
-    "восстановленный",
-    "восстановленная",
-    "витринный образец",
-    "витринный",
-    "уценка",
-    "уценённый",
-    "уцененный",
-    "б/у",
-    "бывший в употреблении",
-    "как новый",
-    "refurbished",
-    "renewed",
-    "pre-owned",
-    "used",
-    "open box",
-)
-
-
-def _marker_pattern(markers: tuple[str, ...]) -> re.Pattern[str]:
-    """Unicode word boundaries and flexible whitespace inside marker phrases."""
-    phrases = [
-        r"\s+".join(re.escape(word) for word in marker.split()) for marker in sorted(markers, key=len, reverse=True)
-    ]
-    return re.compile(r"(?<!\w)(?:" + "|".join(phrases) + r")(?!\w)", re.IGNORECASE)
-
-
-_NEGATION_PREFIX = re.compile(r"(?<!\w)(?:не|not)\s+$", re.IGNORECASE)
-_BUNDLE_PREFIX = re.compile(r"(?<!\w)(?:в\s+комплекте|with(?:\s+(?:a|an))?)\s*[:—-]?\s*$", re.IGNORECASE)
-_BUNDLE_SUFFIX = re.compile(r"\s*(?:[:—-]\s*)?в\s+комплекте(?!\w)", re.IGNORECASE)
-
-# Complete an adjective-only accessory head or a known functional noun phrase.
-# These are lexical categories, not product-title or query exceptions.
-_BUNDLE_NOUN_COMPLEMENTS = {
-    "зарядное": ("устройство", "приспособление"),
-    "кабель": ("питания",),
-    "адаптер": ("питания",),
-}
-_BUNDLE_PHRASE_WORD = re.compile(r"[^\S\r\n]+(?P<word>\w+(?:-\w+)*)(?![\w-])")
-_BUNDLE_PHRASE_PREFIX_WORD = re.compile(r"(?<![\w-])(?P<word>\w+(?:-\w+)*)[^\S\r\n]+\Z")
-_BUNDLE_MODIFIER = re.compile(
-    r"(?:(?:силиконов|кожан|пластиков|резинов|металлическ|нейлонов|тканев|"
-    r"прозрачн|защитн|сетев|беспроводн|оригинальн|универсальн|компактн|"
-    r"магнитн|черн|чёрн|бел|красн|син|зелён|зелен|сер)"
-    r"(?:ый|ий|ой|ая|яя|ое|ее|ые|ие)|"
-    r"usb(?:-[abc])?|type-[abc]|micro-usb|hdmi|lightning|displayport|thunderbolt|"
-    r"silicone|leather|plastic|rubber|metal|nylon|transparent|protective|"
-    r"wireless|original|universal|compact|magnetic|black|white|red|blue|green|grey)",
-    re.IGNORECASE,
-)
-
-
-def _has_bundle_phrase_prefix(text: str, match: re.Match[str], pattern: re.Pattern[str]) -> bool:
-    """R-COMPARE-BUNDLE-NOUN-PHRASES: admit at most three preceding modifiers.
-
-    Walk backwards from this accessory only through adjacent recognized words,
-    then require the original explicit bundle cue. Unknown words, punctuation,
-    relation words and another accessory cannot connect it to an earlier cue.
-    """
-    position = match.start()
-    for _ in range(3):
-        word_match = _BUNDLE_PHRASE_PREFIX_WORD.search(text, 0, position)
-        if word_match is None or pattern.match(text, word_match.start("word")):
-            return False
-        if not _BUNDLE_MODIFIER.fullmatch(word_match.group("word")):
-            return False
-        position = word_match.start("word")
-        if _BUNDLE_PREFIX.search(text, 0, position):
-            return True
-    return False
-
-
-def _has_bundle_phrase_suffix(text: str, match: re.Match[str], pattern: re.Pattern[str]) -> bool:
-    """R-COMPARE-BUNDLE-NOUN-PHRASES: admit at most three known phrase words.
-
-    A noun complement belongs to its accessory head and can occur only once.
-    Unknown words, punctuation, relation words and another accessory stop the
-    extension; they must not borrow a later clause's 'в комплекте'.
-    """
-    position = match.end()
-    noun_complements = _BUNDLE_NOUN_COMPLEMENTS.get(match.group().casefold(), ())
-    for _ in range(3):
-        word_match = _BUNDLE_PHRASE_WORD.match(text, position)
-        if word_match is None or pattern.match(text, word_match.start("word")):
-            return False
-        word = word_match.group("word").casefold()
-        if word in noun_complements:
-            noun_complements = ()
-        elif not _BUNDLE_MODIFIER.fullmatch(word):
-            return False
-        position = word_match.end()
-        if _BUNDLE_SUFFIX.match(text, position):
-            return True
-    return False
-
-
-def _positive_marker_text(text: str, pattern: re.Pattern[str], *, bundles: bool) -> str:
-    """Mask only explicitly negated or locally bundled marker occurrences.
-
-    Longer phrases match first, so a bundled 'защитное стекло' also masks its
-    nested 'стекло'. Another positive marker in the same title stays evidence.
-    """
-
-    def replace(match: re.Match[str]) -> str:
-        negated = _NEGATION_PREFIX.search(text, 0, match.start())
-        bundled = bundles and (
-            _BUNDLE_PREFIX.search(text, 0, match.start())
-            or _has_bundle_phrase_prefix(text, match, pattern)
-            or _BUNDLE_SUFFIX.match(text, match.end())
-            or _has_bundle_phrase_suffix(text, match, pattern)
-        )
-        return " " * len(match.group()) if negated or bundled else match.group()
-
-    return pattern.sub(replace, text)
-
-
-# START_CONTRACT: _has_unrequested_marker
-# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES: detect positive unrequested markers.
-# INPUTS: Untrusted title/query, fixed markers; accessory bundles admit up to three known prefix modifiers or suffix noun/modifier words.
-# OUTPUTS: True only when an unmasked title marker is absent from the equally checked query.
-# SIDE_EFFECTS: None; no source I/O, title exceptions or ranking mutations.
-def _has_unrequested_marker(title: str, query: str, markers: tuple[str, ...], *, bundles: bool = False) -> bool:
-    pattern = _marker_pattern(markers)
-    title = _positive_marker_text(title, pattern, bundles=bundles)
-    query = _positive_marker_text(query, pattern, bundles=bundles)
-    for marker in markers:
-        word_pattern = _marker_pattern((marker,))
-        if word_pattern.search(title) and not word_pattern.search(query):
-            return True
-    return False
-
-
-# END_CONTRACT: _has_unrequested_marker
-
-
-def _looks_like_another_condition(title: str, query: str) -> bool:
-    """Detect an unrequested used/refurbished/display condition on word boundaries.
-
-    Direct 'не'/'not' negation is not condition evidence, including in a query:
-    asking for 'не б/у' must not make a genuinely used listing comparable.
-    """
-    return _has_unrequested_marker(title, query, _CONDITION_MARKERS)
-
-
-def _looks_like_an_accessory(title: str, query: str) -> bool:
-    """Detect an unrequested accessory, not a substring or an explicit bundle.
-
-    'with [a/an] <accessory>', 'в комплекте: <accessory>' and '<accessory> в
-    комплекте' describe a bundled accessory, not the listing itself. Up to three
-    known modifiers may follow a bundle prefix; up to three known noun complements
-    and modifiers may precede the bundle suffix. The extensions stop at punctuation,
-    unknown words and other accessories; direct cue separators remain allowed.
-    These rules also apply to queries, without exempting whole titles or treating
-    a bundled accessory as a standalone-accessory request.
-    """
-    return _has_unrequested_marker(title, query, _ACCESSORY_MARKERS, bundles=True)
-
-
-def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: frozenset[str]) -> str:
-    """One warning per call, not per offer: every warning costs the agent tokens."""
-    verb = "offer states" if count == 1 else "offers state"
-    sizes = format_size_tokens({size for group in stated for size in group})
-    return f"identity_mismatch: {count} {verb} {sizes}, query asks {format_size_tokens(asked)}; not comparable"
-
-
-def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
-    """Flag a cheapest offer that probably answers a different question.
-
-    Warnings never remove an offer or change raw cheapest. The same bounded
-    accessory/condition checks steer cheapest_comparable; an explicit bundle or
-    negation is not positive evidence. The median check only warns, because an
-    uncalibrated price threshold must never hide a real bargain.
-    """
-    if not priced:
-        return []
-    warnings: list[str] = []
-    cheapest = priced[0]
-
-    if _looks_like_an_accessory(cheapest.title, query):
-        warnings.append(
-            f"relevance: the cheapest offer ({cheapest.source}, {cheapest.price_rub} ₽) is titled "
-            f"{cheapest.title[:60]!r}, which reads as an accessory rather than {query!r} itself — verify before quoting it"
-        )
-
-    if _looks_like_another_condition(cheapest.title, query):
-        warnings.append(
-            f"condition: the cheapest offer ({cheapest.source}, {cheapest.price_rub} ₽) is titled "
-            f"{cheapest.title[:60]!r} — that is a used, refurbished or display unit, so it is not "
-            f"comparable with new goods from the other marketplaces"
-        )
-
-    # A price far under the middle of the pack is usually a different product,
-    # a different configuration or a grey import. Half the median is
-    # conservative on purpose: normal cross-marketplace spread does not reach it.
-    if len(priced) >= 3:
-        prices = sorted(offer.price_rub or 0.0 for offer in priced)
-        median = prices[len(prices) // 2]
-        low = cheapest.price_rub or 0.0
-        if median > 0 and low < median * 0.5:
-            warnings.append(
-                f"price_outlier: the cheapest offer is {low} ₽ against a median of {median} ₽ across "
-                f"{len(priced)} offers — check it is the same product and configuration"
-            )
-    return warnings
-
-
-# END_BLOCK_RELEVANCE_POLICY
-
-
-# START_BLOCK_PRICE_POLICY
-def _ranks_in_rubles(offer: MarketOffer) -> bool:
-    """Whether an offer may enter the cheapest-in-rubles ranking.
-
-    R-COMPARE-CONDITIONAL-PRICE: an explicitly conditional price never ranks,
-    even if an adapter fills price_rub with it. Unmarked source prices retain
-    their existing treatment; no missing price or foreign currency may rank.
-    """
-    return offer.price_rub is not None and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
-
-
-def _conditional_price_warning(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
-    """Name the excluded amount, not the offer whose everyday price may still rank."""
-    condition = kind
-    if kind == "wallet":
-        condition = "WB Wallet"
-    elif kind == "subscription":
-        condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
-    return (
-        f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
-        f"requires {condition}; not ranked"
-    )
-
-
-# END_BLOCK_PRICE_POLICY
 
 
 def _wb_product_url(nm_id: object) -> str:
@@ -1168,125 +878,15 @@ async def compare_prices(
 
     results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
 
-    outcomes = [outcome for outcome, _ in results]
-    offers: list[MarketOffer] = _dedupe(offer for _, source_offers in results for offer in source_offers)
-
-    for name in missing:
-        outcomes.append(
-            SourceOutcome(
-                source=name,
-                status="not_installed",
-                detail="connector package is not installed in this environment",
-            )
-        )
-
-    # Rank on everyday ruble prices only. The currency check is explicit rather
-    # than implied by price_rub being None: an adapter that starts populating
-    # price_rub from a foreign-currency field should fail this filter, not
-    # quietly win the comparison.
-    priced_all = [offer for offer in offers if _ranks_in_rubles(offer)]
-    priced = sorted(
-        (offer for offer in priced_all if not in_stock_only or offer.in_stock is True),
-        key=lambda offer: offer.price_rub or 0.0,
-    )
-    # Unpriced offers keep their place at the end rather than being dropped:
-    # "found, but not priced in rubles" is information, and for Taobao the yuan
-    # price still rides along in price_native.
-    unpriced = [
-        offer for offer in offers if not _ranks_in_rubles(offer) or (in_stock_only and offer.in_stock is not True)
-    ]
-    ranked = priced + unpriced
-    foreign = [offer for offer in offers if offer.currency != "rub"]
-
-    ok_sources = [outcome.source for outcome in outcomes if outcome.status == "ok"]
-    failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
-
-    cheapest = priced[0] if priced else None
-    # A size the query states and the title contradicts is explicit text, not a
-    # heuristic, so it keeps the offer out of the like-for-like candidate rather
-    # than merely warning about it. The offer keeps its rank and may remain
-    # plain cheapest; only cheapest_comparable skips it.
-    query_sizes = extract_size_tokens(text)
-    comparable: list[MarketOffer] = []
-    size_excluded: list[frozenset[str]] = []
-    for offer in priced:
-        if _looks_like_an_accessory(offer.title, text) or _looks_like_another_condition(offer.title, text):
-            continue
-        title_sizes = extract_size_tokens(offer.title)
-        if sizes_conflict(query_sizes, title_sizes):
-            size_excluded.append(title_sizes)
-            continue
-        comparable.append(offer)
-    cheapest_comparable = comparable[0] if comparable else None
-    price_spread = None
-    if len(priced) >= 2:
-        low, high = priced[0].price_rub, priced[-1].price_rub
-        if low and high:
-            price_spread = round(high - low, 2)
-
-    warnings: list[str] = []
-    if failed_sources:
-        warnings.append(
-            f"partial: {len(failed_sources)} of {len(outcomes)} marketplaces did not answer "
-            f"({', '.join(failed_sources)}) — prices below cover only {', '.join(ok_sources) or 'none'}"
-        )
-    if not priced:
-        warnings.append("no_prices: no marketplace returned a usable price for this query")
-    if in_stock_only:
-        excluded = len(priced_all) - len(priced)
-        if excluded:
-            warnings.append(f"stock_filter: excluded {excluded} priced offer(s) without confirmed stock")
-        if not priced_all:
-            warnings.append("stock_filter: no priced offers were returned")
-    for outcome in outcomes:
-        warnings.extend(f"source_warning:{outcome.source}: {warning}" for warning in outcome.warnings)
-    # Only an offer left out of the ranking is named here; a Plus amount beside a
-    # ranked everyday price already sits in price_with_subscription_rub, and a
-    # warning per such offer would bill the agent twice for the same number.
-    for offer in offers:
-        kind, native = offer.price_kind, offer.price_native
-        if kind and kind != "regular" and native is not None:
-            warnings.append(_conditional_price_warning(offer.source, offer.product_id, native, kind, offer.currency))
-    warnings.extend(_relevance_warnings(text, priced))
-    if size_excluded:
-        warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
-    if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
-        warnings.append(
-            "comparable_price: the raw cheapest listing is an accessory, a different condition or a different "
-            "variant; cheapest_comparable is the safer like-for-like candidate"
-        )
-    elif cheapest is not None and cheapest_comparable is None:
-        warnings.append(
-            "comparable_price: every priced listing looks like an accessory, a different condition "
-            "or a different variant"
-        )
-    if foreign:
-        currencies = ", ".join(sorted({offer.currency for offer in foreign}))
-        warnings.append(
-            f"foreign_currency: {len(foreign)} offer(s) are priced in {currencies}, not roubles — "
-            f"their price is in price_native and they are excluded from the ranking and from cheapest"
-        )
-
-    log_event(
-        "compare_prices.done",
-        query=text,
-        offers=len(ranked),
-        ok_sources=len(ok_sources),
-        failed=len(failed_sources),
-    )
-    return CompareResponse(
-        query=text,
-        sources_queried=active,
-        sources_ok=ok_sources,
-        complete=not failed_sources,
-        total_offers=len(ranked),
-        cheapest=cheapest,
-        cheapest_comparable=cheapest_comparable,
-        price_spread_rub=price_spread,
-        offers=ranked,
-        source_outcomes=outcomes,
-        warnings=warnings,
-        server_version=SERVER_VERSION,
+    return build_response(
+        text,
+        results,
+        ResponseOptions(
+            active=active,
+            missing=missing,
+            in_stock_only=in_stock_only,
+            server_version=SERVER_VERSION,
+        ),
     )
 
 

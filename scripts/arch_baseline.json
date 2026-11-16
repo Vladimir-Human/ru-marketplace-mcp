@@ -1,7 +1,7 @@
 {
   "files": {
     "packages/avito-connector/src/avito_connector/server.py": 1700,
-    "packages/compare-connector/src/compare_connector/server.py": 1677,
+    "packages/compare-connector/src/compare_connector/server.py": 1280,
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
     "packages/ozon-connector/src/ozon_connector/server.py": 1797,
@@ -10,7 +10,7 @@
   "functions": {
     "packages/aliexpress-connector/src/aliexpress_connector/server.py::_aliexpress_selfcheck_impl": 174,
     "packages/cian-connector/src/cian_connector/server.py::cian_search": 161,
-    "packages/compare-connector/src/compare_connector/server.py::compare_prices": 208,
+    "packages/compare-connector/src/compare_connector/server.py::compare_prices": 110,
     "packages/marketplace-connector/src/marketplace_connector/cli.py::cmd_setup": 191,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py::_raw_owned_popup": 181,
     "packages/ozon-connector/src/ozon_connector/server.py::_ozon_reviews_impl": 243,
@@ -22,5 +22,7 @@
     "packages/yandex-connector/src/yandex_connector/server.py::yandex_selfcheck": 157,
     "packages/yandex-connector/src/yandex_connector/ssr.py::parse_search": 233
   },
-  "pure": []
+  "pure": [
+    "packages/compare-connector/src/compare_connector/decide.py"
+  ]
 }
