@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 from mcp_core.errors import ErrorCode, ToolError
-from mcp_core.kit import blocked_error, host_checked_id, polite_wait, render_json, sync_curl_get
+from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, polite_wait, render_json, sync_curl_get
 from mcp_core.pacing import Pacer
 
 _PRODUCT_ID_RE = re.compile(r"/product/([A-Za-z0-9_-]+)")
@@ -389,3 +389,20 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
     error = json.loads(str(excinfo.value))
     assert error["error"] == ErrorCode.PARSER_DRIFT
     assert error["message"] == "page extractor returned non-JSON data"
+
+
+@pytest.mark.req("R-CIAN-CARD-TRUTH")
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://www.cian.ru/xpvnsulc/?back_location=https%3A%2F%2Fwww.cian.ru%2Fsale%2Fflat%2F1%2F", True),
+        ("https://megamarket.ru/xpvnsulc/?back_location=https%3A%2F%2Fmegamarket.ru%2F&hcheck=1", True),
+        ("https://www.lamoda.ru/xpvnsulc/", True),
+        ("https://www.cian.ru/rent/flat/1/", False),
+        ("https://www.cian.ru/rent/flat/1/?from=%2Fxpvnsulc%2F", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_on_bot_check_page_reads_only_the_path(url, expected):
+    assert on_bot_check_page(url) is expected

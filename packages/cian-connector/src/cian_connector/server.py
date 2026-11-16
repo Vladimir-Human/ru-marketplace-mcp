@@ -56,13 +56,14 @@ from mcp_core import resilience as R
 from mcp_core.cache import TTLCache
 from mcp_core.errors import (
     BadRequestError,
+    ChallengeRequiredError,
     NotFoundError,
     ParserDriftError,
     TransportDownError,
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, polite_wait
+from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -211,7 +212,9 @@ _JS_POST = """async (args) => {
 _JS_CARD_CONFIG = """(args) => {
     const title = document.title || '';
     const url = location.href;
-    if (/не найден|удален|удалён|снят/i.test(title)) {
+    // Whole words only: every rent title starts with 'Снять', which a bare
+    // /снят/ took for 'removed' (live 2026-11-16).
+    if (/не найден|(^|[^а-яё])(удал[её]н[оа]?|снят[оа]?)(?![а-яё])/i.test(title)) {
         return JSON.stringify({kind: 'not_found', title, url});
     }
     const cfg = window._cianConfig;
@@ -935,6 +938,15 @@ async def cian_card(
             raise_tool_error(ParserDriftError("card state is not a JSON object"))
         kind = envelope.get("kind")
         title = _s(envelope.get("title")) or ""
+        if kind != "ok" and on_bot_check_page(envelope.get("url")):
+            # The offer page sent the browser to Cian's bot check; no card state
+            # exists there, so this is a human step, not parser drift.
+            raise_tool_error(
+                ChallengeRequiredError(
+                    f"Cian sent offer {offer_id} to its bot check (a picture slider).",
+                    provider="cian",
+                )
+            )
         if kind == "not_found":
             raise_tool_error(NotFoundError(f"Cian reports offer {offer_id} as removed: {title[:80]}"))
         if kind == "too_big":

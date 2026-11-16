@@ -33,6 +33,7 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
 # blocked_error: Build the refusal error, with the operator's rotation hint and a bounded detail.
 # host_checked_id: Extract an id from a URL only when its host is ours; bare ids pass.
+# on_bot_check_page: Tell whether a page URL is the shared anti-bot check (/xpvnsulc/).
 # sync_curl_get: Tier-1 GET whose streamed body is capped and decoded.
 # render_json: Open a page over CDP under the connector's lock, run an extractor, parse its JSON.
 # END_MODULE_MAP
@@ -83,6 +84,24 @@ def blocked_error(message: str, *, pacer: Pacer, detail: str = "", status_code: 
     if detail:
         message += f" Detail: {detail[:160]}"
     return TransportDownError(message, status_code=status_code)
+
+
+# Lamoda, Megamarket and Cian put their anti-bot check (a picture slider a human
+# passes) under this path and keep the wanted page in `back_location`. Seen live on
+# all three; on Cian and Megamarket on 2026-11-16 (P0-2).
+BOT_CHECK_PATH = "/xpvnsulc/"
+
+
+def on_bot_check_page(url: object) -> bool:
+    """Whether ``url`` is the shared anti-bot check page rather than the page asked for.
+
+    Path-based on purpose: the wanted URL rides along percent-encoded in the
+    query, so only the path says where the browser actually is. Each source
+    navigates its own hosts only, so the host is the caller's concern.
+    """
+    if not isinstance(url, str) or not url:
+        return False
+    return urllib.parse.urlsplit(url).path.startswith(BOT_CHECK_PATH)
 
 
 def host_checked_id(
