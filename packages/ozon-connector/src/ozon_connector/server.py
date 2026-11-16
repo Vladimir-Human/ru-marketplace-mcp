@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -28,7 +28,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # _parse_widgets: Normalize card widget fields without inventing missing prices.
 # _safe_review_page_path: Rebuild pagination from validated review components.
 # _coerce_review_item_id: Normalize positive int or ASCII decimal-string review itemId to int.
-# _parse_review_item: Normalize review text, score, author and variant item_id.
+# _parse_review_item: Normalize review text, score and variant item_id without author identity.
 # _parse_search_tile: Preserve identity/stock; coerce RUB prices, rating and count with raw-value warnings.
 # ozon_card: Read a validated SKU/product path with a required widgetStates object.
 # ozon_reviews: Raise on first-page widgetStates drift; later-page failures return partial data;
@@ -803,12 +803,10 @@ def _parse_review_item(r: dict) -> dict[str, Any]:
     (comment as {'text': ...}) must not crash the whole tool (audit 2026-06-01
     CONFIRMED: dict comment raised KeyError on [:1500])."""
     content = r.get("content")
-    author = r.get("author")
     usefulness = r.get("usefulness")
     # nested objects may drift to non-dict (list/str/null); coerce so a single
     # drifted review can't crash the whole tool (audit wave-2 DRIFT).
     content = content if isinstance(content, dict) else {}
-    author = author if isinstance(author, dict) else {}
     usefulness = usefulness if isinstance(usefulness, dict) else {}
 
     def _text(v: object) -> str:
@@ -820,13 +818,6 @@ def _parse_review_item(r: dict) -> dict[str, Any]:
                 return inner
         return ""
 
-    # firstName/lastName may drift to a non-string (rich-text object/null) — a
-    # single such review must not crash the tool (audit wave-2 round-2 DRIFT).
-    fn = author.get("firstName")
-    ln = author.get("lastName")
-    name = (fn if isinstance(fn, str) else "").strip()
-    if isinstance(ln, str) and ln:
-        name = f"{name} {ln}".strip()
     photos = content.get("photos")
     return {
         "score": content.get("score"),
@@ -835,7 +826,6 @@ def _parse_review_item(r: dict) -> dict[str, Any]:
         "negative": _text(content.get("negative"))[:500],
         "useful": usefulness.get("useful"),
         "photos": len(photos) if isinstance(photos, list) else 0,
-        "author": name[:60],
         "date": _ts_to_iso(r.get("publishedAt") or r.get("createdAt")),
         # Ozon serves ONE review pool per card family, so a review here may well
         # describe a different variant — in practice often a different brand.
@@ -886,7 +876,7 @@ async def ozon_reviews(
 
     Tier-1 (curl_cffi) tried first, Tier-2 (Chrome CDP) fallback — same path
     as ozon_card. Returns review texts (comment/positive/negative), per-review
-    score, helpfulness votes, author first name, date, plus the overall star
+    score, helpfulness votes, date, plus the overall star
     distribution and total count.
 
     Pages are walked automatically (30/page) until `limit` texts are collected

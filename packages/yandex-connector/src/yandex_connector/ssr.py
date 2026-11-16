@@ -53,6 +53,17 @@ anonymous page, 19 in a hydrated browser DOM), and ``parse_search`` uses it
 whenever the collections are missing — before the thinner schema.org fallback.
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Parse Yandex SSR product/card data without review author identity.
+# SCOPE: Pure fixture-tested state extraction; retain product, shop, price and review facts.
+# DEPENDS: stdlib html,json,math,re,typing; mcp_core.resilience.
+# LINKS: M-YANDEX; R-NO-PERSONAL-DATA.removed.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# parse_search/parse_card: Extract native product rows and cards.
+# parse_reviews: Extract review content, ratings, dates, votes and photos, never author names.
+# END_MODULE_MAP
+
 from __future__ import annotations
 
 import html as _html
@@ -922,6 +933,7 @@ def _stars_from_distribution(distribution: Any) -> dict[int, int]:
     return out
 
 
+# START_BLOCK_REVIEW_PARSING
 def parse_reviews(merged: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract the reviews embedded in a product page's state.
 
@@ -944,7 +956,6 @@ def parse_reviews(merged: dict[str, Any]) -> list[dict[str, Any]]:
                 date = str(descriptor["content"])
                 break
         votes = _as_dict(raw.get("votes"))
-        author = _as_dict(raw.get("author"))
         photos = [
             url
             for item in (raw.get("media") or [])
@@ -952,7 +963,6 @@ def parse_reviews(merged: dict[str, Any]) -> list[dict[str, Any]]:
         ]
         out.append(
             {
-                "author": str(author.get("nickname") or ""),
                 "rating": _to_int(raw.get("rating")),
                 "date": date,
                 "pros": str(raw.get("pro") or ""),
@@ -964,6 +974,9 @@ def parse_reviews(merged: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+# END_BLOCK_REVIEW_PARSING
 
 
 def parse_card(html: str) -> dict[str, Any]:

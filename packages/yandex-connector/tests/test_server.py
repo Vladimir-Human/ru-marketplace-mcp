@@ -238,6 +238,7 @@ async def test_search_rejects_too_short_queries(monkeypatch, bad_query):
 # -------------------------------------------------------------------- card ----
 
 
+@pytest.mark.req("R-NO-PERSONAL-DATA.removed")
 async def test_card_returns_prices_rating_breakdown_and_reviews(monkeypatch):
     stub_html(monkeypatch, {"/card/x/763970960": load("card_washer.html")})
 
@@ -249,7 +250,7 @@ async def test_card_returns_prices_rating_breakdown_and_reviews(monkeypatch):
     assert card.rating == 4.8
     assert card.rating_stars == {1: 10, 2: 3, 3: 10, 4: 19, 5: 502}
     assert card.reviews
-    assert card.reviews[0].author
+    assert all("author" not in review.model_dump() for review in card.reviews)
 
 
 async def test_card_can_skip_reviews(monkeypatch):

@@ -7,9 +7,9 @@ reported separately.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Describe Yandex outputs and qualify the shown discount without claiming verified price history.
-# SCOPE: Schema descriptions only; preserve separate everyday/subscription prices and all public field types.
+# SCOPE: Remove review author identity; preserve separate everyday/subscription prices and other public field types.
 # DEPENDS: mcp_core.models/sources; Pydantic; stdlib typing.
-# LINKS: M-YANDEX; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# LINKS: R-NO-PERSONAL-DATA; M-YANDEX; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # YandexProduct/YandexSearchResponse: Describe native search offers and distinct price roles.
@@ -110,7 +110,6 @@ class YandexSearchResponse(BaseModel):
 class YandexReview(BaseModel):
     """One buyer review, as server-rendered on a product page."""
 
-    author: str = Field(default="", description="Reviewer display name.")
     rating: int | None = Field(default=None, description="Star rating the reviewer gave, 1..5.")
     date: str = Field(default="", description="Human-readable date as displayed (e.g. '20 июля').")
     pros: str = Field(default="", description="What the reviewer liked.")

@@ -17,7 +17,19 @@ fix: ``price_old_rub`` went from always-null (the parser never located the
 strike-through) to float on both search captures.
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Pin fixture-measured Yandex search/card shapes without review author identity.
+# SCOPE: Pure shape constants; no runtime I/O.
+# DEPENDS: None; generated from ssr parsers and mcp_core.resilience.shape_signature.
+# LINKS: M-YANDEX; R-NO-PERSONAL-DATA.removed.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# SEARCH_SHAPE_REFERENCE/CARD_SHAPE_REFERENCE: Fixture-measured parser output paths and types.
+# END_MODULE_MAP
+
 from __future__ import annotations
+
+# START_BLOCK_SHAPE_REFERENCES
 
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "has_next_page:bool",
@@ -63,7 +75,6 @@ CARD_SHAPE_REFERENCE: tuple[str, ...] = (
     "rating_stars.4:int",
     "rating_stars.5:int",
     "review_count:int",
-    "reviews[].author:str",
     "reviews[].comment:str",
     "reviews[].cons:str",
     "reviews[].date:str",
@@ -78,3 +89,5 @@ CARD_SHAPE_REFERENCE: tuple[str, ...] = (
     "status:str",
     "title:str",
 )
+
+# END_BLOCK_SHAPE_REFERENCES

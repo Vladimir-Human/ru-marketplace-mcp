@@ -8,7 +8,7 @@ writes, and serializes back to ``meta`` on the wire.
 # PURPOSE: Describe Avito outputs and distinguish shown sale references from verified price history.
 # SCOPE: Schema descriptions only; preserve field types, defaults, aliases and computed-percent meaning.
 # DEPENDS: mcp_core.models/sources; Pydantic; stdlib typing.
-# LINKS: M-AVITO; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# LINKS: R-NO-PERSONAL-DATA; M-AVITO; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # AvitoSearchItemOut/AvitoSearchResponse: Describe listings, availability and shown sale fields.
@@ -50,7 +50,9 @@ class AvitoSearchItemOut(BaseModel):
     )
     url: str | None = Field(default=None, description="Canonical avito.ru listing URL.")
     location: str | None = Field(default=None, description="Seller location string.")
-    seller_name: str | None = Field(default=None, description="Seller display name.")
+    seller_name: str | None = Field(
+        default=None, description="Company or /brands/ shop display name; None for private or unknown sellers."
+    )
     seller_id: str | None = Field(default=None, description="Seller/user id when present.")
     is_company: bool | None = Field(default=None, description="Whether the seller is a company profile.")
     posted_at: str | None = Field(default=None, description="Publication time as reported by Avito.")
@@ -86,7 +88,9 @@ class AvitoSearchResponse(BaseModel):
 
 
 class AvitoSellerOut(BaseModel):
-    name: str | None = Field(default=None, description="Seller display name.")
+    name: str | None = Field(
+        default=None, description="Company or /brands/ shop display name; None for private or unknown sellers."
+    )
     seller_id: str | None = Field(default=None, description="Seller/user id when present.")
     is_company: bool | None = Field(default=None, description="Whether this is a company profile.")
     rating_score: float | None = Field(default=None, description="Seller rating score.")

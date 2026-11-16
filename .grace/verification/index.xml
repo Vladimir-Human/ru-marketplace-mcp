@@ -634,6 +634,17 @@
     <test file="packages/ozon-connector/tests/test_server.py" name="test_fetch_composer_redacts_a_tier1_exception_in_the_stderr_log" requirements="R-NO-MCP-LOGGING.diagnostics" title="Tier-1 diagnostics use redacted stdlib stderr logging, even without Context." />
   </requirement>
   <requirement id="R-NO-MCP-RETRY-MIDDLEWARE" kind="requirement" state="gap" gaps="G-NO-MCP-RETRY-MIDDLEWARE-UNTESTED" />
+  <requirement id="R-NO-PERSONAL-DATA" kind="requirement" state="tested">
+    <test file="packages/avito-connector/tests/test_name_privacy.py" name="test_public_avito_names" requirements="R-NO-PERSONAL-DATA.avito" />
+    <test file="packages/avito-connector/tests/test_name_privacy.py" name="test_seller_block_uses_native_company_hint_when_label_is_absent" requirements="R-NO-PERSONAL-DATA.avito" />
+    <test file="packages/avito-connector/tests/test_name_privacy.py" name="test_seller_name_rule" requirements="R-NO-PERSONAL-DATA.avito" />
+    <test file="packages/cian-connector/tests/test_name_privacy.py" name="test_public_cian_names" requirements="R-NO-PERSONAL-DATA.cian" />
+    <test file="packages/cian-connector/tests/test_name_privacy.py" name="test_publisher_name_rule" requirements="R-NO-PERSONAL-DATA.cian" />
+    <test file="packages/marketplace-connector/tests/conformance/test_no_personal_data.py" name="test_every_output_schema_excludes_personal_fields" requirements="R-NO-PERSONAL-DATA.conformance" />
+    <test file="packages/ozon-connector/tests/test_server.py" name="test_public_reviews_omit_author" requirements="R-NO-PERSONAL-DATA.removed" />
+    <test file="packages/wb-connector/tests/test_name_privacy.py" name="test_public_wb_omits_user" requirements="R-NO-PERSONAL-DATA.removed" />
+    <test file="packages/yandex-connector/tests/test_server.py" name="test_card_returns_prices_rating_breakdown_and_reviews" requirements="R-NO-PERSONAL-DATA.removed" />
+  </requirement>
   <requirement id="R-OFFLINE" kind="rule" state="gap" gaps="G-OFFLINE-UNTESTED" />
   <requirement id="R-OLD-BUILD-INFO" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_old_build_info.py" name="test_doctor_prints_age_info_as_its_first_row_only_for_an_old_build" requirements="R-OLD-BUILD-INFO" />

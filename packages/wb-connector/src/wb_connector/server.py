@@ -27,7 +27,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: R-NO-MCP-LOGGING; R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -650,7 +650,7 @@ def _decode_mojibake(s: object) -> str:
     Accepts ANY type and returns a str: a drifted/null field (text=None, or a
     rich-text dict) must not crash the downstream [:1500] slice — this helper is
     the single chokepoint every WB text field flows through (audit wave-2 DRIFT:
-    text/pros/cons/user=None raised 'NoneType not subscriptable')."""
+    text/pros/cons=None raised 'NoneType not subscriptable')."""
     if not isinstance(s, str):
         return ""
     if not s:
@@ -1378,15 +1378,12 @@ async def wb_reviews(
 
             feedbacks: list[dict[str, Any]] = []
             for f in pool[:limit]:
-                ud = f.get("wbUserDetails")
-                uname = ud.get("name", "") if isinstance(ud, dict) else ""
                 feedbacks.append(
                     {
                         "rating": f.get("productValuation"),
                         "text": _decode_mojibake(f.get("text", ""))[:1500],
                         "pros": _decode_mojibake(f.get("pros", ""))[:500],
                         "cons": _decode_mojibake(f.get("cons", ""))[:500],
-                        "user": _decode_mojibake(uname)[:60],
                         "date": f.get("createdDate"),
                     }
                 )
@@ -1578,14 +1575,11 @@ async def wb_questions(
                 answer_text = _normalise_ws(_decode_mojibake(answer.get("text")))
                 if answered_only and not answer_text:
                     continue
-                user_details = raw.get("wbUserDetails")
-                user_name = user_details.get("name", "") if isinstance(user_details, dict) else ""
                 collected.append(
                     {
                         "question_id": str(raw.get("id") or ""),
                         "text": _normalise_ws(_decode_mojibake(raw.get("text")))[:1500],
                         "date": raw.get("createdDate"),
-                        "user": _decode_mojibake(user_name)[:60],
                         "answered": bool(answer_text),
                         "answer_text": answer_text[:1500],
                         "answer_date": answer.get("createDate"),

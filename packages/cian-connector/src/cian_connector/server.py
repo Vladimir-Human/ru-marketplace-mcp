@@ -30,7 +30,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA;
+# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA;
 #        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -86,6 +86,7 @@ from cian_connector.models_output import (
     CianSelfcheckResponse,
     MetaOut,
 )
+from cian_connector.privacy import public_publisher_name
 from cian_connector.settings import get_settings
 from cian_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
 
@@ -567,7 +568,7 @@ def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
         "metro": metro,
         "newbuilding_name": _s(newbuilding.get("name")),
         "url": _clean_url(offer.get("fullUrl")),
-        "agency_name": _s(R.first_present(user, "agencyName", "companyName")),
+        "agency_name": public_publisher_name(user, R.first_present(user, "agencyName", "companyName")),
         "seller_type": _s(user.get("userType")),
         "is_by_homeowner": _b(offer.get("isByHomeowner")),
         "created_at": _s(offer.get("creationDate")),
@@ -621,7 +622,7 @@ def _agent(offer_data: dict[str, Any], offer: dict[str, Any]) -> dict[str, Any] 
         if not user:
             return None
         return {
-            "name": _s(R.first_present(user, "agencyName", "companyName")),
+            "name": public_publisher_name(user, R.first_present(user, "agencyName", "companyName")),
             "agent_id": R.coerce_int(R.first_present(user, "cianUserId", "userId")),
             "account_type": _s(user.get("accountType")),
             "user_type": _s(user.get("userType")),
@@ -630,7 +631,7 @@ def _agent(offer_data: dict[str, Any], offer: dict[str, Any]) -> dict[str, Any] 
             "on_cian_since": None,
         }
     return {
-        "name": _s(R.first_present(agent, "name", "companyName")),
+        "name": public_publisher_name(agent, R.first_present(agent, "name", "companyName")),
         "agent_id": R.coerce_int(R.first_present(agent, "cianUserId", "id")),
         "account_type": _s(agent.get("accountType")),
         "user_type": _s(agent.get("userType")),

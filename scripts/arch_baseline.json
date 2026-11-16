@@ -1,11 +1,11 @@
 {
   "files": {
-    "packages/avito-connector/src/avito_connector/server.py": 1700,
+    "packages/avito-connector/src/avito_connector/server.py": 1696,
     "packages/compare-connector/src/compare_connector/server.py": 1280,
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
-    "packages/ozon-connector/src/ozon_connector/server.py": 1797,
-    "packages/wb-connector/src/wb_connector/server.py": 2754
+    "packages/ozon-connector/src/ozon_connector/server.py": 1787,
+    "packages/wb-connector/src/wb_connector/server.py": 2740
   },
   "functions": {
     "packages/aliexpress-connector/src/aliexpress_connector/server.py::_aliexpress_selfcheck_impl": 174,
@@ -16,8 +16,8 @@
     "packages/ozon-connector/src/ozon_connector/server.py::_ozon_reviews_impl": 243,
     "packages/ozon-connector/src/ozon_connector/server.py::_ozon_selfcheck_impl": 194,
     "packages/wb-connector/src/wb_connector/server.py::wb_category_products": 200,
-    "packages/wb-connector/src/wb_connector/server.py::wb_questions": 195,
-    "packages/wb-connector/src/wb_connector/server.py::wb_reviews": 161,
+    "packages/wb-connector/src/wb_connector/server.py::wb_questions": 191,
+    "packages/wb-connector/src/wb_connector/server.py::wb_reviews": 157,
     "packages/wb-connector/src/wb_connector/server.py::wb_search": 249,
     "packages/yandex-connector/src/yandex_connector/server.py::yandex_selfcheck": 157,
     "packages/yandex-connector/src/yandex_connector/ssr.py::parse_search": 233

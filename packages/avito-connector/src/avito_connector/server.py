@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -135,6 +135,7 @@ from avito_connector.models_output import (
     AvitoSellerResponse,
     MetaOut,
 )
+from avito_connector.privacy import public_seller_name
 from avito_connector.settings import get_settings
 from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
 
@@ -688,11 +689,13 @@ def _score_after_name(document: _SellerPageHTML, name_node: dict[str, Any] | Non
     return None
 
 
-def parse_item_seller(html: str) -> dict[str, Any]:
+def parse_item_seller(html: str, *, company_hint: bool | None = None) -> dict[str, Any]:
     """Read the item seller block; unknown fields are None, never fabricated 0.
 
-    Company status follows the explicit label, not the seller name or URL.
-    Profile links are Avito-only, absolute and stripped of query/fragment.
+    Company status follows the explicit label, not the seller name or URL; without a
+    label it is the page's own flag (``company_hint``). Profile links are Avito-only,
+    absolute and stripped of query/fragment. A private or unknown seller's name is
+    None; a company or /brands/ shop keeps it (R-NO-PERSONAL-DATA).
     """
     document = _SellerPageHTML()
     document.feed(html)
@@ -702,7 +705,7 @@ def parse_item_seller(html: str) -> dict[str, Any]:
     labels = [_seller_text(node) for node in document.nodes if node["attrs"].get("data-marker") == "seller-info/label"]
     label = next((lbl for lbl in labels if lbl), None)
     label_types = {lbl != "Частное лицо" for lbl in labels if lbl in ("Частное лицо", "Компания", "Магазин")}
-    is_company = False if False in label_types else (True if True in label_types else None)
+    is_company = False if False in label_types else (True if True in label_types else company_hint)
     rating_container = next(
         (node for node in document.nodes if "seller-info-rating" in (node["attrs"].get("class") or "").split()),
         None,
@@ -751,7 +754,7 @@ def parse_item_seller(html: str) -> dict[str, Any]:
     # model's own «N отзывов о модели», which must never become the seller's.
     review_text = _seller_text(rating_container) or _seller_text(document.marked("rating-caption/rating"))
     return {
-        "name": _seller_text(name_node),
+        "name": public_seller_name(_seller_text(name_node), is_company, profile_url),
         "rating_score": _seller_score(score_text) if block_present else None,
         "rating_count": _seller_review_count(review_text) if block_present else None,
         "is_company": is_company,
@@ -759,10 +762,12 @@ def parse_item_seller(html: str) -> dict[str, Any]:
     }
 
 
-def parse_seller_profile(html: str) -> dict[str, Any]:
+def parse_seller_profile(html: str, profile_url: str | None = None) -> dict[str, Any]:
     """Read profile title and reputation; no listing total is shown on this page.
 
-    Missing profiles raise NotFoundError; neither name nor score is parser drift.
+    Missing profiles raise NotFoundError; neither name nor score is parser drift. A
+    private or unknown seller's name is None; a company or /brands/ shop keeps it
+    (R-NO-PERSONAL-DATA).
     """
     document = _SellerPageHTML()
     document.feed(html)
@@ -777,7 +782,7 @@ def parse_seller_profile(html: str) -> dict[str, Any]:
     if name is None and score is None:
         raise ParserDriftError("avito_seller: profile page carries neither seller name nor rating score")
     return {
-        "name": name,
+        "name": public_seller_name(name, parse_item_seller(html)["is_company"], profile_url),
         "rating_score": score,
         "rating_count": _seller_review_count(_seller_text(document.marked("profile/summary"))),
     }
@@ -981,7 +986,8 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
             location = R.flatten_text(it.get("addressDetailed"), "locationName", "name") or R.flatten_text(
                 it.get("geo"), "formattedAddress", "name", "title"
             )
-        seller = it.get("seller") if isinstance(it.get("seller"), dict) else {}
+        seller_raw = it.get("seller")
+        seller = seller_raw if isinstance(seller_raw, dict) else {}
         images = it.get("images")
         images_count = (
             len(images)
@@ -998,9 +1004,11 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
                 "price_conflict": bool(price_conflict),
                 "url": uri or None,
                 "location": location,
-                "seller_name": R.first_present(seller, "name", "title")
-                if seller
-                else R.first_present(it, "sellerName"),
+                "seller_name": public_seller_name(
+                    R.first_present(seller, "name", "title") if seller else it.get("sellerName"),
+                    R.first_present(seller, "isCompany", "is_company"),
+                    R.flatten_text(R.first_present(seller, "profileUrl", "profile_url", "url", "uri")),
+                ),
                 "seller_id": str(R.first_present(seller if seller else {}, "id", "userId", "user_id", default="") or "")
                 or None,
                 "is_company": R.first_present(seller, "isCompany", "is_company") if seller else None,
@@ -1404,7 +1412,8 @@ async def avito_card(
             item = parse_item_page(body, item_id)
         except (ParserDriftError, NotFoundError) as exc:
             raise_tool_error(exc)
-        seller_data = parse_item_seller(body)
+        details = _state.card_details(body, item_id, item.get("description"))
+        seller_data = parse_item_seller(body, company_hint=details["is_company"])
         # The profile link ends in the id avito_seller accepts (/brands/<hash>,
         # /user/<hash>/profile), so the card hands it on rather than leaving it empty.
         profile_match = re.search(r"/(?:brands|user)/([0-9A-Za-z_-]+)", seller_data.get("profile_url") or "")
@@ -1414,7 +1423,7 @@ async def avito_card(
         )
         item["url"] = item["url"] or url
         item["availability"], item["availability_evidence"] = _state.card_availability(body, item_id)
-        _apply_details(item, _state.card_details(body, item_id, item.get("description")))
+        _apply_details(item, details)
         price_warnings = _apply_sale(item, *_state.card_sale_price(body, item_id))
         result = AvitoCardResponse(**item, tier_used="cdp")
         _pacer.record_success()
@@ -1481,7 +1490,7 @@ async def avito_seller(
         status, body, tier = await _fetch_item_page(url, ctx)
         _check_rendered_page(status, body, tier, "seller")
         try:
-            seller_data = parse_seller_profile(body)
+            seller_data = parse_seller_profile(body, url)
         except (ParserDriftError, NotFoundError) as exc:
             raise_tool_error(exc)
         seller = AvitoSellerOut(**seller_data, seller_id=seller_id, profile_url=url)

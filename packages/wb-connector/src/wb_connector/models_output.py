@@ -7,6 +7,16 @@ ToolError. Validation/transport/parse failures raise ``ToolError`` via
 ``raise_tool_error`` with a typed ``ConnectorError`` subclass.
 """
 
+# START_MODULE_CONTRACT
+# PURPOSE: Define WB public output models without private-person identity.
+# SCOPE: Product data, marketplace merchant identity and shared metadata.
+# DEPENDS: Pydantic; mcp_core.models.
+# LINKS: M-WB; R-NO-PERSONAL-DATA.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# Output models: Typed public responses; private names removed or nullable by parser rule.
+# END_MODULE_MAP
+
 from __future__ import annotations
 
 from typing import Any
@@ -15,6 +25,7 @@ from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBa
 from pydantic import BaseModel, Field
 
 
+# START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
     """WB carries the shared envelope unchanged."""
 
@@ -111,7 +122,6 @@ class WbReviewItem(BaseModel):
     text: str = Field(default="", description="Review text (mojibake-decoded, max 1500 chars).")
     pros: str = Field(default="", description="Pros text (mojibake-decoded, max 500 chars).")
     cons: str = Field(default="", description="Cons text (mojibake-decoded, max 500 chars).")
-    user: str = Field(default="", description="Reviewer name (mojibake-decoded, max 60 chars).")
     date: str | None = Field(default=None, description="Review created date.")
 
 
@@ -133,7 +143,6 @@ class WbQuestionItem(BaseModel):
     question_id: str = Field(default="", description="WB question id.")
     text: str = Field(default="", description="The buyer's question (mojibake-decoded, max 1500 chars).")
     date: str | None = Field(default=None, description="When the question was asked (UTC ISO-8601).")
-    user: str = Field(default="", description="Asker's display name (mojibake-decoded, max 60 chars).")
     answered: bool = Field(default=False, description="Whether a non-empty seller answer is present.")
     answer_text: str = Field(default="", description="Seller's answer (mojibake-decoded, max 1500 chars).")
     answer_date: str | None = Field(default=None, description="When the seller answered (UTC ISO-8601).")
@@ -267,3 +276,6 @@ class WbCategoriesResponse(BaseModel):
     items: list[WbCategoryNode] = Field(default_factory=list, description="Category nodes at the requested root.")
     host_used: str = Field(default="", description="Static CDN host that served the menu.")
     meta: MetaOut = Field(default_factory=MetaOut, description="Validation metadata.")
+
+
+# END_BLOCK_OUTPUT_MODELS
