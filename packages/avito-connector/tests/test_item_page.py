@@ -61,6 +61,13 @@ def _product() -> dict:
     }
 
 
+def _product_without_sku() -> dict:
+    """A Product whose page says nothing about WHICH ad it describes."""
+    product = _product()
+    product.pop("sku")
+    return product
+
+
 @pytest.fixture(autouse=True)
 def _offline(monkeypatch):
     """A pre-fix card gets the misleading catalog success, never real HTTP/CDP."""
@@ -424,6 +431,47 @@ def test_a_product_for_another_sku_is_drift_not_the_card():
 
     with pytest.raises(server.ParserDriftError):
         server.parse_item_page(_html({"@graph": [unrelated]}), ITEM_ID)
+
+
+@pytest.mark.req("R-AVITO-IDENTITY-NO-SKU")
+async def test_a_product_without_a_sku_is_checked_by_the_id_in_its_canonical_url(monkeypatch):
+    """A Product without a sku names no item, so the canonical URL the page
+    records must name the requested one — that URL is where the /<id> request
+    redirects to."""
+    _patch_item_page(monkeypatch, _html(_product_without_sku()))
+
+    result = await server.avito_card(str(ITEM_ID))
+
+    assert result.item_id == ITEM_ID
+    assert result.title == TITLE
+    assert result.price_rub == 39990.0
+
+
+@pytest.mark.req("R-AVITO-IDENTITY-NO-SKU")
+async def test_a_redirect_to_another_item_without_a_sku_is_drift(monkeypatch):
+    """The page ended up on another ad: it says nothing about which, and the
+    canonical URL it records names another item."""
+    product = _product_without_sku()
+    product["offers"] = {**product["offers"], "url": "https://www.avito.ru/moskva/noutbuki/drugoe_4612345678"}
+    _patch_item_page(monkeypatch, _html(product))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card(str(ITEM_ID))
+
+    assert "parser_drift" in str(excinfo.value)
+
+
+@pytest.mark.req("R-AVITO-IDENTITY-NO-SKU")
+async def test_a_canonical_url_without_an_id_and_a_product_without_a_sku_is_drift(monkeypatch):
+    """No id in the URL means no proof of identity: the same mismatch branch."""
+    product = _product_without_sku()
+    product["offers"] = {**product["offers"], "url": "https://www.avito.ru/moskva/noutbuki"}
+    _patch_item_page(monkeypatch, _html(product))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card(str(ITEM_ID))
+
+    assert "parser_drift" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(

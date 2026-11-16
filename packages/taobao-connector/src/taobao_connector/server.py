@@ -21,7 +21,7 @@ body and 33 links; the committed TRIMMED capture
 (tests/fixtures/search_login_wall_live.html) measures 29.5 KB and 32 anchors,
 and readyState/body size cannot be read back from a static file at all. A
 title-only wall check cannot see that variant, so wall detection is structural
-as well as titular (``_login_wall_markers``): tools answer ``transport_down``
+as well as titular (``_login_wall_markers``): tools answer ``challenge_required``
 with the log-in fix inline and the selfcheck answers
 ``inconclusive(login_wall)``, never drift.
 
@@ -127,7 +127,6 @@ _TMALL_CARD_MESSAGE = (
     "Tmall listings are not readable by taobao_card. The search result already carries title, price, shop and URL."
 )
 
-TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
 # Additional render time only; no new navigation and no waiting on login/CAPTCHA walls.
@@ -520,7 +519,9 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     """Open ``url`` in the operator's Chrome, wait for client-side render, extract.
 
     Serialized via _cdp_lock: a burst of searches must not spray tabs across the
-    operator's browser. Every extraction is capped like an HTTP body. An empty
+    operator's browser. Every extraction is capped like an HTTP body and runs
+    under the connector's own budget (TAOBAO_TIMEOUT), read at call time so an
+    operator or a test can retune it without a rebuild. An empty
     loading search grid gets at most 10 extra seconds in this same page; login
     walls and anti-bot challenges never wait. The deadline also bounds a stuck
     poll evaluation, not only the sleeps between evaluations.
@@ -537,7 +538,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
 
     async def read(page):
         async def extract() -> dict[str, Any]:
-            raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
+            raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=_settings.timeout)
             if not isinstance(raw, str) or len(raw.encode()) > MAX_BODY_BYTES:
                 raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))
             data = json.loads(raw)

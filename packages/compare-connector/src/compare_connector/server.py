@@ -858,8 +858,8 @@ async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
 
     The connector already untangles the tile's base/current price pair, so
     price_rub carries the current price. The page runs in the operator's Chrome:
-    x5sec challenges surface as a TransportDownError from the connector, which
-    compare reports as source_unavailable rather than a data result.
+    x5sec challenges surface as a ChallengeRequiredError from the connector,
+    which compare reports as source_unavailable rather than a data result.
     """
     server = SOURCES["aliexpress"]
     response = await server.aliexpress_search(query=query)

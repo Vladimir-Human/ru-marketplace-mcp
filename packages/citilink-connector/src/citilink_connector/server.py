@@ -87,15 +87,13 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 SITE_BASE = "https://www.citilink.ru"
 SEARCH_URL = f"{SITE_BASE}/search/"
 
-TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
 
 # Real product routes, confirmed live July 2026 from a challenge-passed session:
 #   citilink  /product/noutbuk-lenovo-2169270/   slug ending in a numeric id
-#   dns       /product/b7a1667f9b19ed20/         16-hex id
-# The original pattern demanded 24 hex — a MongoDB ObjectId shape neither site
-# uses — so every search returned zero tiles and reported drift.
+# The original pattern demanded 24 hex — a MongoDB ObjectId shape this site does
+# not use — so every search returned zero tiles and reported drift.
 #
 # The charset is deliberately narrower than "anything but a slash". This id is
 # interpolated straight back into a URL that opens in the operator's logged-in
@@ -310,6 +308,8 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
 
     The first navigation pays the proof-of-work (wait_ms is generous for that
     reason); later reads on the same session are fast. Serialized via _cdp_lock.
+    The extractor runs under the connector's own budget (CITILINK_TIMEOUT), read
+    at call time so an operator or a test can retune it without a rebuild.
     The mechanism is shared (mcp_core.kit.render_json); this module-level name
     stays because the tools call it and the tests patch it.
     """
@@ -321,6 +321,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
             lock=_cdp_lock,
             wait=_polite_wait,
             max_body_bytes=MAX_BODY_BYTES,
+            evaluate_timeout=_settings.timeout,
             wait_for_dom_parsed=True,
         )
     except NavBlocked as exc:

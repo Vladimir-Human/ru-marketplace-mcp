@@ -24,7 +24,16 @@
     <test file="scripts/test_check_arch.py" name="test_removed_baseline_entries_fail_instead_of_rotting" requirements="R-ARCH-GATE,R-ARCH-GATE.size" />
     <test file="scripts/test_check_arch.py" name="test_report_counts_sizes_conformance_and_non_release_multi_package_changes" requirements="R-ARCH-GATE,R-ARCH-GATE.size" />
   </requirement>
+  <requirement id="R-AVITO-IDENTITY-NO-SKU" kind="requirement" state="tested">
+    <test file="packages/avito-connector/tests/test_item_page.py" name="test_a_canonical_url_without_an_id_and_a_product_without_a_sku_is_drift" requirements="R-AVITO-IDENTITY-NO-SKU" title="No id in the URL means no proof of identity: the same mismatch branch." />
+    <test file="packages/avito-connector/tests/test_item_page.py" name="test_a_product_without_a_sku_is_checked_by_the_id_in_its_canonical_url" requirements="R-AVITO-IDENTITY-NO-SKU" title="A Product without a sku names no item, so the canonical URL the page" />
+    <test file="packages/avito-connector/tests/test_item_page.py" name="test_a_redirect_to_another_item_without_a_sku_is_drift" requirements="R-AVITO-IDENTITY-NO-SKU" title="The page ended up on another ad: it says nothing about which, and the" />
+  </requirement>
   <requirement id="R-AVITO-ITEM-PATH" kind="requirement" state="tested">
+    <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_every_captured_avito_path_is_a_plain_ascii_slug" requirements="R-AVITO-ITEM-PATH" title="The captures decide how narrow the item-path regex may be." />
+    <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_the_captured_item_pages_carry_their_id_in_the_url_tail" requirements="R-AVITO-ITEM-PATH" title="Every captured item page's canonical URL ends in that item's id." />
+    <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_the_item_path_regex_accepts_the_item_page_shapes" requirements="R-AVITO-ITEM-PATH" />
+    <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_the_item_path_regex_refuses_everything_that_is_not_an_ascii_slug" requirements="R-AVITO-ITEM-PATH" title="A wider shape than the captures need would let a crafted path through." />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_accepts_a_bare_id_item_url" requirements="R-AVITO-ITEM-PATH" title="/&lt;id&gt; is the item-page shape the bare-id branch itself navigates to." />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_keeps_opening_real_item_urls_normalized" requirements="R-AVITO-ITEM-PATH" title="Real item URLs keep working: city/category slug segments, with or" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_non_item_page_paths_before_transport" requirements="R-AVITO-ITEM-PATH" title="R-INPUT-TRUST: the card opens pages in the operator's logged-in Chrome," />
@@ -667,6 +676,19 @@
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_two_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" title="Even a short listing must not certify prices the search tool cannot read." />
   </requirement>
+  <requirement id="R-SETTINGS-WIRED" kind="requirement" state="tested">
+    <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_a_budget_outside_five_to_forty_five_seconds_is_refused" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_the_configured_timeout_reaches_the_rendered_read" requirements="R-SETTINGS-WIRED" title="The env var must land in the browser read, not in a dead constant." />
+    <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_the_default_budget_is_the_one_the_read_had_before" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/detmir-connector/tests/test_settings_wiring.py" name="test_the_per_request_timeout_reaches_the_http_client" requirements="R-SETTINGS-WIRED" title="The timeout that IS wired stays wired: it is the client's own budget." />
+    <test file="packages/detmir-connector/tests/test_settings_wiring.py" name="test_the_unwired_wall_timeout_knob_is_gone" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/dns-connector/tests/test_settings_wiring.py" name="test_a_budget_outside_five_to_forty_five_seconds_is_refused" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/dns-connector/tests/test_settings_wiring.py" name="test_the_configured_timeout_reaches_the_rendered_read" requirements="R-SETTINGS-WIRED" title="The env var must land in the browser read, not in a dead constant." />
+    <test file="packages/dns-connector/tests/test_settings_wiring.py" name="test_the_default_budget_is_the_one_the_read_had_before" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/taobao-connector/tests/test_settings_wiring.py" name="test_a_budget_outside_five_to_forty_five_seconds_is_refused" requirements="R-SETTINGS-WIRED" />
+    <test file="packages/taobao-connector/tests/test_settings_wiring.py" name="test_the_configured_timeout_reaches_the_page_evaluation" requirements="R-SETTINGS-WIRED" title="The env var must land in the evaluation budget, not in a dead constant." />
+    <test file="packages/taobao-connector/tests/test_settings_wiring.py" name="test_the_default_budget_is_the_one_the_evaluation_had_before" requirements="R-SETTINGS-WIRED" />
+  </requirement>
   <requirement id="R-SHAPE-DRIFT-WARNING" kind="requirement" state="tested">
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" name="test_search_warns_when_a_required_key_family_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="Tiles that still parse without a parser-critical key are structural" />
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" name="test_selfcheck_reports_shape_drift_when_a_required_path_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="A page that still yields tiles but lost a parser-critical field is" />
@@ -690,6 +712,12 @@
     <test file="packages/wb-connector/tests/test_shape_reference.py" name="test_search_a_delisted_page_carries_no_shape_drift_warning" requirements="R-SHAPE-DRIFT-WARNING" title="card/v4 answers an all-delisted page with &quot;sizes&quot;: [] on every product —" />
     <test file="packages/wb-connector/tests/test_shape_reference.py" name="test_search_warns_when_a_required_key_family_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="Products that still flatten after losing the whole price family are" />
     <test file="packages/wb-connector/tests/test_shape_reference.py" name="test_selfcheck_cries_drift_when_a_required_family_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="The canary must fail the same way the tool does when a family is lost." />
+  </requirement>
+  <requirement id="R-SKILL-DSH-BLOCK" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/test_skill_dsh_blocks.py" name="test_the_default_mount_really_is_the_compare_mount" requirements="R-SKILL-DSH-BLOCK" title="The blocks are about the compare mount because that is what the shipped" />
+    <test file="packages/marketplace-connector/tests/test_skill_dsh_blocks.py" name="test_the_dsh_block_names_exactly_the_default_mount_tools" requirements="R-SKILL-DSH-BLOCK" title="The default profile's tools, named one by one, with their real count." />
+    <test file="packages/marketplace-connector/tests/test_skill_dsh_blocks.py" name="test_the_dsh_block_names_no_tool_that_does_not_exist" requirements="R-SKILL-DSH-BLOCK" title="A block that names a ghost tool sends the agent after a name that never" />
+    <test file="packages/marketplace-connector/tests/test_skill_dsh_blocks.py" name="test_the_gate_rejects_a_block_that_names_only_two_compare_tools" requirements="R-SKILL-DSH-BLOCK" title="A gate that cannot fail is worse than no gate at all." />
   </requirement>
   <requirement id="R-SOURCE-REGISTRY" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_every_runnable_package_has_exactly_one_registry_entry" requirements="R-SOURCE-REGISTRY" title="The registry is not a list of the sources someone remembered." />

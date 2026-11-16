@@ -1,8 +1,8 @@
 """Detsky Mir connector settings (env prefix ``DETMIR_``).
 
 The Detsky Mir public API needs no credentials, so everything here is an
-operational knob: timeouts, politeness gap, body caps, cache TTL and the region
-whose prices and stock you want.
+operational knob: the per-request timeout, politeness gap, body caps, cache TTL
+and the region whose prices and stock you want.
 """
 
 from __future__ import annotations
@@ -26,11 +26,6 @@ class DetmirSettings(BaseSettings):
         default=25.0,
         gt=0,
         description="Per-request timeout in seconds. Category listings are large, so this is higher than WB's.",
-    )
-    wall_timeout: float = Field(
-        default=60.0,
-        gt=0,
-        description="Hard ceiling for a whole tool call, including retries.",
     )
     min_gap: float = Field(
         default=0.8,
