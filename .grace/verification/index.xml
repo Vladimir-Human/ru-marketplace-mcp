@@ -159,6 +159,12 @@
     <test file="scripts/test_workflow_permissions.py" name="test_ci_is_read_only_and_no_job_widens_it" requirements="R-CI-TOKEN-SCOPE" />
     <test file="scripts/test_workflow_permissions.py" name="test_every_workflow_limits_the_token" requirements="R-CI-TOKEN-SCOPE" />
   </requirement>
+  <requirement id="R-CIAN-CAPTCHA" kind="requirement" state="tested">
+    <test file="packages/cian-connector/tests/test_server.py" name="test_captcha_demand_records_no_refusal_but_the_waf_page_does" requirements="R-CIAN-CAPTCHA" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_card_captcha_demand_is_challenge_required" requirements="R-CIAN-CAPTCHA" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_only_the_api_error_code_is_a_captcha_demand" requirements="R-CIAN-CAPTCHA" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_search_captcha_demand_is_challenge_required" requirements="R-CIAN-CAPTCHA" />
+  </requirement>
   <requirement id="R-CIAN-CARD-TRUTH" kind="requirement" state="tested">
     <test file="packages/cian-connector/tests/test_server.py" name="test_card_js_does_not_read_a_rent_title_as_removed" requirements="R-CIAN-CARD-TRUTH" />
     <test file="packages/cian-connector/tests/test_server.py" name="test_card_js_still_reads_removed_titles_as_not_found" requirements="R-CIAN-CARD-TRUTH" />
