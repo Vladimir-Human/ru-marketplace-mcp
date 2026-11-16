@@ -862,6 +862,14 @@
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_the_cli_and_compare_tables_are_the_registry_projections" requirements="R-SOURCE-REGISTRY" />
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_the_literal_mount_table_matches_the_registry" requirements="R-SOURCE-REGISTRY" title="server.py's mounts stay literal: test_dependency_parity.py parses it." />
   </requirement>
+  <requirement id="R-STDIO-PROBE" kind="requirement" state="tested">
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_checks_running_version" requirements="R-STDIO-PROBE.eras,R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_fails_a_broken_discover" requirements="R-STDIO-PROBE.eras" title="A server whose ``server/discover`` errors or never answers fails the sessionless probe." />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_fails_a_server_that_does_not_identify_itself" requirements="R-STDIO-PROBE.eras" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_accept_complete_current_state" requirements="R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_reject_incomplete_or_stale_state" requirements="R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_reject_missing_or_malformed_payload" requirements="R-STDIO-PROBE.version" />
+  </requirement>
   <requirement id="R-STDOUT" kind="rule" state="gap" gaps="G-STDOUT-UNTESTED" />
   <requirement id="R-TAOBAO-GRID-LOADING" kind="requirement" state="tested">
     <test file="packages/taobao-connector/tests/test_search_loading.py" name="test_a_page_with_login_routes_is_never_polled_as_a_loading_grid" requirements="R-TAOBAO-GRID-LOADING" title="Pre-release audit 2026-10-30: «加载中» alone used to turn this page into a retryable timeout." />
