@@ -28,7 +28,9 @@ architecture gate's pure list.
 # _size_mismatch_warning: Name the excluded offers and the asked sizes once per call.
 # _relevance_warnings: Flag a cheapest offer that probably answers a different question.
 # _ranks_in_rubles: Whether an offer may enter the cheapest-in-rubles ranking.
-# _conditional_price_warning: Name the excluded amount, not the offer whose everyday price may still rank.
+# ConditionalPriceDecision: What one offer's everyday and conditional prices say about its rank.
+# decide_conditional_price: The one rule for an everyday price beside a conditional one.
+# _conditional_price_note: Name the excluded amount, not the offer whose everyday price may still rank.
 # build_response: Rank eligible RUB offers with per-source completeness and warnings.
 # END_MODULE_MAP
 
@@ -346,17 +348,76 @@ def _ranks_in_rubles(offer: MarketOffer) -> bool:
     return offer.price_rub is not None and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
 
 
-def _conditional_price_warning(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
+def _conditional_price_note(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
     """Name the excluded amount, not the offer whose everyday price may still rank."""
     condition = kind
     if kind == "wallet":
         condition = "WB Wallet"
+    elif kind == "card":
+        condition = "Ozon card" if source == "ozon" else "card"
     elif kind == "subscription":
         condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
     return (
         f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
         f"requires {condition}; not ranked"
     )
+
+
+@dataclass(frozen=True)
+class ConditionalPriceDecision:
+    """What one offer's everyday and conditional prices say about its rank.
+
+    `rank_price_rub` is the price the offer may rank by — None when the offer has
+    no everyday price — and `note` is the one sentence the agent needs about the
+    conditional amount, None when there is nothing to say about it.
+    """
+
+    rank_price_rub: float | None
+    note: str | None
+
+
+# START_CONTRACT: decide_conditional_price
+# PURPOSE: R-COMPARE-CONDITIONAL-PRICE: one rule for an everyday price beside a conditional one.
+# INPUTS: Untrusted source and id, the everyday and the conditional amount, the condition's kind.
+# OUTPUTS: The price the offer may rank by and at most one note about the conditional amount.
+# SIDE_EFFECTS: None; no source I/O, no ranking mutation, no invented price.
+def decide_conditional_price(
+    source: str,
+    product_id: str,
+    everyday_price_rub: float | None,
+    conditional_price_rub: float | None,
+    kind: str,
+    currency: str = "rub",
+) -> ConditionalPriceDecision:
+    """Decide what an everyday price beside a conditional one means.
+
+    An everyday price plus a *lower* conditional one ranks by the everyday price
+    and says that the cheaper amount exists (`info:conditional_price_available`):
+    the buyer without the card, the wallet or the subscription still pays the
+    everyday price, and the amount is context, not a doubt about the data.
+
+    A conditional price *alone* is not an everyday price: the offer does not rank
+    and the amount is named in a real warning (`conditional_price`), because a
+    buyer who cannot use that condition must not be quoted it.
+
+    A conditional amount that is not lower than the everyday price is no bargain,
+    so it stays unmentioned; the everyday price is the whole answer then.
+    """
+    if conditional_price_rub is None:
+        return ConditionalPriceDecision(everyday_price_rub, None)
+    if everyday_price_rub is None:
+        note = _conditional_price_note(source, product_id, conditional_price_rub, kind, currency)
+        return ConditionalPriceDecision(None, note)
+    if conditional_price_rub >= everyday_price_rub:
+        return ConditionalPriceDecision(everyday_price_rub, None)
+    note = (
+        f"info:conditional_price_available: {source}/{product_id or '?'}: "
+        f"{conditional_price_rub:g} {currency.upper()} with {kind}"
+    )
+    return ConditionalPriceDecision(everyday_price_rub, note)
+
+
+# END_CONTRACT: decide_conditional_price
 
 
 # END_BLOCK_PRICE_POLICY
@@ -449,15 +510,26 @@ def build_response(
             warnings.append(f"stock_filter: excluded {excluded} priced offer(s) without confirmed stock")
         if not priced_all:
             warnings.append("stock_filter: no priced offers were returned")
+    # A source's info: note stays a note: the prefix is what tells context from a
+    # doubt about the data (mcp_core.health_warnings), and source_outcomes still
+    # attributes it.
     for outcome in outcomes:
-        warnings.extend(f"source_warning:{outcome.source}: {warning}" for warning in outcome.warnings)
-    # Only an offer left out of the ranking is named here; a Plus amount beside a
-    # ranked everyday price already sits in price_with_subscription_rub, and a
-    # warning per such offer would bill the agent twice for the same number.
+        warnings.extend(
+            warning if warning.startswith("info:") else f"source_warning:{outcome.source}: {warning}"
+            for warning in outcome.warnings
+        )
+    # An adapter that knows a conditional price names it with the shared helper
+    # (an everyday price beside a lower conditional one gets the info note, a
+    # conditional price alone the warning). This loop is the safety net for an
+    # offer that arrives marked conditional without a note: the same sentence
+    # twice costs the agent twice.
+    already_named = {warning for outcome in outcomes for warning in outcome.warnings}
     for offer in offers:
         kind, native = offer.price_kind, offer.price_native
         if kind and kind != "regular" and native is not None:
-            warnings.append(_conditional_price_warning(offer.source, offer.product_id, native, kind, offer.currency))
+            decision = decide_conditional_price(offer.source, offer.product_id, None, native, kind, offer.currency)
+            if decision.note and decision.note not in already_named:
+                warnings.append(decision.note)
     warnings.extend(_relevance_warnings(query, priced))
     if size_excluded:
         warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
