@@ -33,7 +33,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
 # SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings; shape_reference.
-# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; packages/detmir-connector/tests.
+# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/detmir-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
@@ -207,11 +207,13 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
             raise_tool_error(ParserDriftError(f"{label}: response was not valid JSON ({exc})", provider="detmir"))
             raise AssertionError("unreachable") from exc  # pragma: no cover
 
-    was_cached = _cache.get(url) is not None
-    payload = await _cache.get_or_fetch(url, fetch)
-    if ctx is not None and was_cached:
-        await ctx.debug(f"{label}: cache hit")
-    return payload
+    cached = _cache.get(url)
+    if cached is not None:
+        if ctx is not None:
+            await ctx.debug(f"{label}: cache hit")
+        return cached
+    # Public tools store only after their body-status, parse and output checks.
+    return await fetch()
 
 
 def _body_error_status(payload: Any) -> int | None:
@@ -390,8 +392,8 @@ async def detmir_card(
     # request from cache.
     query = urllib.parse.urlencode({"filter": f"withregion:{region_used}"})
     url = f"{API_BASE}/v2/products/{product_id}?{query}"
-    # Sample the cache before the fetch: _fetch_json stores a fresh payload in
-    # _cache, so reading it afterwards would report a hit on a network-backed answer.
+    # Sample before validation commits the fresh payload, so a network-backed
+    # answer does not report itself as a cache hit.
     was_cached = _cache.get(url) is not None
     payload = await _fetch_json(url, "detmir_card", ctx)
 
@@ -422,7 +424,7 @@ async def detmir_card(
     warnings.extend(R.validate_offer(product.model_dump(), require_title=True))
 
     log_event("detmir_card.done", product_id=product_id, price=product.price_rub, warnings=len(warnings))
-    return DetmirCardResponse(
+    result = DetmirCardResponse(
         product=product,
         region=region_used,
         meta=MetaOut(
@@ -432,6 +434,9 @@ async def detmir_card(
             cached=was_cached,
         ),
     )
+    if not was_cached:
+        _cache.set(url, payload)
+    return result
 
 
 @mcp.tool(
@@ -549,7 +554,7 @@ async def detmir_category(
         )
 
     log_event("detmir_category.done", alias=slug, returned=len(products), total=total)
-    return DetmirListResponse(
+    result = DetmirListResponse(
         query=slug,
         mode="category",
         total_available=total,
@@ -560,6 +565,9 @@ async def detmir_category(
         region=region_used,
         meta=MetaOut(source="detmir_category", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
+    if _cache.get(url) is None:
+        _cache.set(url, payload)
+    return result
 
 
 @mcp.tool(
@@ -667,7 +675,7 @@ async def detmir_categories(
         warnings.append(f"empty: no categories under {resolved!r}")
 
     log_event("detmir_categories.done", parent=resolved, returned=len(items))
-    return DetmirCategoriesResponse(
+    result = DetmirCategoriesResponse(
         parent=resolved,
         returned=len(items),
         total_available=R.coerce_int(R.first_present(meta_node, "total", "length", default=None)),
@@ -675,6 +683,9 @@ async def detmir_categories(
         region=region_used,
         meta=MetaOut(source="detmir_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
+    if _cache.get(url) is None:
+        _cache.set(url, payload)
+    return result
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls detmir_selfcheck()

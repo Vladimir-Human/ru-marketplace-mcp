@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; packages/avito-connector/tests.
+# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -299,8 +299,8 @@ def _looks_like_json(body: str) -> bool:
 async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
     """Tier-1 first; CDP fallback on block/non-200. Returns (status, body, tier).
 
-    Only JSON-shaped 200s are cached — a cached block page would keep reporting
-    a block after the challenge cleared.
+    Cache entries come only from avito_search after parsing and validation;
+    JSON-shaped HTTP 200 alone is not proof of a successful response.
     """
     cached = _cache.get(url)
     if cached is not None:
@@ -313,7 +313,6 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
         status, body = await asyncio.to_thread(_sync_curl_get, url, _proxy())
         if status == 200 and _looks_like_json(body):
             _pacer.record_success()
-            _cache.set(url, (status, body))
             return status, body, "curl_cffi"
         if ctx and status in (401, 403, 429):
             await ctx.debug(f"Avito tier-1 HTTP {status} (firewall); trying CDP")
@@ -325,8 +324,6 @@ async def _fetch(url: str, ctx: Context | None) -> tuple[int, str, str]:
 
     try:
         status, body = await _cdp_fetch(url, ctx)
-        if status == 200 and _looks_like_json(body):
-            _cache.set(url, (status, body))
         return status, body, "cdp"
     except NavBlocked as exc:
         if exc.status:
@@ -1089,6 +1086,8 @@ async def avito_search(
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="avito_search")
         result.meta = MetaOut(**attached["_meta"])
+        if tier != "cache":
+            _cache.set(url, (status, body))
         return result
     except ConnectorError as exc:
         if isinstance(exc, (RateLimitedError, ChallengeRequiredError)):

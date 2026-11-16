@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; packages/aliexpress-connector/tests.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; packages/aliexpress-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -682,9 +682,6 @@ async def aliexpress_search(
                     "or the DOM shape moved; verify manually"
                 )
             )
-        # Persist only validated payloads: caching a transitively empty render
-        # would block self-healing retries for the whole cache TTL.
-        _cache.set(url, payload)
         items = []
         coupon_seen = 0
         for t in items_raw:
@@ -717,6 +714,8 @@ async def aliexpress_search(
             result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="aliexpress_search"
         )
         result.meta = MetaOut(**attached["_meta"])
+        if tier != "cache":
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise
@@ -789,7 +788,6 @@ async def aliexpress_card(
                 _pacer.record_refusal()
                 raise_tool_error(_challenge_error())
             tier = "cdp"
-            _cache.set(url, payload)
         title = R.flatten_text(payload.get("title"))
         price, old_price = _card_prices(payload)
         rating = R.coerce_rating(payload.get("rating_text"))
@@ -831,6 +829,9 @@ async def aliexpress_card(
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="aliexpress_card")
         result.meta = MetaOut(**attached["_meta"])
+        # Keep partial-card responses unchanged, but let missing fields recover.
+        if tier != "cache" and title is not None and price is not None:
+            _cache.set(url, payload)
         return result
     except ToolError:
         raise

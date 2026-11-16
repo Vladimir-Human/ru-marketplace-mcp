@@ -25,7 +25,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # INVARIANTS: One home load per uncached search/selfcheck; same-tab hidden-redirect fallback; preserve caps/caches.
 # INVARIANTS: Reject failures before success pacing/cache; 401/403/429 stop with cooldown; /xpvnsulc/ needs a human.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; packages/megamarket-connector/tests.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _browser_session / _session_page: Lazily own one tab and source lock for dependent reads.
@@ -51,7 +51,7 @@ import os
 import re
 import urllib.parse
 from collections.abc import AsyncIterator
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Annotated, Any
@@ -80,7 +80,7 @@ from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.transport.chrome_cdp import NavBlocked, NavigationPolicyError, PageLike, _check_final_host, open_page
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from megamarket_connector.models_output import (
     MegamarketCardResponse,
@@ -152,6 +152,8 @@ mcp = FastMCP(
 )
 
 _cache: TTLCache = TTLCache(ttl_s=_settings.cache_ttl, max_entries=128)
+# R-CACHE-VALIDATED: the public tools store these responses after their own validation.
+_TOOL_VALIDATED_PATHS = ("/catalogService/catalog/search", "/catalogService/productCardMainInfo/get")
 _pacer = Pacer(_min_gap)
 _cdp_lock = asyncio.Lock()
 
@@ -403,9 +405,20 @@ def _raise_failed_envelope(payload: dict[str, Any], what: str) -> None:
     raise_tool_error(TransportDownError(f"Megamarket {what} API failed: {detail[:200]}"))
 
 
+def _post_cache_key(api_path: str, body: dict[str, Any]) -> str:
+    return f"{api_path}:{json.dumps(body, sort_keys=True, ensure_ascii=False)}"
+
+
+def _store_validated(api_path: str, body: dict[str, Any], payload: dict[str, Any]) -> None:
+    """Cache a tool response that passed validation, unless it came from the cache."""
+    key = _post_cache_key(api_path, body)
+    if _cache.get(key) is None:
+        _cache.set(key, payload)
+
+
 async def _post(api_path: str, body: dict[str, Any], ctx: Context | None, what: str) -> dict[str, Any]:
     """POST through CDP and unwrap the envelope, mapping failures to the taxonomy."""
-    cache_key = f"{api_path}:{json.dumps(body, sort_keys=True, ensure_ascii=False)}"
+    cache_key = _post_cache_key(api_path, body)
     cached = _cache.get(cache_key)
     if cached is not None:
         return cached
@@ -433,7 +446,8 @@ async def _post(api_path: str, body: dict[str, Any], ctx: Context | None, what: 
         raise_tool_error(ParserDriftError(f"{what} payload is not a JSON object"))
     _raise_failed_envelope(payload, what)
     _pacer.record_success()
-    _cache.set(cache_key, payload)
+    if api_path not in _TOOL_VALIDATED_PATHS:
+        _cache.set(cache_key, payload)
     return payload
 
 
@@ -860,9 +874,10 @@ async def megamarket_search(
         async with _browser_session():
             address_id = await _resolve_address_id(ctx)
             resolved = await _resolve_search_params(query, ctx)
+            body = _search_body(query, 1, address_id, resolved)
             payload = await _post(
                 "/catalogService/catalog/search",
-                _search_body(query, 1, address_id, resolved),
+                body,
                 ctx,
                 "search",
             )
@@ -946,6 +961,7 @@ async def megamarket_search(
             result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="megamarket_search"
         )
         result.meta = MetaOut(**attached["_meta"])
+        _store_validated("/catalogService/catalog/search", body, payload)
         return result
     except ToolError:
         raise
@@ -981,11 +997,12 @@ async def megamarket_card(
         item_id = _extract_item_id(item_id_or_url)
         if item_id is None:
             raise_tool_error(BadRequestError(f"could not extract a goods id from {item_id_or_url!r}"))
+        card_body = {"goodsId": item_id, "merchantId": "0"}
         payload = await _post(
             # productCardMainInfo/get is the endpoint the mobile app uses;
             # productCard/get was a guess and is not part of the API.
             "/catalogService/productCardMainInfo/get",
-            {"goodsId": item_id, "merchantId": "0"},
+            card_body,
             ctx,
             "card",
         )
@@ -1018,6 +1035,7 @@ async def megamarket_card(
         card_warnings.extend(R.validate_offer({**card_fields, "in_stock": card_fields.get("is_available")}))
         attached = R.attach_meta(card_fields, card_warnings, source="megamarket_card")
         result.meta = MetaOut(**attached["_meta"])
+        _store_validated("/catalogService/productCardMainInfo/get", card_body, payload)
         return result
     except ToolError:
         raise
@@ -1068,9 +1086,10 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
         async with asyncio.timeout(90), _browser_session():
             address_id = await _resolve_address_id(ctx)
             resolved = await _resolve_search_params("телефон", ctx)
+            body = _search_body("телефон", 1, address_id, resolved)
             payload = await _post(
                 "/catalogService/catalog/search",
-                _search_body("телефон", 1, address_id, resolved),
+                body,
                 ctx,
                 "selfcheck",
             )
@@ -1158,7 +1177,13 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
         server_started_at=SERVER_STARTED_AT,
         process_id=None,
     )
-    return MegamarketSelfcheckResponse(**result_dict)
+    result = MegamarketSelfcheckResponse(**result_dict)
+    # A repeated selfcheck stays one load (R-MEGAMARKET-ONE-LOAD), and the cache
+    # holds only rows the search tool itself accepts.
+    with suppress(ValidationError):
+        if result.healthy and all(MegamarketSearchItemOut(**item) for item in items_raw):
+            _store_validated("/catalogService/catalog/search", body, payload)
+    return result
 
 
 # Advertised output schemas are the dominant constant cost of an MCP mount:

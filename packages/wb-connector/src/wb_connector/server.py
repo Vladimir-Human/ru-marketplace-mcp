@@ -27,7 +27,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; packages/wb-connector/tests.
+# LINKS: M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -48,6 +48,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # wb_category_products: Read paginated products for a catalog shard.
 # _wb_dom_selfcheck: Classify a one-shot DOM baseline and typed transport errors.
 # wb_selfcheck: Probe configured transport/parser health for operators; not an MCP tool.
+# _cache_validated: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -512,51 +513,32 @@ async def _budgeted_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, 
 
 
 async def _fresh_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
-    """A canary read that cannot be answered from the cache.
-
-    Every probe uses a fixed URL, so a cached 200 would let a canary report
-    ``healthy`` about a read that happened earlier — and ``search_v9: healthy``
-    was observed while a live request to the same endpoint was timing out. A
-    health signal has to describe the present.
-    """
+    """Invalidate a fixed canary URL so its verdict describes the present read."""
 
     _cache.invalidate(url)
     return await _safe_get_text(client, url)
 
 
+# START_BLOCK_VALIDATED_CACHE
+
+
+def _cache_validated(url: str, text: str | None) -> None:
+    """Commit a response only after its caller completed parse/output validation."""
+    if _cache.get(url) is None:
+        _cache.set(url, (200, text, None))
+
+
+# END_BLOCK_VALIDATED_CACHE
+
+
 async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
-    """GET with body cap, wall-clock budget, and bounded transient-network retry.
-
-    Thin delegation to ``mcp_core.transport.get_text_budgeted``. That function is
-    WB's own logic promoted into the shared runtime, so behaviour is unchanged:
-    ``(status, text, err)`` with the same ``timeout:`` / ``network:`` /
-    ``http_status:`` classification, retries only on transport faults (never on an
-    HTTP status, so rate-limit handling stays the caller's explicit decision), the
-    whole operation bounded by ``WB_WALL_TIMEOUT``, and the polite gate re-entered
-    before each retry.
-
-    The module-level knobs are read at call time, not captured at import, because
-    tests patch them per scenario.
-
-    **Only successful reads are cached.** A 200 with a body is idempotent catalog
-    data and safe to replay for the TTL. A failure is not: caching a transient
-    ConnectTimeout would keep failing the tool for the whole TTL window even
-    though the very next attempt would have succeeded, turning a blip into an
-    outage. Statuses like 429 and 5xx stay uncached for the same reason — the
-    caller's error path should see live upstream state, not a stale verdict.
-    """
+    """Bounded, paced HTTP reads; WB responses are cached by validated callers."""
     cached = _cache.get(url)
     if cached is not None:
         return cached
 
     if _needs_impersonation(url):
-        # Preferring impersonation must not mean depending on it. Measured on
-        # 2026-09-21 from a second address: search.wb.ru v9 answered the default
-        # client with 130 KB while the impersonated path timed out at 15 s, and
-        # card.wb.ru refused both transports with the same wall. The split is not
-        # a property of the host; it moves with the address and the hour. So the
-        # gated hosts try impersonation first and fall back once, through the same
-        # polite gate and wall-clock budget as any other read.
+        # Prefer impersonation, but fall back once through the same polite gate and wall budget.
         result = await _impersonated_get_text(url)
         if not _is_usable(result):
             fallback = await _budgeted_get_text(client, url)
@@ -571,7 +553,9 @@ async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str 
     status, text, err = result
     if err is None and status == 200 and text is not None and not _is_edge_wall(text):
         _pacer.record_success()
-        _cache.set(url, result)
+        # WB responses are committed by their validated callers, not this raw tier.
+        if not (urlsplit(url).hostname or "").endswith((".wb.ru", ".wildberries.ru", ".wbbasket.ru")):
+            _cache.set(url, result)
     elif err is None and (status in _REFUSAL_STATUSES or _is_edge_wall(text)):
         # Hand the refusal to the pacer so its longer post-refusal gap and its
         # rotation hint can fire for this source. Read through the live module
@@ -1088,12 +1072,14 @@ async def wb_card(
             item_dicts.append(_card_item_dict(p))
         warnings = _aggregate_offer_warnings(item_dicts)
         log_event("wb_card.done", nm_count=len(nm_ids), items=len(item_dicts))
-        return WbCardResponse(
+        result = WbCardResponse(
             dest=dest,
             count=len(item_dicts),
             items=[WbCardItem(**d) for d in item_dicts],
             meta=MetaOut(source="wb_card", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
+        _cache_validated(url, text)
+        return result
     except ToolError:
         raise
     except Exception as exc:
@@ -1188,7 +1174,7 @@ async def wb_root_info(
             raise_tool_error(ParserDriftError(f"imt_id unusable: {imt!r} (expected positive integer)", provider="wb"))
         opts = data.get("options")
         log_event("wb_root_info.done", nm_id=nm_id, imt_id=imt_int)
-        return WbRootInfoResponse(
+        result = WbRootInfoResponse(
             imt_id=imt_int,
             subj_name=_decode_mojibake(data.get("subj_name", "")),
             subj_root_name=_decode_mojibake(data.get("subj_root_name", "")),
@@ -1198,6 +1184,8 @@ async def wb_root_info(
             host_used=host,
             meta=MetaOut(source="wb_root_info", healthy=True, warnings=[]),
         )
+        _cache_validated(url, text)
+        return result
     except ToolError:
         raise
     except Exception as exc:
@@ -1392,7 +1380,7 @@ async def wb_reviews(
                 }
             )
             log_event("wb_reviews.done", imt_id=imt_id, host=host, returned=len(feedbacks), pool=len(feedbacks_raw))
-            return WbReviewsResponse(
+            result = WbReviewsResponse(
                 imt_id=imt_id,
                 sort=sort_mode,
                 pool_size=len(feedbacks_raw),
@@ -1403,6 +1391,8 @@ async def wb_reviews(
                 host_used=host,
                 meta=MetaOut(source="wb_reviews", healthy=not R.health_warnings(warnings), warnings=warnings),
             )
+            _cache_validated(url, text)
+            return result
 
         message = (
             "; ".join(f"{attempt['host']}: {attempt['error']}" for attempt in attempts) or "all review hosts failed"
@@ -1489,6 +1479,7 @@ async def wb_questions(
 
     try:
         collected: list[dict[str, Any]] = []
+        pending_cache: list[tuple[str, str | None]] = []
         total_available = 0
         offset = skip
         # Pages of 30 (the upstream cap), so a limit above 30 needs several passes.
@@ -1531,6 +1522,7 @@ async def wb_questions(
                 raise_tool_error(ParserDriftError(f"wb_questions: invalid JSON ({exc})", provider="wb"))
             data, shape_error = _expect_json_object(data, "wb_questions response")
             data = _require_object(data, "wb_questions response")
+            pending_cache.append((url, text))
             if shape_error:
                 log_event("wb_questions.shape_error", reason=shape_error["message"])
                 raise_tool_error(ParserDriftError(f"wb_questions: {shape_error['message']}", provider="wb"))
@@ -1602,7 +1594,7 @@ async def wb_questions(
             answered=answered_count,
             total=total_available,
         )
-        return WbQuestionsResponse(
+        result = WbQuestionsResponse(
             imt_id=imt_id,
             total_available=total_available,
             returned=len(collected),
@@ -1612,6 +1604,9 @@ async def wb_questions(
             questions=[WbQuestionItem(**q) for q in collected],
             meta=MetaOut(source="wb_questions", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
+        for cache_url, cache_text in pending_cache:
+            _cache_validated(cache_url, cache_text)
+        return result
     except ToolError:
         raise
     except Exception as exc:
@@ -1831,7 +1826,10 @@ async def wb_search(
                         "answer is unconfirmed — the query may still have matches"
                     ],
                 )
-            return WbNoResultsResponse(query=query, page=page, total_ids=total_found, meta=empty_meta)
+            empty_result = WbNoResultsResponse(query=query, page=page, total_ids=total_found, meta=empty_meta)
+            if v9_error is None:
+                _cache_validated(v9_url, text)
+            return empty_result
 
         # Past the end, WB repeats page 1 rather than returning nothing. Honour
         # the documented contract — a page past the end is "no results" — instead
@@ -1883,7 +1881,7 @@ async def wb_search(
             total=total_found,
             fallback=fallback_used,
         )
-        return WbSearchResponse(
+        result = WbSearchResponse(
             query=query,
             page=page,
             page_size=page_size,
@@ -1892,6 +1890,9 @@ async def wb_search(
             items=[WbCardItem(**d) for d in item_dicts],
             meta=MetaOut(source="wb_search", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
+        if v9_error is None:
+            _cache_validated(v9_url, text)
+        return result
     except ToolError:
         raise
     except Exception as exc:
@@ -1957,12 +1958,7 @@ def _static_menu_urls() -> list[str]:
 
 
 async def _fetch_first_json(urls: list[str], label: str, ctx: Context | None) -> tuple[dict | list, str]:
-    """GET each URL in turn, returning the first parsed JSON body and its host.
-
-    Mirror hosts fail independently, so a single 404/5xx is not a real outage —
-    only exhausting every mirror is. The last error is surfaced so the caller can
-    distinguish "all mirrors down" from "this id does not exist".
-    """
+    """Try mirrors until JSON parses; surface the last failure if all fail."""
     last_error = ""
     async with _wb_client() as client:
         for url in urls:
@@ -2041,6 +2037,7 @@ async def _search_via_search_goods(
     if not isinstance(ids, list):
         raise ParserDriftError("wb_search search-goods: expected an ids list", provider="wb")
     if not ids:
+        _cache_validated(sg_url, text)
         return [], 0
 
     page_size = 30
@@ -2050,6 +2047,7 @@ async def _search_via_search_goods(
     if not page_ids:
         if raw_page_ids:
             raise ParserDriftError("wb_search search-goods: no recoverable ids", provider="wb")
+        _cache_validated(sg_url, text)
         return [], len(ids)
 
     card_params = httpx.QueryParams(
@@ -2099,6 +2097,9 @@ async def _search_via_search_goods(
         raise ParserDriftError(
             f"wb_search fallback card: {products_error or 'products contain non-objects'}", provider="wb"
         )
+    WbCardResponse(items=[WbCardItem(**_card_item_dict(p)) for p in products])
+    _cache_validated(sg_url, json.dumps(ids))
+    _cache_validated(card_url, text)
     return products, len(ids)
 
 
@@ -2176,6 +2177,7 @@ async def wb_seller(
         meta=MetaOut(source="wb_seller", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
     log_event("wb_seller.done", supplier_id=supplier_id, has_inn=bool(inn))
+    _cache_validated(f"https://{host_used}/vol0/data/supplier-by-id/{supplier_id}.json", json.dumps(data))
     return result
 
 
@@ -2325,7 +2327,7 @@ async def wb_categories(
     warnings = ["truncated: node budget reached — narrow the root or lower max_depth"] if truncated else []
 
     log_event("wb_categories.done", root=resolved, returned=total, truncated=truncated)
-    return WbCategoriesResponse(
+    result = WbCategoriesResponse(
         root=resolved,
         max_depth=max_depth,
         total_returned=total,
@@ -2334,6 +2336,8 @@ async def wb_categories(
         host_used=host_used,
         meta=MetaOut(source="wb_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
+    _cache_validated(f"https://{host_used}/vol0/data/main-menu-ru-ru-v3.json", json.dumps(data))
+    return result
 
 
 @mcp.tool(
@@ -2528,7 +2532,7 @@ async def wb_category_products(
             page=page,
             count=len(item_dicts),
         )
-        return WbCategoryProductsResponse(
+        result = WbCategoryProductsResponse(
             shard=shard_norm,
             query=query_norm,
             page=page,
@@ -2540,6 +2544,8 @@ async def wb_category_products(
             items=[WbCardItem(**d) for d in item_dicts],
             meta=MetaOut(source="wb_category_products", healthy=not R.health_warnings(warnings), warnings=warnings),
         )
+        _cache_validated(url, text)
+        return result
     except ToolError:
         raise
     except Exception as exc:

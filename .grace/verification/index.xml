@@ -31,6 +31,11 @@
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_separator_escapes_before_transport" requirements="R-AVITO-ITEM-PATH" title="R-AVITO-ITEM-PATH: an item path is a plain ASCII slug, so a backslash or" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_still_opens_a_plain_city_category_slug_path" requirements="R-AVITO-ITEM-PATH" title="The same guard must not touch ordinary slugs: plain ASCII item paths keep" />
   </requirement>
+  <requirement id="R-CACHE-VALIDATED" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_every_response_cache_has_a_case" requirements="R-CACHE-VALIDATED" />
+    <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_rejected_response_is_not_cached" requirements="R-CACHE-VALIDATED" />
+    <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
+  </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_already_waiting_on_the_lock_does_not_retry" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />

@@ -24,14 +24,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
 # SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
 # DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; packages/lamoda-connector/tests.
+# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/lamoda-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
 # _search_item_from_tile: Normalize rendered price/title fields.
 # _graphql_via_https: POST the SKU query over plain HTTPS and return status/body.
 # _graphql_via_cdp: POST the query inside the operator's Chrome with bounded transport.
-# _graphql_card: Try HTTPS then CDP; parse and cache GraphQL product details, sizes and stock.
+# _graphql_card: Try HTTPS then CDP; parse GraphQL details; the card tool commits validated data.
 # _cdp_render_search: Read browser search and recover explicit challenge handoffs.
 # lamoda_search: Return rendered catalog tiles with nullable prices; warn when a required key family vanishes.
 # lamoda_card: Return GraphQL-backed SKU details and availability.
@@ -475,8 +475,7 @@ async def _graphql_card(sku: str, ctx: Context | None) -> dict[str, Any]:
     # Keep the answered tier with the successful product so cache hits do not
     # misreport a browser-backed card as a plain HTTPS response.
     product = {**product, "_tier_used": tier}
-    _cache.set(cache_key, product)
-    return product
+    return product  # lamoda_card commits only after output validation.
 
 
 async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
@@ -529,9 +528,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
         payload = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         raise_tool_error(TransportDownError(f"CDP timeout after {TIMEOUT}s"))
-    if not _anti_bot_challenge(payload) and not _refusal_page(payload):
-        _cache.set(cache_key, payload)
-    return payload
+    return payload  # lamoda_search commits only after parsing and validation.
 
 
 @mcp.tool(
@@ -590,6 +587,9 @@ async def lamoda_search(
         result = LamodaSearchResponse(query=query, tier_used="cdp", count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="lamoda_search")
         result.meta = MetaOut(**attached["_meta"])
+        key = f"search:{query.strip()}"
+        if _cache.get(key) is None:
+            _cache.set(key, payload)
         return result
     except ToolError:
         raise
@@ -647,6 +647,8 @@ async def lamoda_card(
         card = result.model_dump(by_alias=True, exclude={"meta", "sizes"})
         attached = R.attach_meta(card, R.validate_offer(card), source="lamoda_card")
         result.meta = MetaOut(**attached["_meta"])
+        if _cache.get(f"graphql:{sku}") is None:
+            _cache.set(f"graphql:{sku}", product)
         return result
     except ToolError:
         raise
