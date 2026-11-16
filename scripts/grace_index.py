@@ -353,6 +353,12 @@ def tree_digest(root: Path) -> str:
     return hashlib.sha256(b"".join(sorted(lines))).hexdigest()
 
 
+def _recorded(cmd: list[str]) -> list[str]:
+    """The command as the committed evidence records it: the interpreter is "python", never this
+    machine's path (a Windows path names the operator's account)."""
+    return ["python" if part == sys.executable else part for part in cmd]
+
+
 def run_gates(root: Path) -> list[dict[str, object]]:
     stdio_dir = root / ".tmp"
     # pytest creates --basetemp but not its parent; the pytest gates use .tmp/evidence/<gate>.
@@ -370,7 +376,7 @@ def run_gates(root: Path) -> list[dict[str, object]]:
         except OSError as exc:
             exit_code, summary = 127, str(exc).replace("\n", " ")[:200]
         seconds = round(time.monotonic() - started, 3)
-        records.append({"name": name, "cmd": cmd, "exit": exit_code, "summary": summary, "seconds": seconds})
+        records.append({"name": name, "cmd": _recorded(cmd), "exit": exit_code, "summary": summary, "seconds": seconds})
         print(f"[M-GRACE-INDEX][BLOCK_EVIDENCE] {name}: exit={exit_code}; {summary}")
     return records
 
