@@ -466,7 +466,7 @@ uv run pytest -q packages/dns-connector/tests/test_search_extractor_dom.py \
 коннекторов он не входит.
 
 CI прогоняет тесты на Ubuntu, Windows и macOS против Python 3.12
-и 3.13. Windows-специфичное управление процессами проверяется юнит-тестами на любой
+и 3.13; ещё 3.14 (все три ОС) и 3.15 (Ubuntu, Windows) проверяются без блокировки слияния. Windows-специфичное управление процессами проверяется юнит-тестами на любой
 ОС через подмену платформы, так что эти ветки покрыты даже на Linux.
 
 Как добавить маркетплейс — [docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md).
