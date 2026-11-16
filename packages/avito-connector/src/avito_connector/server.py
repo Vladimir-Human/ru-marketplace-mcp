@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -113,12 +113,13 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, polite_wait, sync_curl_get
+from mcp_core.kit import blocked_error, polite_wait, sync_curl_get, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -144,6 +145,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["avito"].hosts
 SITE_BASE = "https://www.avito.ru"
 ITEMS_API = f"{SITE_BASE}/web/1/js/items"
 
@@ -262,7 +264,7 @@ async def _cdp_fetch(url: str, ctx: Context | None) -> tuple[int, str]:
     """
 
     async def _attempt() -> tuple[int, str]:
-        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000) as page:
+        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000, allowed_hosts=ALLOWED_HOSTS) as page:
             raw = await asyncio.wait_for(
                 page.evaluate(
                     """async (args) => {
@@ -355,7 +357,7 @@ async def _fetch_item_page(url: str, ctx: Context | None) -> tuple[int, str, str
     await _polite_wait()
 
     async def _attempt() -> str:
-        async with _cdp_lock, open_page(url, wait_ms=4000, allowed_hosts={"avito.ru", "www.avito.ru"}) as page:
+        async with _cdp_lock, open_page(url, wait_ms=4000, allowed_hosts=ALLOWED_HOSTS) as page:
             content = getattr(page, "content", None)
             # Playwright exposes content(); the shared raw-CDP PageLike currently
             # only exposes evaluate(). Snapshot the same rendered DOM there,
@@ -652,8 +654,7 @@ def _seller_profile_url(raw: str) -> str:
         raise BadRequestError("invalid Avito seller URL") from exc
     if parts.scheme or parts.netloc:
         if (
-            parts.scheme not in ("http", "https")
-            or parts.hostname not in {"avito.ru", "www.avito.ru"}
+            not url_on_hosts(raw, ALLOWED_HOSTS)
             or parts.username is not None
             or parts.password is not None
             or port not in (None, 80, 443)
@@ -1229,7 +1230,7 @@ def _photo_magic_matches(content_type: str, data: bytes) -> bool:
 
 def _sync_photo_get(url: str) -> tuple[int, str, bytes]:
     """One listing photo over the curl_cffi tier, streamed with a hard size cap."""
-    if not _state.photo_url_allowed(url):
+    if not url_on_hosts(url, ALLOWED_HOSTS) or not _state.photo_url_allowed(url):
         raise ValueError("disallowed photo URL")
     proxy = _proxy()
     kwargs: dict[str, Any] = {"proxies": {"http": proxy, "https": proxy}} if proxy else {}
@@ -1351,8 +1352,7 @@ async def avito_card(
             raise_tool_error(BadRequestError("invalid Avito item URL"))
         if parts.scheme or parts.netloc:
             if (
-                parts.scheme not in ("http", "https")
-                or parts.hostname not in {"avito.ru", "www.avito.ru"}
+                not url_on_hosts(raw, ALLOWED_HOSTS)
                 or parts.username is not None
                 or parts.password is not None
                 or port not in (None, 80, 443)

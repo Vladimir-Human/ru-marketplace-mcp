@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <requirements project="ru-marketplace-mcp" evidence="Repository source and documentation; static inspection only; tests and live services not run">
+  <requirement id="R-NAV-HOSTS" status="accepted" source="Owner plan item P1-13, 2026-11-16">
+    <says>SourceSpec gains hosts, the one list per source for input checks, navigation and P2-1 m6d. allowed_hosts becomes required on open_page, open_owned_popup and render_json; every call site passes its source's list. The handoff path keeps its own list.</says>
+    <invariant id="R-NAV-HOSTS.invariant" owner="M-SOURCES,M-KIT,M-CHROME-CDP,M-WB,M-OZON,M-AVITO,M-TAOBAO,M-MEGAMARKET,M-LAMODA,M-DNS,M-CITILINK,M-ALIEXPRESS,M-CIAN" proof="offline registry/schema-driven hostile-input transport spies, render_json final-URL tests and mypy">I-NAV-HOSTS: no tool argument and no redirect takes the scraping Chrome or an HTTP fetch off the source's hosts. Foreign URL/id-or-URL arguments are bad_request or documented not_found before any transport call; owned navigation requires an explicit policy, checks its input before browser access and rejects a final URL off the policy with NavigationPolicyError. Connector HTTP fetches do not follow redirects.</invariant>
+  </requirement>
   <requirement id="R-NO-MCP-LOGGING" status="accepted" source="Plan item A8a">
     <says>Actionable messages belong in existing tool-result warnings or notes, not MCP logging. Progress and every debug message use redacted stdlib logging on stderr; no new output field or deprecated Context logging call.</says>
     <invariant id="R-NO-MCP-LOGGING.context-calls" owner="M-WB,M-OZON,M-YANDEX,M-DETMIR,M-AVITO,M-COMPARE,M-MPSTATS" proof="offline AST test">No production ctx.info, ctx.debug, ctx.warning, ctx.error, ctx.log or logging sibling call remains, including non-search tools and CLI-only selfchecks; public Context parameters remain unchanged.</invariant>

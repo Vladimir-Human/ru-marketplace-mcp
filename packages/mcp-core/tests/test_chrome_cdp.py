@@ -481,7 +481,7 @@ async def test_open_page_keeps_the_tab_count_when_raw_fallback_fails_too(monkeyp
     monkeypatch.setattr(chrome_cdp, "_raw_cdp_page", raw_fails)
 
     with pytest.raises(TransportDownError) as caught:
-        async with chrome_cdp.open_page("https://example.com/", 0):
+        async with chrome_cdp.open_page("https://example.com/", 0, allowed_hosts={"example.com"}):
             pytest.fail("a failed fallback must not yield a page")
 
     message = str(caught.value)
@@ -928,7 +928,7 @@ async def test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200(mo
     fake_page = _FakeNavPage(outcome=200, status=status)
     _patch_playwright_tab(monkeypatch, fake_page)
 
-    async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0) as page:
+    async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0, allowed_hosts={"shop.test"}) as page:
         assert page.url == "https://shop.test/real"
 
     assert fake_page.waits == [{"wait_until": "domcontentloaded", "timeout": chrome_cdp._ANTIBOT_RECHECK_S * 1000}]
@@ -958,7 +958,7 @@ async def test_playwright_antibot_stays_a_block_without_a_good_reload(monkeypatc
     _patch_playwright_tab(monkeypatch, fake_page)
 
     with pytest.raises(chrome_cdp.NavBlocked) as blocked:
-        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0, allowed_hosts={"shop.test"}):
             pass
 
     assert fake_page.waits == [{"wait_until": "domcontentloaded", "timeout": chrome_cdp._ANTIBOT_RECHECK_S * 1000}]
@@ -972,7 +972,7 @@ async def test_playwright_429_is_not_rechecked(monkeypatch):
     _patch_playwright_tab(monkeypatch, fake_page)
 
     with pytest.raises(chrome_cdp.NavBlocked) as blocked:
-        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0, allowed_hosts={"shop.test"}):
             pass
 
     assert blocked.value.status == 429
@@ -1037,7 +1037,7 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
     )
 
     with pytest.raises(chrome_cdp.NavBlocked) as blocked:
-        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0):
+        async with chrome_cdp.open_page("https://shop.test/p", wait_ms=0, allowed_hosts={"shop.test"}):
             pass
 
     assert blocked.value.status == 429

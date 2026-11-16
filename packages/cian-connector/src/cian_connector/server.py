@@ -30,7 +30,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA;
+# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; M-SOURCES; R-NAV-HOSTS.invariant.
 #        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -67,12 +67,13 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait
+from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 from pydantic import Field
 
@@ -95,9 +96,9 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["cian"].hosts
 SITE_BASE = "https://www.cian.ru"
 # www geo-redirects to a regional subdomain remembered in the profile (rostov.cian.ru).
-ALLOWED_HOSTS = frozenset({"www.cian.ru", ".cian.ru"})
 SEARCH_API = "https://api.cian.ru/search-offers/v2/search-offers-desktop/"
 CARD_CONFIG_KEY = "frontend-offer-card"
 TIMEOUT = _settings.timeout
@@ -685,14 +686,13 @@ def _parse_card(offer_data: Any) -> dict[str, Any]:
 
 def _extract_offer_id(raw: str) -> int | None:
     """Bare digits or a cian.ru offer URL; anything else is None.
-
     Offer ids run 9 digits today; the 6-digit floor rejects a short fragment
     ('123') instead of fetching an id that never existed.
     """
     raw = raw.strip()
     if raw.isdigit():
         return int(raw) if len(raw) >= 6 else None
-    match = _OFFER_ID_RE.search(raw)
+    match = _OFFER_ID_RE.search(raw) if url_on_hosts(raw, ALLOWED_HOSTS) else None
     return int(match.group(1)) if match else None
 
 

@@ -70,7 +70,8 @@ def _patch_page(monkeypatch, page):
     """Replace the owned-page factory, keeping the real _cdp_render in place."""
 
     @asynccontextmanager
-    async def open_mock(url, wait_ms):
+    async def open_mock(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         page.opens += 1
         try:
             yield page

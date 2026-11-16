@@ -53,7 +53,7 @@ async def test_ozon_only_passes_explicit_compat_to_its_owned_cdp_tab(monkeypatch
     monkeypatch.setattr(server._settings, "chrome_compat", mode)
     monkeypatch.setattr(server, "open_page", page)
     status, body = await server._cdp_fetch_json("https://www.ozon.ru/api/test", None)
-    expected = {"wait_ms": 4000}
+    expected = {"wait_ms": 4000, "allowed_hosts": server.ALLOWED_HOSTS}
     if mode == "windows":
         expected["ozon_windows_compat"] = True
     assert calls[0] == ("open", "https://www.ozon.ru/", expected)

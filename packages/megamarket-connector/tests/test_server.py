@@ -1203,7 +1203,11 @@ def _patch_page(monkeypatch, final_url):
         async def __aexit__(self, *exc):
             return False
 
-    monkeypatch.setattr(server, "open_page", lambda url, wait_ms=0: FakeCtx())
+    def open_page(url, wait_ms=0, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
+        return FakeCtx()
+
+    monkeypatch.setattr(server, "open_page", open_page)
     monkeypatch.setattr(server, "_min_gap", 0.0)
 
 

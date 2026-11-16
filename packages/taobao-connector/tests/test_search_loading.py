@@ -82,7 +82,8 @@ class FakePage:
 
 def _patch_page(monkeypatch, page):
     @asynccontextmanager
-    async def open_mock(url, wait_ms):
+    async def open_mock(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         assert url.startswith("https://s.taobao.com/search?")
         page.opens += 1
         try:

@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -76,12 +76,13 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait
+from mcp_core.kit import polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked, current_page_url, open_owned_popup, open_page
 from pydantic import Field
 
@@ -100,6 +101,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["aliexpress"].hosts
 SITE_BASE = "https://aliexpress.ru"
 SEARCH_URL = f"{SITE_BASE}/wholesale"
 # The landing page any card read starts from. It is a live search the site keeps
@@ -161,8 +163,7 @@ def _extract_item_id(raw: str) -> str | None:
     if parts.scheme:
         if parts.scheme not in ("http", "https"):
             return None
-        host = (parts.hostname or "").rstrip(".").lower()
-        if host != "aliexpress.ru" and not host.endswith(".aliexpress.ru"):
+        if not url_on_hosts(raw, ALLOWED_HOSTS):
             return None
         raw = parts.path
     elif raw.startswith("//"):
@@ -395,7 +396,9 @@ async def _cdp_render_search(url: str, ctx: Context | None) -> dict[str, Any]:
     """Open the search URL in the operator's Chrome and extract tiles."""
     async with _cdp_lock:
         await _polite_wait()
-        async with open_page(url, wait_ms=10000, navigation_timeout_ms=TIMEOUT * 1000) as page:
+        async with open_page(
+            url, wait_ms=10000, navigation_timeout_ms=TIMEOUT * 1000, allowed_hosts=ALLOWED_HOSTS
+        ) as page:
             raw = await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0)
     return _unwrap_extract(raw, "search")
 
@@ -414,7 +417,7 @@ def _unwrap_extract(raw: Any, what: str) -> dict[str, Any]:
 
 _POPUP_CLOSE_TIMEOUT_S = 5.0
 _POPUP_ARRIVAL_TIMEOUT_S = 2.0
-_CARD_HOSTS = frozenset({"aliexpress.ru", "www.aliexpress.ru"})
+_CARD_HOSTS = ALLOWED_HOSTS
 
 
 async def _read_card_target(target: Any, wants: re.Pattern[str]) -> dict[str, Any]:
@@ -490,7 +493,9 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
     wants = re.compile(rf"/item/{re.escape(item_id)}(?!\d)")
     async with _cdp_lock:
         await _polite_wait()
-        async with open_page(_LANDING, wait_ms=9000, navigation_timeout_ms=TIMEOUT * 1000) as page:
+        async with open_page(
+            _LANDING, wait_ms=9000, navigation_timeout_ms=TIMEOUT * 1000, allowed_hosts=ALLOWED_HOSTS
+        ) as page:
             context = getattr(page, "context", None)
             if context is None:
                 # Raw CDP has no Playwright page context: open the item as a popup

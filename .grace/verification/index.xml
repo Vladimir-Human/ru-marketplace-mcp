@@ -581,6 +581,16 @@
     <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_skip_reason_names_the_missing_token" requirements="R-MPSTATS-MOUNT-GATE" />
     <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_standalone_mpstats_server_keeps_its_tools" requirements="R-MPSTATS-MOUNT-GATE" title="The gate lives in the unified mount, never in the standalone server." />
   </requirement>
+  <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_foreign_url_arguments_never_reach_transport" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_url_inventory_includes_each_url_capable_source" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_valid_source_input_can_reach_the_transport" requirements="R-NAV-HOSTS.invariant" title="A reject-everything implementation must fail the same conformance suite." />
+    <test file="packages/mcp-core/tests/test_kit.py" name="test_host_policy_exact_names_and_explicit_subdomains" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/mcp-core/tests/test_kit.py" name="test_sync_curl_get_streams_decodes_and_closes" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_open_page_refuses_foreign_input_before_browser_or_permit" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_accepts_its_registered_redirect" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_passes_policy_and_refuses_foreign_final_url" requirements="R-NAV-HOSTS.invariant" />
+  </requirement>
   <requirement id="R-NIGHTLY-DRIFT-ALARM" kind="requirement" state="tested" gaps="G-LIVE-SMOKE-STRENGTH">
     <test file="scripts/test_ci_concurrency.py" name="test_a_broken_live_check_fails_the_alarm" requirements="R-NIGHTLY-DRIFT-ALARM" title="R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure." />
     <test file="scripts/test_ci_concurrency.py" name="test_the_doctor_alarm_runs_before_the_canary_on_one_ledger" requirements="R-NIGHTLY-DRIFT-ALARM" title="The alarm must get its live requests before the canary spends them." />

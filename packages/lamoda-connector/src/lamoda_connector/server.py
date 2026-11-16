@@ -24,7 +24,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
 # SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
 # DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/lamoda-connector/tests.
+# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/lamoda-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
@@ -65,13 +65,14 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait
+from mcp_core.kit import polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
 from mcp_core.runtime import browser_handoff_lifespan, current_client_scope
+from mcp_core.sources import BY_NAME
 from mcp_core.transport import build_client
 from mcp_core.transport.browser_handoff import get_handoff_id, has_pending_handoff, read_with_handoff
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
@@ -97,6 +98,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["lamoda"].hosts
 SITE_BASE = "https://www.lamoda.ru"
 GRAPHQL_URL = f"{SITE_BASE}/goapi/v2/catalog/graphql/products/"
 
@@ -166,6 +168,11 @@ def _extract_sku(raw: str) -> str | None:
     expects the canonical uppercase form.
     """
     raw = raw.strip()
+    parts = urllib.parse.urlsplit(raw)
+    if parts.scheme or parts.netloc:
+        if not url_on_hosts(raw, ALLOWED_HOSTS):
+            return None
+        raw = parts.path
     match = _SKU_RE.search(raw)
     return match.group(1).upper() if match else None
 
@@ -361,8 +368,7 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
     """Tier 2: POST from a loaded Lamoda tab carrying the operator's cookies."""
 
     async def _attempt() -> tuple[int, str]:
-        # open_page defaults to the origin host (www.lamoda.ru); no extra hosts.
-        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000) as page:
+        async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=4000, allowed_hosts=ALLOWED_HOSTS) as page:
             # A landing that stopped on the anti-bot page cannot post anything; say
             # so at once instead of waiting out the fetch timeout (live 2026-10-12).
             snippet = await asyncio.wait_for(page.evaluate(_JS_BODY_SNIPPET), timeout=10.0)
@@ -503,7 +509,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
         async with _cdp_lock:
             await _polite_wait()
             if scope is None:
-                async with open_page(url, wait_ms=8000) as page:
+                async with open_page(url, wait_ms=8000, allowed_hosts=ALLOWED_HOSTS) as page:
                     return await read(page)
             note: dict = {}
             data, expires_at = await read_with_handoff(
@@ -511,6 +517,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
                 wait_ms=8000,
                 scope=scope,
                 operation="lamoda_search",
+                allowed_hosts=ALLOWED_HOSTS,
                 read=read,
                 challenge=lambda payload: "captcha" if _anti_bot_challenge(payload) else None,
                 note_out=note,

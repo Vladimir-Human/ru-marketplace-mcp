@@ -245,7 +245,7 @@ async def test_public_raw_fallback_bounds_outbound_send(monkeypatch, slow_method
     )
 
     async def enter():
-        async with cdp.open_page("https://example.com/prepub", wait_ms=0):
+        async with cdp.open_page("https://example.com/prepub", wait_ms=0, allowed_hosts={"example.com"}):
             pytest.fail("a timed-out attach command must not yield a page")
 
     started = time.monotonic()
@@ -273,7 +273,7 @@ async def test_public_raw_fallback_still_navigates_and_closes_only_its_target(mo
     """R-CDP-COMMAND-DEADLINE: immediate sends/noisy recv keep the owned lifecycle."""
     cdp, commands, _, _ = _install_raw_lifecycle_transport(monkeypatch, noisy=noisy)
 
-    async with cdp.open_page("https://example.com/prepub", wait_ms=0) as page:
+    async with cdp.open_page("https://example.com/prepub", wait_ms=0, allowed_hosts={"example.com"}) as page:
         assert page.url == "https://example.com/prepub"
         assert not any(command["method"] == "Target.closeTarget" for _, command in commands)
 

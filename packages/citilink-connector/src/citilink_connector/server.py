@@ -23,7 +23,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Citilink product search and cards from rendered pages.
 # SCOPE: Read-only paced committed-and-parsed CDP reads; fail-fast rate_limited on 429; reject walls before mapping/caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-NAV-TIMEOUT.qrator-429; R-SELFCHECK-GATES-PRICE; packages/citilink-connector/tests.
+# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-NAV-TIMEOUT.qrator-429; R-SELFCHECK-GATES-PRICE; packages/citilink-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
@@ -66,6 +66,7 @@ from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked
 from pydantic import Field
 
@@ -84,6 +85,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+ALLOWED_HOSTS = BY_NAME["citilink"].hosts
 SITE_BASE = "https://www.citilink.ru"
 SEARCH_URL = f"{SITE_BASE}/search/"
 
@@ -140,7 +142,7 @@ def _extract_product_id(raw: str) -> str | None:
     steer the operator's logged-in Chrome there. The check is the shared one
     (mcp_core.kit.host_checked_id); this pattern and this host are ours.
     """
-    return host_checked_id(raw, hosts=("citilink.ru",), path_re=_PRODUCT_ID_RE, bare_re=_BARE_ID_RE)
+    return host_checked_id(raw, hosts=ALLOWED_HOSTS, path_re=_PRODUCT_ID_RE, bare_re=_BARE_ID_RE)
 
 
 _SEARCH_EXTRACT_TEMPLATE = """
@@ -319,6 +321,7 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
             extract_js,
             wait_ms,
             lock=_cdp_lock,
+            allowed_hosts=ALLOWED_HOSTS,
             wait=_polite_wait,
             max_body_bytes=MAX_BODY_BYTES,
             evaluate_timeout=_settings.timeout,

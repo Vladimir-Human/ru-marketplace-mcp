@@ -27,11 +27,12 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # PURPOSE: Provide the shared connector assembly — pacing, refusal errors, capped reads and paced CDP extraction.
 # SCOPE: Mechanism only; per-source state stays in each connector, curl_cffi arrives as an argument and chrome_cdp imports lazily.
 # DEPENDS: mcp_core.pacing,errors; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
-# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed.
+# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
 # blocked_error: Build the refusal error, with the operator's rotation hint and a bounded detail.
+# url_on_hosts: Share exact/leading-dot source-host matching between inputs and navigation.
 # host_checked_id: Extract an id from a URL only when its host is ours; bare ids pass.
 # on_bot_check_page: Tell whether a page URL is the shared anti-bot check (/xpvnsulc/).
 # sync_curl_get: Tier-1 GET whose streamed body is capped and decoded.
@@ -44,7 +45,7 @@ import asyncio
 import json
 import re
 import urllib.parse
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from typing import Any
 
 from mcp_core.errors import ParserDriftError, TransportDownError, raise_tool_error
@@ -56,6 +57,7 @@ __all__ = [
     "polite_wait",
     "render_json",
     "sync_curl_get",
+    "url_on_hosts",
 ]
 
 
@@ -104,6 +106,32 @@ def on_bot_check_page(url: object) -> bool:
     return urllib.parse.urlsplit(url).path.startswith(BOT_CHECK_PATH)
 
 
+# START_BLOCK_HOST_POLICY
+
+
+def url_on_hosts(url: str, hosts: Collection[str]) -> bool:
+    """HTTP(S) on an exact host; only a leading-dot entry admits subdomains.
+
+    Input checks and navigation share this rule (R-NAV-HOSTS.invariant).
+    Malformed authorities and browser-significant backslashes fail closed.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    allowed = {item.lower().rstrip(".") for item in hosts}
+    return (
+        parts.scheme in {"http", "https"}
+        and bool(host)
+        and "\\" not in parts.netloc
+        and (host in allowed or any(item.startswith(".") and host.endswith(item) for item in allowed))
+    )
+
+
+# END_BLOCK_HOST_POLICY
+
+
 def host_checked_id(
     raw: str,
     *,
@@ -113,7 +141,7 @@ def host_checked_id(
 ) -> str | None:
     """Pull a product id out of a URL on one of ``hosts``, or from a bare id.
 
-    Host-checked on purpose. The id is the only thing that survives this
+    Exact/leading-dot host-checked on purpose. The id is the only thing that survives this
     function and the caller rebuilds the navigation URL from its own base, so a
     caller cannot smuggle ``/product/<id>`` into a path on someone else's
     domain and steer the operator's logged-in Chrome there. Anything outside
@@ -127,10 +155,7 @@ def host_checked_id(
         return raw.lower()
     parts = urllib.parse.urlsplit(raw)
     if parts.scheme:
-        if parts.scheme not in ("http", "https"):
-            return None
-        host = (parts.hostname or "").rstrip(".").lower()
-        if not any(host == allowed or host.endswith(f".{allowed}") for allowed in hosts):
+        if not url_on_hosts(raw, hosts):
             return None
         raw = parts.path
     elif raw.startswith("//"):
@@ -165,7 +190,9 @@ def sync_curl_get(
     kwargs: dict[str, Any] = {}
     if proxy:
         kwargs["proxies"] = {"http": proxy, "https": proxy}
-    r = get(url, headers=headers, impersonate=impersonate, timeout=timeout, stream=True, **kwargs)
+    r = get(
+        url, headers=headers, impersonate=impersonate, timeout=timeout, stream=True, allow_redirects=False, **kwargs
+    )
     try:
         encoding = r.encoding or "utf-8"
         chunks: list[bytes] = []
@@ -196,6 +223,7 @@ async def render_json(
     lock: asyncio.Lock,
     wait: Callable[[], Awaitable[None]],
     max_body_bytes: int,
+    allowed_hosts: Collection[str],
     evaluate_timeout: float = 30.0,
     wait_for_dom_parsed: bool = False,
 ) -> dict[str, Any]:
@@ -208,13 +236,14 @@ async def render_json(
     returns JSON text; a missing, oversized or non-object payload is a loud
     error rather than an empty result. ``wait_for_dom_parsed`` forwards the
     opt-in commit/readyState wait; other callers keep the transport's default.
+    ``allowed_hosts`` is required and is passed unchanged into owned navigation.
     """
     from mcp_core.transport.chrome_cdp import open_page
 
     async with lock:
         await wait()
         page_options: dict[str, Any] = {"wait_for_dom_parsed": True} if wait_for_dom_parsed else {}
-        async with open_page(url, wait_ms=wait_ms, **page_options) as page:
+        async with open_page(url, wait_ms=wait_ms, allowed_hosts=allowed_hosts, **page_options) as page:
             raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=evaluate_timeout)
     if not isinstance(raw, str) or len(raw.encode()) > max_body_bytes:
         raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))

@@ -29,6 +29,7 @@ import json
 import urllib.parse
 
 from mcp_core.resilience import shape_signature
+from mcp_core.sources import BY_NAME
 from mcp_core.transport.chrome_cdp import NavBlocked, open_page
 
 # source -> (search URL template, the anchor pattern its extractor keys on)
@@ -254,7 +255,7 @@ async def diagnose(source: str, query: str) -> int:
     print(f"\n{'=' * 72}\n{source}  ·  {url}\n{'=' * 72}")
 
     try:
-        async with open_page(url, wait_ms=9000) as page:
+        async with open_page(url, wait_ms=9000, allowed_hosts=BY_NAME[source].hosts) as page:
             raw = await asyncio.wait_for(page.evaluate(_DIAGNOSTIC_JS, {"pattern": pattern}), timeout=30.0)
     except NavBlocked as exc:
         print(f"  navigation refused: HTTP {exc.status}")

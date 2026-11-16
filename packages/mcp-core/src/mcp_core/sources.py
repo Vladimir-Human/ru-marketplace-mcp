@@ -30,7 +30,7 @@ shipping.
 #        no imports of connectors and no changes to source selection or public types.
 # DEPENDS: stdlib dataclasses,os,typing.
 # LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE;
-#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING; R-ERROR-NEXT-STEP.
+#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING; R-ERROR-NEXT-STEP; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # SourceSpec: One shipped server's identity, wiring and access facts.
@@ -86,6 +86,7 @@ __all__ = [
 ]
 
 
+# START_BLOCK_SOURCE_REGISTRY
 @dataclass(frozen=True)
 class SourceSpec:
     """What the project knows about one shipped server.
@@ -112,6 +113,8 @@ class SourceSpec:
     # were named in, which for three sources is neither the canonical name nor
     # the mount name (wb_, detmir_, yandex_), so it is recorded, not derived.
     tool_prefix: str = ""
+    # Exact hosts; only a leading dot admits subdomains (R-NAV-HOSTS.invariant).
+    hosts: tuple[str, ...] = ()
     aliases: tuple[str, ...] = ()
     kind: str = "marketplace"
     # Unified mount name; None means this server is not mounted as a source.
@@ -151,6 +154,18 @@ class SourceSpec:
 SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="wildberries",
+        hosts=(
+            "www.wildberries.ru",
+            "wildberries.ru",
+            "card.wb.ru",
+            "search.wb.ru",
+            "catalog.wb.ru",
+            "feedbacks2.wb.ru",
+            "feedbacks1.wb.ru",
+            "questions.wildberries.ru",
+            "search-goods.wildberries.ru",
+            ".wbbasket.ru",  # SKU-dependent basket-N hosts and static-basket mirrors serve JSON.
+        ),
         listing_tool="wb_search",
         pacing_floor_paths=("_min_gap", "_settings.dom_min_gap"),
         aliases=("wb",),
@@ -173,6 +188,11 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="ozon",
+        hosts=(
+            "www.ozon.ru",
+            "ozon.ru",
+            "m.ozon.ru",  # Existing mobile card links are canonicalized by Ozon's search parser.
+        ),
         listing_tool="ozon_search",
         package="ozon-connector",
         module="ozon_connector.server",
@@ -193,6 +213,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="yandex_market",
+        hosts=("market.yandex.ru",),
         listing_tool="yandex_search",
         pacing_floor_paths=("_limiter.min_gap_s",),
         aliases=("yandex", "ym"),
@@ -212,6 +233,11 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="detsky_mir",
+        hosts=(
+            "api.detmir.ru",
+            "www.detmir.ru",
+            "detmir.ru",  # Existing canonical card-URL alias accepted by the compare router.
+        ),
         listing_tool="detmir_category",
         pacing_floor_paths=("_limiter.min_gap_s",),
         aliases=("detmir",),
@@ -231,6 +257,11 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="avito",
+        hosts=(
+            "www.avito.ru",
+            "avito.ru",
+            ".img.avito.st",  # Opt-in listing-photo HTTP reads use these image CDN subdomains.
+        ),
         listing_tool="avito_search",
         package="avito-connector",
         module="avito_connector.server",
@@ -251,6 +282,13 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="taobao",
+        hosts=(
+            "s.taobao.com",
+            "item.taobao.com",
+            "login.taobao.com",  # The source's registered login/human-handoff page.
+            "taobao.com",
+            "detail.tmall.taobao.com",  # Preserve the existing tested input alias; cards rebuild ITEM_BASE.
+        ),
         listing_tool="taobao_search",
         package="taobao-connector",
         module="taobao_connector.server",
@@ -277,6 +315,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="megamarket",
+        hosts=("megamarket.ru",),
         listing_tool="megamarket_search",
         package="megamarket-connector",
         module="megamarket_connector.server",
@@ -301,6 +340,10 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="lamoda",
+        hosts=(
+            "www.lamoda.ru",
+            "lamoda.ru",
+        ),
         listing_tool="lamoda_search",
         package="lamoda-connector",
         module="lamoda_connector.server",
@@ -321,6 +364,10 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="dns",
+        hosts=(
+            "www.dns-shop.ru",
+            "dns-shop.ru",
+        ),
         listing_tool="dns_search",
         package="dns-connector",
         module="dns_connector.server",
@@ -342,6 +389,10 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="citilink",
+        hosts=(
+            "www.citilink.ru",
+            "citilink.ru",
+        ),
         listing_tool="citilink_search",
         retry_rate_limit=False,
         package="citilink-connector",
@@ -364,6 +415,10 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="aliexpress",
+        hosts=(
+            "aliexpress.ru",
+            "www.aliexpress.ru",
+        ),
         listing_tool="aliexpress_search",
         aliases=("ali",),
         package="aliexpress-connector",
@@ -385,6 +440,11 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="cian",
+        hosts=(
+            "www.cian.ru",
+            "cian.ru",
+            ".cian.ru",  # Existing www-to-regional redirects and the api.cian.ru search endpoint.
+        ),
         listing_tool="cian_search",
         package="cian-connector",
         module="cian_connector.server",
@@ -419,6 +479,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="mpstats",
+        hosts=("plugin.mpstats.io",),
         auth_setting="MPSTATS_MP_AUTH",
         package="mpstats-connector",
         module="mpstats_connector.server",
@@ -450,6 +511,7 @@ SOURCES: tuple[SourceSpec, ...] = (
 )
 
 BY_NAME: dict[str, SourceSpec] = {spec.name: spec for spec in SOURCES}
+# END_BLOCK_SOURCE_REGISTRY
 
 
 def _mounted() -> tuple[SourceSpec, ...]:

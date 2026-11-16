@@ -215,7 +215,8 @@ async def test_challenge_recovery_bypasses_failed_payload_cache(monkeypatch):
             return json.dumps(payload)
 
     @asynccontextmanager
-    async def open_page(url, wait_ms):
+    async def open_page(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         yield Page()
 
     monkeypatch.setattr(server, "open_page", open_page)
@@ -597,7 +598,8 @@ async def test_card_graphql_307_falls_back_to_cdp(monkeypatch):
             return json.dumps({"status": 200, "text": json.dumps(REAL_FOUND)})
 
     @asynccontextmanager
-    async def open_page(url, wait_ms):
+    async def open_page(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         opened.append((url, wait_ms))
         yield Page()
 
@@ -642,7 +644,8 @@ async def test_card_cdp_landing_on_the_challenge_page_is_challenge_required(monk
             raise AssertionError("must not POST from a challenge page")
 
     @asynccontextmanager
-    async def open_page(url, wait_ms):
+    async def open_page(url, wait_ms, *, allowed_hosts):
+        assert allowed_hosts == server.ALLOWED_HOSTS
         yield Page()
 
     monkeypatch.setattr(server, "open_page", open_page)

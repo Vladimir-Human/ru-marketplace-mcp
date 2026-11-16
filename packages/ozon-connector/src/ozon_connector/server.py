@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -73,7 +73,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait, sync_curl_get
+from mcp_core.kit import polite_wait, sync_curl_get, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -84,6 +84,7 @@ from mcp_core.process import (
 )
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport import proxy_from_env
 from mcp_core.transport.chrome_cdp import NavBlocked, cdp_setup_hint, open_page
 from pydantic import Field
@@ -164,6 +165,7 @@ _settings = get_settings()
 # the JA3/JA4 fingerprint pool. Override via OZON_IMPERSONATE.
 IMPERSONATE = _settings.impersonate
 TIMEOUT = _settings.timeout
+ALLOWED_HOSTS = BY_NAME["ozon"].hosts
 MAX_BODY_BYTES = _settings.max_body_bytes  # 50 MB hard cap default; OZON_MAX_BODY_BYTES
 _SELFCHECK_SKU = _settings.selfcheck_sku  # golden-fixture baseline SKU; OZON_SELFCHECK_SKU
 
@@ -385,7 +387,7 @@ async def _cdp_fetch_json(api_url: str, ctx: Context | None) -> tuple[int, str]:
         page_options: dict[str, Any] = {"wait_ms": 4000}
         if _settings.chrome_compat == "windows":
             page_options["ozon_windows_compat"] = True
-        async with _cdp_lock, open_page("https://www.ozon.ru/", **page_options) as page:
+        async with _cdp_lock, open_page("https://www.ozon.ru/", allowed_hosts=ALLOWED_HOSTS, **page_options) as page:
             raw = await asyncio.wait_for(
                 page.evaluate(
                     """async (args) => {
@@ -614,10 +616,9 @@ def _canonical_product_path_from_input(raw_input: str) -> tuple[str | None, dict
     raw = raw_input.strip()
     if raw.isdigit():
         return f"/product/{raw}/", None
-    if raw.startswith("http"):
-        parts = urllib.parse.urlsplit(raw)
-        host = (parts.hostname or "").rstrip(".").lower()
-        if parts.scheme != "https" or not (host == "ozon.ru" or host.endswith(".ozon.ru")):
+    parts = urllib.parse.urlsplit(raw)
+    if parts.scheme or parts.netloc:
+        if parts.scheme != "https" or not url_on_hosts(raw, ALLOWED_HOSTS):
             return None, {"status": "error", "type": "invalid_arguments", "message": "URL must be on ozon.ru"}
         raw = parts.path
     else:
@@ -654,8 +655,7 @@ def _search_tile_product_link(link: str) -> tuple[str, str] | None:
             return None
         return f"https://www.ozon.ru{link}", canonical
     parts = urllib.parse.urlsplit(link)
-    host = (parts.hostname or "").rstrip(".").lower()
-    if parts.scheme != "https" or "@" in parts.netloc or not (host == "ozon.ru" or host.endswith(".ozon.ru")):
+    if parts.scheme != "https" or "@" in parts.netloc or not url_on_hosts(link, ALLOWED_HOSTS):
         return None
     canonical, _error = _canonical_product_path_from_input(parts.path)
     if not canonical:
