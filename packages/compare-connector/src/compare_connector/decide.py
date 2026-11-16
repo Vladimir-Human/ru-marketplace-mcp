@@ -531,10 +531,13 @@ def build_response(
             warnings.append("stock_filter: no priced offers were returned")
     # A source's info: note stays a note: the prefix is what tells context from a
     # doubt about the data (mcp_core.health_warnings), and source_outcomes still
-    # attributes it.
+    # attributes it. A conditional_price: warning keeps its documented top-level
+    # prefix too, wherever the helper ran (the adapter or the safety net below).
     for outcome in outcomes:
         warnings.extend(
-            warning if warning.startswith("info:") else f"source_warning:{outcome.source}: {warning}"
+            warning
+            if warning.startswith(("info:", "conditional_price:"))
+            else f"source_warning:{outcome.source}: {warning}"
             for warning in outcome.warnings
         )
     # An adapter that knows a conditional price names it with the shared helper

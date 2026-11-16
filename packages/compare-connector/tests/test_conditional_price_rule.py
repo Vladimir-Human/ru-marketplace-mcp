@@ -249,4 +249,23 @@ def test_build_response_ranks_by_the_everyday_price_and_never_the_conditional_on
     assert len([w for w in response.warnings if "conditional_price: wildberries/2" in w]) == 1
 
 
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE.no-fabrication")
+def test_an_adapter_conditional_price_warning_keeps_its_top_level_prefix():
+    """v2.9.4 gave a wallet-only WB offer the top-level ``conditional_price: …`` warning the docs describe.
+
+    The adapter now names it through the shared helper; the comparison must pass it through as is, not
+    as ``source_warning:wildberries: conditional_price: …``.
+    """
+    note = "conditional_price: wildberries/2: 900 RUB requires WB Wallet; not ranked"
+    offer = MarketOffer(
+        source="wildberries", product_id="2", title="Kettle", price_rub=None, price_native=900.0, price_kind="wallet"
+    )
+    response = build_response(
+        "Kettle",
+        [(SourceOutcome(source="wildberries", status="ok", detail="1 results, 0 priced", warnings=[note]), [offer])],
+        ResponseOptions(active=["wildberries"], missing=[]),
+    )
+    assert [w for w in response.warnings if "conditional_price" in w] == [note]
+
+
 # END_BLOCK_CONDITIONAL_PRICE_RULE_TESTS

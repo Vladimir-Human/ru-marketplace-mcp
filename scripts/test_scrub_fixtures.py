@@ -5,7 +5,7 @@ finds the values in the same keys change (a) scrubs at runtime — reviewer,
 asker, private seller and agent names, phones, e-mails — and replaces them with
 fixed placeholders of the same shape; check_provenance runs it as a gate, and
 the same gate holds the private-material scrub: a recording's region field
-holds only a placeholder, no file under packages/*/tests/, scripts/ or docs/
+holds only a placeholder, no file under packages/*/tests/, scripts/, docs/ or .grace/
 carries a Windows user path, and no committed fixture or recording carries the
 scraping profile's directory name.
 
@@ -298,6 +298,20 @@ def test_the_published_default_profile_name_passes_in_docs(tmp_path: Path) -> No
     (docs / "setup.md").write_text("The profile lives in %LOCALAPPDATA%\\Chrome-Scraping.", encoding="utf-8")
 
     assert scrub.private_material_problems(tmp_path) == []
+
+
+@pytest.mark.req("R-FIXTURE-PERSONAL-DATA")
+def test_the_check_covers_committed_grace_evidence(tmp_path: Path) -> None:
+    """.grace/evidence/latest.json is committed; an interpreter path in it names the operator's account."""
+    evidence = tmp_path / ".grace" / "evidence"
+    evidence.mkdir(parents=True)
+    (evidence / "latest.json").write_text(
+        '{"cmd": ["C:/Users/operator/w/x/.venv/Scripts/python.exe"]}', encoding="utf-8"
+    )
+
+    problems = scrub.private_material_problems(tmp_path)
+
+    assert any("user path" in problem for problem in problems)
 
 
 @pytest.mark.req("R-FIXTURE-PERSONAL-DATA")
