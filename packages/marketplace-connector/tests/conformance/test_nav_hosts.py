@@ -11,6 +11,10 @@ _url_parameters: Discover URL-capable arguments, not a typed tool/parameter inve
 _cases: Expand the compare card router over the current card-supported sources.
 _transport_spies: Record and block browser and HTTP transport attempts.
 test_foreign_url_arguments_never_reach_transport: Exercise hostile authorities and product-shaped paths.
+_fetch_only_cases: Discover card/seller inputs for every registered non-page fetch host.
+test_page_policy_keeps_fetch_only_hosts_out: Pin the legacy page policies apart from fetch policies.
+test_page_hosts_are_covered_by_fetch_hosts: Check exact and leading-dot policy containment.
+test_legacy_subdomain_card_inputs_keep_reaching_transport: Keep the real parsers' mobile/regional inputs.
 END_MODULE_MAP
 """
 
@@ -24,7 +28,9 @@ from typing import Any
 import httpx
 import pytest
 from curl_cffi import requests as cffi
+from fastmcp import Client
 from fastmcp.exceptions import ToolError
+from mcp_core.kit import url_on_hosts
 from mcp_core.output_schema import registered_tools
 from mcp_core.sources import BY_NAME, SOURCES
 from mcp_core.transport import chrome_cdp
@@ -190,3 +196,129 @@ def test_url_inventory_includes_each_url_capable_source():
 
 
 # END_BLOCK_CONFORMANCE
+# START_BLOCK_PAGE_HOST_CONFORMANCE
+
+# Page policies read from v2.9.4's Avito URL checks, WB DOM guard and compare's
+# numeric-card router. These are requirement oracles, not production fallbacks;
+# discovery still exercises every fetch-only host in the current registry.
+PAGE_HOST_BASELINES = {
+    "avito": ("www.avito.ru", "avito.ru"),
+    "wildberries": ("www.wildberries.ru", "wildberries.ru"),
+    "detsky_mir": ("www.detmir.ru", "detmir.ru"),
+}
+
+
+def _page_hosts(spec):
+    # The unchanged main registry has no page_hosts yet: exercise its actual
+    # broad policy in the red run instead of failing with AttributeError.
+    return getattr(spec, "page_hosts", spec.hosts)
+
+
+def _fetch_only_cases():
+    compare = importlib.import_module(BY_NAME["compare"].module)
+    verify = next(tool for tool in registered_tools(compare.mcp) if tool.name == "compare_verify_offer")
+    for spec in SOURCES:
+        pages = PAGE_HOST_BASELINES.get(spec.name, _page_hosts(spec))
+        module = importlib.import_module(spec.module)
+        tools = [
+            tool
+            for tool in registered_tools(module.mcp)
+            if tool.name in {spec.card_tool, f"{spec.tool_prefix}card", f"{spec.tool_prefix}seller"}
+        ]
+        for policy_host in spec.hosts:
+            host = f"attacker{policy_host}" if policy_host.startswith(".") else policy_host
+            if url_on_hosts(f"https://{host}/", pages):
+                continue
+            for tool in tools:
+                parameters = (
+                    _url_parameters(tool) or [name for name in tool.parameters["properties"] if "id" in name][:1]
+                )
+                for parameter in parameters:
+                    # Numeric/list input is tested through MCP's real schema
+                    # validation, not by passing a string to an int-only fn.
+                    schema = tool.parameters["properties"][parameter]
+                    path = "/brands/abc123" if tool.name.endswith("seller") else "/slug_1234567890"
+                    url = f"https://{host}{path}"
+                    yield spec, module, tool, {parameter: [url] if schema.get("type") == "array" else url}, host
+            if spec.card_tool:
+                path = {
+                    "wildberries": "/catalog/123456789/detail.aspx",
+                    "detsky_mir": "/product/index/id/123456789/",
+                }.get(spec.name, "/slug_1234567890")
+                yield spec, compare, verify, {"source": spec.name, "product_id_or_url": f"https://{host}{path}"}, host
+
+
+FETCH_ONLY_CASES = list(_fetch_only_cases())
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+@pytest.mark.parametrize("spec", SOURCES, ids=lambda spec: spec.name)
+def test_page_policy_keeps_fetch_only_hosts_out(spec):
+    assert _page_hosts(spec) == PAGE_HOST_BASELINES.get(spec.name, spec.hosts)
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+@pytest.mark.parametrize("spec", SOURCES, ids=lambda spec: spec.name)
+def test_page_hosts_are_covered_by_fetch_hosts(spec):
+    for host in _page_hosts(spec):
+        sample = f"page{host}" if host.startswith(".") else host
+        assert url_on_hosts(f"https://{sample}/", spec.hosts)
+        if host.startswith("."):
+            assert any(entry.startswith(".") and host.endswith(entry) for entry in spec.hosts)
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+@pytest.mark.parametrize(
+    "case", FETCH_ONLY_CASES, ids=[f"{s.name}.{t.name}[{h}]" for s, _m, t, _a, h in FETCH_ONLY_CASES]
+)
+async def test_fetch_only_card_and_seller_hosts_never_reach_navigation(case, transport_spies):
+    _spec, module, tool, arguments, _host = case
+    async with Client(module.mcp) as client:
+        with pytest.raises(ToolError) as caught:
+            await client.call_tool(tool.name, arguments)
+    # URL-capable tools must return the real pre-transport refusal. Numeric
+    # tools instead reject a URL at the advertised input-schema boundary.
+    message = str(caught.value)
+    if message.startswith("{"):
+        assert json.loads(message)["error"] in {"bad_request", "not_found"}
+    else:
+        assert "validation" in message.lower()
+    assert transport_spies == []
+
+
+# END_BLOCK_PAGE_HOST_CONFORMANCE
+# START_BLOCK_LEGACY_PAGE_INPUTS
+
+# Own-domain links read from the v2.9.4 input parsers, including the two parsers
+# (Megamarket and Lamoda) that previously extracted an id without a host guard.
+KEPT_PAGE_INPUTS = {
+    "ozon": "https://m.ozon.ru/product/123456789/",
+    "taobao": "https://h5.m.taobao.com/awp/core/detail.htm?id=123456789012",
+    "megamarket": "https://www.megamarket.ru/catalog/details/123456789/",
+    "lamoda": "https://m.lamoda.ru/p/mp002xm0vy5m/",
+    "dns": "https://spb.dns-shop.ru/product/abcd/",
+    "citilink": "https://m.citilink.ru/product/notebook-123456/",
+    "aliexpress": "https://m.aliexpress.ru/item/1005010003103368.html",
+    "cian": "https://spb.cian.ru/sale/flat/123456789/",
+}
+
+
+@pytest.mark.req("R-NAV-HOSTS.kept-inputs")
+@pytest.mark.parametrize(
+    "spec", [spec for spec in SOURCES if spec.name in KEPT_PAGE_INPUTS], ids=lambda spec: spec.name
+)
+async def test_legacy_subdomain_card_inputs_keep_reaching_transport(spec, transport_spies):
+    url = KEPT_PAGE_INPUTS[spec.name]
+    assert url_on_hosts(url, _page_hosts(spec))
+    module = importlib.import_module(spec.module)
+    name = spec.card_tool or f"{spec.tool_prefix}card"
+    tool = next(tool for tool in registered_tools(module.mcp) if tool.name == name)
+    parameter = _url_parameters(tool)[0]
+    try:
+        await tool.fn(**{parameter: url})
+    except (ToolError, ConnectionError):
+        pass
+    assert transport_spies, f"{name} refused the previously accepted own-domain URL: {url}"
+
+
+# END_BLOCK_LEGACY_PAGE_INPUTS

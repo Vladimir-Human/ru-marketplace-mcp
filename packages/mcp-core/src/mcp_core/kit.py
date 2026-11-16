@@ -27,12 +27,12 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # PURPOSE: Provide the shared connector assembly — pacing, refusal errors, capped reads and paced CDP extraction.
 # SCOPE: Mechanism only; per-source state stays in each connector, curl_cffi arrives as an argument and chrome_cdp imports lazily.
 # DEPENDS: mcp_core.pacing,errors; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
-# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant.
+# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
 # blocked_error: Build the refusal error, with the operator's rotation hint and a bounded detail.
-# url_on_hosts: Share exact/leading-dot source-host matching between inputs and navigation.
+# url_on_hosts: Share exact/leading-dot source-host matching; explicit schemeless opt-in for input parsers only.
 # host_checked_id: Extract an id from a URL only when its host is ours; bare ids pass.
 # on_bot_check_page: Tell whether a page URL is the shared anti-bot check (/xpvnsulc/).
 # sync_curl_get: Tier-1 GET whose streamed body is capped and decoded.
@@ -109,14 +109,18 @@ def on_bot_check_page(url: object) -> bool:
 # START_BLOCK_HOST_POLICY
 
 
-def url_on_hosts(url: str, hosts: Collection[str]) -> bool:
+def url_on_hosts(url: str, hosts: Collection[str], *, allow_schemeless: bool = False) -> bool:
     """HTTP(S) on an exact host; only a leading-dot entry admits subdomains.
 
     Input checks and navigation share this rule (R-NAV-HOSTS.invariant).
     Malformed authorities and browser-significant backslashes fail closed.
+    Only input parsers may opt into HTTPS for links with no scheme and no //;
+    navigation keeps requiring an explicit HTTP(S) scheme.
     """
     try:
         parts = urllib.parse.urlsplit(url)
+        if allow_schemeless and not parts.scheme and "//" not in url:
+            parts = urllib.parse.urlsplit("https://" + url)
         host = (parts.hostname or "").rstrip(".").lower()
     except ValueError:
         return False

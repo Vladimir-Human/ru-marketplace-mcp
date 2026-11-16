@@ -478,3 +478,17 @@ async def test_raw_popup_extractor_url_on_foreign_host_with_same_item_id_is_reje
         await server._cdp_card(ITEM_URL, None)
 
     assert json.loads(str(excinfo.value))["error"] == "transport_down"
+
+
+# START_BLOCK_PAGE_HOST_ALIAS
+@pytest.mark.req("R-NAV-HOSTS.kept-inputs")
+async def test_card_popup_keeps_the_www_page_alias(popups):
+    """The leading-dot registry entry must work in the post-read redirect guard."""
+    popups.owned.url = "https://www.aliexpress.ru/item/100501000.html"
+    result = await server._cdp_card(ITEM_URL, None)
+    assert result["title"] == popups.owned.url
+    assert popups.owned.closed
+    assert popups.operator.close_calls == 0
+
+
+# END_BLOCK_PAGE_HOST_ALIAS
