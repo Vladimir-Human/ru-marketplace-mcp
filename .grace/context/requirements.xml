@@ -336,4 +336,11 @@
     <says>Generate the verification index and gap list from AST-read pytest req markers without importing tests. Gate untraced requirements, unknown IDs and a stale committed index in lint; preserve existing mappings and declared gaps without hand bookkeeping.</says>
     <invariant id="R-GRACE-INDEX.evidence" owner="M-GRACE-INDEX" proof="test log" source="Execution plan v3 A5 job 2 brief, 2026-11-16">--evidence runs the local CI gates and writes schema-2 machine facts with one SHA-256 digest of sorted tracked modes, filtered working-tree blobs and paths, excluding exactly .grace/evidence/ and changes/ instead of commit IDs or per-file hashes. --check-evidence runs no gates and passes only for schema 2, successful recorded gates and the matching tree digest: unstaged/staged source edits and deletions fail, while the same checked tree passes after a squash-merge and across LF/CRLF checkouts; use it in Done and tag checks, not CI.</invariant>
   </requirement>
+  <requirement id="R-ARCH-GATE" status="accepted" source="Owner .tmp/brief.md A12, 2026-11-16">
+    <says>Gate production package structure in lint: connector boundaries, measured file/function caps and pure modules. Report T7 numbers; arch-exempt permits only size-cap overruns.</says>
+    <invariant id="R-ARCH-GATE.boundary" owner="M-ARCH-GATE" proof="test">Connectors import only themselves and mcp_core; core imports no connector; only compare and marketplace dynamically load other connectors from registry data, including the existing parity-pinned marketplace mount table and registry-fed selfcheck helper.</invariant>
+    <invariant id="R-ARCH-GATE.size" owner="M-ARCH-GATE" proof="test">Physical file lines and def-node spans are capped at 1200/150 unless baselined; missing entries and slack above 100/20 fail, with measured baseline function caps at initial length plus 10.</invariant>
+    <invariant id="R-ARCH-GATE.purity" owner="M-ARCH-GATE" proof="test">Pure-list modules import none of asyncio, httpx, fastmcp, subprocess, socket, mcp_core.transport or mcp_core.http and contain no await.</invariant>
+    <invariant id="R-ARCH-GATE.exempt" owner="M-ARCH-GATE" proof="test">The arch-exempt label passes --exempt in lint and downgrades size-cap overruns only; boundary, purity, slack and missing-entry failures remain fatal.</invariant>
+  </requirement>
 </requirements>

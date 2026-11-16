@@ -133,6 +133,9 @@ jobs:
       - name: Generated GRACE verification index is current
         run: uv run python scripts/grace_index.py --check
 
+      - name: Architecture structure gate
+        run: uv run python scripts/check_arch.py ${{ contains(github.event.pull_request.labels.*.name, 'arch-exempt') && '--exempt' || '' }}
+
       - name: CHANGELOG fragment
         if: github.event_name == 'pull_request'
         env:
