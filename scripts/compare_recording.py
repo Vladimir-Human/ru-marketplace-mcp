@@ -13,13 +13,14 @@ what it returns or how it fails.
 
 START_MODULE_CONTRACT
 PURPOSE: Capture the compare adapters' raw search payload per compare call and store it as a replayable recording.
-SCOPE: The per-source field plan, the cut-down of a typed search response, the region scrub, the recording document, the capture hook and the child launcher.
-DEPENDS: mcp_core.sources (the registry), mcp_core.errors, mcp_core.redact; FastMCP ToolError; stdlib argparse,datetime,importlib,json,os,pathlib,runpy.
+SCOPE: Adapter fields including images, city-free URLs, scrubbed diagnostics and regions, the recording document, cancellation-safe capture and the child launcher.
+DEPENDS: mcp_core.sources (the registry), mcp_core.errors, mcp_core.redact; FastMCP ToolError; stdlib argparse,datetime,importlib,json,os,pathlib,re,runpy,urllib.parse.
 LINKS: M-COMPARE-RECORDING, M-COMPARE, M-LIVE-AUDIT, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   SOURCE_PLANS: The fields each compare adapter reads, per source.
-  cut_response: One source's typed search response cut down to those fields.
-  scrub_regions: Replace every region value with R1, R2, ... in order of appearance.
+  _recorded_url: Remove Avito city paths and location queries without losing item/image identity.
+  cut_response: One source's typed search response cut down to those fields, with URLs and text scrubbed.
+  scrub_regions: Replace regions with R1, R2, ... and their diagnostic mentions with the same placeholders.
   build_recording: One recording document: the query, the capture time, the sources.
   assemble_recording: One recording document from the captured sources and the compare outcomes.
   write_recording: Write one recording file.
@@ -40,11 +41,13 @@ import itertools
 import json
 import math
 import os
+import re
 import runpy
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastmcp.exceptions import ToolError
 from mcp_core.errors import ConnectorError
@@ -63,9 +66,9 @@ class SourcePlan:
     """What one marketplace's search payload looks like to the compare adapters.
 
     ``item_fields`` are the attributes the adapter reads, one by one, off every
-    item of the search response - nothing else is stored. ``extra_fields`` are
-    the fields the benchmark reads beyond the adapter's own (the product image,
-    where the payload carries one). ``region_fields`` name the response
+    item of the search response - nothing else is stored. ``extra_fields`` keep
+    supplemental adapter reads (Yandex's image) in the same field plan.
+    ``region_fields`` name the response
     attributes that say which region the answer is for.
     """
 
@@ -125,7 +128,7 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
     "ozon": SourcePlan(
         source="ozon",
         tool="ozon_search",
-        item_fields=("sku", "title", "price", "rating", "rating_count", "stock", "url"),
+        item_fields=("sku", "title", "price", "rating", "rating_count", "stock", "url", "image_url"),
         response_model="ozon_connector.models_output:OzonSearchResponse",
         item_model="ozon_connector.models_output:OzonSearchItemOut",
     ),
@@ -147,7 +150,7 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
     "megamarket": SourcePlan(
         source="megamarket",
         tool="megamarket_search",
-        item_fields=("item_id", "title", "price_rub", "rating", "rating_count", "is_available", "url"),
+        item_fields=("item_id", "title", "price_rub", "rating", "rating_count", "is_available", "url", "image_url"),
         response_model="megamarket_connector.models_output:MegamarketSearchResponse",
         item_model="megamarket_connector.models_output:MegamarketSearchItemOut",
     ),
@@ -161,7 +164,7 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
     "dns": SourcePlan(
         source="dns",
         tool="dns_search",
-        item_fields=("product_id", "title", "price_rub", "url"),
+        item_fields=("product_id", "title", "price_rub", "url", "image_url"),
         response_model="dns_connector.models_output:DnsSearchResponse",
         item_model="dns_connector.models_output:DnsSearchItemOut",
     ),
@@ -175,7 +178,7 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
     "aliexpress": SourcePlan(
         source="aliexpress",
         tool="aliexpress_search",
-        item_fields=("item_id", "title", "price_rub", "rating", "url"),
+        item_fields=("item_id", "title", "price_rub", "rating", "url", "image_url"),
         response_model="aliexpress_connector.models_output:AliSearchResponse",
         item_model="aliexpress_connector.models_output:AliSearchItemOut",
     ),
@@ -221,25 +224,67 @@ def _region(response: Any, plan: SourcePlan) -> str | None:
     return None
 
 
+def _recorded_url(source: str, value: Any, *, image: bool = False) -> Any:
+    """Remove location-bearing URL parts without inventing an item or an image.
+
+    Avito accepts /<id> (avito_card's own input parser); no city/category/slug
+    survives. Other page URLs keep their item path but lose query and fragment,
+    except Taobao/Tmall's identity-bearing id query. CDN paths name images, not
+    cities; keep their rendering/signature queries except location parameters.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    try:
+        parts = urlsplit(value)
+        host = (parts.hostname or "").rstrip(".").lower()
+    except ValueError:
+        return ""
+    if source == "avito" and not image:
+        if host and host not in {"avito.ru", "www.avito.ru"}:
+            return ""
+        match = re.fullmatch(r"(?:[A-Za-z0-9_-]+_)?(\d{6,})", parts.path.rstrip("/").rsplit("/", 1)[-1])
+        return f"https://www.avito.ru/{match.group(1)}" if match else ""
+    query = ""
+    if image:
+        location_keys = {"city", "city_id", "region", "region_id", "location", "location_id", "lr", "dest"}
+        pairs = parse_qsl(parts.query, keep_blank_values=True)
+        if not any(key.lower() in location_keys for key, _ in pairs):
+            query = parts.query
+        else:
+            query = urlencode([(key, val) for key, val in pairs if key.lower() not in location_keys])
+    elif source == "taobao":
+        query = urlencode([(key, val) for key, val in parse_qsl(parts.query) if key == "id"])
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
+
+
 def cut_response(source: str, response: Any) -> dict[str, Any]:
     """One source's typed search response, cut down to the fields the benchmark reads.
 
     The adapter reads the item attributes named in the plan and nothing else;
     this stores exactly those, plus the response's own diagnostics (whether the
     source considered its answer healthy, and what it warned about), the region
-    and the moment the answer was observed. No reviewer name, phone, e-mail or
-    legal entity can enter here: no such field is in the plan.
+    and the moment the answer was observed. Reviewer, phone and e-mail fields
+    are excluded. Seller/shop/supplier names are business names, not personal
+    data, and stay. Diagnostic text uses the runtime redactor; the completed
+    recording also replaces region names with placeholders.
     """
     plan = SOURCE_PLANS[source]
     fields = plan.item_fields + plan.extra_fields
     items = getattr(response, "items", None) or []
     meta = getattr(response, "meta", None)
     region = _region(response, plan)
+
+    def field(item: Any, name: str) -> Any:
+        value = _scalar(getattr(item, name, None))
+        if name in {"url", "image", "image_url"}:
+            value = _recorded_url(source, value, image=name != "url")
+        return redact_error_text(value, len(value)) if isinstance(value, str) else value
+
     return {
-        "items": [{name: _scalar(getattr(item, name, None)) for name in fields} for item in items],
+        "items": [{name: field(item, name) for name in fields} for item in items],
         "meta": {
             "healthy": _meta_field(meta, "healthy", None),
-            "warnings": list(_meta_field(meta, "warnings", []) or []),
+            "warnings": [redact_error_text(str(warning)) for warning in (_meta_field(meta, "warnings", []) or [])],
         },
         **({"region": region} if region else {}),
         "observed_at": now(),
@@ -251,7 +296,8 @@ def scrub_regions(document: dict[str, Any]) -> dict[str, Any]:
 
     The same region keeps the same placeholder, so a recording that mixed
     regions still mixes them after the scrub: the condition survives, only the
-    name is gone. A recording with no region comes back unchanged.
+    name is gone. Diagnostic mentions use the same mapping, including labeled
+    regions in warnings without a region field; text also uses runtime redaction.
     """
     placeholders: dict[str, str] = {}
 
@@ -260,13 +306,62 @@ def scrub_regions(document: dict[str, Any]) -> dict[str, Any]:
             placeholders[value] = f"R{len(placeholders) + 1}"
         return placeholders[value]
 
+    # Discover names before numbering them: a warning may precede the region
+    # field that identifies its otherwise unlabeled mention.
+    diagnostic_region = re.compile(r"\b(?:region|city|location)(?:_id)?\s*[:=]\s*([^;,\n]+)", re.IGNORECASE)
+    names: set[str] = set()
+
+    def collect(node: Any, key: str = "") -> None:
+        if isinstance(node, dict):
+            for name, value in node.items():
+                collect(value, name)
+        elif isinstance(node, list):
+            for value in node:
+                collect(value, key)
+        elif isinstance(node, str):
+            if key in REGION_KEYS:
+                names.add(node)
+            elif key in {"warnings", "message"}:
+                names.update(match.group(1).strip() for match in diagnostic_region.finditer(node))
+
+    collect(document)
+    ordered_names = sorted((value for value in names if value), key=lambda value: (-len(value), value))
+    pattern = (
+        re.compile(r"(?<!\w)(?:" + "|".join(re.escape(value) for value in ordered_names) + r")(?!\w)")
+        if ordered_names
+        else None
+    )
+
+    # Number fields and diagnostic mentions in the same document walk. A
+    # warning-only city encountered first must be R1, not the last placeholder.
+    def number(node: Any, key: str = "") -> None:
+        if isinstance(node, dict):
+            for name, value in node.items():
+                number(value, name)
+        elif isinstance(node, list):
+            for value in node:
+                number(value, key)
+        elif isinstance(node, str):
+            if key in REGION_KEYS:
+                placeholder(node)
+            elif key in {"warnings", "message"} and pattern:
+                for match in pattern.finditer(node):
+                    placeholder(match.group(0))
+
+    number(document)
+
     def walk(node: Any, key: str = "") -> Any:
         if isinstance(node, dict):
             return {name: walk(value, name) for name, value in node.items()}
         if isinstance(node, list):
             return [walk(value, key) for value in node]
-        if key in REGION_KEYS and isinstance(node, str):
-            return placeholder(node)
+        if isinstance(node, str):
+            if key in REGION_KEYS:
+                return placeholders[node]
+            text = redact_error_text(node, len(node))
+            if key in {"warnings", "message"} and pattern:
+                return pattern.sub(lambda match: placeholders[match.group(0)], text)
+            return text
         return node
 
     return walk(document)
@@ -317,7 +412,7 @@ def assemble_recording(
     return build_recording(query, captured_at, sources)
 
 
-def error_entry(exc: BaseException) -> dict[str, str]:
+def error_entry(exc: Exception) -> dict[str, str]:
     """The recorded form of a source's error: its code and its message.
 
     The message is redacted the same way the runtime redacts one: an upstream
@@ -384,14 +479,14 @@ def _write_capture(directory: Path, source: str, query: str, entry: dict[str, An
 
 
 def _capturing(source: str, tool: Any, directory: Path) -> Any:
-    """The wrapped search tool: it answers as before and writes the answer down."""
+    """Capture answers and ordinary errors; cancellation/control flow only re-raises."""
 
     @functools.wraps(tool)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         query = kwargs.get("query", args[0] if args else "")
         try:
             response = await tool(*args, **kwargs)
-        except BaseException as exc:
+        except Exception as exc:
             _write_capture(directory, source, str(query), {"error": error_entry(exc)})
             raise
         _write_capture(directory, source, str(query), {"response": cut_response(source, response)})
