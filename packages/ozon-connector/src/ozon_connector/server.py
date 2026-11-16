@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.info/error.
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; packages/ozon-connector/tests.
+# LINKS: M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -1669,7 +1669,7 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
                 notes=[f"critical widget(s) vanished: {d['missing']}"],
             )
         elif not sm.get("ok"):
-            notes = ["widgets present but parse smoke yielded nothing (inner shape drift)"]
+            notes = ["widgets present but the parse smoke found nothing to report (shape drift, or no readable price)"]
             if sm.get("shape_drift"):
                 notes.insert(0, sm["shape_drift"])
             checks[name] = R.selfcheck_entry(
@@ -1678,6 +1678,11 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
                 missing_widgets=[],
                 smoke=sm,
                 notes=notes,
+                reason=(
+                    R.price_gate(sm.get("parsed_items", 0), sm.get("priced", 0))
+                    if name == "search" and not sm.get("shape_drift")
+                    else None
+                ),
             )
         else:
             checks[name] = R.selfcheck_entry("healthy", baseline=baseline, added_widgets=d["added"][:10], smoke=sm)
@@ -1693,20 +1698,20 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
         }
 
     def _smoke_search(payload: dict) -> dict:
-        items = []
-        for key, val in (payload.get("widgetStates") or {}).items():
-            if not key.startswith("tileGridDesktop-"):
-                continue
-            data = json.loads(val) if isinstance(val, str) else val
-            for it in (data.get("items") or [])[:50]:
-                parsed = _parse_search_tile(it)
-                if parsed.get("title"):
-                    items.append(parsed)
+        items = _search_items_from_payload(payload)
         # Tiles parsing is not enough: the search tool's own answer warns
         # through the same required-family registry, and the canary must
         # fail the same way when a parser-critical family vanishes.
         drift = R.shape_drift_warning({"items": items}, SEARCH_REQUIRED_FAMILIES, source="ozon_search")
-        return {"ok": bool(items) and drift is None, "parsed_items": len(items), "shape_drift": drift}
+        # R-SELFCHECK-GATES-PRICE: the search tool's own price (the tile parser's
+        # "price"), not a second reader, and a listing with no priced tile is drift.
+        n_priced = sum(1 for it in items if it.get("price") is not None)
+        return {
+            "ok": bool(items) and drift is None and R.price_gate(len(items), n_priced) is None,
+            "parsed_items": len(items),
+            "priced": n_priced,
+            "shape_drift": drift,
+        }
 
     def _smoke_reviews(payload: dict) -> dict:
         widgets = payload.get("widgetStates") or {}

@@ -2631,6 +2631,22 @@ def test_the_canary_is_drift_when_identified_products_carry_no_price(monkeypatch
     assert check["reason"] == "no_prices"
 
 
+@pytest.mark.req("R-SELFCHECK-GATES-PRICE")
+def test_the_canary_is_drift_when_two_identified_products_carry_no_price(monkeypatch):
+    """Even a short listing must not certify prices the search tool cannot read."""
+    body = _live_v9()
+    body["products"] = body["products"][:2]
+    assert len(body["products"]) == 2
+    for product in body["products"]:
+        for size in product.get("sizes") or []:
+            size["price"] = dict.fromkeys(size["price"], 0)
+    check = _canary_search_v9(monkeypatch, body)
+    assert check["recovered_ids"] == 2
+    assert check["priced"] == 0
+    assert check["state"] == "drift"
+    assert check["reason"] == "no_prices"
+
+
 def test_an_edge_wall_is_not_a_success_and_is_not_cached(monkeypatch):
     """A wall served with HTTP 200 is a refusal, and must never reach the cache.
 

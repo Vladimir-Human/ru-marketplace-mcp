@@ -77,7 +77,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Yandex Market search and cards from server-rendered state.
 # SCOPE: Read-only paced HTML fetches; distinct everyday, Plus and old prices.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; ssr; models_output; settings.
-# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/yandex-connector/tests.
+# LINKS: M-YANDEX; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/yandex-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch_html: Retry bounded page reads and classify HTTP/transport refusals.
@@ -723,7 +723,7 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
     #    canary never depends on a hardcoded SKU that may be delisted.
     try:
         search = await yandex_search(query=_settings.selfcheck_query, page=1, limit=5, ctx=None)
-        priced = [item for item in search.items if item.price_rub or item.price_with_plus]
+        priced = [item for item in search.items if item.price_rub is not None]
         # "ssr" and "zone" are both parser verdicts: the collection parser or the
         # first-screen zone parser read real product state and the rows carry
         # everyday prices. Only the schema.org fallback is weak.
@@ -751,13 +751,20 @@ async def yandex_selfcheck(ctx: Context | None = None) -> YandexSelfcheckRespons
             notes = [] if healthy else ["search parsed but produced no priced items"]
             if search.meta.extraction == "zone":
                 notes.append("first-screen zone payloads (collections absent): brand unavailable, one screen deep")
-            checks["search"] = YandexSelfcheckEntry(
-                state="healthy" if healthy else "drift",
-                detail=(
-                    f"extraction={search.meta.extraction} returned={search.returned} "
-                    f"total={search.total_available} priced={len(priced)}"
-                ),
-                notes=notes,
+            # R-SELFCHECK-GATES-PRICE: a listing whose items carry no price the
+            # search tool could read is drift (no_prices), and the reason names it.
+            reason = R.price_gate(len(search.items), len(priced))
+            checks["search"] = YandexSelfcheckEntry.model_validate(
+                {
+                    "state": "healthy" if healthy else "drift",
+                    "detail": (
+                        f"extraction={search.meta.extraction} returned={search.returned} "
+                        f"total={search.total_available} priced={len(priced)}"
+                    ),
+                    "notes": notes,
+                    "reason": reason,
+                    "priced": len(priced),
+                }
             )
         if search.items:
             probe_product_id = search.items[0].product_id or None

@@ -33,7 +33,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
 # SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings; shape_reference.
-# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/detmir-connector/tests.
+# LINKS: M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/detmir-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
@@ -741,8 +741,25 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
                 notes=notes,
             )
             return
-        ok, detail = verify(result)
-        checks[name] = DetmirSelfcheckEntry(state="healthy" if ok else "drift", detail=detail)
+        ok, detail, reason = verify(result)
+        checks[name] = DetmirSelfcheckEntry.model_validate(
+            {"state": "healthy" if ok else "drift", "detail": detail, "reason": reason}
+        )
+
+    def _category_verdict(r: Any) -> tuple[bool, str, str | None]:
+        """The listing is healthy only when the tool's own items carry a price.
+
+        R-SELFCHECK-GATES-PRICE: the price comes from the category tool's own
+        items (price_rub), and a listing with no priced item is drift
+        (no_prices) — the same rule the tool's own answer applies.
+        """
+        priced = [p for p in r.items if p.price_rub is not None]
+        reason = R.price_gate(len(r.items), len(priced))
+        if any(w.startswith("shape_drift:") for w in r.meta.warnings):
+            reason = None
+        ok = r.returned > 0 and reason is None and r.meta.healthy
+        detail = f"returned={r.returned} total={r.total_available} priced={len(priced)}"
+        return ok, detail, reason
 
     await probe(
         "card",
@@ -750,18 +767,16 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
         lambda r: (
             bool(r.product.title) and r.product.price_rub is not None,
             f"title={r.product.title[:40]!r} price={r.product.price_rub}",
+            None,
         ),
     )
     await probe(
         "category",
         detmir_category(alias=_settings.selfcheck_category, limit=3, offset=0, ctx=None),
-        lambda r: (
-            # meta.healthy carries the shape-drift warning the category tool now
-            # adds when a parser-critical key family vanished, so the canary
-            # fails the same way the runtime data path does.
-            r.returned > 0 and any(p.price_rub for p in r.items) and r.meta.healthy,
-            f"returned={r.returned} total={r.total_available}",
-        ),
+        # meta.healthy carries the shape-drift warning the category tool now
+        # adds when a parser-critical key family vanished, so the canary
+        # fails the same way the runtime data path does.
+        _category_verdict,
     )
     await probe(
         "categories",
@@ -769,6 +784,7 @@ async def detmir_selfcheck(ctx: Context | None = None) -> DetmirSelfcheckRespons
         lambda r: (
             r.returned > 0 and any(c.alias for c in r.items),
             f"returned={r.returned} total={r.total_available}",
+            None,
         ),
     )
 

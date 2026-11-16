@@ -164,7 +164,8 @@ async def test_dom_selfcheck_unexpected_errors_are_inconclusive(selfcheck_fakes,
         ({"tiles": [], "page_says_empty": False}, "drift", "schema_drift"),
         ({"tiles": [], "page_says_empty": True}, "inconclusive", "baseline_gone"),
         ({"tiles": [{"nm": "invalid", "lines": ["100 ₽"]}]}, "drift", "schema_drift"),
-        ({"tiles": [{"nm": "123", "label": "Товар", "lines": []}]}, "drift", "schema_drift"),
+        # R-SELFCHECK-GATES-PRICE: identified but unpriced is named no_prices.
+        ({"tiles": [{"nm": "123", "label": "Товар", "lines": []}]}, "drift", "no_prices"),
     ],
 )
 async def test_dom_selfcheck_search_requires_identified_priced_products(selfcheck_fakes, payload, state, reason):

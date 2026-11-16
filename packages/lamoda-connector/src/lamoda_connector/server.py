@@ -24,7 +24,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
 # SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
 # DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/lamoda-connector/tests.
+# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/lamoda-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
@@ -744,12 +744,26 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
                         shape_added=drift["added"],
                     )
                 else:
-                    notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
-                    if drift["added"]:
-                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
-                    checks["search"] = R.selfcheck_entry(
-                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
-                    )
+                    # R-SELFCHECK-GATES-PRICE: the search tool's own price (the
+                    # tile parser's price_rub), not a second reader, and a listing
+                    # whose tiles carry no readable price is drift.
+                    items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
+                    priced = [it for it in items if it.price_rub is not None]
+                    if price_reason := R.price_gate(len(items), len(priced)):
+                        checks["search"] = R.selfcheck_entry(
+                            "drift",
+                            baseline=baseline,
+                            reason=price_reason,
+                            priced=0,
+                            notes=["no tile carries a price the search tool can read"],
+                        )
+                    else:
+                        notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                        if drift["added"]:
+                            notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                        checks["search"] = R.selfcheck_entry(
+                            "healthy", baseline=baseline, notes=notes, shape_added=drift["added"], priced=len(priced)
+                        )
             else:
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero SKUs"]

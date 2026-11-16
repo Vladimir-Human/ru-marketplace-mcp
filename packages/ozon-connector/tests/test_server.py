@@ -551,6 +551,7 @@ def test_ozon_search_skips_unhashable_sku_values(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-SELFCHECK-GATES-PRICE")
 def test_ozon_selfcheck_includes_runtime_identity(monkeypatch):
     search_body = json.dumps(
         {
@@ -571,6 +572,10 @@ def test_ozon_selfcheck_includes_runtime_identity(monkeypatch):
                                         "id": "name",
                                         "textDS": {"text": "Good filter"},
                                     },
+                                    # R-SELFCHECK-GATES-PRICE: a listing whose tiles
+                                    # carry no price the search tool can read is
+                                    # drift, so a healthy synthetic tile needs one.
+                                    {"type": "priceV2", "priceV2": {"price": [{"text": "1 000 ₽"}]}},
                                 ],
                             },
                         ],
@@ -612,6 +617,7 @@ def test_ozon_selfcheck_includes_runtime_identity(monkeypatch):
         result = await server.ozon_selfcheck()
         data = result.model_dump()
         assert data["status"] == "success"
+        assert data["checks"]["search"]["smoke"]["parsed_items"] == 1
         assert data["server_version"] == server.SERVER_VERSION
         assert isinstance(data["server_started_at"], str)
         assert data["server_started_at"].endswith("Z")

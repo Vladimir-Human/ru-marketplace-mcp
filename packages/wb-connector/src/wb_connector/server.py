@@ -27,7 +27,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
+# LINKS: R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -2653,12 +2653,13 @@ async def _wb_dom_selfcheck(want: str) -> dict:
                 if isinstance(item.get("nm_id"), int) and not isinstance(item.get("nm_id"), bool) and item["nm_id"] > 0
             ]
             priced = [item for item in identified if R.coerce_price(item.get("price_rub")) is not None]
-            if not identified or not priced:
+            reason = R.price_gate(len(identified), len(priced))
+            if not identified or reason:
                 return R.selfcheck_entry(
                     "drift",
                     baseline=baseline,
                     transport="dom",
-                    reason="schema_drift",
+                    reason=reason or "schema_drift",
                     raw_len=len(items),
                     recovered_ids=len(identified),
                     priced=len(priced),

@@ -48,7 +48,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Taobao/Tmall search and Taobao-only item cards with prices kept in CNY.
 # SCOPE: Read-only DOM/state; no ad-click trackers; bounded loading polls; explicit Tmall card refusal; challenge handoffs.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-TAOBAO; M-KIT; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING.
+# LINKS: M-TAOBAO; M-KIT; M-COMPARE; M-MARKETPLACE; R-TAOBAO-QUERY; R-TAOBAO-TMALL-SEARCH; R-TAOBAO-TMALL-CARD; R-TAOBAO-GRID-LOADING; R-SELFCHECK-GATES-PRICE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _search_url: Build canonical percent-encoded search/cache/handoff URLs.
@@ -1095,12 +1095,26 @@ async def _taobao_selfcheck_impl(ctx: Context | None) -> TaobaoSelfcheckResponse
                         shape_added=drift["added"],
                     )
                 else:
-                    notes = [f"{len(items_raw)} items extracted", "shape matches the captured reference"]
-                    if drift["added"]:
-                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
-                    checks["search"] = R.selfcheck_entry(
-                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
-                    )
+                    # R-SELFCHECK-GATES-PRICE: the search tool's own price (the
+                    # tile parser's price_cny), not a second reader, and a listing
+                    # whose tiles carry no readable price is drift.
+                    items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
+                    priced = [it for it in items if it.price_cny is not None]
+                    if reason := R.price_gate(len(items), len(priced)):
+                        checks["search"] = R.selfcheck_entry(
+                            "drift",
+                            baseline=baseline,
+                            reason=reason,
+                            priced=0,
+                            notes=["no tile carries a price the search tool can read"],
+                        )
+                    else:
+                        notes = [f"{len(items_raw)} items extracted", "shape matches the captured reference"]
+                        if drift["added"]:
+                            notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                        checks["search"] = R.selfcheck_entry(
+                            "healthy", baseline=baseline, notes=notes, shape_added=drift["added"], priced=len(priced)
+                        )
             else:
                 # Rendered, no wall, no challenge, and still zero items. Was the
                 # grid still rendering? Then nothing drifted and the canary has
