@@ -202,5 +202,63 @@
         "price_unit"
       ]
     }
+  },
+  "compare_queries": {
+    "1": [
+      "наушники sony wh-1000xm5",
+      "iphone 16 128gb",
+      "dyson v15 detect",
+      "подгузники pampers premium care 4",
+      "playstation 5 slim",
+      "xiaomi redmi note 14 256gb",
+      "ssd samsung 990 pro 1tb",
+      "lego 42151"
+    ]
+  },
+  "personal_data_fields": ["user", "author", "reviewer_name", "phone", "email"],
+  "domains": {
+    "wildberries": ["wildberries.ru", "wb.ru", "wbbasket.ru", "wbcontent.net", "wbstatic.net"],
+    "ozon": ["ozon.ru", "ozone.ru", "ozon.com"],
+    "yandex_market": ["yandex.ru", "ya.ru", "yandex.net"],
+    "detsky_mir": ["detmir.ru"],
+    "avito": ["avito.ru", "avito.st"],
+    "taobao": ["taobao.com", "tmall.com"],
+    "megamarket": ["megamarket.ru", "sbermegamarket.ru"],
+    "lamoda": ["lamoda.ru"],
+    "dns": ["dns-shop.ru"],
+    "citilink": ["citilink.ru"],
+    "aliexpress": ["aliexpress.ru", "aliexpress.com"],
+    "cian": ["cian.ru"]
+  },
+  "card_url_templates": {
+    "dns": "https://www.dns-shop.ru/product/{id}/",
+    "citilink": "https://www.citilink.ru/product/{id}/"
+  },
+  "phase_a_tools": {
+    "wildberries": [
+      {"tool": "wb_search", "kind": "listing"},
+      {"tool": "wb_card", "kind": "card"},
+      {"tool": "wb_root_info", "kwargs": {"nm_id": "$id_int"}},
+      {"tool": "wb_seller", "kwargs": {"supplier_id": "$wb_card:supplier_id"}},
+      {"tool": "wb_categories", "kwargs": {}},
+      {"tool": "wb_reviews", "kwargs": {"imt_id": "$wb_root_info:imt_id", "limit": 1}},
+      {"tool": "wb_questions", "kwargs": {"imt_id": "$wb_root_info:imt_id", "limit": 1}},
+      {"tool": "wb_category_products", "kwargs": {"shard": "$wb_categories:shard", "query": "$wb_categories:query"}}
+    ],
+    "ozon": [
+      {"tool": "ozon_search", "kind": "listing"},
+      {"tool": "ozon_card", "kind": "card"},
+      {"tool": "ozon_reviews", "kwargs": {"sku_or_path": "$id", "limit": 1}}
+    ],
+    "yandex_market": [{"tool": "yandex_search", "kind": "listing"}, {"tool": "yandex_card", "kind": "card"}],
+    "detsky_mir": [{"tool": "detmir_category", "kind": "listing"}, {"tool": "detmir_card", "kind": "card"}, {"tool": "detmir_categories", "kwargs": {}}],
+    "avito": [{"tool": "avito_search", "kind": "listing"}, {"tool": "avito_card", "kind": "card"}, {"tool": "avito_seller", "kwargs": {"seller_id_or_url": "$avito_card:seller_id"}}],
+    "taobao": [{"tool": "taobao_search", "kind": "listing"}, {"tool": "taobao_card", "kind": "card"}],
+    "megamarket": [{"tool": "megamarket_search", "kind": "listing"}, {"tool": "megamarket_card", "kind": "card"}],
+    "lamoda": [{"tool": "lamoda_search", "kind": "listing"}, {"tool": "lamoda_card", "kind": "card"}],
+    "dns": [{"tool": "dns_search", "kind": "listing"}, {"tool": "dns_card", "kind": "card"}],
+    "citilink": [{"tool": "citilink_search", "kind": "listing"}, {"tool": "citilink_card", "kind": "card"}],
+    "aliexpress": [{"tool": "aliexpress_search", "kind": "listing"}, {"tool": "aliexpress_card", "kind": "card"}],
+    "cian": [{"tool": "cian_search", "kind": "listing"}, {"tool": "cian_card", "kind": "card"}]
   }
 }

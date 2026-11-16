@@ -62,6 +62,7 @@ scratch/
 .live-metrics.lock
 .live-history.jsonl
 .live-ids.json
+.live-audit/
 .claude/settings.local.json
 
 # Архивы релиза собираются и прикладываются к Releases, а не хранятся в git.
