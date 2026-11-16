@@ -297,3 +297,34 @@ async def test_default_wait_does_not_enable_parsed_dom(navigation):
     async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200):
         assert not navigation.parsed_reads
     assert navigation.closed
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+async def test_unparsed_dom_timeout_says_the_page_was_still_parsing(navigation):
+    navigation.ready, navigation.commits = ["loading"], True
+    with pytest.raises((TimeoutError, chrome_cdp.TransportDownError)) as excinfo:
+        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True):
+            pytest.fail("loading DOM yielded")
+    assert chrome_cdp._UNPARSED_MSG in str(excinfo.value)
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+@pytest.mark.parametrize(
+    ("ready_state", "next_data", "parsed"),
+    [("loading", False, False), ("loading", True, True), ("interactive", False, True), ("complete", False, True)],
+)
+def test_parsed_dom_predicate_accepts_a_next_data_block_while_loading(ready_state, next_data, parsed):
+    """Runs the shipped predicate in Node against a stub document (no browser)."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not available")
+    stub = (
+        f"const document = {{readyState: {json.dumps(ready_state)}, "
+        f"getElementById: (id) => ({json.dumps(next_data)} && id === '__NEXT_DATA__') ? {{}} : null}};"
+    )
+    script = f"{stub} process.stdout.write(String(Boolean({chrome_cdp._DOM_PARSED_JS})));"
+    out = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=30, check=True).stdout
+    assert out == ("true" if parsed else "false")

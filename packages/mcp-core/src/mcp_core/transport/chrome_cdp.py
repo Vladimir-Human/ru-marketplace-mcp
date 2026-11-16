@@ -832,7 +832,14 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 
 # START_BLOCK_NAVIGATION_TIMEOUT
 _DEFAULT_NAV_TIMEOUT_MS = 20_000.0
-_DOM_PARSED_JS = "document.readyState === 'interactive' || document.readyState === 'complete'"
+# A Next.js page emits its data block (#__NEXT_DATA__) after the server-rendered
+# markup; a late script on a stalled CDN can hold readyState at 'loading' with
+# that markup already in the DOM (Citilink search, 2026-11-16).
+_DOM_PARSED_JS = (
+    "document.readyState === 'interactive' || document.readyState === 'complete' "
+    "|| document.getElementById('__NEXT_DATA__') !== null"
+)
+_UNPARSED_MSG = "the page committed, but its HTML was still being parsed when the navigation timeout ran out"
 
 
 def _navigation_timeout_ms(value: float | None) -> float:
@@ -1105,9 +1112,12 @@ class _RawCdpPage:
         if wait_for_dom_parsed and status not in _NAV_FAIL_STATUSES:
             if not committed:
                 raise TimeoutError("CDP Page.navigate: main document did not commit")
-            async with asyncio.timeout(max(0, deadline - loop.time())):
-                while not await self.evaluate(_DOM_PARSED_JS):
-                    await asyncio.sleep(0.05)
+            try:
+                async with asyncio.timeout(max(0, deadline - loop.time())):
+                    while not await self.evaluate(_DOM_PARSED_JS):
+                        await asyncio.sleep(0.05)
+            except TimeoutError as exc:
+                raise TimeoutError(_UNPARSED_MSG) from exc
         return status
 
     async def close(self) -> None:
@@ -2082,8 +2092,11 @@ async def _playwright_page(
                 raise NavBlocked(status, final)
             if wait_for_dom_parsed:
                 remaining = min(timeout_ms / 1000, deadline - asyncio.get_running_loop().time())
-                async with asyncio.timeout(max(0, remaining)):
-                    await page.wait_for_function(_DOM_PARSED_JS, timeout=max(1, remaining * 1000))
+                try:
+                    async with asyncio.timeout(max(0, remaining)):
+                        await page.wait_for_function(_DOM_PARSED_JS, timeout=max(1, remaining * 1000))
+                except (TimeoutError, _PlaywrightTimeoutError) as exc:
+                    raise TimeoutError(_UNPARSED_MSG) from exc
             if wait_ms > 0:
                 await page.wait_for_timeout(wait_ms)
             if STEALTH and sys.platform in ("win32", "darwin"):

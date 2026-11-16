@@ -87,10 +87,12 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_429_without_load_events_is_refused_before_parse_or_settle" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_default_wait_does_not_enable_parsed_dom" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_keeps_final_host_policy" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_predicate_accepts_a_next_data_block_while_loading" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" title="Runs the shipped predicate in Node against a stub document (no browser)." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_preserves_antibot_recheck" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_recheck_without_reload_preserves_block" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_without_load_events_yields_owned_page" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_is_bounded_and_never_yielded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_timeout_says_the_page_was_still_parsing" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
   </requirement>
   <requirement id="R-CHALLENGE-ACTION" kind="requirement" state="tested" gaps="G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_challenge_is_json_with_the_challenge_contract" requirements="R-CHALLENGE-ACTION" title="The x5sec verdict must reach the agent through the public card tool as the" />
