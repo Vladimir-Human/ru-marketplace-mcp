@@ -68,7 +68,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --all-packages --frozen --no-dev
 
 # ---- Stage 2: runtime -------------------------------------------------------
-FROM python:3.12-slim-trixie@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS runtime
+FROM python:3.12-slim-trixie@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS runtime
 
 # Run as an unprivileged user: a scraper reachable over HTTP should not be root
 # inside its container. Create the user first so the copied tree is owned by it.
