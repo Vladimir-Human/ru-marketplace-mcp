@@ -590,6 +590,8 @@
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_open_page_refuses_foreign_input_before_browser_or_permit" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_accepts_its_registered_redirect" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_passes_policy_and_refuses_foreign_final_url" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_lookalike_domain_still_fails" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: only the source's own subdomains pass, never a lookalike or a foreign host." />
+    <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_subdomain_link_the_source_accepted_before_still_passes" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: a mobile or regional link on the source's own domain is not refused." />
   </requirement>
   <requirement id="R-NIGHTLY-DRIFT-ALARM" kind="requirement" state="tested" gaps="G-LIVE-SMOKE-STRENGTH">
     <test file="scripts/test_ci_concurrency.py" name="test_a_broken_live_check_fails_the_alarm" requirements="R-NIGHTLY-DRIFT-ALARM" title="R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure." />

@@ -189,9 +189,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="ozon",
         hosts=(
-            "www.ozon.ru",
             "ozon.ru",
-            "m.ozon.ru",  # Existing mobile card links are canonicalized by Ozon's search parser.
+            ".ozon.ru",  # Inputs on any ozon.ru subdomain were accepted before P1-13 (mobile/regional links).
         ),
         listing_tool="ozon_search",
         package="ozon-connector",
@@ -283,11 +282,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="taobao",
         hosts=(
-            "s.taobao.com",
-            "item.taobao.com",
-            "login.taobao.com",  # The source's registered login/human-handoff page.
             "taobao.com",
-            "detail.tmall.taobao.com",  # Preserve the existing tested input alias; cards rebuild ITEM_BASE.
+            ".taobao.com",  # Inputs on any taobao.com subdomain were accepted before P1-13 (mobile/regional links).
         ),
         listing_tool="taobao_search",
         package="taobao-connector",
@@ -365,8 +361,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="dns",
         hosts=(
-            "www.dns-shop.ru",
             "dns-shop.ru",
+            ".dns-shop.ru",  # Inputs on any dns-shop.ru subdomain were accepted before P1-13 (mobile/regional links).
         ),
         listing_tool="dns_search",
         package="dns-connector",
@@ -390,8 +386,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="citilink",
         hosts=(
-            "www.citilink.ru",
             "citilink.ru",
+            ".citilink.ru",  # Inputs on any citilink.ru subdomain were accepted before P1-13 (mobile/regional links).
         ),
         listing_tool="citilink_search",
         retry_rate_limit=False,
@@ -417,7 +413,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         name="aliexpress",
         hosts=(
             "aliexpress.ru",
-            "www.aliexpress.ru",
+            ".aliexpress.ru",  # Inputs on any aliexpress.ru subdomain were accepted before P1-13 (mobile/regional links).
         ),
         listing_tool="aliexpress_search",
         aliases=("ali",),
