@@ -342,6 +342,8 @@
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_live_pacing_floor_and_registry_listing" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_old_drift_starts_with_upgrade" requirements="R-ERROR-NEXT-STEP.guidance" />
     <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_retry_header_and_refusal_policies" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_a_standalone_server_names_no_tool_it_does_not_list" requirements="R-ERROR-NEXT-STEP.guidance" title="A one-source server has no compare_prices, marketplace_health or (here) search tool to send the agent to." />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_bad_request_without_a_named_parameter_guesses_none" requirements="R-ERROR-NEXT-STEP.guidance" />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_error_reference_describes_outgoing_fields" requirements="R-ERROR-NEXT-STEP.reference" />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_installation_is_shared_and_idempotent" requirements="R-ERROR-NEXT-STEP.boundary" />
     <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_metadata_and_new_guidance_are_redacted" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance" />
