@@ -356,6 +356,7 @@
     <test file="scripts/test_scrub_fixtures.py" name="test_a_phone_keeps_its_format_with_a_fixed_number" requirements="R-FIXTURE-PERSONAL-DATA" title="A phone keeps its shape: the country prefix stays, the number is fixed." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_private_avito_seller_name_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="A private seller's name is personal data; the shop's is not." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_private_cian_agent_name_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="A private agent's name is personal data." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_a_real_user_path_next_to_an_allowed_fake_still_fails" requirements="R-FIXTURE-PERSONAL-DATA" title="The allowlist names exact fake paths, not whole files." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_wb_question_asker_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="A WB question carries the asker's name under the same raw key." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_wb_review_author_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="WB carries the reviewer's name under wbUserDetails.name." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_yandex_review_author_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="Yandex carries the reviewer's name under author.nickname." />
@@ -363,13 +364,14 @@
     <test file="scripts/test_scrub_fixtures.py" name="test_an_email_becomes_the_fixed_address" requirements="R-FIXTURE-PERSONAL-DATA" title="An e-mail address is replaced by one fixed address." />
     <test file="scripts/test_scrub_fixtures.py" name="test_an_ozon_review_author_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="Ozon splits the author's name into firstName and lastName." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_accepts_a_planted_recording_with_a_placeholder_region" requirements="R-FIXTURE-PERSONAL-DATA" title="The placeholder form is what a scrubbed recording carries." />
-    <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_profile_directory_name" requirements="R-FIXTURE-PERSONAL-DATA" title="No file may carry the scraping profile's directory name." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_profile_directory_name" requirements="R-FIXTURE-PERSONAL-DATA" title="Captured material may not carry the scraping profile's directory name." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_recording_with_a_real_region" requirements="R-FIXTURE-PERSONAL-DATA" title="A recording's region field holds a placeholder, never a real region." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_windows_user_path" requirements="R-FIXTURE-PERSONAL-DATA" title="No file under the covered trees may carry a Windows user path." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_gate_line_names_the_file_and_the_key_path" requirements="R-FIXTURE-PERSONAL-DATA" title="One line per hit: the file, the key path and a masked preview." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_masked_preview_never_carries_the_whole_value" requirements="R-FIXTURE-PERSONAL-DATA" title="The gate prints a preview, never the value." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_output_is_stable_on_a_second_run" requirements="R-FIXTURE-PERSONAL-DATA" title="The same input gives the same output, and a second run finds nothing." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_provenance_gate_fails_on_a_fixture_with_a_personal_name" requirements="R-FIXTURE-PERSONAL-DATA" title="check_provenance runs the scanner: a fixture with a name fails the gate." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_the_published_default_profile_name_passes_in_docs" requirements="R-FIXTURE-PERSONAL-DATA" title="The default directory name is published; outside captured material it is no leak." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_repository_fixtures_carry_no_personal_data" requirements="R-FIXTURE-PERSONAL-DATA" title="The committed fixtures hold no personal name, phone or e-mail." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_scanner_finds_a_reviewer_in_a_copy_of_the_real_card_fixture" requirements="R-FIXTURE-PERSONAL-DATA" title="The rule fires on the real capture's shape, not only on synthetic payloads." />
   </requirement>
