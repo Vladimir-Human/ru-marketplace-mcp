@@ -76,11 +76,21 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_raw_ipv6.py" name="test_the_page_socket_url_is_built_for_the_host_we_dial" requirements="R-CDP-IPV6-NETLOC" title="The IPv6 host must produce a bracketed, parseable websocket URL." />
   </requirement>
   <requirement id="R-CDP-NAV-TIMEOUT" kind="requirement" state="tested" gaps="G-CDP-NAV-TIMEOUT-LIVE">
+    <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_429_returns_rate_limited_with_retry_delay" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
+    <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_tools_opt_in_without_changing_settle_delay" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_public_citilink_never_waits_for_missing_domcontentloaded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed,R-CDP-NAV-TIMEOUT.qrator-429" title="Real connector/kit/open_page; only browser I/O is replaced." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_goto_and_status_waits_out_an_antibot_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: a self-clearing main-frame check returns the real page." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_429_is_not_rechecked" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: refuse a 429 without waiting for a navigation." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: the new document lands before the final host check." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_antibot_stays_a_block_without_a_good_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: wait once, then preserve the known failed status." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_raw_429_is_not_rechecked" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: raw fallback refuses 429 before reading a later reload." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_429_without_load_events_is_refused_before_parse_or_settle" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_default_wait_does_not_enable_parsed_dom" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_keeps_final_host_policy" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_preserves_antibot_recheck" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_recheck_without_reload_preserves_block" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_without_load_events_yields_owned_page" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_is_bounded_and_never_yielded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
   </requirement>
   <requirement id="R-CHALLENGE-ACTION" kind="requirement" state="tested" gaps="G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_challenge_is_json_with_the_challenge_contract" requirements="R-CHALLENGE-ACTION" title="The x5sec verdict must reach the agent through the public card tool as the" />

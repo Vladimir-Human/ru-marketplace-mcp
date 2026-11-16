@@ -21,9 +21,9 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Citilink product search and cards from rendered pages.
-# SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
+# SCOPE: Read-only paced committed-and-parsed CDP reads; fail-fast rate_limited on 429; reject walls before mapping/caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; packages/citilink-connector/tests.
+# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-NAV-TIMEOUT.qrator-429; packages/citilink-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
@@ -54,6 +54,7 @@ from mcp_core.errors import (
     BadRequestError,
     ChallengeRequiredError,
     ParserDriftError,
+    RateLimitedError,
     ToolError,
     TransportDownError,
     raise_tool_error,
@@ -304,7 +305,20 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     The mechanism is shared (mcp_core.kit.render_json); this module-level name
     stays because the tools call it and the tests patch it.
     """
-    return await render_json(url, extract_js, wait_ms, lock=_cdp_lock, wait=_polite_wait, max_body_bytes=MAX_BODY_BYTES)
+    try:
+        return await render_json(
+            url,
+            extract_js,
+            wait_ms,
+            lock=_cdp_lock,
+            wait=_polite_wait,
+            max_body_bytes=MAX_BODY_BYTES,
+            wait_for_dom_parsed=True,
+        )
+    except NavBlocked as exc:
+        if exc.status == 429:
+            raise_tool_error(RateLimitedError("citilink", retry_after_s=30.0))
+        raise
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:

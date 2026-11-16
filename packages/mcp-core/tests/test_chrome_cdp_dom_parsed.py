@@ -1,0 +1,299 @@
+"""Owned navigation with a parsed DOM but no DOMContentLoaded/load event.
+
+All browser I/O is replaced; these tests prove the transport shell, not markup.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import urllib.request
+from contextlib import asynccontextmanager
+from io import BytesIO
+from types import SimpleNamespace
+
+import pytest
+from mcp_core.transport import chrome_cdp
+
+URL = "https://www.citilink.ru/search/?text=laptop"
+
+
+def _browser_doubles(state):
+    """Model readiness and main-frame response/commit events, never page markup."""
+
+    def parsed():
+        state.parsed_reads += 1
+        value = state.ready[0]
+        if len(state.ready) > 1:
+            state.ready.pop(0)
+        return value in {"interactive", "complete"}
+
+    class Page:
+        url = URL
+
+        async def goto(self, url, *, wait_until, timeout):
+            if wait_until == "domcontentloaded" and not state.dcl:
+                raise chrome_cdp._PlaywrightTimeoutError("DOMContentLoaded never fired")
+            if not state.commits:
+                await asyncio.sleep(timeout / 1000)
+                raise chrome_cdp._PlaywrightTimeoutError("main document did not commit")
+            self.url = state.final
+            return SimpleNamespace(status=state.status)
+
+        @asynccontextmanager
+        async def expect_navigation(self, *, wait_until, timeout):
+            assert timeout <= 10_000
+            if state.reload is None:
+                raise chrome_cdp._PlaywrightTimeoutError("no reload")
+            assert wait_until == "commit"
+            self.url = state.final
+            future = asyncio.get_running_loop().create_future()
+            future.set_result(SimpleNamespace(status=state.reload))
+            yield SimpleNamespace(value=future)
+
+        async def wait_for_function(self, expression, *, timeout):
+            assert "document.readyState" in expression and "interactive" in expression and "complete" in expression
+            assert 0 < timeout <= 200
+            while not parsed():
+                await asyncio.sleep(0.001)
+
+        async def wait_for_timeout(self, ms):
+            state.settled.append(ms)
+
+        async def close(self):
+            state.closed = True
+
+    class Socket:
+        def __init__(self, browser):
+            self.browser = browser
+            self.queue = asyncio.Queue()
+
+        def put(self, message):
+            self.queue.put_nowait(json.dumps(message))
+
+        def document(self, status):
+            self.put(
+                {
+                    "method": "Network.responseReceived",
+                    "params": {
+                        "type": "Document",
+                        "frameId": "main",
+                        "response": {"status": status, "url": state.final, "headers": {"server": "QRATOR"}},
+                    },
+                }
+            )
+            # A successful iframe must never override the main document.
+            self.put(
+                {
+                    "method": "Network.responseReceived",
+                    "params": {
+                        "type": "Document",
+                        "frameId": "child",
+                        "response": {"status": 200},
+                    },
+                }
+            )
+            if state.commits:
+                self.put(
+                    {
+                        "method": "Page.frameNavigated",
+                        "params": {
+                            "frame": {
+                                "id": "main",
+                                "url": state.final,
+                                "loaderId": "document",
+                            }
+                        },
+                    }
+                )
+            if state.dcl:
+                self.put({"method": "Page.loadEventFired", "params": {}})
+
+        async def send(self, raw):
+            msg = json.loads(raw)
+            method = msg["method"]
+            state.sent.append(method)
+            result = {}
+            if method == "Target.createTarget":
+                result = {"targetId": "owned"}
+            elif method == "Target.closeTarget":
+                state.closed = True
+            elif method == "Page.navigate":
+                result = {"frameId": "main"}
+            elif method == "Runtime.evaluate":
+                assert "document.readyState" in msg["params"]["expression"]
+                result = {"result": {"value": parsed()}}
+            self.put({"id": msg["id"], "result": result})
+            if method == "Page.navigate":
+                # The stale about:blank load must not satisfy this navigation.
+                self.put({"method": "Page.loadEventFired", "params": {}})
+                self.document(state.status)
+                if state.reload is not None:
+                    self.document(state.reload)
+
+        async def recv(self):
+            return await self.queue.get()
+
+    return Page, Socket
+
+
+@pytest.fixture(params=["playwright", "raw"])
+def navigation(monkeypatch, request):
+    state = SimpleNamespace(
+        status=200,
+        reload=None,
+        final=URL,
+        ready=["interactive"],
+        parsed_reads=0,
+        closed=False,
+        settled=[],
+        permit=[],
+        commits=True,
+        dcl=False,
+        sent=[],
+    )
+    Page, Socket = _browser_doubles(state)
+
+    @asynccontextmanager
+    async def context():
+        if request.param == "raw":
+            raise chrome_cdp._CdpConnectTimeout("fake attach timeout")
+        yield SimpleNamespace()
+
+    async def new_tab(ctx):
+        return Page()
+
+    @asynccontextmanager
+    async def connect(url, **kwargs):
+        yield Socket(url.endswith("/browser"))
+
+    async def acquire(host):
+        assert host == "www.citilink.ru"
+        return SimpleNamespace(
+            ok=lambda: state.permit.append("ok"),
+            refused=lambda status: state.permit.append(("refused", status)),
+            neutral=lambda: state.permit.append("neutral"),
+            release=lambda: state.permit.append("release"),
+        )
+
+    async def sleep(seconds):
+        state.settled.append(seconds * 1000)
+
+    # Keep raw polling real; only the post-navigation settle delay is recorded.
+    original_sleep = asyncio.sleep
+
+    async def record_sleep(seconds):
+        if seconds == 0.8:
+            await sleep(seconds)
+        else:
+            await original_sleep(seconds)
+
+    monkeypatch.setattr(chrome_cdp, "STEALTH", False)
+    monkeypatch.setattr(chrome_cdp, "get_context", context)
+    monkeypatch.setattr(chrome_cdp, "_new_tab", new_tab)
+    monkeypatch.setattr(chrome_cdp, "_acquire_navigation_permit", acquire)
+    monkeypatch.setattr(chrome_cdp, "_browser_ws_url", lambda: "ws://localhost/browser")
+    monkeypatch.setattr(chrome_cdp, "_websockets", SimpleNamespace(connect=connect))
+    monkeypatch.setattr(chrome_cdp.asyncio, "sleep", record_sleep)
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **k: BytesIO(
+            json.dumps(
+                [
+                    {"id": "owned", "webSocketDebuggerUrl": "ws://localhost/page"},
+                ]
+            ).encode()
+        ),
+    )
+    return state
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+@pytest.mark.parametrize("ready", ["interactive", "complete"])
+async def test_parsed_dom_without_load_events_yields_owned_page(navigation, ready):
+    navigation.ready = ["loading", ready]
+    async with chrome_cdp.open_page(URL, 800, navigation_timeout_ms=200, wait_for_dom_parsed=True) as page:
+        assert page.url == URL
+        assert navigation.parsed_reads >= 2
+        assert navigation.settled == [800]
+        assert navigation.permit == ["ok", "release"]
+        assert not navigation.closed
+    assert navigation.closed
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+async def test_parsed_dom_keeps_final_host_policy(navigation):
+    navigation.final = "https://outside.example/search"
+    with pytest.raises(chrome_cdp.NavigationPolicyError):
+        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+            pytest.fail("off-host page yielded")
+    assert navigation.closed
+    assert navigation.permit == ["neutral", "release"]
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+@pytest.mark.parametrize("status,reload", [(401, 200), (403, 200), (401, 403)])
+async def test_parsed_dom_preserves_antibot_recheck(navigation, status, reload):
+    navigation.status, navigation.reload = status, reload
+    if reload == 200:
+        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+            assert navigation.parsed_reads
+        assert navigation.permit == ["ok", "release"]
+    else:
+        with pytest.raises(chrome_cdp.NavBlocked) as caught:
+            async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+                pytest.fail("blocked reload yielded")
+        assert caught.value.status == reload
+        assert navigation.permit == [("refused", reload), "release"]
+    assert navigation.closed
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+@pytest.mark.parametrize("commits", [False, True])
+async def test_unparsed_dom_is_bounded_and_never_yielded(navigation, commits):
+    navigation.ready, navigation.commits = ["loading"], commits
+    start = asyncio.get_running_loop().time()
+    with pytest.raises((TimeoutError, chrome_cdp.TransportDownError, chrome_cdp._PlaywrightTimeoutError)):
+        async with asyncio.timeout(1):
+            async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True):
+                pytest.fail("loading DOM yielded")
+    assert asyncio.get_running_loop().time() - start < 0.5, "the navigation budget, not the outer watchdog, must fire"
+    assert navigation.closed
+    assert "ok" not in navigation.permit
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+@pytest.mark.parametrize("status", [401, 403])
+async def test_parsed_dom_recheck_without_reload_preserves_block(navigation, status):
+    navigation.status = status
+    with pytest.raises(chrome_cdp.NavBlocked) as caught:
+        async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200, wait_for_dom_parsed=True):
+            pytest.fail("unrecovered block yielded")
+    assert caught.value.status == status
+    assert not navigation.parsed_reads
+    assert navigation.permit == [("refused", status), "release"]
+    assert navigation.closed
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.qrator-429")
+async def test_429_without_load_events_is_refused_before_parse_or_settle(navigation):
+    navigation.status, navigation.ready = 429, ["loading"]
+    start = asyncio.get_running_loop().time()
+    with pytest.raises(chrome_cdp.NavBlocked) as caught:
+        async with asyncio.timeout(12):
+            async with chrome_cdp.open_page(URL, 800, wait_for_dom_parsed=True):
+                pytest.fail("429 yielded")
+    assert asyncio.get_running_loop().time() - start < 12
+    assert caught.value.status == 429
+    assert not navigation.parsed_reads and not navigation.settled
+    assert navigation.permit == [("refused", 429), "release"]
+    assert navigation.closed
+
+
+@pytest.mark.req("R-CDP-NAV-TIMEOUT.dom-parsed")
+async def test_default_wait_does_not_enable_parsed_dom(navigation):
+    navigation.dcl = True
+    async with chrome_cdp.open_page(URL, 0, navigation_timeout_ms=200):
+        assert not navigation.parsed_reads
+    assert navigation.closed

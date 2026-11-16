@@ -27,7 +27,7 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # PURPOSE: Provide the shared connector assembly — pacing, refusal errors, capped reads and paced CDP extraction.
 # SCOPE: Mechanism only; per-source state stays in each connector, curl_cffi arrives as an argument and chrome_cdp imports lazily.
 # DEPENDS: mcp_core.pacing,errors; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
-# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST.
+# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
@@ -197,6 +197,7 @@ async def render_json(
     wait: Callable[[], Awaitable[None]],
     max_body_bytes: int,
     evaluate_timeout: float = 30.0,
+    wait_for_dom_parsed: bool = False,
 ) -> dict[str, Any]:
     """Open ``url`` in the operator's Chrome, let the page settle, extract.
 
@@ -205,13 +206,15 @@ async def render_json(
     gets to render — the first navigation of a challenge-walled source pays a
     proof-of-work there, later reads on the same session are fast. The extractor
     returns JSON text; a missing, oversized or non-object payload is a loud
-    error rather than an empty result.
+    error rather than an empty result. ``wait_for_dom_parsed`` forwards the
+    opt-in commit/readyState wait; other callers keep the transport's default.
     """
     from mcp_core.transport.chrome_cdp import open_page
 
     async with lock:
         await wait()
-        async with open_page(url, wait_ms=wait_ms) as page:
+        page_options: dict[str, Any] = {"wait_for_dom_parsed": True} if wait_for_dom_parsed else {}
+        async with open_page(url, wait_ms=wait_ms, **page_options) as page:
             raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=evaluate_timeout)
     if not isinstance(raw, str) or len(raw.encode()) > max_body_bytes:
         raise_tool_error(TransportDownError("extracted page data missing or over the body cap"))

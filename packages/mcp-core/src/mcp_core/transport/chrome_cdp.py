@@ -96,7 +96,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
@@ -832,6 +832,7 @@ async def probe_session(*, timeout_s: float = 15.0) -> dict[str, object]:
 
 # START_BLOCK_NAVIGATION_TIMEOUT
 _DEFAULT_NAV_TIMEOUT_MS = 20_000.0
+_DOM_PARSED_JS = "document.readyState === 'interactive' || document.readyState === 'complete'"
 
 
 def _navigation_timeout_ms(value: float | None) -> float:
@@ -1026,7 +1027,9 @@ class _RawCdpPage:
             raise RuntimeError(f"page.evaluate failed: {str(text)[:300]}")
         return (result.get("result") or {}).get("value")
 
-    async def goto_and_status(self, url: str, *, navigation_timeout_ms: float | None = None) -> int | None:
+    async def goto_and_status(
+        self, url: str, *, navigation_timeout_ms: float | None = None, wait_for_dom_parsed: bool = False
+    ) -> int | None:
         """Return the last main-document status within one send-and-events deadline."""
         timeout_s = _navigation_timeout_ms(navigation_timeout_ms) / 1000
         loop = asyncio.get_running_loop()
@@ -1041,7 +1044,7 @@ class _RawCdpPage:
         nav_error: object = None
         main_frame: object = None
         nav_failed = False
-        rechecking = False
+        rechecking = committed = False
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
@@ -1070,9 +1073,18 @@ class _RawCdpPage:
                 if isinstance(status, int) and (frame_id is None or frame_id == main_frame):
                     statuses.append(status)
                     self._url = response.get("url") or self._url
+                    if wait_for_dom_parsed and status in _NAV_FAIL_STATUSES - _ANTIBOT_RECHECK_STATUSES:
+                        break  # A 429 needs neither a commit nor a load/parse wait.
             elif method == "Page.frameNavigated":
                 self._note_event(msg)
-            elif method == "Page.loadEventFired":
+            frame = params.get("frame", {})
+            if (not wait_for_dom_parsed and method == "Page.loadEventFired") or (
+                wait_for_dom_parsed
+                and method == "Page.frameNavigated"
+                and not frame.get("parentId")
+                and frame.get("id") == main_frame
+                and statuses
+            ):
                 # A new tab's initial about:blank can deliver its load event after
                 # Page.navigate was sent and before this navigation's main document.
                 # That load is not ours: ending the wait there returns no status and
@@ -1081,6 +1093,7 @@ class _RawCdpPage:
                 # document to wait for; otherwise the deadline still bounds the wait.
                 if not statuses and not nav_failed:
                     continue
+                committed = True
                 if statuses and statuses[-1] in _ANTIBOT_RECHECK_STATUSES and not rechecking:
                     rechecking = True
                     deadline = min(deadline, loop.time() + _ANTIBOT_RECHECK_S)
@@ -1088,7 +1101,14 @@ class _RawCdpPage:
                 break
         if nav_error is not None:
             raise RuntimeError(f"CDP Page.navigate: {nav_error}")
-        return statuses[-1] if statuses else None
+        status = statuses[-1] if statuses else None
+        if wait_for_dom_parsed and status not in _NAV_FAIL_STATUSES:
+            if not committed:
+                raise TimeoutError("CDP Page.navigate: main document did not commit")
+            async with asyncio.timeout(max(0, deadline - loop.time())):
+                while not await self.evaluate(_DOM_PARSED_JS):
+                    await asyncio.sleep(0.05)
+        return status
 
     async def close(self) -> None:
         try:
@@ -1616,6 +1636,7 @@ async def _raw_cdp_page(
     *,
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
+    wait_for_dom_parsed: bool = False,
 ) -> AsyncIterator[_RawCdpPage]:
     """Open a tab over raw CDP, mirroring open_page's guarantees."""
     if ozon_windows_compat:
@@ -1676,7 +1697,8 @@ async def _raw_cdp_page(
                         _windows_chrome_ua_override(version),
                         timeout=_RAW_CONNECT_TIMEOUT_S,
                     )
-                status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms)
+                nav_options = {"wait_for_dom_parsed": True} if wait_for_dom_parsed else {}
+                status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms, **nav_options)
                 if status in _NAV_FAIL_STATUSES:
                     raise NavBlocked(status, page.url)
                 if wait_ms > 0:
@@ -2013,6 +2035,7 @@ async def _playwright_page(
     *,
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
+    wait_for_dom_parsed: bool = False,
 ) -> AsyncIterator[Page]:
     if ozon_windows_compat:
         _validate_ozon_compat_url(url)
@@ -2030,16 +2053,19 @@ async def _playwright_page(
                     compat_session.send("Network.setUserAgentOverride", _windows_chrome_ua_override(version)),
                     timeout=_RAW_CONNECT_TIMEOUT_S,
                 )
-            resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            wait_until: Literal["commit", "domcontentloaded"] = "commit" if wait_for_dom_parsed else "domcontentloaded"
+            deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
+            resp = await page.goto(url, wait_until=wait_until, timeout=timeout_ms)
             status = resp.status if resp is not None else None
             if status in _ANTIBOT_RECHECK_STATUSES:
                 # Wait for the main frame's next navigation to land, not just for a
                 # response: page.url must be the new document's before the host
                 # check, and a redirect must resolve to its final status. None (a
                 # History API change) proves nothing, so the original status stands.
+                deadline = max(deadline, asyncio.get_running_loop().time() + _ANTIBOT_RECHECK_S)
                 try:
                     async with page.expect_navigation(
-                        wait_until="domcontentloaded", timeout=_ANTIBOT_RECHECK_S * 1000
+                        wait_until=wait_until, timeout=_ANTIBOT_RECHECK_S * 1000
                     ) as navigation:
                         pass
                     reloaded = await navigation.value
@@ -2054,6 +2080,10 @@ async def _playwright_page(
                 except Exception:
                     pass
                 raise NavBlocked(status, final)
+            if wait_for_dom_parsed:
+                remaining = min(timeout_ms / 1000, deadline - asyncio.get_running_loop().time())
+                async with asyncio.timeout(max(0, remaining)):
+                    await page.wait_for_function(_DOM_PARSED_JS, timeout=max(1, remaining * 1000))
             if wait_ms > 0:
                 await page.wait_for_timeout(wait_ms)
             if STEALTH and sys.platform in ("win32", "darwin"):
@@ -2099,7 +2129,7 @@ class NavigationPolicyError(RuntimeError):
 @asynccontextmanager
 # START_CONTRACT: open_page
 # PURPOSE: Yield one owned authenticated page with bounded navigation and cleanup.
-# INPUTS: HTTP(S) URL, settle delay, optional allowed hosts and positive finite navigation timeout in ms.
+# INPUTS: HTTP(S) URL, settle delay, host policy, positive finite navigation timeout and opt-in wait_for_dom_parsed.
 # TIMEOUT: Source override wins over CHROME_NAV_TIMEOUT_MS; absent global default is 20000ms.
 # RECHECK: Main-document 401/403 get one bounded main-frame reload wait (R-CDP-NAV-TIMEOUT.antibot-recheck).
 # OUTPUTS: Async context yielding PageLike; raises scheme, host-policy or navigation failures; an open host breaker raises ToolError rate_limited with retry_after_s.
@@ -2112,12 +2142,16 @@ async def open_page(
     allowed_hosts: Collection[str] | None = None,
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
+    wait_for_dom_parsed: bool = False,
 ) -> AsyncIterator[PageLike]:
     """Open a tab on ``url`` in the operator's Chrome, yield it, then close it.
 
     ``navigation_timeout_ms`` overrides ``CHROME_NAV_TIMEOUT_MS`` (default 20000).
     Both transports receive this same positive finite initial-navigation budget;
     attach, settle, recheck, extraction and teardown retain their separate bounds.
+    ``wait_for_dom_parsed`` opts in to commit then interactive/complete readyState,
+    within the navigation budget, without a DOMContentLoaded/load event; failed
+    statuses are checked first. Default waits remain unchanged.
     ``ozon_windows_compat`` changes the OS identity only on the owned Ozon tab,
     before its first navigation; native brands, versions and language are kept.
 
@@ -2170,6 +2204,8 @@ async def open_page(
     page_options: dict[str, Any] = {"navigation_timeout_ms": timeout_ms}
     if ozon_windows_compat:
         page_options["ozon_windows_compat"] = True
+    if wait_for_dom_parsed:
+        page_options["wait_for_dom_parsed"] = True
     try:
         try:
             page = await stack.enter_async_context(_playwright_page(url, wait_ms, **page_options))
