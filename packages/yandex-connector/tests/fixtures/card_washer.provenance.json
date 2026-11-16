@@ -1,7 +1,7 @@
 {
   "url": "https://market.yandex.ru/",
   "captured_at": "2026-07-28",
-  "sha256": "336988160bda304b4293f17fa6c4d38e0db6e9a5c6b6ff31a9e6afd11a35a244",
+  "sha256": "f5ce3b1c7c3c0d9b8b28fb374c54cce549a806395cc4399f6958ebeb3dc4f07d",
   "method": "real SSR product page captured live Jul 2026, trimmed to a few products and two reviews each (2 MB -> ~60 KB); trimming preserves exact nesting; the exact product URL was not recorded in the test docstring, so the base domain is given and the product is identified by the pinned assertions",
   "ground_truth": {
     "note": "washer product card pinned by test_ssr.py::test_card_extracts_prices_rating_and_seller: title starts «Стиральная машина», brand Tuvio, price_rub 19377.0, price_with_plus 18796.0, price_before_discount_rub 26185.0, discount 28%, rating 4.8 over rating_count 544 with review_count 209; two reviews with pros/cons and vote counts."

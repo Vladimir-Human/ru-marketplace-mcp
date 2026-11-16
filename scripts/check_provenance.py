@@ -1,5 +1,6 @@
-"""Verify every fixture's sha256 pin against the fixture itself, and check that
-the provenance set is complete.
+"""Verify every fixture's sha256 pin against the fixture itself, check that the
+provenance set is complete, and hold the committed fixtures free of personal
+data.
 
 A provenance file pins the bytes it describes, and nothing checked that the pin
 still matched. The citilink card pin was found stale by a manual audit on
@@ -14,6 +15,14 @@ same goes the other way round - a fixture in the covered directories that no
 sidecar describes is evidence nobody captured. Both are failures unless the
 path sits in KNOWN_EXCEPTIONS with a dated reason.
 
+Personal data is part of the gate too (R-FIXTURE-PERSONAL-DATA). The scanner in
+scripts/scrub_fixtures.py reads the same keys the runtime scrub reads - the
+reviewer, asker, private seller and agent names, phones and e-mails - and
+fails with one masked line per hit. The same gate holds the private-material
+rule: a committed recording's region field holds only a placeholder, no file
+under packages/*/tests/, scripts/ or docs/ carries a Windows user path, and no
+committed fixture or recording carries the scraping profile's directory name.
+
 Known exceptions live in KNOWN_STALE (a pin that no longer matches its file)
 and in KNOWN_EXCEPTIONS (a completeness gap), each with a dated reason. An
 allowlist is not a fix: it keeps new drift loud while one old case waits for
@@ -27,6 +36,11 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import scrub_fixtures
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -237,7 +251,29 @@ def check() -> list[str]:
     problems.extend(_sidecar_problems())
     problems.extend(_fixture_problems())
     problems.extend(_pin_problems())
+    problems.extend(_personal_data_problems())
+    problems.extend(_private_material_problems())
     return problems
+
+
+# START_BLOCK_PERSONAL_DATA
+
+
+def _personal_data_problems() -> list[str]:
+    """Every personal value in the committed fixtures, one masked line per hit."""
+    problems = []
+    for path in scrub_fixtures.fixture_files(ROOT):
+        for hit in scrub_fixtures.scan_file(path):
+            problems.append(hit.line(ROOT))
+    return problems
+
+
+def _private_material_problems() -> list[str]:
+    """Every private-material problem: a user path, a profile directory, a real region."""
+    return scrub_fixtures.private_material_problems(ROOT)
+
+
+# END_BLOCK_PERSONAL_DATA
 
 
 def main() -> int:

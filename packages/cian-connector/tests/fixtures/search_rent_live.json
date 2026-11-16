@@ -1127,7 +1127,7 @@
           "userId": 0,
           "userTrustLevel": "involved",
           "accountType": "specialist",
-          "agencyName": "Дмитрий Шубин",
+          "agencyName": "Агент",
           "agentModerationInfo": {
             "isUserIdentified": false,
             "isUserIdentifiedByDocuments": true,
@@ -1854,7 +1854,7 @@
           "userId": 0,
           "userTrustLevel": "involved",
           "accountType": "specialist",
-          "agencyName": "Игорь Соснин",
+          "agencyName": "Агент",
           "agentAvatarUrl": "https://www.cian.ru/api/get-avatar/?i=51820428&t=2&p=2&timestamp=1656583167",
           "agentModerationInfo": {
             "isUserIdentified": true,
