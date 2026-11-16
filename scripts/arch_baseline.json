@@ -5,7 +5,7 @@
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
     "packages/ozon-connector/src/ozon_connector/server.py": 1800,
-    "packages/wb-connector/src/wb_connector/server.py": 3300
+    "packages/wb-connector/src/wb_connector/server.py": 2800
   },
   "functions": {
     "packages/aliexpress-connector/src/aliexpress_connector/server.py::_aliexpress_selfcheck_impl": 174,
@@ -19,7 +19,6 @@
     "packages/wb-connector/src/wb_connector/server.py::wb_questions": 201,
     "packages/wb-connector/src/wb_connector/server.py::wb_reviews": 170,
     "packages/wb-connector/src/wb_connector/server.py::wb_search": 255,
-    "packages/wb-connector/src/wb_connector/server.py::wb_selfcheck": 625,
     "packages/yandex-connector/src/yandex_connector/server.py::yandex_selfcheck": 161,
     "packages/yandex-connector/src/yandex_connector/ssr.py::parse_search": 233
   },
