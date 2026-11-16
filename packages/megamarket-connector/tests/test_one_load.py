@@ -197,8 +197,12 @@ async def test_refusal_stops_search_without_another_request(browser, status, pha
     assert error["error"] == "rate_limited"
     assert error["retry_after_s"] == 1200
     assert error["status_code"] == status
-    assert "refused this browser after repeated page loads" in error["message"]
-    assert "human step will not lift" in error["message"]
+    assert f"Megamarket refused this browser (HTTP {status})" in error["message"]
+    assert "nothing to pass" in error["message"]
+    # 2026-11-16: the first page load of a call after 2.5 quiet hours was refused, so the
+    # message must not blame repeated loads or promise that a human step cannot help.
+    assert "repeated page loads" not in error["message"]
+    assert "human step" not in error["message"]
     assert "IP reputation" not in error["message"]
     assert "residential IP" not in error["message"]
     expected = {

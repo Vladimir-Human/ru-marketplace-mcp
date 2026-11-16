@@ -239,8 +239,9 @@ def _check_browser_response(status: int | None, url: str = "", retry_after: str 
         raise_tool_error(
             ConnectorError(
                 ErrorCode.RATE_LIMITED,
-                "Megamarket refused this browser after repeated page loads; a human step will not lift this refusal. "
-                "Wait for the cooldown before retrying.",
+                f"Megamarket refused this browser (HTTP {status}); its refusal page has nothing to pass. "
+                "Such refusals lift by themselves: on 2026-11-16 one still held after 2.5 hours, refusing the first "
+                "page load of a call. Call again after retry_after_s.",
                 provider="megamarket",
                 status_code=status,
                 retry_after_s=1200 if delay is None else delay,
