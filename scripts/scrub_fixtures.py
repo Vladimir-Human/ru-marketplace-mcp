@@ -785,7 +785,7 @@ USER_PATH_RE = re.compile(r"[A-Za-z]:[\\/]Users[\\/][^\\/\s\"'<>|]+")
 REGION_PLACEHOLDER_RE = re.compile(r"^R\d+$")
 
 # The trees the private-material rule covers.
-PRIVATE_TREES = ("scripts", "docs")
+PRIVATE_TREES = ("scripts", "docs", ".grace")
 
 # The planted fake user paths, per file: a test that proves a redaction needs a
 # Windows user path to redact. Only these exact strings pass in that file, so a

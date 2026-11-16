@@ -465,7 +465,8 @@ def test_evidence_then_check_passes_and_records_only_machine_facts(tmp_path: Pat
     assert [gate["name"] for gate in evidence["gates"]] == list(PASS_GATES)
     for gate in evidence["gates"]:
         assert set(gate) == {"name", "cmd", "exit", "summary", "seconds"}
-        assert gate["cmd"] == PASS_GATES[gate["name"]]
+        # The interpreter is recorded as "python": no machine path or account name is committed.
+        assert gate["cmd"] == ["python", *PASS_GATES[gate["name"]][1:]]
         assert gate["exit"] == 0
         assert gate["seconds"] >= 0
     assert evidence["gates"][0]["summary"] == "first ran"
