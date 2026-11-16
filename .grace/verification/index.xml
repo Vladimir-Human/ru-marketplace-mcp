@@ -369,6 +369,11 @@
     <test file="packages/lamoda-connector/tests/test_fixture_url_sanitization.py" name="test_fixture_hygiene_detection_controls" requirements="R-LAMODA-FIXTURE-URL-HYGIENE" title="The data-only hygiene check detects poison and preserves ordinary URLs." />
     <test file="packages/lamoda-connector/tests/test_fixture_url_sanitization.py" name="test_retained_html_fixture_urls_have_no_signed_advertising_tracking" requirements="R-LAMODA-FIXTURE-URL-HYGIENE" title="R-LAMODA-FIXTURE-URL-HYGIENE: scan all captures without exposing tokens." />
   </requirement>
+  <requirement id="R-LAMODA-REFUSAL-HONEST" kind="requirement" state="tested">
+    <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_a_real_challenge_is_still_a_challenge" requirements="R-LAMODA-REFUSAL-HONEST" />
+    <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_refusal_page_is_not_a_challenge" requirements="R-LAMODA-REFUSAL-HONEST" />
+    <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_search_on_the_refusal_page_answers_rate_limited_with_a_wait" requirements="R-LAMODA-REFUSAL-HONEST" />
+  </requirement>
   <requirement id="R-LIVE-BUDGET" kind="requirement" state="tested">
     <test file="scripts/test_live_budget.py" name="test_a_missing_hook_point_raises" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_budget.py" name="test_a_raw_cdp_popup_is_booked_before_it_opens" requirements="R-LIVE-BUDGET" title="Review #195 P2: the raw popup opens with ``opener._send(window.open)``," />

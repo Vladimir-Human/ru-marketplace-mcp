@@ -56,6 +56,8 @@ from mcp_core.dom import JS_HELPERS, prices_from_tile, title_from_tile
 from mcp_core.errors import (
     BadRequestError,
     ChallengeRequiredError,
+    ConnectorError,
+    ErrorCode,
     NotFoundError,
     ParserDriftError,
     ToolError,
@@ -246,6 +248,33 @@ _SEARCH_EXTRACT_JS = _SEARCH_EXTRACT_TEMPLATE.replace("//__SHARED_HELPERS__", JS
 # deliberately absent: it occurs in ordinary product copy and is not evidence
 # of a challenge.
 _CHALLENGE_TEXT_RE = re.compile(r"провер|не\s+робот|captcha|are\s+you\s+human|access\s+denied", re.IGNORECASE)
+# Lamoda's refusal page (HTTP 403, live 2026-11-16) is headed "Проверка безопасности"
+# but offers nothing to pass; it lifted by itself within about 20 minutes.
+_REFUSAL_TEXT_RE = re.compile(r"запрос\s+отклон", re.IGNORECASE)
+_REFUSAL_RETRY_S = 1200.0
+
+
+def _refusal_page(data: dict[str, Any]) -> bool:
+    """Return whether an empty rendered page is Lamoda's refusal, not a check a human passes."""
+    items = data.get("items")
+    if isinstance(items, list) and items:
+        return False
+    text = f"{data.get('title') or ''} {data.get('body_snippet') or ''}"
+    return bool(_REFUSAL_TEXT_RE.search(text))
+
+
+def _refusal_error() -> ConnectorError:
+    """The refusal as a timed wait: a human step cannot lift it (R-LAMODA-REFUSAL-HONEST)."""
+    _pacer.record_refusal()
+    return ConnectorError(
+        ErrorCode.RATE_LIMITED,
+        "Lamoda refused this browser: its page says 'Запрос отклонен' (HTTP 403) and offers no check "
+        "to pass, so a human step will not help. Such a refusal lifted by itself within about 20 minutes "
+        "on 2026-11-16; call again after retry_after_s.",
+        provider="lamoda",
+        retry_after_s=_REFUSAL_RETRY_S,
+        status_code=403,
+    )
 
 
 def _anti_bot_challenge(data: dict[str, Any]) -> bool:
@@ -257,6 +286,8 @@ def _anti_bot_challenge(data: dict[str, Any]) -> bool:
     """
     items = data.get("items")
     if isinstance(items, list) and items:
+        return False
+    if _refusal_page(data):
         return False
     if str(data.get("title") or "") == "__BLOCKED__":
         return True
@@ -335,6 +366,8 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
             # A landing that stopped on the anti-bot page cannot post anything; say
             # so at once instead of waiting out the fetch timeout (live 2026-10-12).
             snippet = await asyncio.wait_for(page.evaluate(_JS_BODY_SNIPPET), timeout=10.0)
+            if isinstance(snippet, str) and _REFUSAL_TEXT_RE.search(snippet):
+                raise_tool_error(_refusal_error())
             if _CHALLENGE_PATH in str(page.url) or (
                 isinstance(snippet, str) and len(snippet) < 1000 and _CHALLENGE_TEXT_RE.search(snippet)
             ):
@@ -496,7 +529,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
         payload = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         raise_tool_error(TransportDownError(f"CDP timeout after {TIMEOUT}s"))
-    if not _anti_bot_challenge(payload):
+    if not _anti_bot_challenge(payload) and not _refusal_page(payload):
         _cache.set(cache_key, payload)
     return payload
 
@@ -523,6 +556,8 @@ async def lamoda_search(
             payload = await _cdp_render_search(query.strip(), ctx)
         except NavBlocked as exc:
             raise_tool_error(TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status})."))
+        if _refusal_page(payload):
+            raise_tool_error(_refusal_error())
         if _anti_bot_challenge(payload):
             raise_tool_error(
                 ChallengeRequiredError(
