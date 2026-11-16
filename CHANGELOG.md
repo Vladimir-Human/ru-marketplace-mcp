@@ -9,6 +9,65 @@
 
 ## [Unreleased]
 
+## [2.9.4] - 2026-11-16
+
+### Added
+- Ошибки `parser_drift`, `transport_down`, `challenge_required` и `rate_limited` от сборки старше 30 дней содержат поле `old_build`: версию, дату выпуска, возраст в днях и строку обновления на случай, если вышла новая версия. `marketplace-mcp doctor` первой строкой пишет то же самое. В сеть за этим сервер не ходит (#258).
+- Errors `parser_drift`, `transport_down`, `challenge_required` and `rate_limited` from a build older than 30 days carry an `old_build` field: the version, the release date, the age in days and the upgrade line in case a newer version exists. `marketplace-mcp doctor` prints the same as its first line. The server makes no network call for this (#258).
+
+### Changed
+- Сравнение цен: описание параметра `sources` у `compare_prices` и поля `source` у предложения теперь перечисляет все площадки, по которым сравнение ищет, а не три (#238).
+- Price comparison: the description of `compare_prices`' `sources` parameter and of an offer's `source` field now lists every marketplace the comparison searches, not three (#238).
+- Описания полей `old_price_rub` и `discount_percent` у всех площадок уточняют: цена «как её показывает площадка, а не проверенная прежняя цена» (#238).
+- The `old_price_rub` and `discount_percent` field descriptions in every source now say the value is as the marketplace shows it, not a verified previous price (#238).
+
+- В README и в руководстве по сравнению цен появился короткий блок «Безопасность и границы»: не подключайте сервер в одну сессию агента с инструментами, которые читают личные данные и могут отправить их наружу без подтверждения, и держите отдельный профиль Chrome для парсинга. SECURITY.md дополнен: запросы уходят на выбранные площадки, ранжирование опирается только на сведения о товарах, сервер только сравнивает и не оформляет заказы, цены не включают доставку, сборы и пошлины (#242).
+- README and the price-comparison guide gained a short "Security and limits" block: do not run the server in one agent session with tools that read private data and can send it out unapproved, and keep a separate Chrome profile for scraping. SECURITY.md adds that queries go to the selected marketplaces, ranking uses product facts only, the server compares and never places orders, and prices exclude delivery, fees and duties (#242).
+- Форма «Broken endpoint» просит вывод `marketplace-mcp doctor <source>` и версию пакета вместо вывода `*_selfcheck()` и перечисляет все площадки (#242).
+- The "Broken endpoint" issue form asks for `marketplace-mcp doctor <source>` output and the package version instead of `*_selfcheck()` output, and lists every marketplace (#242).
+
+### Removed
+- Настройка `DETMIR_WALL_TIMEOUT`: сервер её никогда не применял. Таймаут одного запроса `DETMIR_TIMEOUT` работает как прежде (#264).
+- The `DETMIR_WALL_TIMEOUT` setting: the server never applied it. The per-request `DETMIR_TIMEOUT` works as before (#264).
+
+### Fixed
+- Если Chrome запустился, но не открыл порт отладки, `marketplace-mcp browser start` и автозапуск Chrome теперь говорят, что произошло на самом деле: профиль уже занят другим Chrome (новый Chrome передал ему запуск и закрылся), Chrome не смог запуститься (с кодом выхода) или Chrome ещё запускается. Раньше сообщение всегда предполагало другой Chrome (#240).
+- When Chrome starts but never opens its debugging port, `marketplace-mcp browser start` and the Chrome autostart now say what actually happened: another Chrome already holds the profile (the new Chrome handed its start to it and quit), Chrome failed to start (with its exit code), or Chrome is still starting. Before, the message always guessed another Chrome (#240).
+
+- Циан: карточка объявления об аренде больше не отвечает «объявление удалено». Заголовок каждой аренды начинается со «Снять…», и проверка снятых объявлений принимала его за «снято». Если сайт уводит страницу объявления на свою проверку «не робот ли вы», инструмент отвечает `challenge_required` и предлагает `marketplace-mcp unblock cian`, а не «изменилась вёрстка» (#247).
+- Cian: a rental offer's card no longer answers "removed". Every rent title starts with «Снять…», and the removed-offer check took it for «снято». When the site sends the offer page to its bot check, the tool answers `challenge_required` with `marketplace-mcp unblock cian` instead of parser drift (#247).
+
+- Lamoda: страница отказа «Запрос отклонен» (HTTP 403) больше не выдаётся за проверку, которую может пройти человек. Инструмент отвечает `rate_limited` и просит повторить через 20 минут: 16 ноября такой отказ сам снялся примерно за это время (#248).
+- Lamoda: the refusal page «Запрос отклонен» (HTTP 403) is no longer reported as a check a human can pass. The tool answers `rate_limited` and asks to retry in 20 minutes: on 16 November such a refusal lifted by itself in about that time (#248).
+
+- Ситилинк: поиск и карточка больше не ждут сигнала «страница загружена», который сайт иногда так и не присылает, пока его статические файлы зависают. Товары читаются, как только страница разобрана. На ответ 429 (защита Qrator) инструмент сразу отвечает `rate_limited` и просит повторить через 30 секунд, а не ждёт 45 секунд до таймаута (#249).
+- Citilink: search and card no longer wait for a "page loaded" signal the site sometimes never sends while its static files hang. Products are read as soon as the page is parsed. On a 429 (Qrator protection) the tool answers `rate_limited` at once and asks to retry in 30 seconds instead of waiting 45 seconds for a timeout (#249).
+
+- Мегамаркет: один поиск больше не загружает сайт четыре раза подряд. Страница открывается один раз, остальные запросы идут из неё же. Если сайт отказал посреди поиска (HTTP 401/403/429), инструмент сразу отвечает `rate_limited` и просит подождать 20 минут вместо `transport_down` с советом про репутацию IP. Слайдер-проверка отвечает `challenge_required` (#250).
+- Megamarket: one search no longer loads the site four times in a row. The page is opened once and the other requests run from it. If the site refuses mid-search (HTTP 401/403/429), the tool answers `rate_limited` at once and asks to wait 20 minutes instead of `transport_down` with IP-reputation advice. The slider check answers `challenge_required` (#250).
+
+- Ситилинк: если страница поиска пришла, а список товаров на ней так и не заполнился (пустые заготовки плиток, потому что не загрузились скрипты самого сайта), поиск отвечает `transport_down` и советует повторить позже. Раньше это выдавалось за смену разметки (`parser_drift`) (#252).
+- Citilink: when the search page arrives but its product list never fills in (empty placeholder tiles because the site's own scripts did not load), the search answers `transport_down` and suggests trying later. It used to be reported as a markup change (`parser_drift`) (#252).
+
+- Мегамаркет: при отказе (HTTP 401/403/429) сообщение больше не называет причину, которую нельзя подтвердить («после повторных загрузок»). Оно говорит, что на странице отказа нечего проходить, что такой отказ снимается сам, и сколько ждать (#253).
+- Megamarket: on a refusal (HTTP 401/403/429) the message no longer names a cause that cannot be backed ("after repeated page loads"). It says the refusal page has nothing to pass, that such a refusal lifts by itself, and how long to wait (#253).
+
+- Wildberries: `marketplace-mcp doctor` считает товары с ценой так же, как сам поиск, и сообщает о сбое, если поиск вернул товары, а ни одной цены в них прочитать нельзя. Раньше проверка смотрела в старые поля и считала WB здоровым даже без цен (#256).
+- Wildberries: `marketplace-mcp doctor` counts priced items the same way the search does and reports drift when the search returns products but no price can be read. The check used to look at old fields and called WB healthy even without prices (#256).
+
+- Повторный вызов больше не отдаёт из кэша ответ, который сам инструмент забраковал: сбой Avito с кодом 200, карточку AliExpress без названия или цены, карточку Яндекс Маркета без названия и такие же случаи в Wildberries, Ozon, Детском мире, Циане, Мегамаркете, MPStats и Lamoda. Раньше такой ответ повторялся до конца срока кэша, теперь следующий вызов снова идёт к источнику (#257).
+- A repeated call no longer serves a cached answer the tool itself rejected: an Avito error with HTTP 200, an AliExpress card without title or price, a Yandex Market card without a title, and the same cases in Wildberries, Ozon, Detsky Mir, Cian, Megamarket, MPStats and Lamoda. Such an answer used to repeat until the cache expired; now the next call goes to the source again (#257).
+
+- `marketplace-mcp doctor` больше не называет источник здоровым, если поиск нашёл товары, но ни у одного нет цены, которую читает сам инструмент поиска. Так теперь проверяются все источники с проверкой поиска: Ozon, Яндекс Маркет, Детский мир, Avito, Taobao, Мегамаркет, Lamoda, DNS, Ситилинк, AliExpress, Циан и Wildberries; причина в отчёте — `no_prices` (#263).
+- `marketplace-mcp doctor` no longer calls a source healthy when its search found products but none carries a price the search tool itself can read. Every source with a search check now works this way: Ozon, Yandex Market, Detsky Mir, Avito, Taobao, Megamarket, Lamoda, DNS, Citilink, AliExpress, Cian and Wildberries; the report names the reason `no_prices` (#263).
+
+- `CITILINK_TIMEOUT`, `DNS_TIMEOUT` и `TAOBAO_TIMEOUT` теперь действительно ограничивают чтение страницы в браузере (от 5 до 45 секунд, по умолчанию 30, как и раньше). Раньше эти настройки ничего не меняли (#264).
+- `CITILINK_TIMEOUT`, `DNS_TIMEOUT` and `TAOBAO_TIMEOUT` now really bound the browser page read (5 to 45 seconds, default 30 as before). These settings used to change nothing (#264).
+- Avito: карточка, у которой на странице нет артикула товара, принимается, только если адрес объявления на этой странице содержит запрошенный номер; иначе инструмент отвечает `parser_drift`, а не выдаёт чужое объявление (#264).
+- Avito: a card whose page carries no item SKU is accepted only when the ad's address on that page holds the requested id; otherwise the tool answers `parser_drift` instead of returning another ad (#264).
+- Подсказки для агентов (skills) правильно перечисляют четыре инструмента, которые DeepSeek Harness подключает по умолчанию, а подсказка Ozon объясняет, что рейтинг и отзывы общие для всех вариантов карточки (#264).
+- The agent guides (skills) now list the four tools DeepSeek Harness mounts by default, and the Ozon guide explains that the rating and reviews are shared by all variants of a card (#264).
+
 ## [2.9.3] - 2026-11-15
 
 ### Added

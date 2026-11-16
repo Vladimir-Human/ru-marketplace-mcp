@@ -1,3 +1,3 @@
 """Detsky Mir MCP connector."""
 
-__version__ = "2.9.3"
+__version__ = "2.9.4"
