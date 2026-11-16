@@ -492,24 +492,31 @@
     <test file="scripts/test_live_audit.py" name="test_all_run_plans_fit_and_never_repeat" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_capture_dimensions_scale_and_finally_close" requirements="R-LIVE-AUDIT.capture" />
     <test file="scripts/test_live_audit.py" name="test_card_args_use_native_types_and_paths" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_compare_drops_paused_sources_before_budget" requirements="R-LIVE-AUDIT.runner" />
     <test file="scripts/test_live_audit.py" name="test_compare_queries_precede_winner_spending" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_compare_records_wall_latency_sources_and_visibility" requirements="R-LIVE-AUDIT.timing" />
     <test file="scripts/test_live_audit.py" name="test_compare_trigger_thresholds" requirements="R-LIVE-AUDIT.timing" />
     <test file="scripts/test_live_audit.py" name="test_compare_uses_text_search_sources_only" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_duplicate_saved_ids_do_not_repeat_card_calls" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_each_run_fits_measured_costs" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_error_envelope_rejects_wrong_types" requirements="R-LIVE-AUDIT.checks" />
     <test file="scripts/test_live_audit.py" name="test_full_profile_environment_uses_registry_selection" requirements="R-LIVE-AUDIT.child" />
     <test file="scripts/test_live_audit.py" name="test_invalid_runs_and_later_phase_a_refused" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_json_ld_product_offer_not_aggregate_low_price" requirements="R-LIVE-AUDIT.capture" />
     <test file="scripts/test_live_audit.py" name="test_missing_or_false_hook_refuses_before_calls" requirements="R-LIVE-AUDIT.child" />
     <test file="scripts/test_live_audit.py" name="test_new_measured_card_cost_is_used_before_next_call" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_phase_a_refuses_a_split_that_moved_between_runs" requirements="R-LIVE-AUDIT.runner" title="A matrix run between the two phase A runs changes the history; run 2 refuses instead of guessing." />
     <test file="scripts/test_live_audit.py" name="test_phase_a_registry_coverage_and_wb_split" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_phase_a_runs_keep_their_split_when_run_one_measures_other_costs" requirements="R-LIVE-AUDIT.plans,R-LIVE-AUDIT.runner" title="History says WB search and card cost 3; the fake books 1. Run 2 must still take exactly the rest." />
     <test file="scripts/test_live_audit.py" name="test_phase_a_schema_catalogue_guide_pii_and_hosts" requirements="R-LIVE-AUDIT.checks" />
     <test file="scripts/test_live_audit.py" name="test_real_stdio_client_with_wrapped_fake_server" requirements="R-LIVE-AUDIT.child" />
     <test file="scripts/test_live_audit.py" name="test_real_wrapped_child_request_reaches_shared_ledger" requirements="R-LIVE-AUDIT.child" />
     <test file="scripts/test_live_audit.py" name="test_runner_ledger_delta_refresh_ids_and_whitelist" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_skip_lamoda_reaches_runner_and_compare" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_skip_options_are_validated" requirements="R-LIVE-AUDIT.runner" />
     <test file="scripts/test_live_audit.py" name="test_summary_dispatch_makes_no_preflight_or_install" requirements="R-LIVE-AUDIT.runner" />
     <test file="scripts/test_live_audit.py" name="test_trigger_waits_for_eight_compare_calls" requirements="R-LIVE-AUDIT.timing" />
+    <test file="scripts/test_live_audit.py" name="test_wb_uses_longest_cost_guarded_prefix" requirements="R-LIVE-AUDIT.plans" />
   </requirement>
   <requirement id="R-LIVE-BUDGET" kind="requirement" state="tested">
     <test file="scripts/test_live_budget.py" name="test_a_missing_hook_point_raises" requirements="R-LIVE-BUDGET" />
@@ -854,6 +861,14 @@
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_every_runnable_package_has_exactly_one_registry_entry" requirements="R-SOURCE-REGISTRY" title="The registry is not a list of the sources someone remembered." />
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_the_cli_and_compare_tables_are_the_registry_projections" requirements="R-SOURCE-REGISTRY" />
     <test file="packages/marketplace-connector/tests/test_source_registry_parity.py" name="test_the_literal_mount_table_matches_the_registry" requirements="R-SOURCE-REGISTRY" title="server.py's mounts stay literal: test_dependency_parity.py parses it." />
+  </requirement>
+  <requirement id="R-STDIO-PROBE" kind="requirement" state="tested">
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_checks_running_version" requirements="R-STDIO-PROBE.eras,R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_fails_a_broken_discover" requirements="R-STDIO-PROBE.eras" title="A server whose ``server/discover`` errors or never answers fails the sessionless probe." />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_probe_fails_a_server_that_does_not_identify_itself" requirements="R-STDIO-PROBE.eras" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_accept_complete_current_state" requirements="R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_reject_incomplete_or_stale_state" requirements="R-STDIO-PROBE.version" />
+    <test file="scripts/test_e2e_stdio_check.py" name="test_sources_reject_missing_or_malformed_payload" requirements="R-STDIO-PROBE.version" />
   </requirement>
   <requirement id="R-STDOUT" kind="rule" state="gap" gaps="G-STDOUT-UNTESTED" />
   <requirement id="R-TAOBAO-GRID-LOADING" kind="requirement" state="tested">
