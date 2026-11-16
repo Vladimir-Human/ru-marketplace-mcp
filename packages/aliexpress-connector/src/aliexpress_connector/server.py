@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; packages/aliexpress-connector/tests.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -911,20 +911,14 @@ async def _aliexpress_selfcheck_impl(ctx: Context | None) -> AliSelfcheckRespons
             )
         else:
             items_raw = [t for t in (payload.get("items") or []) if isinstance(t, dict)]
-            priced = [t for t in items_raw if (t.get("price_texts") or {}).get("attached")]
+            # R-SELFCHECK-GATES-PRICE: the search tool's own price reader, not
+            # "does the tile carry any attached price text" — an unreadable price
+            # text is exactly what the tool reports as no price at all.
+            priced = [t for t in items_raw if _tile_prices(t)[0] is not None]
             totals = items_raw and [t for t in items_raw if t.get("orders") is not None]
             if not items_raw:
                 checks["search"] = R.selfcheck_entry(
                     "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero tiles"]
-                )
-            elif len(items_raw) < 3 or not priced:
-                checks["search"] = R.selfcheck_entry(
-                    "drift",
-                    baseline=baseline,
-                    reason="parse_smoke_failed",
-                    notes=[
-                        f"{len(items_raw)} tiles but {'no prices attach' if not priced else 'fewer than 3'} — the shape likely moved"
-                    ],
                 )
             else:
                 # Tiles extract — now ask the second question: did the SHAPE
@@ -954,17 +948,29 @@ async def _aliexpress_selfcheck_impl(ctx: Context | None) -> AliSelfcheckRespons
                         shape_missing=drift["missing"],
                         shape_added=drift["added"],
                     )
+                elif reason := R.price_gate(len(items_raw), len(priced)):
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason=reason,
+                        priced=0,
+                        notes=["no tile carries a price the search tool can read"],
+                    )
+                elif len(items_raw) < 3:
+                    checks["search"] = R.selfcheck_entry(
+                        "drift", baseline=baseline, reason="parse_smoke_failed", notes=["fewer than 3 tiles"]
+                    )
                 else:
                     notes = [
                         f"{len(items_raw)} tiles extracted",
-                        f"{len(priced)} tiles with an attached price"
+                        f"{len(priced)} tiles with a price the search tool can read"
                         + (f", {len(totals)} with an orders line" if totals else ""),
                         "shape matches the captured reference",
                     ]
                     if drift["added"]:
                         notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
                     checks["search"] = R.selfcheck_entry(
-                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"], priced=len(priced)
                     )
 
     # Chain the card probe off the search result so the canary never depends on

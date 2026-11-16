@@ -3,7 +3,7 @@
 # PURPOSE: Probe configured Wildberries transport/parser health for operators.
 # SCOPE: CLI-only card, reviews, search_goods, search_v9 and root_basket probes; no MCP registration.
 # DEPENDS: server (helpers, constants, models and transport); typing.
-# LINKS: M-WB; R-WB-SELFCHECK-DOM; packages/wb-connector/tests.
+# LINKS: M-WB; R-WB-SELFCHECK-DOM; R-SELFCHECK-GATES-PRICE; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _probe_card: Probe the API or rendered baseline card and return its nm id.
@@ -486,11 +486,11 @@ async def _probe_search_v9(checks: dict[str, dict], use_dom: bool, sq: str) -> N
                                         priced=len(priced),
                                         notes=[drift],
                                     )
-                                elif len(identified) >= 3 and not priced:
+                                elif reason := S.R.price_gate(len(identified), len(priced)):
                                     checks["search_v9"] = S.R.selfcheck_entry(
                                         "drift",
                                         baseline=sq,
-                                        reason="no_prices",
+                                        reason=reason,
                                         recovered_ids=len(identified),
                                         priced=0,
                                         notes=["v9 products carry no price the search tool can read"],

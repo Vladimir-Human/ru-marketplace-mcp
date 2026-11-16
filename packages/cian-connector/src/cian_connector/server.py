@@ -29,7 +29,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; packages/cian-connector/tests.
+# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
@@ -38,6 +38,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 #              plus a runtime shape-drift warning when a required key family vanishes.
 # cian_card: Read embedded offer-card state and classify removed/blocked pages.
 # cian_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
+# _NoPricesFound: Mark a listing whose items carry no readable price (drift: no_prices).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -999,6 +1000,14 @@ async def cian_card(
 # ------------------------------------------------------------ selfcheck ----
 
 
+class _NoPricesFound(ValueError):
+    """The page answered, but no item carries a price the search tool can read.
+
+    R-SELFCHECK-GATES-PRICE: a priceless listing is drift with the reason
+    ``no_prices``, not a parse failure and never a healthy canary.
+    """
+
+
 async def cian_selfcheck(ctx: Context | None = None) -> CianSelfcheckResponse:
     """Structural drift canary for Cian (tri-state: success / drift_detected /
     inconclusive). Not an MCP tool — ``marketplace-mcp doctor`` runs it.
@@ -1071,6 +1080,13 @@ async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:
     def _record(name: str, baseline: str, smoke: Any, payload: Any) -> Any:
         try:
             verdict = smoke(payload)
+        except _NoPricesFound as exc:
+            # R-SELFCHECK-GATES-PRICE: the listing answered, but no item carries
+            # a price the search tool can read — drift, named no_prices.
+            checks[name] = R.selfcheck_entry(
+                "drift", baseline=baseline, reason=str(exc), notes=["no offer carries a price the search tool can read"]
+            )
+            return None
         except Exception as exc:
             checks[name] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=[str(exc)[:160]]
@@ -1084,8 +1100,6 @@ async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:
         if not rows:
             raise ValueError("no offers parsed from a generic query")
         priced = [row for row in rows if row["price_rub"] is not None]
-        if not priced:
-            raise ValueError("no offer carries a price — bargainTerms family lost")
         if all(row["offer_id"] is None for row in rows):
             raise ValueError("offers carry no id")
         if all(row["address"] is None for row in rows):
@@ -1100,7 +1114,9 @@ async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:
         if missing:
             lost = "; ".join("/".join(family) for family in missing)
             raise ValueError(f"payload lost parser-critical key families: {lost}")
-        return f"{len(rows)} offers parsed, total {total}", priced[0]["offer_id"]
+        if reason := R.price_gate(len(rows), len(priced)):
+            raise _NoPricesFound(reason)
+        return f"{len(rows)} offers parsed, total {total}, {len(priced)} priced", priced[0]["offer_id"]
 
     def _card_smoke(envelope: Any) -> tuple[str, None]:
         if not isinstance(envelope, dict):

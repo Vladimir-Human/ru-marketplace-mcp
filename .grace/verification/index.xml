@@ -658,8 +658,14 @@
     <test file="packages/ozon-connector/tests/test_server.py" name="test_reviews_redacts_the_failing_page_body_in_last_error" requirements="R-SECRET-REDACTION" title="last_error is part of a successful answer, so the upstream body it quotes" />
   </requirement>
   <requirement id="R-SELFCHECK-GATES-PRICE" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_selfcheck_gates_price.py" name="test_a_priceless_listing_never_reads_healthy" requirements="R-SELFCHECK-GATES-PRICE" title="The captured listing with every price unreadable must not read healthy." />
+    <test file="packages/marketplace-connector/tests/conformance/test_selfcheck_gates_price.py" name="test_every_selfcheck_source_is_covered" requirements="R-SELFCHECK-GATES-PRICE" title="The registry is the list: a source with a selfcheck needs a case or a stated gap." />
+    <test file="packages/marketplace-connector/tests/conformance/test_selfcheck_gates_price.py" name="test_the_captured_listing_reads_healthy" requirements="R-SELFCHECK-GATES-PRICE" title="The untouched capture is the healthy baseline: the gate must not cry drift." />
+    <test file="packages/mcp-core/tests/test_price_gate.py" name="test_price_gate" requirements="R-SELFCHECK-GATES-PRICE" title="The decision depends on having items, not on a three-item minimum." />
+    <test file="packages/ozon-connector/tests/test_server.py" name="test_ozon_selfcheck_includes_runtime_identity" requirements="R-SELFCHECK-GATES-PRICE" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_counts_prices_the_way_the_search_tool_reads_them" requirements="R-SELFCHECK-GATES-PRICE" title="The captured v9 page keeps prices in sizes[].price; all three are priced." />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" />
+    <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_two_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" title="Even a short listing must not certify prices the search tool cannot read." />
   </requirement>
   <requirement id="R-SHAPE-DRIFT-WARNING" kind="requirement" state="tested">
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" name="test_search_warns_when_a_required_key_family_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="Tiles that still parse without a parser-critical key are structural" />

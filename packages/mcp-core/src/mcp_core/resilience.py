@@ -25,7 +25,7 @@ step, not something already in place.
 # PURPOSE: Normalize drifting upstream values and report structural health honestly.
 # SCOPE: Offline coercion, validation, shape fingerprints and tri-state canaries.
 # DEPENDS: stdlib math,re,collections.abc,typing; mcp_core.redact; no network or persistence.
-# LINKS: M-RESILIENCE; M-DOM; M-MODELS; R-OZON-SEARCH-NUMERIC.
+# LINKS: M-RESILIENCE; M-DOM; M-MODELS; R-OZON-SEARCH-NUMERIC; R-SELFCHECK-GATES-PRICE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # DECOY_MARKERS: The one list of non-price text markers, shared with the DOM decoy regex.
@@ -45,6 +45,7 @@ step, not something already in place.
 # shape_signature: Fingerprint bounded paths/types independently of values.
 # diff_keys: Return sorted missing and added structural keys.
 # shape_drift_warning: One compact runtime warning when a required key family vanished.
+# price_gate: Name price drift when a listing has identified items but none priced.
 # selfcheck_entry: Build healthy/drift/inconclusive sub-check metadata.
 # selfcheck_result: Aggregate verdicts and inject omitted required checks.
 # flatten_text: Reduce display fields to usable scalar text, never container repr.
@@ -939,6 +940,15 @@ INCONCLUSIVE_REASONS = frozenset(
         "skipped",
     }
 )
+
+
+# START_BLOCK_PRICE_GATE
+def price_gate(identified: int, priced: int) -> str | None:
+    """R-SELFCHECK-GATES-PRICE: identified but wholly unpriced listings are drift."""
+    return "no_prices" if identified > 0 and priced == 0 else None
+
+
+# END_BLOCK_PRICE_GATE
 
 
 def selfcheck_entry(

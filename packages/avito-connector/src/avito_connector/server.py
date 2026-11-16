@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; packages/avito-connector/tests.
+# LINKS: M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
@@ -1531,7 +1531,7 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
             )
             return
         try:
-            verdict = smoke(payload)
+            verdict, reason = smoke(payload)
         except ConnectorError as exc:
             drift = isinstance(exc, ParserDriftError)
             if isinstance(exc, (RateLimitedError, ChallengeRequiredError)):
@@ -1548,9 +1548,11 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=[str(exc)[:160]]
             )
             return
-        checks[name] = R.selfcheck_entry("healthy", baseline=baseline, notes=[verdict or "ok"])
+        checks[name] = R.selfcheck_entry(
+            "drift" if reason else "healthy", baseline=baseline, reason=reason, notes=[verdict]
+        )
 
-    def _search_smoke(payload: Any) -> str:
+    def _search_smoke(payload: Any) -> tuple[str, str | None]:
         nonlocal probe_item
         if not isinstance(payload, dict):
             raise ValueError("payload not an object")
@@ -1569,7 +1571,10 @@ async def _avito_selfcheck_impl(ctx: Context | None) -> AvitoSelfcheckResponse:
             lost = "; ".join("/".join(family) for family in missing)
             raise ValueError(f"payload lost parser-critical key families: {lost}")
         probe_item = first
-        return f"{len(items)} items parsed"
+        # R-SELFCHECK-GATES-PRICE: the search tool's own price (price_rub).
+        priced = [it for it in items if it.get("price_rub") is not None]
+        reason = R.price_gate(len(items), len(priced))
+        return (f"{len(items)} items, {len(priced)} priced", reason)
 
     def _page_failure(name: str, baseline: str, exc: Exception) -> None:
         text = _redact(str(exc))

@@ -25,7 +25,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # INVARIANTS: One home load per uncached search/selfcheck; same-tab hidden-redirect fallback; preserve caps/caches.
 # INVARIANTS: Reject failures before success pacing/cache; 401/403/429 stop with cooldown; /xpvnsulc/ needs a human.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; packages/megamarket-connector/tests.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/megamarket-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _browser_session / _session_page: Lazily own one tab and source lock for dependent reads.
@@ -1131,8 +1131,11 @@ async def _megamarket_selfcheck_impl(ctx: Context | None) -> MegamarketSelfcheck
                     notes=[f"{len(items_raw)} items parsed, but parser-critical key families lost: {lost}"],
                 )
             else:
+                priced = [it for it in items_raw if it.get("price_rub") is not None]
+                reason = R.price_gate(len(items_raw), len(priced))
+                state = "drift" if reason else "healthy"
                 checks["search"] = R.selfcheck_entry(
-                    "healthy", baseline=baseline, notes=[f"{len(items_raw)} items parsed"]
+                    state, baseline=baseline, notes=[f"{len(items_raw)} items, {len(priced)} priced"], reason=reason
                 )
         elif container_found and total not in (0, None):
             # total says there are matches and none of them parsed. That is a

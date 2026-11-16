@@ -23,7 +23,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Citilink product search and cards from rendered pages.
 # SCOPE: Read-only paced committed-and-parsed CDP reads; fail-fast rate_limited on 429; reject walls before mapping/caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-NAV-TIMEOUT.qrator-429; packages/citilink-connector/tests.
+# LINKS: M-CITILINK; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-NAV-TIMEOUT.qrator-429; R-SELFCHECK-GATES-PRICE; packages/citilink-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
@@ -606,12 +606,26 @@ async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResp
                     shape_added=drift["added"],
                 )
             else:
-                notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
-                if drift["added"]:
-                    notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
-                checks["search"] = R.selfcheck_entry(
-                    "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
-                )
+                # R-SELFCHECK-GATES-PRICE: the search tool's own price (the tile
+                # parser's price_rub), not a second reader, and a listing whose
+                # tiles carry no readable price is drift, never a healthy canary.
+                items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
+                priced = [it for it in items if it.price_rub is not None]
+                if reason := R.price_gate(len(items), len(priced)):
+                    checks["search"] = R.selfcheck_entry(
+                        "drift",
+                        baseline=baseline,
+                        reason=reason,
+                        priced=0,
+                        notes=["no tile carries a price the search tool can read"],
+                    )
+                else:
+                    notes = [f"{len(items_raw)} tiles extracted", "shape matches the captured reference"]
+                    if drift["added"]:
+                        notes.append(f"{len(drift['added'])} new paths vs baseline (informational)")
+                    checks["search"] = R.selfcheck_entry(
+                        "healthy", baseline=baseline, notes=notes, shape_added=drift["added"], priced=len(priced)
+                    )
         elif _placeholder_tiles(payload):
             checks["search"] = R.selfcheck_entry(
                 "inconclusive",
