@@ -19,6 +19,11 @@ import pytest
 from mcp_core.transport import chrome_cdp
 from wb_connector import dom_transport as dom
 
+# The real navigation guard is the subject here. conftest's offline guard replaces
+# open_page for every offline test; this file keeps the real one and fakes the page
+# lifecycle and permit beneath it instead, so no browser can be reached.
+_REAL_OPEN_PAGE = chrome_cdp.open_page
+
 # START_BLOCK_REDIRECT_FAKE
 
 
@@ -43,6 +48,7 @@ def redirect(monkeypatch):
     async def no_gap():
         pass
 
+    monkeypatch.setattr(chrome_cdp, "open_page", _REAL_OPEN_PAGE)
     monkeypatch.setattr(chrome_cdp, "_playwright_page", lifecycle)
     monkeypatch.setattr(chrome_cdp, "_acquire_navigation_permit", acquire)
     monkeypatch.setattr(dom, "_gap", no_gap)
