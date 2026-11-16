@@ -48,7 +48,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
 # wb_category_products: Read paginated products for a catalog shard.
 # _wb_dom_selfcheck: Classify a one-shot DOM baseline and typed transport errors.
 # wb_selfcheck: Probe configured transport/parser health for operators; not an MCP tool.
-# _cache_validated: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
+# _cache_validated: Store a response once its tool has validated it (R-CACHE-VALIDATED).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -513,7 +513,13 @@ async def _budgeted_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, 
 
 
 async def _fresh_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
-    """Invalidate a fixed canary URL so its verdict describes the present read."""
+    """A canary read that cannot be answered from the cache.
+
+    Every probe uses a fixed URL, so a cached 200 would let a canary report
+    ``healthy`` about a read that happened earlier — and ``search_v9: healthy``
+    was observed while a live request to the same endpoint was timing out. A
+    health signal has to describe the present.
+    """
 
     _cache.invalidate(url)
     return await _safe_get_text(client, url)
@@ -523,7 +529,7 @@ async def _fresh_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str
 
 
 def _cache_validated(url: str, text: str | None) -> None:
-    """Commit a response only after its caller completed parse/output validation."""
+    """Store a 200 response its tool has parsed and validated, unless it came from the cache."""
     if _cache.get(url) is None:
         _cache.set(url, (200, text, None))
 
@@ -532,13 +538,38 @@ def _cache_validated(url: str, text: str | None) -> None:
 
 
 async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str | None, str | None]:
-    """Bounded, paced HTTP reads; WB responses are cached by validated callers."""
+    """GET with body cap, wall-clock budget, and bounded transient-network retry.
+
+    Thin delegation to ``mcp_core.transport.get_text_budgeted``. That function is
+    WB's own logic promoted into the shared runtime, so behaviour is unchanged:
+    ``(status, text, err)`` with the same ``timeout:`` / ``network:`` /
+    ``http_status:`` classification, retries only on transport faults (never on an
+    HTTP status, so rate-limit handling stays the caller's explicit decision), the
+    whole operation bounded by ``WB_WALL_TIMEOUT``, and the polite gate re-entered
+    before each retry.
+
+    The module-level knobs are read at call time, not captured at import, because
+    tests patch them per scenario.
+
+    **Nothing is stored here** (R-CACHE-VALIDATED): a 200 with a body can still be
+    a payload the tool rejects, so each tool stores its response with
+    ``_cache_validated`` only after parsing and output validation, and this
+    function answers from what was stored. A failure is never stored either:
+    caching a transient ConnectTimeout would keep failing the tool for the whole
+    TTL window even though the very next attempt would have succeeded.
+    """
     cached = _cache.get(url)
     if cached is not None:
         return cached
 
     if _needs_impersonation(url):
-        # Prefer impersonation, but fall back once through the same polite gate and wall budget.
+        # Preferring impersonation must not mean depending on it. Measured on
+        # 2026-09-21 from a second address: search.wb.ru v9 answered the default
+        # client with 130 KB while the impersonated path timed out at 15 s, and
+        # card.wb.ru refused both transports with the same wall. The split is not
+        # a property of the host; it moves with the address and the hour. So the
+        # gated hosts try impersonation first and fall back once, through the same
+        # polite gate and wall-clock budget as any other read.
         result = await _impersonated_get_text(url)
         if not _is_usable(result):
             fallback = await _budgeted_get_text(client, url)
@@ -553,9 +584,6 @@ async def _safe_get_text(client: httpx.AsyncClient, url: str) -> tuple[int, str 
     status, text, err = result
     if err is None and status == 200 and text is not None and not _is_edge_wall(text):
         _pacer.record_success()
-        # WB responses are committed by their validated callers, not this raw tier.
-        if not (urlsplit(url).hostname or "").endswith((".wb.ru", ".wildberries.ru", ".wbbasket.ru")):
-            _cache.set(url, result)
     elif err is None and (status in _REFUSAL_STATUSES or _is_edge_wall(text)):
         # Hand the refusal to the pacer so its longer post-refusal gap and its
         # rotation hint can fire for this source. Read through the live module
@@ -1958,7 +1986,12 @@ def _static_menu_urls() -> list[str]:
 
 
 async def _fetch_first_json(urls: list[str], label: str, ctx: Context | None) -> tuple[dict | list, str]:
-    """Try mirrors until JSON parses; surface the last failure if all fail."""
+    """GET each URL in turn, returning the first parsed JSON body and its host.
+
+    Mirror hosts fail independently, so a single 404/5xx is not a real outage —
+    only exhausting every mirror is. The last error is surfaced so the caller can
+    distinguish "all mirrors down" from "this id does not exist".
+    """
     last_error = ""
     async with _wb_client() as client:
         for url in urls:
@@ -2029,6 +2062,7 @@ async def _search_via_search_goods(
                 _redact(err or f"wb_search search-goods: HTTP {status_code}"), provider="wb", status_code=status_code
             )
         ids = json.loads(text or "")
+        sg_text = text
     except httpx.HTTPError as exc:
         raise TransportDownError(_redact(str(exc)), provider="wb") from exc
     except json.JSONDecodeError as exc:
@@ -2037,7 +2071,7 @@ async def _search_via_search_goods(
     if not isinstance(ids, list):
         raise ParserDriftError("wb_search search-goods: expected an ids list", provider="wb")
     if not ids:
-        _cache_validated(sg_url, text)
+        _cache_validated(sg_url, sg_text)
         return [], 0
 
     page_size = 30
@@ -2047,7 +2081,7 @@ async def _search_via_search_goods(
     if not page_ids:
         if raw_page_ids:
             raise ParserDriftError("wb_search search-goods: no recoverable ids", provider="wb")
-        _cache_validated(sg_url, text)
+        _cache_validated(sg_url, sg_text)
         return [], len(ids)
 
     card_params = httpx.QueryParams(
@@ -2097,8 +2131,9 @@ async def _search_via_search_goods(
         raise ParserDriftError(
             f"wb_search fallback card: {products_error or 'products contain non-objects'}", provider="wb"
         )
+    # wb_search builds these items the same way; a page it would reject is not stored.
     WbCardResponse(items=[WbCardItem(**_card_item_dict(p)) for p in products])
-    _cache_validated(sg_url, json.dumps(ids))
+    _cache_validated(sg_url, sg_text)
     _cache_validated(card_url, text)
     return products, len(ids)
 

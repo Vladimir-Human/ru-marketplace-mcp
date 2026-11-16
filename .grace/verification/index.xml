@@ -35,6 +35,7 @@
     <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_every_response_cache_has_a_case" requirements="R-CACHE-VALIDATED" />
     <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_rejected_response_is_not_cached" requirements="R-CACHE-VALIDATED" />
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
+    <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
