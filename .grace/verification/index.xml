@@ -236,6 +236,18 @@
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_price_shapes_the_decoy_and_magnitude_guards_must_keep" requirements="R-COERCE-AMBIGUOUS" title="The stricter guards must not eat the ordinary shapes: a currency glyph," />
   </requirement>
   <requirement id="R-COMPARE-BENCHMARK-REPLAY" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_avito_region_reaches_the_replayed_outcome" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_image_replays_as_the_same_offer_image" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Synthetic typed search answers exercise the real adapters before and after recording." />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_timeout_replays_with_the_timeout_error_code" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_committed_payloads_contain_only_what_the_recorder_can_produce" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Re-cut every typed payload: the corpus must not invent response/item fields." />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_replay_refuses_an_unknown_or_missing_recording_schema" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="scripts/test_compare_recording.py" name="test_a_compare_timeout_records_the_outcomes_timeout_not_a_cancelled_capture" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_an_avito_city_url_is_scrubbed_before_the_recording_is_written" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_control_flow_exceptions_write_no_capture_and_still_raise" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_recorded_image_urls_drop_location_queries_and_keep_rendering_parameters" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_recorded_page_urls_drop_region_queries_without_losing_item_identity" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_warning_only_regions_are_numbered_in_order_of_appearance" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
+    <test file="scripts/test_compare_recording.py" name="test_warnings_are_redacted_and_regions_use_the_payload_placeholder" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_live_audit.py" name="test_a_failing_source_is_recorded_as_its_error_and_still_raises" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="An errored source is stored as its error, and the error still reaches the caller." />
     <test file="scripts/test_live_audit.py" name="test_a_record_dir_inside_the_repository_must_be_the_ignored_one" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A recording is private material: inside the repository only .live-recordings/ (gitignored) takes it." />
     <test file="scripts/test_live_audit.py" name="test_recording_is_a_phase_c_option_only" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The recorder belongs to the compare phase; the other phases refuse it." />
@@ -244,6 +256,8 @@
     <test file="scripts/test_live_audit.py" name="test_the_recorder_stores_only_the_fields_the_adapters_read" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The stored payload is the cut-down the adapters read, and nothing else." />
     <test file="scripts/test_live_audit.py" name="test_the_recording_holds_the_query_the_time_and_each_source" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="One recording is one compare call: the query, the capture time, the sources." />
     <test file="scripts/test_live_audit.py" name="test_the_scrub_replaces_regions_with_placeholders_in_order_of_appearance" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Regions become R1, R2, ... in order of appearance, and equal regions stay equal." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_fixture_provenance_may_keep_its_avito_capture_url" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The city-free URL rule applies to recordings, not a fixture's provenance." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_the_gate_rejects_an_avito_city_url_and_accepts_its_city_free_form" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Plant only synthetic recording data; the gate must report no unmasked city." />
   </requirement>
   <requirement id="R-COMPARE-BUNDLE-NOUN-PHRASES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-BUNDLE-NOUN-PHRASES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
@@ -424,12 +438,14 @@
     <test file="scripts/test_scrub_fixtures.py" name="test_an_agency_cian_agent_is_kept" requirements="R-FIXTURE-PERSONAL-DATA" title="An agency's name stays: it is a company, not a person." />
     <test file="scripts/test_scrub_fixtures.py" name="test_an_email_becomes_the_fixed_address" requirements="R-FIXTURE-PERSONAL-DATA" title="An e-mail address is replaced by one fixed address." />
     <test file="scripts/test_scrub_fixtures.py" name="test_an_ozon_review_author_is_found_and_replaced" requirements="R-FIXTURE-PERSONAL-DATA" title="Ozon splits the author's name into firstName and lastName." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_fixture_provenance_may_keep_its_avito_capture_url" requirements="R-FIXTURE-PERSONAL-DATA.private" title="The city-free URL rule applies to recordings, not a fixture's provenance." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_accepts_a_planted_recording_with_a_placeholder_region" requirements="R-FIXTURE-PERSONAL-DATA" title="The placeholder form is what a scrubbed recording carries." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_covers_committed_grace_evidence" requirements="R-FIXTURE-PERSONAL-DATA" title=".grace/evidence/latest.json is committed; an interpreter path in it names the operator's account." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_profile_directory_name" requirements="R-FIXTURE-PERSONAL-DATA" title="Captured material may not carry the scraping profile's directory name." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_recording_with_a_real_region" requirements="R-FIXTURE-PERSONAL-DATA" title="A recording's region field holds a placeholder, never a real region." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_check_fails_on_a_planted_windows_user_path" requirements="R-FIXTURE-PERSONAL-DATA" title="No file under the covered trees may carry a Windows user path." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_gate_line_names_the_file_and_the_key_path" requirements="R-FIXTURE-PERSONAL-DATA" title="One line per hit: the file, the key path and a masked preview." />
+    <test file="scripts/test_scrub_fixtures.py" name="test_the_gate_rejects_an_avito_city_url_and_accepts_its_city_free_form" requirements="R-FIXTURE-PERSONAL-DATA.private" title="Plant only synthetic recording data; the gate must report no unmasked city." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_masked_preview_never_carries_the_whole_value" requirements="R-FIXTURE-PERSONAL-DATA" title="The gate prints a preview, never the value." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_output_is_stable_on_a_second_run" requirements="R-FIXTURE-PERSONAL-DATA" title="The same input gives the same output, and a second run finds nothing." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_provenance_gate_fails_on_a_fixture_with_a_personal_name" requirements="R-FIXTURE-PERSONAL-DATA" title="check_provenance runs the scanner: a fixture with a name fails the gate." />

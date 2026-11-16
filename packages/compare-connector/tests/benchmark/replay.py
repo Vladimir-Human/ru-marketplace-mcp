@@ -11,13 +11,14 @@ A request no recording covers is an error, never an empty answer: a silent
 
 START_MODULE_CONTRACT
 PURPOSE: Answer the compare adapters' search calls from committed recordings.
-SCOPE: The recording index, the typed rebuild, the replay of one recording, the mixed-region check.
+SCOPE: Schema-1 recording index, typed rebuild including outcome regions, replay of one recording, mixed-region check.
 DEPENDS: compare_connector.server, compare_connector.models_output; the connector output models; scripts/compare_recording.py; FastMCP ToolError; stdlib importlib,json.
 LINKS: M-COMPARE, M-COMPARE-RECORDING, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   RecordingStub: The recorded answers, indexed by source and query.
   RecordingSource: One marketplace's search tool, answered from the recordings.
-  rebuild: The connector's own typed response, rebuilt from the recorded fields.
+  rebuild: The connector's own typed response, rebuilt from the recorded fields and region.
+  _check_schema: Refuse unknown or missing recording format versions.
   replay: One recorded comparison, run through today's adapters and build_response.
   mixed_regions: Whether the recorded sources answered for different regions.
 END_MODULE_MAP
@@ -81,7 +82,15 @@ def rebuild(source: str, payload: dict[str, Any]) -> Any:
     item_model = _model(plan.item_model)
     response_model = _model(plan.response_model)
     items = [item_model(**item) for item in payload.get("items", [])]
-    return response_model(items=items, meta=payload.get("meta", {}))
+    region = {name: payload["region"] for name in plan.region_fields if "region" in payload}
+    return response_model(items=items, meta=payload.get("meta", {}), **region)
+
+
+def _check_schema(recording: dict[str, Any]) -> None:
+    """Refuse unknown/missing versions instead of guessing at their payload shape."""
+    schema = recording.get("schema")
+    if type(schema) is not int or schema != RECORDING.SCHEMA:
+        raise ValueError(f"unsupported recording schema {schema!r}; expected {RECORDING.SCHEMA}")
 
 
 class RecordingStub:
@@ -90,6 +99,7 @@ class RecordingStub:
     def __init__(self, recordings: list[dict[str, Any]]) -> None:
         self.entries: dict[tuple[str, str], dict[str, Any]] = {}
         for recording in recordings:
+            _check_schema(recording)
             query = str(recording.get("query", ""))
             for source, entry in (recording.get("sources") or {}).items():
                 self.entries[(source, query)] = entry
@@ -164,6 +174,7 @@ async def replay(recording: dict[str, Any], stub: RecordingStub | None = None) -
     uses: only the search calls are answered from the recording. A request no
     recording covers fails the replay instead of shrinking the answer.
     """
+    _check_schema(recording)
     stub = stub if stub is not None else RecordingStub([recording])
     names = list(recording.get("sources") or {})
     previous = server.SOURCES
