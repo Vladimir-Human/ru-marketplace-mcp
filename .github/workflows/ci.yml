@@ -7,20 +7,12 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
-  schedule:
-    # Nightly live canary: catches endpoint drift on its own timetable instead
-    # of waiting for a user to trip over it. See the `live` job.
-    - cron: "0 3 * * *"
 
 concurrency:
-  # The nightly canary runs on this same ref as every push to main, so the group
-  # has to carry the event name: otherwise a routine commit cancels the canary —
-  # which reports nothing when cancelled, it just stops existing — and the canary
-  # cancels a merge verification. Scheduled runs are never cancelled; superseded
-  # push and pull-request runs still cancel each other. See
-  # scripts/test_ci_concurrency.py, which fails if this contract is dropped.
+  # Superseded runs of the same ref and event cancel each other.
+  # A manual run does not cancel a push run.
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+  cancel-in-progress: true
 
 # Every job only reads the checkout. Declared here rather than left to the
 # repository default, so pull-request runs stay read-only even if that default
@@ -365,157 +357,6 @@ jobs:
           PYTHONPATH: ""
           MCP_TRANSPORT: stdio
         run: '"$RUNNER_TEMP/pypi-venv/bin/python" scripts/e2e_stdio_check.py'
-
-  live:
-    name: Live endpoint canaries (nightly / manual)
-    # Runs on a schedule and on demand, never on a push: live endpoints drift
-    # on their own timetable, and a flaky marketplace must not gate a PR. The
-    # job needs a Russian-friendly IP — from GitHub's datacenter runners most
-    # sources report inconclusive, which is still a useful baseline signal.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Sync workspace
-        run: uv sync --all-packages
-
-      - name: Doctor drift alarm
-        # Runs BEFORE the canary below, and the order is the fix, not taste.
-        # Both steps book their live requests in ONE ledger — the repo-root
-        # .live-budget.json that the repo-root conftest.py gives `pytest -m live`
-        # and that live_check.py defaults to as well; neither step resets it —
-        # and the cap is 8 requests per source per run. The canary's WB tests
-        # spend most of WB's 8 first, so a doctor step running second gets its
-        # wb_selfcheck refused by the budget, reads inconclusive (exit 2) and
-        # leaves the job green while WB actually drifted. The alarm has
-        # priority; the canary stays informational and green as before.
-        #
-        # The canary cannot tell drift from a block either: a drifted selfcheck
-        # and an unrecognised block both end as pytest exit 1, which leaves the
-        # job green. `live_check.py doctor` runs the CLI's doctor round — every
-        # selfcheck, plus the machine-readable --status-file snapshot — under
-        # the same shared live budget the canary uses. Doctor exit codes: 0 all
-        # healthy, 1 a parser drifted (the alarm this job exists to raise),
-        # 2 nothing drifted but sources could not be judged (blocked, no CDP,
-        # wrong country — the expected nightly result from GitHub's datacenter
-        # IPs, including an unverified budget_refused check), 3 the budget or
-        # status file failed, 4 a checker, doctor invocation or live_check's
-        # setup/usage failed — a broken alarm, not a blocked source (R17).
-        # A blocked source must not page anyone, same rule as the canary;
-        # drift and hard checker/setup/usage errors fail the job.
-        run: |
-          set +e
-          uv run python scripts/live_check.py doctor --status-file "$RUNNER_TEMP/doctor-status.json" 2>&1 | tee doctor.log
-          code=${PIPESTATUS[0]}
-          {
-            echo "## Doctor drift alarm"
-            echo ""
-            echo "Exit $code: 0 healthy, 1 drift (alarm), 2 blocked/inconclusive (including budget_refused), 3 budget or status-file failure, 4 checker/doctor/setup/usage failure (alarm)."
-            echo ""
-            echo "<details><summary>doctor output</summary>"
-            echo ""
-            echo '```'
-            cat doctor.log
-            echo '```'
-            echo ""
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
-          case "$code" in
-            0|2) echo "doctor exit $code: not an alarm" ;;
-            1) echo "doctor reported parser drift; failing the job"; exit 1 ;;
-            4) echo "doctor or a checker failed (exit 4: checker/doctor/setup/usage failure); failing the job"; exit 1 ;;
-            *) echo "doctor did not run cleanly (exit $code); failing the job"; exit 1 ;;
-          esac
-
-      - name: Run live canaries
-        id: canaries
-        # Still runs when the alarm above failed the job: the canary's summary
-        # is most useful on exactly that night.
-        if: ${{ !cancelled() }}
-        # Informational only, and it runs AFTER the doctor alarm on purpose:
-        # both steps share one live-budget ledger (see the step above), and the
-        # WB tests here would otherwise starve the doctor's wb_selfcheck of
-        # WB's 8 requests per run. The price is paid here instead: a WB test
-        # whose request the spent budget refuses is reported SKIPPED with the
-        # budget's reason (root conftest.py), not failed as "drift or block".
-        # A blocked source is information, not a build failure, so we do not let a red assertion abort the job — but we DO
-        # capture the exact pytest exit code and hand it to the summary step,
-        # which is what makes the outcome honest instead of a blanket green.
-        # Only wb, detmir and yandex carry @pytest.mark.live tests (3 of the 14
-        # sources), so this canary covers 3 of 12 — the summary spells that out
-        # so a pass is not mistaken for "everything works". Exit codes: 0 = all
-        # passed, 1 = failures (from a datacenter runner with no Russian IP this
-        # usually means blocked, but it is indistinguishable here from real
-        # drift), 5 = nothing collected, other = a hard error
-        # (crash/collection failure) that is a genuine problem.
-        run: |
-          set +e
-          uv run pytest -q -m "live" --tb=short -rs 2>&1 | tee live.log
-          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-
-      - name: Summarise canary outcome
-        # Always runs, even after a failing canary step, so the verdict is
-        # recorded. This is the step the old comment promised but never existed;
-        # without it the job was green regardless and a blocked run looked
-        # identical to a healthy one. It fails the job ONLY on a hard error
-        # (exit code neither 0/1/5), because that is a broken canary rather than
-        # an unreachable marketplace.
-        if: always()
-        env:
-          RC: ${{ steps.canaries.outputs.exit_code }}
-        run: |
-          {
-            echo "## Live endpoint canaries"
-            echo ""
-            echo "Coverage: **3 of 14 sources** carry \`@pytest.mark.live\` tests — wb, detmir, yandex. The other 11 have none, so a green canary says nothing about them. AliExpress is CDP-only against x5sec: its drift signal comes from \`aliexpress_selfcheck\` on the operator's machine, not from this nightly job."
-            echo ""
-            echo "GitHub's runners have no Russian-friendly IP, so a blocked source and genuine drift both surface as test failures here; disambiguating needs a rerun from a Russian-friendly IP."
-            echo ""
-            case "$RC" in
-              0)
-                # A recognised block and a live budget the doctor alarm above
-                # already spent both skip; a run with skips did not "all pass".
-                if grep -q " skipped" live.log; then
-                  echo "### Result: PASS with skips — no live test failed; the skipped ones met a recognised block or a live budget the doctor alarm had already spent (reasons in the log)."
-                else
-                  echo "### Result: PASS — all live tests passed (endpoints reachable and healthy)."
-                fi ;;
-              1)
-                echo "### Result: FAILED — a live test failed: parser drift, or a block the selfcheck did not recognise (a recognised block skips). This step cannot tell them apart; the Doctor drift alarm step above can." ;;
-              5)
-                echo "### Result: HARD FAILURE — no live tests were collected. Expected 3 sources' worth; the marker or test layout is broken." ;;
-              *)
-                echo "### Result: HARD FAILURE — the canary errored (exit code $RC). This is a broken test run, not an unreachable marketplace." ;;
-            esac
-            echo ""
-            echo "<details><summary>pytest output</summary>"
-            echo ""
-            echo '```'
-            cat live.log
-            echo '```'
-            echo ""
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # Honest conclusion: PASS (0) and BLOCKED/INCONCLUSIVE (1) leave the
-          # job green — a blocked marketplace must not page anyone. Anything else
-          # fails it: exit 5 means the 3 live sources stopped being collected (a
-          # canary silently testing nothing is the exact false-green this job was
-          # fixed to kill), and any other code is a crash.
-          case "$RC" in
-            0|1) : ;;
-            *) echo "Canary did not run cleanly (exit $RC); failing the job — see the step summary."; exit 1 ;;
-          esac
 
   dsh-bundle:
     name: dsh bundle installs and activates

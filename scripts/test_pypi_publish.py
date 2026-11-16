@@ -135,7 +135,6 @@ def test_existing_ci_job_names_are_preserved():
         "test": "Tests (${{ matrix.os }}, py${{ matrix.python }})",
         "coverage": "Coverage (ubuntu, py3.12)",
         "smoke": "Server smoke test",
-        "live": "Live endpoint canaries (nightly / manual)",
         "dsh-bundle": "dsh bundle installs and activates",
     }
     for name, title in expected.items():

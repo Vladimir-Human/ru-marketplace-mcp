@@ -10,8 +10,8 @@ The ledger defaults to `.live-budget.json` in the repository root (ignored by
 git) so `pytest -m live` and `scripts/live_check.py` share one run.
 
 A live test whose request the budget refused is reported as skipped, with the
-budget's reason, not as failed: the nightly doctor alarm runs first on the same
-ledger, so a spent budget is the expected state there, and a failure would read
+budget's reason, not as failed: a doctor run can spend the budget on the same
+ledger, so a spent budget is an expected state there, and a failure would read
 as "parser drift or an unrecognised block" when it is neither.
 
 START_MODULE_CONTRACT

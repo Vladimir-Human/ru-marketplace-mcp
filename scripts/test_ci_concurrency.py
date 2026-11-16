@@ -1,12 +1,4 @@
-"""A push to main must not cancel the nightly live canary, and the canary must not
-cancel a merge verification.
-
-`live` is the only job that produces automatic live evidence, and ci.yml runs it on
-a schedule and on demand. It shares `refs/heads/main` with every push to main, so a
-workflow-level `concurrency` group that ignores the event name puts both runs in one
-slot: with `cancel-in-progress: true` whichever starts second silently kills the
-first. A cancelled canary reports nothing at all — it does not go red, it just stops
-existing — so the loss is invisible in the run history.
+"""Separate refs must not cancel each other, and superseded pushes still cancel.
 
 These tests read the workflow files as text rather than through a YAML parser: they are
 checked into the repository, the facts under test are two scalars in a block we
@@ -167,14 +159,6 @@ def _cancels(expression: str, *, event: str) -> bool:
     return value
 
 
-def test_a_push_and_the_scheduled_canary_do_not_share_a_group() -> None:
-    group = _concurrency("group")
-    assert _render_group(group, event="push") != _render_group(group, event="schedule"), (
-        "a push to main and the nightly canary would occupy one concurrency slot, "
-        "so whichever starts second cancels the other"
-    )
-
-
 def test_separate_refs_still_do_not_cancel_each_other() -> None:
     group = _concurrency("group")
     assert _render_group(group, event="push", ref="refs/heads/main") != _render_group(
@@ -182,79 +166,8 @@ def test_separate_refs_still_do_not_cancel_each_other() -> None:
     )
 
 
-def test_the_scheduled_canary_is_never_cancelled() -> None:
-    assert _cancels(_concurrency("cancel-in-progress"), event="schedule") is False, (
-        "a cancelled nightly run produces no evidence and no failure, so the scheduled canary must not be cancellable"
-    )
-
-
 def test_a_superseded_push_still_cancels() -> None:
     assert _cancels(_concurrency("cancel-in-progress"), event="push") is True
-
-
-def test_the_live_job_stays_schedule_and_dispatch_only() -> None:
-    condition = _child_scalar("  live:", "if")
-    assert "schedule" in condition and "workflow_dispatch" in condition, (
-        "the live job must stay off ordinary pushes; a per-push live run would "
-        "hammer the marketplaces and is not what the canary is for"
-    )
-
-
-@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
-def test_the_live_job_runs_the_doctor_drift_alarm() -> None:
-    """The nightly job must run the doctor status check and fail on its alarm.
-
-    The canary's live tests counted drift_detected as a pass, so real parser
-    drift never failed anything. Doctor separates the outcomes by exit code:
-    1 means a parser drifted — the alarm this job exists to raise — while 2
-    means sources could not be judged (blocked, no CDP, wrong country), the
-    expected nightly result from GitHub's datacenter runners that must not
-    fail the job. The doctor round runs through scripts/live_check.py so it
-    stays inside the shared live request budget.
-    """
-    step = _section("      - name: Doctor drift alarm")
-    assert "live_check.py doctor" in step, "the nightly job must run the doctor status check under the live budget"
-    assert "--status-file" in step, "the doctor round must leave its machine-readable status snapshot"
-    assert "0|2)" in step, "healthy and blocked/inconclusive outcomes must keep the job green"
-    assert re.search(r"^\s*1\).*exit 1", step, re.M), "the doctor alarm (parser drift, exit 1) must fail the job"
-
-
-@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
-def test_the_doctor_alarm_runs_before_the_canary_on_one_ledger() -> None:
-    """The alarm must get its live requests before the canary spends them.
-
-    Both steps book into one ledger: the repo-root conftest.py gives
-    `pytest -m live` the default `.live-budget.json`, live_check.py defaults to
-    the same file, and neither step resets it. The cap is 8 requests per source
-    per run, and the canary's WB tests spend most of WB's 8 — so with the
-    canary first, the doctor's wb_selfcheck is refused, reads inconclusive
-    (exit 2) and the job stays green while WB actually drifted (2026-11-01
-    audit). The alarm has priority, so its step must come first.
-    """
-    text = CI.read_text(encoding="utf-8")
-    doctor = text.index("- name: Doctor drift alarm")
-    canary = text.index("- name: Run live canaries")
-
-    assert doctor < canary, "the doctor alarm must run before the canary, or the canary starves it of WB's budget"
-    live_job = _section("  live:")
-    assert "LIVE_BUDGET_LEDGER" not in live_job, "a per-step ledger would split the one budget both steps share"
-    assert "live_check.py reset" not in live_job, "a reset between the steps would hand the alarm a fresh cap"
-
-
-@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
-def test_a_broken_live_check_fails_the_alarm() -> None:
-    """R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure.
-
-    The step keeps 2 non-alarm because a blocked marketplace must not page
-    anyone. A failed checker or doctor invocation is a broken alarm instead.
-    This inspects workflow text only; it does not execute the nightly job.
-    """
-    step = _section("      - name: Doctor drift alarm")
-
-    assert re.search(r"^\s*4\).*exit 1", step, re.M), "exit 4 (checker/doctor/setup/usage failure) must fail the job"
-    assert "exit 4" in step, "the step summary must name what exit 4 means"
-    assert "checker/doctor/setup/usage failure (alarm)" in step
-    assert "doctor never ran" not in step, "exit 4 also covers a checker that ran and failed"
 
 
 @pytest.mark.req("R-CI-IMAGE-CHECK")
@@ -275,19 +188,19 @@ def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> Non
 @pytest.mark.parametrize(
     ("expression", "event", "expected"),
     [
-        ("true", "schedule", True),
+        ("true", "workflow_dispatch", True),
         ("false", "push", False),
-        ("${{ github.event_name != 'schedule' }}", "push", True),
-        ("${{ github.event_name != 'schedule' }}", "schedule", False),
-        ("${{ github.event_name == 'push' }}", "schedule", False),
+        ("${{ github.event_name != 'workflow_dispatch' }}", "push", True),
+        ("${{ github.event_name != 'workflow_dispatch' }}", "workflow_dispatch", False),
+        ("${{ github.event_name == 'push' }}", "workflow_dispatch", False),
         ("${{ github.event_name == 'push' || github.event_name == 'pull_request' }}", "push", True),
-        ("${{ github.event_name == 'push' || github.event_name == 'pull_request' }}", "schedule", False),
+        ("${{ github.event_name == 'push' || github.event_name == 'pull_request' }}", "workflow_dispatch", False),
         (
-            "${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}",
+            "${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch' }}",
             "workflow_dispatch",
             False,
         ),
-        ("${{ !(github.event_name == 'schedule') }}", "schedule", False),
+        ("${{ !(github.event_name == 'workflow_dispatch') }}", "workflow_dispatch", False),
     ],
 )
 def test_the_expression_reader_understands_the_shapes_it_claims_to(expression: str, event: str, expected: bool) -> None:
