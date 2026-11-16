@@ -19,11 +19,11 @@ Use ``log_event`` (stderr) or the FastMCP ``Context`` logging methods.
 # PURPOSE: Publish shared connector runtime primitives and package version.
 # SCOPE: Public error, HTTP, logging and redaction exports; no server launch.
 # DEPENDS: mcp_core.errors,http,logging,redact; FastMCP and httpx transitively.
-# LINKS: M-CORE; M-ERRORS; M-HTTP; M-LOGGING; M-REDACT.
+# LINKS: M-CORE; M-ERRORS; M-HTTP; M-LOGGING; M-REDACT; R-OLD-BUILD-INFO.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # __all__: Declare the shared package facade for connector imports.
-# __version__: Identify the shared runtime release.
+# __version__ / __release_date__: Identify the shared runtime release and its date.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -64,4 +64,7 @@ __all__ = [
     "redact_error_text",
 ]
 
+# START_BLOCK_RELEASE_METADATA
 __version__ = "2.9.3"
+__release_date__ = "2026-11-15"
+# END_BLOCK_RELEASE_METADATA

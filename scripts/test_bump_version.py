@@ -7,6 +7,7 @@ version is refused with exit code 2.
 
 from __future__ import annotations
 
+import datetime as dt
 import sys
 from pathlib import Path
 
@@ -114,6 +115,7 @@ def test_the_site_table_names_every_declaration_family(mini_tree: Path) -> None:
     assert labels == {
         "pyproject.toml",
         "__init__.py",
+        "release date",
         "SERVER_VERSION",
         "image tag",
         "deployment release pin",
@@ -319,5 +321,33 @@ def test_deleting_one_plugin_manifest_fails_the_version_check(
     assert check_versions.main([], root=mini_tree) == 1
 
     err = capsys.readouterr().err
-    assert "files that declare no version at all" in err
+    assert "files missing required release declarations" in err
     assert "gemini-extension.json" in err
+
+
+@pytest.mark.req("R-OLD-BUILD-INFO")
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_release_date_is_a_separate_declared_site_bumped_to_today(mini_tree, capsys, dry_run) -> None:
+    original = '__version__  = "1.2.3"\r\n__release_date__ = "2000-01-01"  # keep this\r\n'
+    path = _write(mini_tree, "packages/mcp-core/src/mcp_core/__init__.py", original)
+    assert check_versions.main([], root=mini_tree) == 0, "a release date is not a version disagreement"
+
+    today = dt.date.today().isoformat()
+    assert bump_version.bump(mini_tree, NEW, dry_run=dry_run) == 0
+    output = capsys.readouterr()
+    if dry_run:
+        assert f"2000-01-01 -> {today}" in output.out
+        assert path.read_bytes().decode("utf-8") == original
+    else:
+        assert path.read_bytes().decode("utf-8") == original.replace(OLD, NEW).replace("2000-01-01", today)
+        assert check_versions.main([], root=mini_tree) == 0
+    declarations = [item for item in version_sites.iter_declarations(mini_tree) if item.site.label == "release date"]
+    assert len(declarations) == 1
+    assert declarations[0].old == ("2000-01-01" if dry_run else today)
+
+
+@pytest.mark.req("R-OLD-BUILD-INFO")
+def test_an_existing_core_package_must_declare_its_release_date(mini_tree, capsys) -> None:
+    _write(mini_tree, "packages/mcp-core/src/mcp_core/__init__.py", '__version__ = "1.2.3"\n')
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "__init__.py" in capsys.readouterr().err

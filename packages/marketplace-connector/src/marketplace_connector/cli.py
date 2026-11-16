@@ -39,8 +39,8 @@ The verbs cover the moments an operator actually needs help with:
 # START_MODULE_CONTRACT
 # PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
 # SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
-# DEPENDS: mcp_core.logging; mcp_core.source_selection; mcp_core.sources (source registry; per-source tables derived there); mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
-# LINKS: M-MARKETPLACE; M-UNBLOCK; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP; R-DOCTOR-EXIT-CODES.
+# DEPENDS: mcp_core.build_age; mcp_core.logging; mcp_core.source_selection; mcp_core.sources (source registry; per-source tables derived there); mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
+# LINKS: M-MARKETPLACE; M-UNBLOCK; M-BUILD-AGE; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP; R-DOCTOR-EXIT-CODES; R-OLD-BUILD-INFO.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _config_block: Today's per-source mcpServers block (kept for --per-source).
@@ -76,6 +76,7 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
+from mcp_core.build_age import old_build_info
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text
 from mcp_core.source_selection import canonical
@@ -1409,6 +1410,12 @@ def cmd_doctor(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return DOCTOR_FAILURE_EXIT
+    info = old_build_info()
+    if info is not None:
+        print(
+            f"info:old_build: version {info['version']}, released {info['released']}, "
+            f"age {info['age_days']} days; {info['upgrade']}"
+        )
     results = _run_selfchecks(only)
     steps, cdp_note = _health_steps(results)
 

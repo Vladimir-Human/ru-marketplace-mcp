@@ -6,9 +6,9 @@ in others; this script removes the chance to miss one. Both read the site table
 in ``scripts/version_sites.py``, so the set of files a release must touch has a
 single definition.
 
-Only the version substring is replaced. The rest of the line, the file's line
-endings and a JSON file's indentation and key order are copied byte for byte,
-so the diff is the release number and nothing else.
+Only version and release-date substrings are replaced. The rest of the line,
+the file's line endings and a JSON file's indentation and key order are copied
+byte for byte, so the diff is the release number and its date only.
 
 The script deliberately stops short of the steps that need judgment: the
 lockfile relock (which needs uv 0.13.6 for the CI revision gate), moving the
@@ -20,10 +20,10 @@ Usage:
     python scripts/bump_version.py v1.3.0 --dry-run
 
 START_MODULE_CONTRACT
-PURPOSE: Rewrite every declared release version atomically per file and verify the result.
+PURPOSE: Rewrite every declared release version and date atomically per file and verify the result.
 SCOPE: NEW validation, dry-run report, byte-preserving rewrite, post-write gate, next-step hints.
 DEPENDS: scripts/version_sites.py, scripts/check_versions.py; stdlib sys, datetime, pathlib.
-LINKS: M-BUMP-VERSION, R-RELEASE-BUMP, R-VERSION.
+LINKS: M-BUMP-VERSION, R-RELEASE-BUMP, R-VERSION, R-OLD-BUILD-INFO.
 START_MODULE_MAP
   bump                 plan or apply one version across the repository
   main                 CLI wrapper with exit codes
@@ -46,8 +46,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RELOCK_COMMAND = "uvx --from uv==0.13.6 uv lock"
 
 
-def _next_steps(new: str) -> str:
-    today = dt.date.today().isoformat()
+# START_BLOCK_RELEASE_BUMP
+
+
+def _next_steps(new: str, today: str) -> str:
     return (
         "next steps this script does not do:\n"
         f"  1. relock the workspace (uv.lock carries the 17 workspace versions): {RELOCK_COMMAND}\n"
@@ -67,6 +69,7 @@ def bump(root: Path = REPO_ROOT, new: str = "", *, dry_run: bool = False) -> int
         sys.stderr.write(f"NEW must look like X.Y.Z (optionally v-prefixed), got {new!r}\n")
         return 2
     version = match.group(1)
+    today = dt.date.today().isoformat()
 
     declarations = version_sites.iter_declarations(root)
     if not declarations:
@@ -80,7 +83,8 @@ def bump(root: Path = REPO_ROOT, new: str = "", *, dry_run: bool = False) -> int
     if dry_run:
         for declaration in ordered:
             where = version_sites.display_path(declaration.path, root)
-            print(f"{where}:{declaration.lineno} {declaration.old} -> {version}")
+            value = today if declaration.site.kind == "release_date" else version
+            print(f"{where}:{declaration.lineno} {declaration.old} -> {value}")
         print(f"dry run: {len(ordered)} declarations would be rewritten; nothing was written")
         return 0
 
@@ -93,9 +97,10 @@ def bump(root: Path = REPO_ROOT, new: str = "", *, dry_run: bool = False) -> int
         text = version_sites.read_raw(path)
         updated = text
         for declaration in sorted(group, key=lambda item: item.start, reverse=True):
-            if declaration.old == version:
+            value = today if declaration.site.kind == "release_date" else version
+            if declaration.old == value:
                 continue
-            updated = updated[: declaration.start] + version + updated[declaration.end :]
+            updated = updated[: declaration.start] + value + updated[declaration.end :]
             rewritten += 1
         if updated != text:
             path.write_bytes(updated.encode("utf-8"))
@@ -104,8 +109,8 @@ def bump(root: Path = REPO_ROOT, new: str = "", *, dry_run: bool = False) -> int
     if code != 0:
         return code
 
-    print(f"rewrote {rewritten} version declarations to {version}")
-    print(_next_steps(version), end="")
+    print(f"rewrote {rewritten} release declarations to version {version} and date {today}")
+    print(_next_steps(version, today), end="")
     return 0
 
 
@@ -116,6 +121,9 @@ def main(argv: list[str], root: Path = REPO_ROOT) -> int:
         sys.stderr.write("usage: python scripts/bump_version.py NEW [--dry-run]\n")
         return 2
     return bump(root, positional[0], dry_run=dry_run)
+
+
+# END_BLOCK_RELEASE_BUMP
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ contract tests check these guides against synthetic upstream answers.
 # PURPOSE: Serve behavioral guides with generated serialized fields and the error taxonomy.
 # SCOPE: Wire aliases/envelopes, field schemas, resource registration, one shared error URI per profile.
 # DEPENDS: mcp_core.errors, mcp_core.output_schema; Pydantic, FastMCP resources/tools/transforms; json, typing.
-# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC.
+# LINKS: M-RESOURCES; M-ERRORS; M-OUTPUT-SCHEMA; M-CORE; R-TOOL-RESOURCES; R-GUIDE-CONTRACTS; R-COMPARE-SOURCE-SELECTION; R-OZON-SEARCH-NUMERIC; R-OLD-BUILD-INFO.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # GUIDE_SCHEME: URI scheme of the per-tool guides.
@@ -1012,7 +1012,12 @@ def render_error_reference() -> str:
         ERROR_REFERENCE_HEADING,
         "",
         "Every marketplace tool reports a failure as one FastMCP ToolError whose message is a",
-        "JSON object: `{error, message, retryable, provider?, retry_after_s?, status_code?}`.",
+        "JSON object: `{error, message, retryable, provider?, retry_after_s?, status_code?, old_build?}`.",
+        "Optional `old_build` is informational (`info:old_build`): `version`, `released`, `age_days`, `upgrade`.",
+        "Only `parser_drift`, `transport_down`, `challenge_required` and `rate_limited` add it for a build",
+        "older than 30 days. An unparseable release date adds nothing. No network call is made.",
+        "The upgrade text is: if a newer version exists: uvx ru-marketplace-mcp@latest "
+        "(or: pip install -U ru-marketplace-mcp).",
         "A challenge also carries `requires_user_action`, `retryable_now=false`, `retry_when`,",
         "`user_action` and `challenge_type`; while the browser handoff is open it adds",
         "`handoff_id` together with `handoff_expires_at`.",

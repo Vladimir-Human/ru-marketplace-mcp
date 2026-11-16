@@ -7,16 +7,16 @@ could be checked and not bumped (or the reverse) and nothing would notice: the
 gate would go green over a half-finished bump. Both scripts read this module
 instead.
 
-A declaration is a regex match whose captured group is the version text. The
+A declaration is a regex match whose captured group is the version or release-date text. The
 scan works on the raw file text, preserving line endings, and records the
 character span, so the bump rewrites only those bytes: the rest of the line,
 the indentation and the JSON key order stay exactly as they were.
 
 START_MODULE_CONTRACT
-PURPOSE: Single source of truth for version declaration sites, scanning and rewriting.
+PURPOSE: Single source of truth for version and release-date declaration sites, scanning and rewriting.
 SCOPE: Site table, declaration scanning, root-version read, bump planning/applying.
 DEPENDS: stdlib json, re, dataclasses, pathlib.
-LINKS: M-VERSION-SITES, R-RELEASE-BUMP, R-VERSION.
+LINKS: M-VERSION-SITES, R-RELEASE-BUMP, R-VERSION, R-OLD-BUILD-INFO.
 START_MODULE_MAP
   Site                 one family of declaration files and its pattern
   Declaration          one matched version and its span in a file
@@ -34,12 +34,16 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
+
+# START_BLOCK_RELEASE_SITES
 
 # X.Y.Z, optionally prefixed with v. Anything else is not a release version.
 VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 
 PYPROJECT_VERSION = re.compile(r'^version[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 DUNDER_VERSION = re.compile(r'^__version__[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
+RELEASE_DATE = re.compile(r'^__release_date__[ \t]*=[ \t]*"([^"]*)"', re.MULTILINE)
 SERVER_VERSION = re.compile(r'^SERVER_VERSION[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)")
 # The OCI identifier is a JSON string; the version runs to its closing quote.
@@ -69,7 +73,7 @@ class Mismatch:
 
 @dataclass(frozen=True)
 class Site:
-    """One family of files that declares the release version.
+    """One family of files that declares the release version or date.
 
     ``required`` means every existing file in the family must contain a
     declaration: a deleted ``__version__`` line used to shrink a summary nobody
@@ -83,11 +87,12 @@ class Site:
     value_group: int = 1
     top_level_indent: bool = False
     description: str = ""
+    kind: Literal["version", "release_date"] = "version"
 
 
 @dataclass(frozen=True)
 class Declaration:
-    """One matched version substring, with offsets into the file's raw text."""
+    """One matched release substring, with offsets into the file's raw text."""
 
     site: Site
     path: Path
@@ -123,6 +128,7 @@ def _sorted(paths: list[Path]) -> tuple[Path, ...]:
 def build_sites(root: Path) -> tuple[Site, ...]:
     """The site table for one repository root, in reporting order."""
     packages = root / "packages"
+    core_init = packages / "mcp-core" / "src" / "mcp_core" / "__init__.py"
     manifests = _sorted([root / "pyproject.toml", *packages.glob("*/pyproject.toml")])
     deployment_doc = root / "docs" / "DEPLOYMENT.md"
     image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
@@ -144,6 +150,13 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             DUNDER_VERSION,
             _sorted(packages.glob("*/src/*/__init__.py")),
             description="a package __version__",
+        ),
+        Site(
+            "release date",
+            RELEASE_DATE,
+            (core_init,) if core_init.exists() else (),
+            description="the mcp-core release date",
+            kind="release_date",
         ),
         Site(
             "SERVER_VERSION",
@@ -264,10 +277,12 @@ def scan(root: Path) -> tuple[list[Mismatch], dict[str, int], list[str]]:
 
     for site in build_sites(root):
         declarations = _declarations_for(site, root)
-        counts[site.label] = len(declarations)
         if site.required:
             declaring = {declaration.path for declaration in declarations}
             silent.extend(display_path(path, root) for path in site.paths if path not in declaring)
+        if site.kind == "release_date":
+            continue  # The date is required release metadata, not a version to compare.
+        counts[site.label] = len(declarations)
         for declaration in declarations:
             if declaration.old != expected:
                 mismatches.append(
@@ -275,3 +290,6 @@ def scan(root: Path) -> tuple[list[Mismatch], dict[str, int], list[str]]:
                 )
 
     return mismatches, counts, silent
+
+
+# END_BLOCK_RELEASE_SITES

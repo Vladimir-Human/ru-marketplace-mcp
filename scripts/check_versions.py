@@ -23,6 +23,16 @@ Usage:
     python scripts/check_versions.py 1.3.0      # also assert the root is 1.3.0
 
 Runs in CI and as part of the release gate.
+
+START_MODULE_CONTRACT
+PURPOSE: Check consistent versions and the presence of required release metadata.
+SCOPE: Release declarations from the shared table; dates are not compared to versions.
+DEPENDS: M-VERSION-SITES; stdlib sys,pathlib.
+LINKS: M-CHECK-VERSIONS, R-VERSION, R-RELEASE-BUMP, R-OLD-BUILD-INFO.
+END_MODULE_CONTRACT
+START_MODULE_MAP
+  main    check required declarations and version agreement under a repository root
+END_MODULE_MAP
 """
 
 from __future__ import annotations
@@ -33,6 +43,9 @@ from pathlib import Path
 import version_sites
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+# START_BLOCK_VERSION_CHECK
 
 
 def main(argv: list[str], root: Path = REPO_ROOT) -> int:
@@ -47,10 +60,10 @@ def main(argv: list[str], root: Path = REPO_ROOT) -> int:
     mismatches, counts, silent = version_sites.scan(root)
 
     if silent:
-        sys.stderr.write("files that declare no version at all:\n")
+        sys.stderr.write("files missing required release declarations (version or release date):\n")
         for path in sorted(silent):
             sys.stderr.write(f"  {path}\n")
-        sys.stderr.write("\nA missing declaration ships the previous release's number. Add one and re-run.\n")
+        sys.stderr.write("\nA missing declaration leaves release metadata incomplete. Add one and re-run.\n")
         return 1
 
     if mismatches:
@@ -65,6 +78,9 @@ def main(argv: list[str], root: Path = REPO_ROOT) -> int:
     summary = ", ".join(f"{count} {label}" for label, count in counts.items())
     sys.stderr.write(f"version {expected} agreed in {total} places ({summary})\n")
     return 0
+
+
+# END_BLOCK_VERSION_CHECK
 
 
 if __name__ == "__main__":
