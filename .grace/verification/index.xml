@@ -276,6 +276,14 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
   </requirement>
+  <requirement id="R-COMPARE-PRICE-CONTEXT" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_avito_fixture_location_reaches_outcome" requirements="R-COMPARE-PRICE-CONTEXT" />
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_context_fields_are_additive" requirements="R-COMPARE-PRICE-CONTEXT" />
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_mixed_regions_note" requirements="R-COMPARE-PRICE-CONTEXT" />
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_receipt_time_and_failed_source_context" requirements="R-COMPARE-PRICE-CONTEXT" />
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_timeout_has_no_observation_context" requirements="R-COMPARE-PRICE-CONTEXT" />
+    <test file="packages/compare-connector/tests/test_price_context.py" name="test_unknown_fixture_regions_stay_empty" requirements="R-COMPARE-PRICE-CONTEXT" />
+  </requirement>
   <requirement id="R-COMPARE-RELEVANCE-BOUNDARIES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE,G-COMPARE-RELEVANCE-GATES">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
     <test file="packages/compare-connector/tests/test_relevance_markers.py" name="test_compare_mcp_relevance_markers" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-RELEVANCE-BOUNDARIES: no false drops; real unrequested markers still drop." />

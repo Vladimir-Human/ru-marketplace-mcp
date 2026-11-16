@@ -13,7 +13,7 @@ architecture gate's pure list.
 # START_MODULE_CONTRACT
 # PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers and size conflicts, and build the comparison answer.
 # SCOPE: Pure decisions over the results a comparison gathered; no source access, no browser, no model, no stdout.
-# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION.
+# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT.
 # DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib re, collections.abc, dataclasses.
 # SCHEMA: CompareResponse keeps its fields, types and meanings; this module only fills them.
 # LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING.
@@ -31,6 +31,7 @@ architecture gate's pure list.
 # ConditionalPriceDecision: What one offer's everyday and conditional prices say about its rank.
 # decide_conditional_price: The one rule for an everyday price beside a conditional one.
 # _conditional_price_note: Name the excluded amount, not the offer whose everyday price may still rank.
+# _mixed_regions_notes: Name the regions when answered sources priced in different ones.
 # build_response: Rank eligible RUB offers with per-source completeness and warnings.
 # END_MODULE_MAP
 
@@ -423,6 +424,24 @@ def decide_conditional_price(
 # END_BLOCK_PRICE_POLICY
 
 
+def _mixed_regions_notes(outcomes: list[SourceOutcome]) -> list[str]:
+    """R-COMPARE-PRICE-CONTEXT: one info note when answered sources name different regions.
+
+    Context, not a doubt about the data: prices from two regions are still
+    ranked together, so the agent is told which source priced where. A region
+    that is only digits is one source's own id (Avito's location_id): two
+    sources' ids live in different namespaces, so it is shown but never compared.
+    """
+    known = [
+        outcome
+        for outcome in outcomes
+        if outcome.status in {"ok", "unhealthy"} and outcome.region and not outcome.region.lstrip("-").isdigit()
+    ]
+    if len({outcome.region for outcome in known}) < 2:
+        return []
+    return ["info:mixed_regions: " + ", ".join(f"{outcome.source}={outcome.region}" for outcome in known)]
+
+
 def build_response(
     query: str,
     results: list[tuple[SourceOutcome, list[MarketOffer]]],
@@ -496,7 +515,7 @@ def build_response(
         if low and high:
             price_spread = round(high - low, 2)
 
-    warnings: list[str] = []
+    warnings = _mixed_regions_notes(outcomes)
     if failed_sources:
         warnings.append(
             f"partial: {len(failed_sources)} of {len(outcomes)} marketplaces did not answer "

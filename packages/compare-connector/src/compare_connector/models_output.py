@@ -11,7 +11,7 @@ check before drawing conclusions.
 #        describe comparison sources from the registry without changing field types or behavior.
 # DEPENDS: Pydantic; compare_connector.identity; mcp_core.sources.
 # LINKS: M-COMPARE; M-SOURCES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
-#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions; R-COMPARE-IMAGE-URL.
+#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions; R-COMPARE-IMAGE-URL; R-COMPARE-PRICE-CONTEXT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
@@ -139,6 +139,10 @@ class SourceOutcome(BaseModel):
     )
     offers_returned: int = Field(default=0, description="How many offers this marketplace contributed.")
     elapsed_ms: int = Field(default=0, description="Round-trip time for this marketplace, in milliseconds.")
+    observed_at: str = Field(
+        default="", description="ISO-8601 UTC time with Z when compare received the source answer; empty if no answer."
+    )
+    region: str = Field(default="", description="Native search's region or location id; empty when unknown.")
     error_code: str | None = Field(default=None, description="Structured connector error code, if known.")
     retryable: bool = Field(
         default=False, description="Retry may succeed; user action must be completed first if required."

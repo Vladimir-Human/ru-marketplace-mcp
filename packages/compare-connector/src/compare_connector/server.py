@@ -32,7 +32,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
-# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
+# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); decide (the ranking decision); source_error (a failed source's error fields); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
 # LINKS: R-NO-MCP-LOGGING; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
@@ -268,11 +268,13 @@ class OfferBatch(list[MarketOffer]):
 
     ``native_healthy`` keeps the source's own verdict (None when the response
     carried no meta) so the caller can tell an honest empty answer from one a
-    broken parser produced; ``warnings`` is the normalized diagnostic list.
+    broken parser produced; ``warnings`` is the normalized diagnostic list;
+    ``region`` is the region the source's own answer names, empty when it names none.
     """
 
-    def __init__(self, offers: Iterable[MarketOffer], response: object) -> None:
+    def __init__(self, offers: Iterable[MarketOffer], response: object, *, region: str = "") -> None:
         super().__init__(offers)
+        self.region = region
         meta = getattr(response, "meta", None)
         raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
         healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
@@ -433,7 +435,7 @@ async def _search_avito(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url or "",
             )
         )
-    return OfferBatch(offers, response)
+    return OfferBatch(offers, response, region=getattr(response, "location_id", "") or "")
 
 
 async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
@@ -623,6 +625,8 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
     started = time.monotonic()
     try:
         offers = await asyncio.wait_for(_SEARCH_IMPLS[name](query, limit), timeout=SOURCE_TIMEOUT_S)
+        # R-COMPARE-PRICE-CONTEXT: when compare received the answer; the payload's own clock is not used.
+        observed_at = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
     except TimeoutError:
         return (
             SourceOutcome(
@@ -654,6 +658,7 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
         detail = f"{len(offers)} results, {len(native_priced)} priced{unit} (not ranked)"
     warnings = offers.warnings if isinstance(offers, OfferBatch) else []
     native_healthy = offers.native_healthy if isinstance(offers, OfferBatch) else None
+    region = offers.region if isinstance(offers, OfferBatch) else ""
     # A source that contributed NOTHING to a price comparison is only "ok" when
     # its own answer says the data was fine. A native response that already
     # reports a drift/validation warning turned a broken parser into an empty
@@ -672,6 +677,8 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
             SourceOutcome(
                 source=name,
                 status="unhealthy",
+                observed_at=observed_at,
+                region=region,
                 detail=f"{detail} — native validation did not pass",
                 warnings=warnings,
                 offers_returned=0,
@@ -683,6 +690,8 @@ async def _run_source(name: str, query: str, limit: int) -> tuple[SourceOutcome,
         SourceOutcome(
             source=name,
             status="ok",
+            observed_at=observed_at,
+            region=region,
             detail=detail,
             warnings=warnings,
             offers_returned=len(offers),
