@@ -163,6 +163,16 @@ jobs:
         # Windows is what proves the real branches import and behave.
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.12", "3.13"]
+        # Newer interpreters users may already run (requires-python is >=3.12).
+        # Their check names are not in the branch ruleset, so a red leg here
+        # never blocks a merge; a failure in our code still gets a red test
+        # before its fix. 3.15 skips macOS to keep the matrix small.
+        include:
+          - { os: ubuntu-latest, python: "3.14" }
+          - { os: windows-latest, python: "3.14" }
+          - { os: macos-latest, python: "3.14" }
+          - { os: ubuntu-latest, python: "3.15" }
+          - { os: windows-latest, python: "3.15" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
