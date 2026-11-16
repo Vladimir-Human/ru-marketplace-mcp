@@ -1,9 +1,9 @@
 # START_MODULE_CONTRACT
 # PURPOSE: Encode provider-neutral failures as machine-readable MCP ToolErrors.
 # SCOPE: Error taxonomy, retryability, optional status and user-action/challenge metadata;
-#        message and string fields are redacted on the way out.
-# DEPENDS: M-REDACT; FastMCP ToolError; stdlib json,enum,typing.
-# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF; M-REDACT.
+#        optional old-build information; message and string fields are redacted on the way out.
+# DEPENDS: M-REDACT,M-BUILD-AGE; FastMCP ToolError; stdlib json,enum,typing.
+# LINKS: M-ERRORS; M-CORE; M-HTTP; M-BROWSER-HANDOFF; M-REDACT; R-OLD-BUILD-INFO.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # ErrorCode: Enumerate stable wire codes and their retryability.
@@ -28,6 +28,7 @@ from typing import NoReturn
 
 from fastmcp.exceptions import ToolError
 
+from mcp_core.build_age import old_build_info
 from mcp_core.redact import redact_value
 
 
@@ -207,8 +208,21 @@ class ChallengeRequiredError(ConnectorError):
         }
 
 
+# START_BLOCK_TOOL_ERROR_MAPPING
+
+
 def raise_tool_error(err: ConnectorError) -> NoReturn:
-    raise ToolError(json.dumps(redact_value(err.to_dict()), ensure_ascii=False))
+    payload = err.to_dict()
+    if err.code in (
+        ErrorCode.PARSER_DRIFT,
+        ErrorCode.TRANSPORT_DOWN,
+        ErrorCode.CHALLENGE_REQUIRED,
+        ErrorCode.RATE_LIMITED,
+    ):
+        info = old_build_info()
+        if info is not None:
+            payload["old_build"] = info
+    raise ToolError(json.dumps(redact_value(payload), ensure_ascii=False))
 
 
 def raise_tool_error_from(exc: Exception, message: str | None = None, *, provider: str | None = None) -> NoReturn:
@@ -230,3 +244,6 @@ def raise_tool_error_from(exc: Exception, message: str | None = None, *, provide
             exc.provider = provider
         raise_tool_error(exc)
     raise_tool_error(TransportDownError(message or f"{type(exc).__name__}: {exc}", provider=provider))
+
+
+# END_BLOCK_TOOL_ERROR_MAPPING

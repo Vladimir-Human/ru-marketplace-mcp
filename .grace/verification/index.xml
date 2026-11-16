@@ -552,6 +552,17 @@
   </requirement>
   <requirement id="R-NO-MCP-RETRY-MIDDLEWARE" kind="requirement" state="gap" gaps="G-NO-MCP-RETRY-MIDDLEWARE-UNTESTED" />
   <requirement id="R-OFFLINE" kind="rule" state="gap" gaps="G-OFFLINE-UNTESTED" />
+  <requirement id="R-OLD-BUILD-INFO" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/test_old_build_info.py" name="test_doctor_prints_age_info_as_its_first_row_only_for_an_old_build" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/marketplace-connector/tests/test_old_build_info.py" name="test_public_yandex_tool_transport_failure_carries_age_info_only_when_old" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/mcp-core/tests/test_build_age.py" name="test_an_unparseable_release_date_has_no_age_info" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/mcp-core/tests/test_build_age.py" name="test_build_age_has_a_strict_30_day_boundary" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/mcp-core/tests/test_build_age.py" name="test_error_reference_documents_optional_age_info" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/mcp-core/tests/test_build_age.py" name="test_release_date_is_declared_as_iso_metadata" requirements="R-OLD-BUILD-INFO" />
+    <test file="packages/mcp-core/tests/test_build_age.py" name="test_tool_error_adds_only_optional_old_build_and_preserves_all_other_fields" requirements="R-OLD-BUILD-INFO" />
+    <test file="scripts/test_bump_version.py" name="test_an_existing_core_package_must_declare_its_release_date" requirements="R-OLD-BUILD-INFO" />
+    <test file="scripts/test_bump_version.py" name="test_release_date_is_a_separate_declared_site_bumped_to_today" requirements="R-OLD-BUILD-INFO" />
+  </requirement>
   <requirement id="R-OUTPUT-SCHEMA-WRAPPING" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_every_compacted_tool_preserves_its_sdk_output_contract" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: no local or mounted caller loses SDK wrapping." />
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_wrapped_outputs_survive_compaction_through_mcp" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: compaction preserves SDK serialization and decoding." />
