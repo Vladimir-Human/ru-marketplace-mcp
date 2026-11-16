@@ -529,7 +529,7 @@
           "userId": 0,
           "userTrustLevel": "notInvolved",
           "accountType": "specialist",
-          "agencyName": "Наталья  Ярышкина",
+          "agencyName": "Агент",
           "agentModerationInfo": {
             "isUserIdentified": true,
             "isUserIdentifiedByDocuments": true,
