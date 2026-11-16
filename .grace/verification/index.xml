@@ -414,6 +414,29 @@
     <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_refusal_page_is_not_a_challenge" requirements="R-LAMODA-REFUSAL-HONEST" />
     <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_search_on_the_refusal_page_answers_rate_limited_with_a_wait" requirements="R-LAMODA-REFUSAL-HONEST" />
   </requirement>
+  <requirement id="R-LIVE-AUDIT" kind="requirement" state="tested">
+    <test file="scripts/test_live_audit.py" name="test_all_run_plans_fit_and_never_repeat" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_capture_dimensions_scale_and_finally_close" requirements="R-LIVE-AUDIT.capture" />
+    <test file="scripts/test_live_audit.py" name="test_card_args_use_native_types_and_paths" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_compare_queries_precede_winner_spending" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_compare_records_wall_latency_sources_and_visibility" requirements="R-LIVE-AUDIT.timing" />
+    <test file="scripts/test_live_audit.py" name="test_compare_trigger_thresholds" requirements="R-LIVE-AUDIT.timing" />
+    <test file="scripts/test_live_audit.py" name="test_compare_uses_text_search_sources_only" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_duplicate_saved_ids_do_not_repeat_card_calls" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_error_envelope_rejects_wrong_types" requirements="R-LIVE-AUDIT.checks" />
+    <test file="scripts/test_live_audit.py" name="test_full_profile_environment_uses_registry_selection" requirements="R-LIVE-AUDIT.child" />
+    <test file="scripts/test_live_audit.py" name="test_invalid_runs_and_later_phase_a_refused" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_json_ld_product_offer_not_aggregate_low_price" requirements="R-LIVE-AUDIT.capture" />
+    <test file="scripts/test_live_audit.py" name="test_missing_or_false_hook_refuses_before_calls" requirements="R-LIVE-AUDIT.child" />
+    <test file="scripts/test_live_audit.py" name="test_new_measured_card_cost_is_used_before_next_call" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_phase_a_registry_coverage_and_wb_split" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_phase_a_schema_catalogue_guide_pii_and_hosts" requirements="R-LIVE-AUDIT.checks" />
+    <test file="scripts/test_live_audit.py" name="test_real_stdio_client_with_wrapped_fake_server" requirements="R-LIVE-AUDIT.child" />
+    <test file="scripts/test_live_audit.py" name="test_real_wrapped_child_request_reaches_shared_ledger" requirements="R-LIVE-AUDIT.child" />
+    <test file="scripts/test_live_audit.py" name="test_runner_ledger_delta_refresh_ids_and_whitelist" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_summary_dispatch_makes_no_preflight_or_install" requirements="R-LIVE-AUDIT.runner" />
+    <test file="scripts/test_live_audit.py" name="test_trigger_waits_for_eight_compare_calls" requirements="R-LIVE-AUDIT.timing" />
+  </requirement>
   <requirement id="R-LIVE-BUDGET" kind="requirement" state="tested">
     <test file="scripts/test_live_budget.py" name="test_a_missing_hook_point_raises" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_budget.py" name="test_a_raw_cdp_popup_is_booked_before_it_opens" requirements="R-LIVE-BUDGET" title="Review #195 P2: the raw popup opens with ``opener._send(window.open)``," />

@@ -39,7 +39,7 @@ START_MODULE_CONTRACT
 PURPOSE: Run marketplace checks under the shared live budget without masking checker/doctor failure as a blocked source.
 SCOPE: Temp/driver/bare-CDP preflight before call/matrix/doctor budget install, shared tool call, dispatch, doctor verdicts (0/1/2/3/4), result and ledger output.
 DEPENDS: scripts/live_matrix.py; scripts/live_budget.py; mcp_core.transport.chrome_cdp endpoint; Playwright; stdlib contextlib,io,logging,tempfile,shutil,dataclasses; marketplace CLI and connector modules after preflight.
-LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-MATRIX, R-DOCTOR-EXIT-CODES.
+LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-MATRIX, R-LIVE-AUDIT, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
   _check_temp          verify writable temp space, repairing TEMP/TMP inside the repo
   _check_driver        start/stop Playwright, retrying with system node on failure
@@ -358,6 +358,10 @@ async def _run(argv: list[str], budget: live_budget.Budget) -> int:
         import live_matrix
 
         return await live_matrix.run(argv[1:], budget)
+    if mode == "audit":
+        import live_audit
+
+        return await live_audit.run(argv[1:], budget)
     if mode == "selfcheck":
         if len(argv) != 2:
             print("usage: live_check.py selfcheck <source>", file=sys.stderr)
@@ -398,8 +402,24 @@ def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
         return USAGE_EXIT
-    matrix_mode = argv[0] == "matrix"
-    if matrix_mode:
+    if argv[0] == "audit":
+        import live_audit
+
+        try:
+            options = live_audit.select_options(argv[1:])
+        except (ValueError, OSError, SystemExit):
+            print("audit: invalid selection or audit registry", file=sys.stderr)
+            return USAGE_EXIT
+        if options.summary:
+            try:
+                return live_audit.summary(options.cycle)
+            except (ValueError, OSError):
+                print("audit: summary unavailable", file=sys.stderr)
+                return USAGE_EXIT
+        os.environ["CHROME_CHALLENGE_HANDOFF_S"] = "0"
+    matrix_mode = argv[0] in {"matrix", "audit"}
+    label = argv[0]
+    if argv[0] == "matrix":
         import live_matrix
 
         try:
@@ -410,7 +430,7 @@ def main(argv: list[str]) -> int:
         os.environ.setdefault("CHROME_CHALLENGE_HANDOFF_S", "0")
     if argv[0] == "preflight":
         return 0 if asyncio.run(_preflight()) else USAGE_EXIT
-    if argv[0] in {"call", "matrix", "doctor"}:
+    if argv[0] in {"call", "matrix", "doctor", "audit"}:
         # Matrix diagnostics may contain local paths; retain the shared preflight
         # behavior, but expose only a fixed safe failure line in this mode.
         try:
@@ -423,7 +443,8 @@ def main(argv: list[str]) -> int:
         if not ready:
             if matrix_mode:
                 print(
-                    "matrix: preflight failed; `python scripts/live_check.py preflight` shows the fix", file=sys.stderr
+                    f"{label}: preflight failed; `python scripts/live_check.py preflight` shows the fix",
+                    file=sys.stderr,
                 )
             return USAGE_EXIT
     if not os.environ.get("LIVE_BUDGET_LEDGER"):
@@ -434,18 +455,18 @@ def main(argv: list[str]) -> int:
     except Exception as exc:
         if not matrix_mode and not isinstance(exc, AttributeError):
             raise
-        message = "matrix: budget setup failed" if matrix_mode else f"live budget cannot be installed: {exc}"
+        message = f"{label}: budget setup failed" if matrix_mode else f"live budget cannot be installed: {exc}"
         print(message, file=sys.stderr)
         return USAGE_EXIT
     try:
         return asyncio.run(_run(argv, budget))
     except live_budget.BudgetExhausted as exc:
-        print("matrix: budget refused" if matrix_mode else f"stopped: {exc}", file=sys.stderr)
+        print(f"{label}: budget refused" if matrix_mode else f"stopped: {exc}", file=sys.stderr)
         return 3
     except Exception:
         if not matrix_mode:
             raise
-        print("matrix: setup or output failed", file=sys.stderr)
+        print(f"{label}: setup or output failed", file=sys.stderr)
         return USAGE_EXIT
 
 
