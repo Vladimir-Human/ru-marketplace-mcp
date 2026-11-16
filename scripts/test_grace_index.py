@@ -235,6 +235,28 @@ def test_unknown_requirement_and_invariant_ids_are_all_named(tmp_path: Path) -> 
     assert "R-KNOWN.missing" in output
 
 
+@pytest.mark.req("R-GRACE-INDEX.unique-ids")
+@pytest.mark.parametrize(
+    ("registry", "repeated"),
+    [
+        ('<requirement id="R-TWICE" />\n<requirement id="R-TWICE" />', "R-TWICE"),
+        ('<rule id="R-RULE" />\n<rule id="R-RULE" />', "R-RULE"),
+        (
+            '<requirement id="R-ONE"><invariant id="R-ONE.same" /><invariant id="R-ONE.same" /></requirement>',
+            "R-ONE.same",
+        ),
+    ],
+)
+def test_a_repeated_registry_id_fails_write_and_check(tmp_path: Path, registry: str, repeated: str) -> None:
+    """A pasted-twice requirement is one ID with two texts that can drift apart: it fails, by name."""
+    root = _tree(tmp_path, registry)
+
+    for mode in ("--write", "--check"):
+        code, output = _cli(root, mode)
+        assert code != 0, (mode, output)
+        assert f"duplicate registry ID: {repeated}" in output, (mode, output)
+
+
 @pytest.mark.req("R-GRACE-INDEX")
 def test_docstrings_never_declare_known_or_unknown_ids(tmp_path: Path) -> None:
     root = _tree(tmp_path, '<requirement id="R-TEXT-ONLY" />')

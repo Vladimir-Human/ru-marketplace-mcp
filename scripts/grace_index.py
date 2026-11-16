@@ -136,16 +136,16 @@ def read_registry(path: Path) -> tuple[str, dict[str, str], dict[str, str]]:
         if entry.tag not in {"requirement", "rule"}:
             continue
         requirement_id = entry.attrib["id"]
-        if requirement_id in parents and (
-            parents[requirement_id] != requirement_id or kinds.get(requirement_id) != entry.tag
-        ):
-            raise ValueError(f"conflicting registry ID: {requirement_id}")
+        # Every ID appears once (R-GRACE-INDEX.unique-ids): a block pasted twice
+        # is one ID with two texts that drift apart without anyone noticing.
+        if requirement_id in parents:
+            raise ValueError(f"duplicate registry ID: {requirement_id}")
         kinds[requirement_id] = entry.tag
         parents[requirement_id] = requirement_id
         for invariant in entry.iter("invariant"):
             invariant_id = invariant.attrib["id"]
-            if invariant_id in parents and parents[invariant_id] != requirement_id:
-                raise ValueError(f"conflicting registry ID: {invariant_id}")
+            if invariant_id in parents:
+                raise ValueError(f"duplicate registry ID: {invariant_id}")
             parents[invariant_id] = requirement_id
     return document.get("project", ""), kinds, parents
 
