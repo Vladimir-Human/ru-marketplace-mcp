@@ -285,8 +285,14 @@ is what stands between you and silently parsing a captcha page.
 
 **"Chrome/Chromium not found"** — set `CHROME_BINARY` to the full executable path.
 
-**"CDP did not bind within 12s"** — another Chrome instance is likely holding the
-same profile directory. Close it, or use a different `--profile`.
+**Chrome started but CDP never answered** — the message says what the started Chrome did:
+- *"exited with code 0"*: another Chrome already holds the same profile directory without
+  remote debugging on the port; the new Chrome handed its start to that one and quit.
+  Close it, or use a different `--profile`.
+- *"exited with code N"*: Chrome failed to start; the code (in hex for Windows crash codes)
+  is what to search for or report.
+- *"Chrome is running … did not answer"*: Chrome is up but slow, or another program holds
+  the port (see the next entry).
 
 **Port already in use** — something else has 9222. Use `--port 9333` and set
 `CHROME_CDP_PORT` to match.

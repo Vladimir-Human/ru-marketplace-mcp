@@ -41,6 +41,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
 # _start_chrome_with_cdp: Spawn a dedicated-profile Chrome on loopback, off-screen only when asked.
 # _wait_for_cdp_port: Bounded wait for a spawned Chrome to bind the CDP port.
+# _unbound_reason: Name why the port stayed silent from the spawned process: hand-off (exit 0), failed start, or still running.
 # _ensure_cdp_running: Serialize loopback-only autostart, bounded readiness wait and a short negative cache.
 # _remembered_autostart_failure: Age-hinted message of a recent failed autostart, or None.
 # start_browser: Operator launch, visible by default, with a report instead of an exception.
@@ -330,6 +331,12 @@ def _running_as_root() -> bool:
     return bool(geteuid and geteuid() == 0)
 
 
+# The process the last real launch spawned. Both launch paths hold
+# _AUTOSTART_LOCK from the spawn to the end of the port wait, so the reason
+# built after a silent port always reads its own launch.
+_last_spawn: Any = None
+
+
 def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
     """Spawn Chrome with remote debugging enabled. Returns ``(ok, detail)``.
 
@@ -340,6 +347,8 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
     ``--user-data-dir`` exclusivity, so a lost startup race simply means the
     second process exits on its own.
     """
+    global _last_spawn
+    _last_spawn = None
     chrome = _find_chrome()
     if not chrome:
         return False, "Chrome/Chromium not found — set CHROME_BINARY to its full path"
@@ -375,9 +384,9 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
     try:
         if sys.platform == "win32":
             # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: outlive this server.
-            subprocess.Popen(args, creationflags=0x00000008 | 0x00000200, close_fds=True)
+            _last_spawn = subprocess.Popen(args, creationflags=0x00000008 | 0x00000200, close_fds=True)
         else:
-            subprocess.Popen(
+            _last_spawn = subprocess.Popen(
                 args,
                 start_new_session=True,
                 close_fds=True,
@@ -402,6 +411,48 @@ async def _wait_for_cdp_port(timeout_s: float) -> bool:
             await asyncio.sleep(0.6)  # grace: the page launcher lags the socket
             return True
     return False
+
+
+def _unbound_reason(timeout_s: float) -> str:
+    """Why the CDP port stayed silent after a launch, from what that Chrome did.
+
+    Exit code 0 is Chrome's hand-off: a second Chrome on a profile another
+    Chrome already holds passes its start to that one and quits (measured on
+    Chrome 157, Windows: 0.1 s). Another code is a failed start; a process
+    still alive holds the profile itself, so it is slow or the port is taken.
+    Without a pollable process (a faked launch) the old guess is all we have.
+    """
+    endpoint = f"{_url_host(CDP_HOST)}:{CDP_PORT}"
+    waited = f"{timeout_s:g}s"
+    poll: Callable[[], int | None] | None = getattr(_last_spawn, "poll", None)
+    if poll is None:
+        return (
+            f"Chrome started but CDP did not bind within {waited}; another Chrome may hold the profile "
+            f"{SCRAPING_PROFILE} without remote debugging"
+        )
+    code = poll()
+    if code is None:
+        return (
+            f"Chrome is running with the profile {SCRAPING_PROFILE}, but its remote debugging port "
+            f"{endpoint} did not answer within {waited}; it may still be starting, or another program "
+            f"may hold port {CDP_PORT}"
+        )
+    if code == 0:
+        return (
+            f"Chrome exited with code 0 and nothing answered on {endpoint}: most likely another Chrome "
+            f"already holds the profile {SCRAPING_PROFILE} without remote debugging on that port (a second "
+            "Chrome on one profile hands its start to the first and quits); close that Chrome and start again"
+        )
+    if code < 0:  # POSIX: killed by a signal
+        shown = f"{code} (signal {-code})"
+    elif code > 255:  # Windows NTSTATUS, e.g. 0xC0000005
+        shown = f"{code} (0x{code:08X})"
+    else:
+        shown = str(code)
+    return (
+        f"Chrome exited with code {shown} before its remote debugging port {endpoint} answered: it "
+        f"could not start with the profile {SCRAPING_PROFILE}"
+    )
 
 
 async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
@@ -434,7 +485,7 @@ async def _ensure_cdp_running(timeout_s: float = 12.0) -> tuple[bool, str]:
             return False, msg
 
         if not await _wait_for_cdp_port(timeout_s):
-            msg = f"chrome started but CDP did not bind within {timeout_s}s"
+            msg = _unbound_reason(timeout_s)
             _remember_autostart_failure(msg)
             return False, msg
         if STEALTH and sys.platform == "win32":
@@ -485,10 +536,7 @@ async def start_browser(*, visible: bool = True) -> dict[str, Any]:
             return report
 
         if not await _wait_for_cdp_port(12.0):
-            report["reason"] = (
-                f"Chrome started but CDP did not bind within 12s; another Chrome may hold the profile "
-                f"{SCRAPING_PROFILE} without remote debugging"
-            )
+            report["reason"] = _unbound_reason(12.0)
             return report
 
         # Only the Windows stealth launch parks the window; elsewhere --hidden

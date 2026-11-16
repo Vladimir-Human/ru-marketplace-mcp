@@ -115,9 +115,13 @@
   </requirement>
   <requirement id="R-CLI-BROWSER-START" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_cli.py" name="test_browser_start_hidden_that_parked_nothing_says_so" requirements="R-CLI-BROWSER-START" title="Outside Windows (or with CHROME_STEALTH off) --hidden parks nothing (audit A4)." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_a_chrome_still_running_is_not_blamed_on_another_chrome" requirements="R-CLI-BROWSER-START.unbound-reason" title="A live process holds the profile itself: it is slow or the port is taken." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_a_chrome_that_fails_to_start_reports_its_exit_code" requirements="R-CLI-BROWSER-START.unbound-reason" title="A non-zero exit is a failed start, not another Chrome holding the profile." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_a_chrome_that_hands_off_and_quits_names_the_holder_of_the_profile" requirements="R-CLI-BROWSER-START.unbound-reason" title="Exit 0 is Chrome passing its start to another Chrome on the same profile (measured 2026-11-15)." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_a_machine_without_chrome_is_told_to_set_the_binary" requirements="R-CLI-BROWSER-START" title="No Chrome is the most likely real `browser start` failure (audit S4-F22)." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_hidden_launch_outside_windows_is_not_reported_off_screen" requirements="R-CLI-BROWSER-START" title="Parking the window is Windows-only, so --hidden elsewhere must not claim it (audit A4)." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_hidden_launch_without_stealth_matches_the_autostart" requirements="R-CLI-BROWSER-START" title="CHROME_STEALTH=0 keeps the autostart on-screen, so --hidden must too." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_the_connector_autostart_reports_the_same_reason" requirements="R-CLI-BROWSER-START.unbound-reason" title="The autostart shares the reason, so a remembered failure says what Chrome did too." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_start.py" name="test_visible_launch_has_no_off_screen_arguments" requirements="R-CLI-BROWSER-START" />
   </requirement>
   <requirement id="R-CLI-HELP" kind="requirement" state="tested">

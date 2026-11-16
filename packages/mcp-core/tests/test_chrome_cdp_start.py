@@ -8,6 +8,7 @@ request, a refusal for a remote host, and a report instead of an exception.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -30,11 +31,95 @@ def spawned(monkeypatch) -> list[list[str]]:
     monkeypatch.setattr(chrome_cdp, "HEADLESS", False)
     monkeypatch.setattr(chrome_cdp, "CDP_IS_LOOPBACK", True)
     monkeypatch.setattr(chrome_cdp.sys, "platform", "win32")
+    # The launch stores its process; restore the module's state afterwards.
+    monkeypatch.setattr(chrome_cdp, "_last_spawn", None)
     return calls
 
 
 async def _bind_now(_timeout_s: float) -> bool:
     return True
+
+
+async def _never_binds(_timeout_s: float) -> bool:
+    return False
+
+
+@pytest.fixture
+def exit_code_after_launch(monkeypatch, spawned):
+    """Make the faked Chrome process pollable; the test sets what ``poll()`` returns."""
+    state: dict[str, int | None] = {"code": None}
+
+    class PolledPopen:
+        def __init__(self, args, **_kwargs):
+            spawned.append(list(args))
+
+        def poll(self) -> int | None:
+            return state["code"]
+
+    monkeypatch.setattr(chrome_cdp, "subprocess", type("Sub", (), {"Popen": PolledPopen, "DEVNULL": -3}))
+    monkeypatch.setattr(chrome_cdp, "_cdp_port_open", lambda: False)
+    monkeypatch.setattr(chrome_cdp, "_wait_for_cdp_port", _never_binds)
+    return state
+
+
+@pytest.mark.req("R-CLI-BROWSER-START.unbound-reason")
+async def test_a_chrome_that_hands_off_and_quits_names_the_holder_of_the_profile(exit_code_after_launch):
+    """Exit 0 is Chrome passing its start to another Chrome on the same profile (measured 2026-11-15)."""
+    exit_code_after_launch["code"] = 0
+
+    result = await chrome_cdp.start_browser(visible=False)
+
+    assert result["ok"] is False
+    reason = str(result["reason"])
+    assert "exited with code 0" in reason
+    assert f"another Chrome already holds the profile {chrome_cdp.SCRAPING_PROFILE}" in reason
+    assert f":{chrome_cdp.CDP_PORT}" in reason
+
+
+@pytest.mark.req("R-CLI-BROWSER-START.unbound-reason")
+@pytest.mark.parametrize(
+    ("code", "shown"),
+    [(1, "code 1 "), (3221225477, "code 3221225477 (0xC0000005)"), (-11, "code -11 (signal 11)")],
+)
+async def test_a_chrome_that_fails_to_start_reports_its_exit_code(exit_code_after_launch, code, shown):
+    """A non-zero exit is a failed start, not another Chrome holding the profile."""
+    exit_code_after_launch["code"] = code
+
+    result = await chrome_cdp.start_browser(visible=False)
+
+    reason = str(result["reason"])
+    assert shown in reason
+    assert "could not start" in reason
+    assert "another Chrome" not in reason
+
+
+@pytest.mark.req("R-CLI-BROWSER-START.unbound-reason")
+async def test_a_chrome_still_running_is_not_blamed_on_another_chrome(exit_code_after_launch):
+    """A live process holds the profile itself: it is slow or the port is taken."""
+    exit_code_after_launch["code"] = None
+
+    result = await chrome_cdp.start_browser(visible=True)
+
+    reason = str(result["reason"])
+    assert "Chrome is running" in reason
+    assert "may still be starting" in reason
+    assert f"port {chrome_cdp.CDP_PORT}" in reason
+    assert "another Chrome" not in reason
+
+
+@pytest.mark.req("R-CLI-BROWSER-START.unbound-reason")
+async def test_the_connector_autostart_reports_the_same_reason(exit_code_after_launch, monkeypatch):
+    """The autostart shares the reason, so a remembered failure says what Chrome did too."""
+    monkeypatch.setattr(chrome_cdp, "CDP_IS_LOOPBACK", True)
+    monkeypatch.setattr(chrome_cdp, "_autostart_failure", None)
+    monkeypatch.setattr(chrome_cdp, "_AUTOSTART_LOCK", asyncio.Lock())
+    exit_code_after_launch["code"] = 0
+
+    ok, msg = await chrome_cdp._ensure_cdp_running(timeout_s=12.0)
+
+    assert ok is False
+    assert msg == chrome_cdp._unbound_reason(12.0)
+    assert "exited with code 0" in msg
 
 
 @pytest.mark.req("R-CLI-BROWSER-START")
