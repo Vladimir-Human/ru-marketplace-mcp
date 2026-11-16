@@ -3,7 +3,7 @@
 # PURPOSE: Probe configured Wildberries transport/parser health for operators.
 # SCOPE: CLI-only card, reviews, search_goods, search_v9 and root_basket probes; no MCP registration.
 # DEPENDS: server (helpers, constants, models and transport); typing.
-# LINKS: M-WB; R-WB-SELFCHECK-DOM; R-SELFCHECK-GATES-PRICE; packages/wb-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-WB; R-WB-SELFCHECK-DOM; R-SELFCHECK-GATES-PRICE; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _probe_card: Probe the API or rendered baseline card and return its nm id.
@@ -591,11 +591,6 @@ async def _probe_root_basket(checks: dict[str, dict], nm: int) -> None:
 async def run(ctx: S.Context | None = None) -> S.WbSelfCheckResponse:
     use_dom = S._settings.transport == "dom"
     S.log_event("wb_selfcheck.start", transport=S._settings.transport)
-    if ctx is not None:
-        await ctx.info(
-            "wb_selfcheck: probing card / reviews / search_goods / search_v9 / root_basket "
-            f"(card/search_v9 transport={S._settings.transport})"
-        )
     checks: dict[str, dict] = {}
 
     nm = await _probe_card(checks, use_dom)

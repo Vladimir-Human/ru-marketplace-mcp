@@ -21,13 +21,13 @@ Mandatory query params:
 
 Polite rate limit: 1.5s gap on residential IP. Don't disable.
 
-NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
+NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -56,6 +56,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import logging
 import math
 import os as os
 import re
@@ -863,8 +864,7 @@ async def _wb_card_dom(
         wanted = wanted[: _settings.dom_max_cards]
     items: list[WbCardItem] = []
     for nm in wanted:
-        if ctx is not None:
-            await ctx.debug(f"wb_card[dom]: nm={nm}")
+        log_event(f"wb_card[dom]: nm={nm}", level=logging.DEBUG, logger_name=__name__)
         payload = await dom_transport.render(dom_transport.card_url(nm), dom_transport.CARD_EXTRACT_JS, "card")
         item, item_warnings = dom_transport.parse_card_page(payload, nm)
         warnings.extend(item_warnings)
@@ -909,8 +909,7 @@ async def _wb_search_dom(
 ) -> WbSearchResponse | WbNoResultsResponse:
     """wb_search over the rendered search grid (WB_TRANSPORT=dom)."""
     url = dom_transport.search_url(query, page)
-    if ctx is not None:
-        await ctx.debug(f"wb_search[dom]: {url}")
+    log_event(f"wb_search[dom]: {url}", level=logging.DEBUG, logger_name=__name__)
     payload = await dom_transport.render(url, dom_transport.SEARCH_EXTRACT_JS, "search")
     items, warnings = dom_transport.parse_search_page(payload)
     if not items and not payload.get("page_says_empty"):
@@ -1009,8 +1008,6 @@ async def wb_card(
     Full field list and error codes: `guide://wb/wb_card`.
     """
     log_event("wb_card.start", nm_count=len(nm_ids), dest=dest)
-    if ctx is not None:
-        await ctx.info(f"wb_card: {len(nm_ids)} nm_ids dest={dest}")
 
     if not nm_ids:
         log_event("wb_card.validation_failed", reason="empty_nm_ids")
@@ -1037,8 +1034,7 @@ async def wb_card(
         }
     )
     url = f"https://card.wb.ru/cards/v4/detail?{params}"
-    if ctx:
-        await ctx.debug(f"wb_card: {len(nm_ids)} nm_ids dest={dest}")
+    log_event(f"wb_card: {len(nm_ids)} nm_ids dest={dest}", level=logging.DEBUG, logger_name=__name__)
     await _polite_wait()
 
     try:
@@ -1142,15 +1138,12 @@ async def wb_root_info(
     Full field list and error codes: `guide://wb/wb_root_info`.
     """
     log_event("wb_root_info.start", nm_id=nm_id)
-    if ctx is not None:
-        await ctx.info(f"wb_root_info: nm_id={nm_id}")
 
     host = _basket_for_sku(nm_id)
     vol = nm_id // 100000
     part = nm_id // 1000
     url = f"https://{host}/vol{vol}/part{part}/{nm_id}/info/ru/card.json"
-    if ctx:
-        await ctx.debug(f"wb_root_info: {url}")
+    log_event(f"wb_root_info: {url}", level=logging.DEBUG, logger_name=__name__)
     await _polite_wait()
 
     try:
@@ -1313,8 +1306,6 @@ async def wb_reviews(
     Full field list and error codes: `guide://wb/wb_reviews`.
     """
     log_event("wb_reviews.start", imt_id=imt_id, limit=limit, sort=sort)
-    if ctx is not None:
-        await ctx.info(f"wb_reviews: imt_id={imt_id} limit={limit} sort={sort}")
 
     if limit < 1 or limit > 100:
         log_event("wb_reviews.validation_failed", reason="bad_limit", limit=limit)
@@ -1495,8 +1486,6 @@ async def wb_questions(
     Full field list and error codes: `guide://wb/wb_questions`.
     """
     log_event("wb_questions.start", imt_id=imt_id, limit=limit, skip=skip, answered_only=answered_only)
-    if ctx is not None:
-        await ctx.info(f"wb_questions: imt_id={imt_id} limit={limit} skip={skip}")
 
     if limit < 1 or limit > 100:
         log_event("wb_questions.validation_failed", reason="bad_limit", limit=limit)
@@ -1711,8 +1700,6 @@ async def wb_search(
     Full field list and error codes: `guide://wb/wb_search`.
     """
     log_event("wb_search.start", query=query[:100], page=page, dest=dest)
-    if ctx is not None:
-        await ctx.info(f"wb_search: query={query[:80]!r} page={page} dest={dest}")
 
     if page < 1 or page > 20:
         log_event("wb_search.validation_failed", reason="bad_page", page=page)
@@ -1745,8 +1732,7 @@ async def wb_search(
             }
         )
         v9_url = f"https://search.wb.ru/exactmatch/ru/common/v9/search?{v9_params}"
-        if ctx:
-            await ctx.debug(f"wb_search: {v9_url}")
+        log_event(f"wb_search: {v9_url}", level=logging.DEBUG, logger_name=__name__)
         await _polite_wait()
 
         products: list[Any] = []
@@ -1996,8 +1982,7 @@ async def _fetch_first_json(urls: list[str], label: str, ctx: Context | None) ->
     async with _wb_client() as client:
         for url in urls:
             await _polite_wait()
-            if ctx:
-                await ctx.debug(f"{label}: {url}")
+            log_event(f"{label}: {url}", level=logging.DEBUG, logger_name=__name__)
             status_code, text, err = await _safe_get_text(client, url)
             if err:
                 last_error = f"{err} [url={url}]"
@@ -2037,8 +2022,7 @@ async def _search_via_search_goods(
     """
     sg_params = httpx.QueryParams({"query": query, "dest": dest})
     sg_url = f"https://search-goods.wildberries.ru/search?{sg_params}"
-    if ctx:
-        await ctx.debug(f"wb_search fallback: {sg_url}")
+    log_event(f"wb_search fallback: {sg_url}", level=logging.DEBUG, logger_name=__name__)
     await _polite_wait()
 
     try:
@@ -2171,8 +2155,6 @@ async def wb_seller(
     Full field list and error codes: `guide://wb/wb_seller`.
     """
     log_event("wb_seller.start", supplier_id=supplier_id)
-    if ctx is not None:
-        await ctx.info(f"wb_seller: supplier_id={supplier_id}")
 
     data, host_used = await _fetch_first_json(_static_seller_urls(supplier_id), "wb_seller", ctx)
 
@@ -2319,8 +2301,6 @@ async def wb_categories(
     Full field list and error codes: `guide://wb/wb_categories`.
     """
     log_event("wb_categories.start", root=root, max_depth=max_depth)
-    if ctx is not None:
-        await ctx.info(f"wb_categories: root={root!r} depth={max_depth}")
 
     data, host_used = await _fetch_first_json(_static_menu_urls(), "wb_categories", ctx)
 
@@ -2452,8 +2432,6 @@ async def wb_category_products(
     dest_used = (dest or "").strip() or WB_DEFAULT_DEST
 
     log_event("wb_category_products.start", shard=shard_norm, query=query_norm, page=page, sort=sort_norm)
-    if ctx is not None:
-        await ctx.info(f"wb_category_products: shard={shard_norm} {query_norm} page={page}")
 
     if not shard_norm:
         log_event("wb_category_products.validation_failed", reason="empty_shard")

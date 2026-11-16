@@ -31,7 +31,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
-# LINKS: M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# LINKS: R-NO-MCP-LOGGING; M-COMPARE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
@@ -1165,8 +1165,6 @@ async def compare_prices(
         )
 
     log_event("compare_prices.start", query=text, sources=active, limit=per_source_limit, in_stock_only=in_stock_only)
-    if ctx is not None:
-        await ctx.info(f"compare_prices: {text!r} across {', '.join(active)}")
 
     results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
 
@@ -1517,8 +1515,6 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
     Full field list and error codes: `guide://compare/compare_sources`.
     """
     log_event("compare_sources.start")
-    if ctx is not None:
-        await ctx.info("compare_sources: reporting installed marketplaces")
 
     chosen = selected()
     installed = sorted(name for name in SOURCES if chosen is None or name in chosen)

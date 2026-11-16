@@ -10,12 +10,14 @@ listing with no price).
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 from avito_connector import server
 from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 from fastmcp.exceptions import ToolError
+from mcp_core.logging import make_stderr_logger
 from mcp_core.transport import chrome_cdp
 from mcp_core.transport.cdp_budget import NavigationBudget
 
@@ -793,13 +795,13 @@ def test_a_single_block_does_not_cry_wolf():
 
 # ---------------------------------------------------------- debug redaction ----
 #
-# The tier-1 fallback tells the client it is trying CDP and logs the exception
-# that knocked tier 1 out. A connect failure embeds the proxy URL — including
-# credentials — into the exception text, so that debug line must pass through
-# the same redaction as every other error path in this connector.
+# Tier-1 fallback diagnostics belong on stderr, not the MCP client log channel.
+# A connect failure embeds the proxy URL — including credentials — into the
+# exception text, so the debug line must retain the diagnosis without secrets.
 
 
-async def test_fetch_debug_never_leaks_tier1_exception_secrets(monkeypatch):
+@pytest.mark.req("R-SECRET-REDACTION", "R-NO-MCP-LOGGING.diagnostics")
+async def test_fetch_debug_never_leaks_tier1_exception_secrets(monkeypatch, caplog):
     async def no_wait():
         return None
 
@@ -813,19 +815,16 @@ async def test_fetch_debug_never_leaks_tier1_exception_secrets(monkeypatch):
     monkeypatch.setattr(server, "_sync_curl_get", exploding_get)
     monkeypatch.setattr(server, "_cdp_fetch", fake_cdp_fetch)
 
-    class RecordingCtx:
-        def __init__(self):
-            self.messages: list[str] = []
+    logger = make_stderr_logger(server.__name__)
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.DEBUG, logger=server.__name__):
+            await server._fetch("https://www.avito.ru/web/1/js/items?q=x", None)
+    finally:
+        logger.removeHandler(caplog.handler)
 
-        async def debug(self, message):
-            self.messages.append(str(message))
-
-        async def info(self, message):
-            self.messages.append(str(message))
-
-    ctx = RecordingCtx()
-    await server._fetch("https://www.avito.ru/web/1/js/items?q=x", ctx)
-
-    debugged = "\n".join(ctx.messages)
-    assert "p/ss" not in debugged, f"proxy password leaked into ctx.debug: {debugged}"
+    records = [record for record in caplog.records if record.name == server.__name__]
+    assert records and all(record.levelno == logging.DEBUG for record in records)
+    debugged = "\n".join(json.loads(record.getMessage())["event"] for record in records)
+    assert "p/ss" not in debugged, f"proxy password leaked into stderr debug: {debugged}"
     assert "proxy.example:3128" in debugged, "redaction ate the host — the diagnosis must survive"

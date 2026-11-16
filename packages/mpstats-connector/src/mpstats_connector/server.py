@@ -29,13 +29,13 @@ for that day", never "the value was zero". A missing value stays ``None``, never
 ``0`` — a zero would rank a dead listing as the cheapest/top-selling item, which
 is the exact bug class this connector's parsers exist to prevent.
 
-NEVER use print() in stdio MCP — corrupts JSON-RPC. Use ctx.debug/info/error.
+NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Expose MPStats SKU analytics and warehouse stock for Ozon/Wildberries.
 # SCOPE: Read-only paid-account API; secret mp_auth cookie; bounded batch requests; unified-mount availability gate.
 # DEPENDS: FastMCP; httpx; mcp_core cache/pacing/redaction/kit; models_output; settings.
-# LINKS: M-MPSTATS; M-KIT; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; R-CACHE-VALIDATED; packages/mpstats-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; M-MPSTATS; M-KIT; M-MARKETPLACE; R-MPSTATS-MOUNT-GATE; R-CACHE-VALIDATED; packages/mpstats-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # mount_unavailable_reason: Why the unified server must not mount these tools, or None.
@@ -642,8 +642,6 @@ async def mpstats_item(
     Full field list and error codes: `guide://mpstats/mpstats_item`.
     """
     log_event("mpstats_item.start", sku_count=len(skus), place=place)
-    if ctx is not None:
-        await ctx.info(f"mpstats_item: {len(skus)} skus place={place}")
 
     _validate_skus(skus, "mpstats_item")
     if place not in PLACES:
@@ -738,8 +736,6 @@ async def mpstats_warehouses(
     Full field list and error codes: `guide://mpstats/mpstats_warehouses`.
     """
     log_event("mpstats_warehouses.start", sku_count=len(skus), place=place)
-    if ctx is not None:
-        await ctx.info(f"mpstats_warehouses: {len(skus)} skus place={place}")
 
     _validate_skus(skus, "mpstats_warehouses")
     if place not in PLACES:
