@@ -690,13 +690,7 @@ def _score_after_name(document: _SellerPageHTML, name_node: dict[str, Any] | Non
 
 
 def parse_item_seller(html: str, *, company_hint: bool | None = None) -> dict[str, Any]:
-    """Read the item seller block; unknown fields are None, never fabricated 0.
-
-    Company status follows the explicit label, not the seller name or URL; without a
-    label it is the page's own flag (``company_hint``). Profile links are Avito-only,
-    absolute and stripped of query/fragment. A private or unknown seller's name is
-    None; a company or /brands/ shop keeps it (R-NO-PERSONAL-DATA).
-    """
+    """Seller block: unknown -> None, never 0; company = label, else page flag; private name -> None."""
     document = _SellerPageHTML()
     document.feed(html)
     document.close()
@@ -763,12 +757,7 @@ def parse_item_seller(html: str, *, company_hint: bool | None = None) -> dict[st
 
 
 def parse_seller_profile(html: str, profile_url: str | None = None) -> dict[str, Any]:
-    """Read profile title and reputation; no listing total is shown on this page.
-
-    Missing profiles raise NotFoundError; neither name nor score is parser drift. A
-    private or unknown seller's name is None; a company or /brands/ shop keeps it
-    (R-NO-PERSONAL-DATA).
-    """
+    """Profile name/score/reviews; 404 -> NotFoundError, neither name nor score -> drift; private name -> None."""
     document = _SellerPageHTML()
     document.feed(html)
     document.close()
