@@ -220,7 +220,15 @@ _SEARCH_EXTRACT_TEMPLATE = """
     }
     // Qrator-specific DOM hooks are positive evidence; ordinary body words are not.
     const qratorWall = docs.some(doc => !!doc.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]'));
-    return JSON.stringify({items: out, title: document.title || '', qrator_wall: qratorWall});
+    // Product tiles the server sends before the page's own scripts fill them
+    // in carry no product link (2026-11-16: 36 such tiles while the site's
+    // static scripts hung). Counted so an unfilled page is not called drift.
+    const placeholderTiles = docs.reduce((n, doc) => n + Array.from(
+        doc.querySelectorAll('[data-meta-name^="SnippetProduct"]')
+    ).filter(tile => !tile.querySelector('a[href*="/product/"]')).length, 0);
+    return JSON.stringify({
+        items: out, title: document.title || '', qrator_wall: qratorWall, placeholder_tiles: placeholderTiles
+    });
 }
 """
 
@@ -321,6 +329,19 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         raise
 
 
+def _placeholder_tiles(data: dict[str, Any]) -> int:
+    """Product tiles still waiting for the page's scripts (R-CITILINK-UNFILLED-PAGE)."""
+    value = data.get("placeholder_tiles")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+
+
+_UNFILLED_MSG = (
+    "Citilink sent the search page, but its product list never filled in ({n} empty placeholder tiles): "
+    "the page's own scripts did not run (on 2026-11-16 they hung on Citilink's static server in this Chrome). "
+    "This is not a parser change; call again later."
+)
+
+
 def _is_qrator_wall(data: dict[str, Any]) -> bool:
     """Require positive challenge evidence, never an empty document title."""
     # Cards keep the product title separate. Even a blank page_title is authoritative;
@@ -379,6 +400,8 @@ async def citilink_search(
             tier = "cdp"
         _reject_qrator_wall(payload, url)
         items_raw = payload.get("items") if isinstance(payload.get("items"), list) else []
+        if not items_raw and _placeholder_tiles(payload):
+            raise_tool_error(TransportDownError(_UNFILLED_MSG.format(n=_placeholder_tiles(payload))))
         if not items_raw:
             raise_tool_error(
                 ParserDriftError(
@@ -589,6 +612,13 @@ async def _citilink_selfcheck_impl(ctx: Context | None) -> CitilinkSelfcheckResp
                 checks["search"] = R.selfcheck_entry(
                     "healthy", baseline=baseline, notes=notes, shape_added=drift["added"]
                 )
+        elif _placeholder_tiles(payload):
+            checks["search"] = R.selfcheck_entry(
+                "inconclusive",
+                baseline=baseline,
+                reason="transport_down",
+                notes=[f"{_placeholder_tiles(payload)} empty placeholder tiles: the page's scripts did not fill it in"],
+            )
         else:
             checks["search"] = R.selfcheck_entry(
                 "drift", baseline=baseline, reason="parse_smoke_failed", notes=["zero tiles"]

@@ -150,6 +150,13 @@
     <test file="packages/cian-connector/tests/test_server.py" name="test_card_on_the_bot_check_page_is_challenge_required" requirements="R-CIAN-CARD-TRUTH" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_on_bot_check_page_reads_only_the_path" requirements="R-CIAN-CARD-TRUTH" />
   </requirement>
+  <requirement id="R-CITILINK-UNFILLED-PAGE" kind="requirement" state="tested">
+    <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_extractor_counts_tiles_without_a_product_link" requirements="R-CITILINK-UNFILLED-PAGE" />
+    <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_filled_tiles_are_not_placeholders" requirements="R-CITILINK-UNFILLED-PAGE" />
+    <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_search_on_an_unfilled_page_is_transport_down_and_not_cached" requirements="R-CITILINK-UNFILLED-PAGE" />
+    <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_selfcheck_on_an_unfilled_page_is_inconclusive_not_drift" requirements="R-CITILINK-UNFILLED-PAGE" />
+    <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_zero_tiles_without_placeholders_stays_parser_drift" requirements="R-CITILINK-UNFILLED-PAGE" />
+  </requirement>
   <requirement id="R-CLI-BROWSER" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_browser_window.py" name="test_show_moves_the_window_on_screen_and_activates_the_first_tab" requirements="R-CLI-BROWSER" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_browser_window.py" name="test_the_browser_websocket_is_dialed_on_the_host_that_answers" requirements="R-CLI-BROWSER" title="The endpoint's own loopback address must not be dialled (audit S4-F5)." />
