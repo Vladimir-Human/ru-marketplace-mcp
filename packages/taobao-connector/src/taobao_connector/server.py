@@ -122,7 +122,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
-ALLOWED_HOSTS = BY_NAME["taobao"].hosts
+ALLOWED_HOSTS = BY_NAME["taobao"].page_hosts
 SEARCH_BASE = "https://s.taobao.com/search"
 ITEM_BASE = "https://item.taobao.com/item.htm"
 _TMALL_CARD_MESSAGE = (

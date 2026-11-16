@@ -71,7 +71,7 @@ from wb_connector.settings import get_settings
 _settings = get_settings()
 
 SITE = "https://www.wildberries.ru"
-ALLOWED_HOSTS = BY_NAME["wildberries"].hosts
+ALLOWED_HOSTS = BY_NAME["wildberries"].page_hosts
 MAX_PAYLOAD_BYTES = 2_000_000
 
 # A Wallet price is a small discount on the regular price (2 % on the reference

@@ -26,14 +26,14 @@ shipping.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Declare every shipped source once and derive the tables its callers read.
-# SCOPE: Static source data, configuration-aware routes and shared schema descriptions;
+# SCOPE: Static source data, page/fetch host policies, configuration-aware routes and shared schema descriptions;
 #        no imports of connectors and no changes to source selection or public types.
 # DEPENDS: stdlib dataclasses,os,typing.
 # LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE;
-#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING; R-ERROR-NEXT-STEP; R-NAV-HOSTS.invariant.
+#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING; R-ERROR-NEXT-STEP; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# SourceSpec: One shipped server's identity, wiring and access facts.
+# SourceSpec: One shipped server's identity, wiring and access facts; page hosts default centrally to fetch hosts.
 # SOURCES: The registry, in unified mount order.
 # BY_NAME: Registry lookup by canonical source name.
 # MOUNTS: (mount name, module path) rows the unified server mounts.
@@ -113,8 +113,10 @@ class SourceSpec:
     # were named in, which for three sources is neither the canonical name nor
     # the mount name (wb_, detmir_, yandex_), so it is recorded, not derived.
     tool_prefix: str = ""
-    # Exact hosts; only a leading dot admits subdomains (R-NAV-HOSTS.invariant).
+    # Every fetch host; only a leading dot admits subdomains (R-NAV-HOSTS.invariant).
     hosts: tuple[str, ...] = ()
+    # User links, browser navigation and redirects; an unset policy equals hosts.
+    page_hosts: tuple[str, ...] = ()
     aliases: tuple[str, ...] = ()
     kind: str = "marketplace"
     # Unified mount name; None means this server is not mounted as a source.
@@ -147,6 +149,10 @@ class SourceSpec:
     mount_gated: bool = False
     note: str = ""
 
+    def __post_init__(self) -> None:
+        if not self.page_hosts:
+            object.__setattr__(self, "page_hosts", self.hosts)
+
 
 # Registry order is unified mount order: the operator-facing tables derived
 # below keep the order their callers already printed, and a new source is added
@@ -166,6 +172,7 @@ SOURCES: tuple[SourceSpec, ...] = (
             "search-goods.wildberries.ru",
             ".wbbasket.ru",  # SKU-dependent basket-N hosts and static-basket mirrors serve JSON.
         ),
+        page_hosts=("www.wildberries.ru", "wildberries.ru"),
         listing_tool="wb_search",
         pacing_floor_paths=("_min_gap", "_settings.dom_min_gap"),
         aliases=("wb",),
@@ -237,6 +244,7 @@ SOURCES: tuple[SourceSpec, ...] = (
             "www.detmir.ru",
             "detmir.ru",  # Existing canonical card-URL alias accepted by the compare router.
         ),
+        page_hosts=("www.detmir.ru", "detmir.ru"),
         listing_tool="detmir_category",
         pacing_floor_paths=("_limiter.min_gap_s",),
         aliases=("detmir",),
@@ -261,6 +269,7 @@ SOURCES: tuple[SourceSpec, ...] = (
             "avito.ru",
             ".img.avito.st",  # Opt-in listing-photo HTTP reads use these image CDN subdomains.
         ),
+        page_hosts=("www.avito.ru", "avito.ru"),
         listing_tool="avito_search",
         package="avito-connector",
         module="avito_connector.server",
@@ -311,7 +320,10 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="megamarket",
-        hosts=("megamarket.ru",),
+        hosts=(
+            "megamarket.ru",
+            ".megamarket.ru",  # The pre-P1-13 card parser accepted own-domain subdomain links too.
+        ),
         listing_tool="megamarket_search",
         package="megamarket-connector",
         module="megamarket_connector.server",
@@ -339,6 +351,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         hosts=(
             "www.lamoda.ru",
             "lamoda.ru",
+            ".lamoda.ru",  # The pre-P1-13 SKU parser accepted own-domain subdomain links too.
         ),
         listing_tool="lamoda_search",
         package="lamoda-connector",

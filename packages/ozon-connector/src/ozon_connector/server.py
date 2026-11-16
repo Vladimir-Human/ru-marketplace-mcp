@@ -165,7 +165,7 @@ _settings = get_settings()
 # the JA3/JA4 fingerprint pool. Override via OZON_IMPERSONATE.
 IMPERSONATE = _settings.impersonate
 TIMEOUT = _settings.timeout
-ALLOWED_HOSTS = BY_NAME["ozon"].hosts
+ALLOWED_HOSTS = BY_NAME["ozon"].page_hosts
 MAX_BODY_BYTES = _settings.max_body_bytes  # 50 MB hard cap default; OZON_MAX_BODY_BYTES
 _SELFCHECK_SKU = _settings.selfcheck_sku  # golden-fixture baseline SKU; OZON_SELFCHECK_SKU
 

@@ -35,7 +35,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); decide (the ranking decision); source_error (a failed source's error fields); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
-# LINKS: R-NO-MCP-LOGGING; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# LINKS: R-NO-MCP-LOGGING; R-NAV-HOSTS.invariant; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
@@ -821,15 +821,15 @@ def _numeric_card_id(source: str, value: str) -> int:
         if number > 0:
             return number
     else:
-        hosts, path = {
-            "wildberries": ({"wildberries.ru", "www.wildberries.ru"}, r"/catalog/([0-9]+)/detail\.aspx/?"),
-            "detsky_mir": ({"detmir.ru", "www.detmir.ru"}, r"/product/index/id/([0-9]+)/?"),
+        path = {
+            "wildberries": r"/catalog/([0-9]+)/detail\.aspx/?",
+            "detsky_mir": r"/product/index/id/([0-9]+)/?",
         }[source]
         try:
             parsed = urlsplit(candidate)
             valid_origin = (
                 parsed.scheme in {"https", "http"}
-                and parsed.hostname in hosts
+                and parsed.hostname in BY_NAME[source].page_hosts
                 and parsed.username is None
                 and parsed.password is None
                 and parsed.port is None

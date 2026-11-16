@@ -633,7 +633,14 @@
     <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_every_result_carries_the_official_server_note" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the note is an info: note naming the server; it does not touch healthy." />
   </requirement>
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
+    <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_foreign_links_have_no_id" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_offer_links_keep_the_id" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_fetch_only_card_and_seller_hosts_never_reach_navigation" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_foreign_url_arguments_never_reach_transport" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_legacy_subdomain_card_inputs_keep_reaching_transport" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_page_hosts_are_covered_by_fetch_hosts" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_page_policy_keeps_fetch_only_hosts_out" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_url_inventory_includes_each_url_capable_source" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_valid_source_input_can_reach_the_transport" requirements="R-NAV-HOSTS.invariant" title="A reject-everything implementation must fail the same conformance suite." />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_host_policy_exact_names_and_explicit_subdomains" requirements="R-NAV-HOSTS.invariant" />
@@ -643,6 +650,8 @@
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_passes_policy_and_refuses_foreign_final_url" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_lookalike_domain_still_fails" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: only the source's own subdomains pass, never a lookalike or a foreign host." />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_subdomain_link_the_source_accepted_before_still_passes" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: a mobile or regional link on the source's own domain is not refused." />
+    <test file="packages/wb-connector/tests/test_page_hosts.py" name="test_wb_dom_keeps_its_page_alias" requirements="R-NAV-HOSTS.kept-inputs" />
+    <test file="packages/wb-connector/tests/test_page_hosts.py" name="test_wb_dom_refuses_fetch_only_redirects" requirements="R-NAV-HOSTS.invariant" />
   </requirement>
   <requirement id="R-NO-FABRICATION" kind="rule" state="tested">
     <test file="packages/avito-connector/tests/test_item_closed.py" name="test_a_closed_state_of_another_item_is_not_this_ads" requirements="R-NO-FABRICATION" title="Another id's closed buyerItem and its banner are not attributed to the requested ad." />
