@@ -222,7 +222,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
     const qratorWall = docs.some(doc => !!doc.querySelector('script[src*="qrator"], [id^="qrator"], [class^="qrator"]'));
     // Product tiles the server sends before the page's own scripts fill them
     // in carry no product link (2026-11-16: 36 such tiles while the site's
-    // static scripts hung). Counted so an unfilled page is not called drift.
+    // static server did not answer). Counted so an unfilled page is not called drift.
     const placeholderTiles = docs.reduce((n, doc) => n + Array.from(
         doc.querySelectorAll('[data-meta-name^="SnippetProduct"]')
     ).filter(tile => !tile.querySelector('a[href*="/product/"]')).length, 0);
@@ -337,7 +337,7 @@ def _placeholder_tiles(data: dict[str, Any]) -> int:
 
 _UNFILLED_MSG = (
     "Citilink sent the search page, but its product list never filled in ({n} empty placeholder tiles): "
-    "the page's own scripts did not run (on 2026-11-16 they hung on Citilink's static server in this Chrome). "
+    "the page's own scripts did not load from Citilink's static server (rstatic.citilink.ru). "
     "This is not a parser change; call again later."
 )
 
