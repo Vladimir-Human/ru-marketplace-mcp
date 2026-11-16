@@ -1,0 +1,85 @@
+{
+  "query": "чайник электрический 1.7 л",
+  "captured_at": "2026-11-16T09:00:00Z",
+  "sources": {
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 900001,
+            "name": "Чайник электрический 1.7 л, белый",
+            "brand": "Бренд",
+            "supplier": "Магазин",
+            "price_rub": 1990.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.8,
+            "feedbacks": 12,
+            "in_stock": true,
+            "total_quantity": 7
+          },
+          {
+            "nm_id": 900002,
+            "name": "Чайник электрический 1.7 л, серый",
+            "brand": "Бренд",
+            "supplier": "Магазин",
+            "price_rub": 1790.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": null,
+            "review_rating": 4.6,
+            "feedbacks": 4,
+            "in_stock": true,
+            "total_quantity": 2
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "region": "R1",
+        "observed_at": "2026-11-16T09:00:01Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "ym-700001",
+            "sku_id": "sku-700001",
+            "title": "Чайник электрический 1.7 л",
+            "brand": "Бренд",
+            "seller": "Магазин",
+            "price_rub": 2150.0,
+            "price_with_plus": 1799.0,
+            "rating": 4.9,
+            "rating_count": 30,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/product/ym-700001",
+            "image": ""
+          },
+          {
+            "product_id": "ym-700002",
+            "sku_id": "sku-700002",
+            "title": "Чайник электрический 1.7 л, с подсветкой",
+            "brand": "Бренд",
+            "seller": "Магазин",
+            "price_rub": 2400.0,
+            "price_with_plus": null,
+            "rating": 4.7,
+            "rating_count": 18,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/product/ym-700002",
+            "image": ""
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "region": "R2",
+        "observed_at": "2026-11-16T09:00:02Z"
+      }
+    }
+  },
+  "schema": 1
+}

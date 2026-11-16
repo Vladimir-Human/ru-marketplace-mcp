@@ -1,0 +1,17 @@
+{
+  "query": "чайник электрический 1.2 л",
+  "captured_at": "2026-11-16T09:10:00Z",
+  "sources": {
+    "dns": {
+      "response": {
+        "items": [],
+        "meta": {
+          "healthy": true,
+          "warnings": ["info:no_results"]
+        },
+        "observed_at": "2026-11-16T09:10:01Z"
+      }
+    }
+  },
+  "schema": 1
+}
