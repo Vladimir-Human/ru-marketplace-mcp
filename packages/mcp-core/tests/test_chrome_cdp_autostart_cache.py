@@ -49,6 +49,8 @@ def autostart(monkeypatch):
     monkeypatch.setattr(chrome_cdp, "CDP_IS_LOOPBACK", True)
     monkeypatch.setattr(chrome_cdp, "STEALTH", False)
     monkeypatch.setattr(chrome_cdp, "_autostart_failure", None)
+    # No real launch happens here, so no process from another test may leak in.
+    monkeypatch.setattr(chrome_cdp, "_last_spawn", None)
     # The module lock binds to the first event loop that contends for it; each
     # test runs in its own loop, so each needs its own lock.
     monkeypatch.setattr(chrome_cdp, "_AUTOSTART_LOCK", asyncio.Lock())
