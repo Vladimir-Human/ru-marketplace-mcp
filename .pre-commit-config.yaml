@@ -47,14 +47,6 @@ repos:
         files: ^packages/.*/src/.*\.py$
         pass_filenames: true
 
-      - id: check-test-count
-        # Adding a test silently invalidates the number the README advertises.
-        name: documented test count is current
-        entry: python scripts/check_test_count.py
-        language: system
-        files: (^packages/.*/tests/.*\.py|README(\.en)?\.md|docs/ARCHITECTURE\.md)$
-        pass_filenames: false
-
       - id: check-versions
         # Version strings live in seventy-two places and are edited by hand at
         # release time; the one that gets missed is silent.

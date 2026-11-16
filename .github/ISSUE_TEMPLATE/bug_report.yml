@@ -64,8 +64,12 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, Python version (3.12+ required), and uv version (`uv --version`).
+      description: >
+        The ru-marketplace-mcp version (the `ru-marketplace-mcp@X.Y.Z` pin in your MCP client
+        config, or `pip show ru-marketplace-mcp`), OS, Python version (3.12+ required), and uv
+        version (`uv --version`).
       placeholder: |
+        ru-marketplace-mcp: 2.9.3
         OS: Windows 11
         Python: 3.12.4
         uv: 0.5.1

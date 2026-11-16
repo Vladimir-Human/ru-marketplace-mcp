@@ -93,12 +93,6 @@ jobs:
         # skipped the hook still gets caught. No args = scan every packages/*/src.
         run: uv run python scripts/check_no_print.py
 
-      - name: Documented test count is current
-        # The figure appears in seven places and is edited by hand, so it rots on
-        # a schedule — it has already been wrong three times, twice while the
-        # audit that fixed it was adding tests of its own.
-        run: uv run python scripts/check_test_count.py
-
       - name: Generated tool reference is current
         # docs/TOOLS.md and the README cost block are generated from the wire
         # schemas; a stale copy would advertise tools or costs the server no

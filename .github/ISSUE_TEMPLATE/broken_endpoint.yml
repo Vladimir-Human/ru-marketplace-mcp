@@ -18,7 +18,7 @@ body:
     attributes:
       label: Before you file
       options:
-        - label: I ran the connector's `*_selfcheck()` and pasted its output below. It distinguishes format drift from a block, and without it the report cannot be triaged.
+        - label: I ran `marketplace-mcp doctor <source>` and pasted its output below. It tells format drift from a block, and without it the report cannot be triaged.
           required: true
 
   - type: dropdown
@@ -31,7 +31,27 @@ body:
         - Ozon
         - Yandex Market
         - Detsky Mir
+        - Avito
+        - Taobao
+        - Megamarket
+        - Lamoda
+        - DNS
+        - Citilink
+        - AliExpress
+        - Cian
+        - MPStats
         - Compare
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: >
+        The ru-marketplace-mcp version you run: the `ru-marketplace-mcp@X.Y.Z` pin in your MCP
+        client config, or `pip show ru-marketplace-mcp`, or `uv tool list`.
+      placeholder: 2.9.3
     validations:
       required: true
 
@@ -61,17 +81,15 @@ body:
       required: true
 
   - type: textarea
-    id: selfcheck_output
+    id: doctor_output
     attributes:
-      label: "`*_selfcheck()` output"
+      label: "`marketplace-mcp doctor` output"
       description: >
-        Paste the verbatim result of the matching selfcheck (wb_selfcheck, ozon_selfcheck,
-        yandex_selfcheck, detmir_selfcheck). Include the top-level status and the per-check
-        entries. Do not paraphrase.
+        Paste the verbatim output of `marketplace-mcp doctor <source>` for the failing source
+        (e.g. `marketplace-mcp doctor ozon`; sources: wildberries, ozon, yandex_market,
+        detsky_mir, avito, taobao, megamarket, lamoda, dns, citilink, aliexpress, cian, mpstats).
+        With `uvx`: `uvx ru-marketplace-mcp doctor <source>`. Do not paraphrase.
       render: text
-      placeholder: |
-        status=drift_detected
-        checks={'card': healthy, 'reviews': drift, 'search_goods': healthy, ...}
     validations:
       required: true
 
@@ -80,7 +98,7 @@ body:
     attributes:
       label: Error code seen
       description: >
-        The `error` field in the tool's JSON, or the selfcheck status. `parser_drift` means the
+        The `error` field in the tool's JSON, or the status `doctor` printed. `parser_drift` means the
         data changed shape; `transport_down` / `rate_limited` mean we were refused, not that the
         product is absent.
       options:
@@ -88,8 +106,8 @@ body:
         - transport_down
         - rate_limited
         - not_found
-        - "selfcheck: drift_detected"
-        - "selfcheck: inconclusive"
+        - "doctor: drift_detected"
+        - "doctor: inconclusive"
         - Other / none of these
     validations:
       required: true

@@ -229,7 +229,7 @@ session, so a crafted path must never become a request for a personal endpoint.
 
 ## Testing
 
-3558 offline tests, no network required. Three flavours:
+The offline tests need no network. Three flavours:
 
 **Unit tests** for pure logic — coercion, merging, ranking, cross-platform process
 handling.
@@ -247,8 +247,7 @@ would produce noise instead of signal.
 
 Coverage is branch-measured over the sixteen packages' source and enforced at
 an 80 % floor (raised from 70 % in October 2026, with the total at 83 %). `scripts/check_coverage_floor.py` measures the offline suite and
-compares it against that floor — the coverage analogue of
-`check_test_count.py`, so a quiet regression surfaces where the change was made
+compares it against that floor, so a quiet regression surfaces where the change was made
 rather than only in a distant CI run.
 
 ## Adding a marketplace
