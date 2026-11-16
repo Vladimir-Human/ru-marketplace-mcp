@@ -39,7 +39,8 @@ def test_search_payload_shape_matches_the_capture() -> None:
         FIXTURES / "search_grid.html",
         page_url="https://www.dns-shop.ru/search/?q=%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA",
     )
-    assert shape_signature(payload) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
+    # The runtime reference still pins parser-critical keys; image_url is optional.
+    assert shape_signature(payload) == sorted([*shape_reference.SEARCH_SHAPE_REFERENCE, "items[].image_url:str"])
 
 
 def test_card_payload_shape_matches_the_capture() -> None:

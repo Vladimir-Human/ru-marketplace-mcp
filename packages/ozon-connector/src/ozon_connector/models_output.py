@@ -12,7 +12,7 @@ The ``meta`` field is populated from the ``_meta`` key that
 # PURPOSE: Define typed Ozon card, review, search and selfcheck wire responses.
 # SCOPE: Review author identity removed; nullable RUB prices, 0..5 ratings, integer counts and unchanged aliases/envelopes.
 # DEPENDS: Pydantic; mcp_core.models.
-# LINKS: R-NO-PERSONAL-DATA; M-OZON; R-OZON-SEARCH-NUMERIC.
+# LINKS: R-NO-PERSONAL-DATA; M-OZON; R-OZON-SEARCH-NUMERIC; R-COMPARE-IMAGE-URL.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # OzonCardResponse/OzonReviewsResponse: Card and review response models.
@@ -133,6 +133,7 @@ class OzonSearchItemOut(BaseModel):
         ),
     )
     stock: str | None = Field(default=None, description="Stock label string.")
+    image_url: str = Field(default="", description="Primary product image URL already present on the search tile.")
 
 
 class OzonSearchResponse(BaseModel):

@@ -79,7 +79,8 @@ def test_search_extractor_shape_matches_the_capture() -> None:
         "https://aliexpress.ru/wholesale?SearchText=x",
     )
 
-    assert shape_signature(payload) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
+    # The runtime reference still pins parser-critical keys; image_url is optional.
+    assert shape_signature(payload) == sorted([*shape_reference.SEARCH_SHAPE_REFERENCE, "items[].image_url:str"])
 
 
 def test_card_extractor_shape_matches_the_capture() -> None:

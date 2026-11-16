@@ -259,6 +259,8 @@ _SEARCH_EXTRACT_TEMPLATE = """
             price_text: priceText,
             old_price_text: oldPriceText,
             availability_text: availText,
+            image_url: tile.querySelector('.catalog-product__image img')?.getAttribute('data-src')
+                || tile.querySelector('.catalog-product__image img')?.getAttribute('src') || '',
             url: href
         });
         if (out.length >= 48) break;
@@ -344,12 +346,14 @@ def _search_item_from_tile(tile: dict[str, Any]) -> DnsSearchItemOut:
     # report the pair only when it is internally consistent.
     if price is not None and old_price is not None and old_price <= price:
         old_price = None
+    image_url = tile.get("image_url")
     return DnsSearchItemOut(
         product_id=tile.get("product_id"),
         title=R.flatten_text(tile.get("title")),
         price_rub=price,
         old_price_rub=old_price,
         url=tile.get("url"),
+        image_url=image_url if isinstance(image_url, str) and image_url.startswith(("http", "//")) else "",
     )
 
 

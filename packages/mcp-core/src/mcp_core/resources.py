@@ -339,6 +339,7 @@ excludes accessories, other conditions and explicit size mismatches. Neither
 proves exact manufacturer identity. price_spread_rub needs two ranked prices.
 complete=false and source_outcomes/warnings mean a partial comparison, not
 proof of the cheapest price across sources that failed or returned degraded data.
+Offers without image URLs: wildberries, avito, taobao, lamoda, citilink.
 
 ## Error Format
 

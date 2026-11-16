@@ -1,9 +1,9 @@
 """Pydantic output models for the Megamarket MCP connector."""
 # START_MODULE_CONTRACT
 # PURPOSE: Describe Megamarket outputs and qualify shown old prices without claiming verified history.
-# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and serialization.
+# SCOPE: Additive optional search image URL; preserve all existing field types, defaults, aliases and serialization.
 # DEPENDS: mcp_core.models/sources; Pydantic.
-# LINKS: M-MEGAMARKET; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# LINKS: M-MEGAMARKET; M-SOURCES; R-MARKETPLACE-PRICE-WORDING; R-COMPARE-IMAGE-URL.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MegamarketSearchItemOut/MegamarketSearchResponse: Describe native search items and their envelope.
@@ -33,6 +33,7 @@ class MegamarketSearchItemOut(BaseModel):
     rating: float | None = Field(default=None, description="Average rating.")
     rating_count: int | None = Field(default=None, description="Review count.")
     url: str | None = Field(default=None, description="Canonical product URL.")
+    image_url: str = Field(default="", description="Primary product image URL already present on the search tile.")
     is_available: bool | None = Field(
         default=None,
         description="Stock status as the search payload reports it (isAvailable). None when absent, never False by default.",

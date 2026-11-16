@@ -336,7 +336,6 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     """
     server = SOURCES["yandex_market"]
     response = await server.yandex_search(query=query, page=1, limit=limit)
-
     batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
         decision = decide_conditional_price(
@@ -360,6 +359,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 rating_count=item.rating_count,
                 in_stock=item.in_stock,
                 url=item.url,
+                image_url=getattr(item, "image", ""),
             )
         )
         if decision.note:
@@ -382,7 +382,6 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     """
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
-
     batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
         decision = decide_conditional_price("ozon", str(item.sku or ""), _as_price(item.price), None, "card")
@@ -399,6 +398,7 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),
                 url=item.url or "",
+                image_url=getattr(item, "image_url", ""),
             )
         )
         if decision.note:
@@ -472,7 +472,6 @@ async def _search_megamarket(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``megamarket_search`` results (CDP tier; rating present)."""
     server = SOURCES["megamarket"]
     response = await server.megamarket_search(query=query)
-
     offers: list[MarketOffer] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
@@ -489,6 +488,7 @@ async def _search_megamarket(query: str, limit: int) -> list[MarketOffer]:
                 # through rather than discarding a stock signal we already have.
                 in_stock=getattr(item, "is_available", None),
                 url=item.url or "",
+                image_url=getattr(item, "image_url", ""),
             )
         )
     return OfferBatch(offers, response)
@@ -522,7 +522,6 @@ async def _search_dns(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``dns_search`` results (CDP tier; electronics, no ratings on tiles)."""
     server = SOURCES["dns"]
     response = await server.dns_search(query=query)
-
     offers: list[MarketOffer] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
@@ -537,6 +536,7 @@ async def _search_dns(query: str, limit: int) -> list[MarketOffer]:
                 rating_count=None,
                 in_stock=None,
                 url=item.url or "",
+                image_url=getattr(item, "image_url", ""),
             )
         )
     return OfferBatch(offers, response)
@@ -576,7 +576,6 @@ async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
     """
     server = SOURCES["aliexpress"]
     response = await server.aliexpress_search(query=query)
-
     offers: list[MarketOffer] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
         offers.append(
@@ -591,6 +590,7 @@ async def _search_aliexpress(query: str, limit: int) -> list[MarketOffer]:
                 rating_count=None,
                 in_stock=None,
                 url=item.url or "",
+                image_url=getattr(item, "image_url", ""),
             )
         )
     return OfferBatch(offers, response)

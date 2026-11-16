@@ -266,6 +266,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
             rating: ratingLeaf(tile),
             orders: ordersLeaf(tile),
             sku_id: sku,
+            image_url: tile.querySelector('[data-type="Element-Gallery"] img')?.getAttribute('src') || '',
             url: href
         });
     }
@@ -380,6 +381,7 @@ def _item_from_payload(
             old_price = computed_old
     orders = R.coerce_int(tile.get("orders"))
     rating = R.coerce_rating(tile.get("rating"))
+    image_url = tile.get("image_url")
     return AliSearchItemOut(
         item_id=tile.get("item_id"),
         title=title_from_tile(tile),
@@ -389,6 +391,7 @@ def _item_from_payload(
         orders_count=orders,
         sku_id=tile.get("sku_id"),
         url=tile.get("url"),
+        image_url=image_url if isinstance(image_url, str) and image_url.startswith(("http", "//")) else "",
     )
 
 
