@@ -1,10 +1,10 @@
 """Requirement-derived CLI checks on planted trees, never the repository registry.
 
 START_MODULE_CONTRACT
-PURPOSE: Prove R-GRACE-INDEX marker discovery, grouped states and byte-staleness gates.
-SCOPE: Small requirements/manual XML and Python sources below pytest's tmp_path.
-DEPENDS: pytest; standard-library pathlib, subprocess, sys, textwrap, xml.etree.
-LINKS: R-GRACE-INDEX; M-GRACE-INDEX.
+PURPOSE: Prove R-GRACE-INDEX static traceability and R-GRACE-INDEX.evidence tree-bound checks.
+SCOPE: Small planted trees and real temporary Git repos; real CI gate-list drift scan.
+DEPENDS: pytest, Git; standard-library json, pathlib, re, runpy, subprocess, sys, textwrap, xml.etree.
+LINKS: R-GRACE-INDEX, R-GRACE-INDEX.evidence; M-GRACE-INDEX.
 END_MODULE_CONTRACT
 
 START_MODULE_MAP
@@ -12,12 +12,17 @@ _write: Plant UTF-8/LF inputs in an isolated tree.
 _tree: Plant a requirement registry and separate manual declarations.
 _cli: Exercise the generator's public CLI with file-backed output.
 _index: Read direct requirement groups from the generated XML.
+_evidence_tree: Commit a real Git tree with explicit identity and LF configuration.
+_evidence_cli: Exercise public evidence modes with only GATES replaced by trivial subprocesses.
 test_*: Assert the brief's observable behavior independently of implementation.
 END_MODULE_MAP
 """
 
 from __future__ import annotations
 
+import json
+import re
+import runpy
 import subprocess
 import sys
 import textwrap
@@ -353,3 +358,250 @@ def test_two_writes_are_byte_identical_sorted_and_lf_only(tmp_path: Path) -> Non
 
 
 # END_BLOCK_GAPS_AND_DETERMINISM
+
+# START_BLOCK_EVIDENCE
+
+
+PASS_GATES = {
+    "first": [sys.executable, "-c", "print('first ran')"],
+    "second": [sys.executable, "-c", "print('x' * 250); print()"],
+}
+
+
+def _git(root: Path, *argv: str) -> str:
+    """Real git, with repository-local identity/config and file-backed output."""
+    output = root / ".tmp/git.log"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("wb") as stream:
+        result = subprocess.run(
+            ["git", *argv], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=False, timeout=30
+        )
+    text = output.read_text(encoding="utf-8", errors="replace")
+    assert result.returncode == 0, text
+    return text.strip()
+
+
+def _evidence_tree(root: Path) -> Path:
+    _tree(root, '<requirement id="R-DEMO" />')
+    _write(root, "pyproject.toml", '[project]\nversion = "1.2.3"\n')
+    _write(root, "scripts/test_demo.py", 'import pytest\n@pytest.mark.req("R-DEMO")\ndef test_demo():\n    pass\n')
+    _write(root, "src/naïve file.txt", "alpha\nbeta\n")
+    _write(root, "changes/entry.md", "excluded change\n")
+    _write(root, ".grace/evidence/other.json", "{}\n")
+    code, output = _cli(root, "--write")
+    assert code == 0, output
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.name", "Evidence test")
+    _git(root, "config", "user.email", "evidence@example.invalid")
+    _git(root, "config", "core.autocrlf", "false")
+    _git(root, "add", "pyproject.toml", "scripts", "src", "changes", ".grace")
+    _git(root, "commit", "-m", "Initial tree")
+    return root
+
+
+def _evidence_cli(root: Path, mode: str, gates: dict[str, list[str]] | None = None) -> tuple[int, str]:
+    """Only fake the costly gate list; run the real CLI/digest/git/file operations."""
+    runner = (
+        "import json,runpy,sys; "
+        "from pathlib import Path; "
+        "sys.path.insert(0,str(Path(sys.argv[1]).parent)); "
+        "ns=runpy.run_path(sys.argv[1]); "
+        "ns['main'].__globals__['GATES']=json.loads(sys.argv[4]); "
+        "raise SystemExit(ns['main'](['--root',sys.argv[2],sys.argv[3]]))"
+    )
+    output = root / ".tmp/evidence-cli.log"
+    with output.open("wb") as stream:
+        result = subprocess.run(
+            [sys.executable, "-c", runner, str(SCRIPT), str(root), mode, json.dumps(gates or PASS_GATES)],
+            cwd=root,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=30,
+        )
+    return result.returncode, output.read_text(encoding="utf-8", errors="replace")
+
+
+def _evidence(root: Path) -> dict:
+    return json.loads((root / ".grace/evidence/latest.json").read_bytes())
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_evidence_then_check_passes_and_records_only_machine_facts(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    path = root / ".grace/evidence/latest.json"
+    raw = path.read_bytes()
+    evidence = _evidence(root)
+    assert set(evidence) == {"schema", "version", "tree_digest", "digest_excludes", "gates", "index", "checked_on_utc"}
+    assert evidence["schema"] == 2
+    assert evidence["version"] == "1.2.3"
+    assert evidence["digest_excludes"] == [".grace/evidence/", "changes/"]
+    assert re.fullmatch(r"[0-9a-f]{64}", evidence["tree_digest"])
+    assert evidence["index"] == {"tested": 1, "gap": 0, "untraced": 0}
+    assert [gate["name"] for gate in evidence["gates"]] == list(PASS_GATES)
+    for gate in evidence["gates"]:
+        assert set(gate) == {"name", "cmd", "exit", "summary", "seconds"}
+        assert gate["cmd"] == PASS_GATES[gate["name"]]
+        assert gate["exit"] == 0
+        assert gate["seconds"] >= 0
+    assert evidence["gates"][0]["summary"] == "first ran"
+    assert evidence["gates"][1]["summary"] == "x" * 200
+    assert raw == (json.dumps(evidence, sort_keys=True, indent=2) + "\n").encode("utf-8")
+    # Check must run no gate and must ignore timestamp freshness.
+    evidence["checked_on_utc"] = "2000-01-01T00:00:00+00:00"
+    path.write_text(json.dumps(evidence), encoding="utf-8")
+    code, output = _evidence_cli(root, "--check-evidence", {"must not run": [sys.executable, "-c", "exit(9)"]})
+    assert code == 0, output
+    # Missing, malformed and legacy evidence must never count as a checked tree.
+    for invalid in ("{", "[]", json.dumps(evidence | {"schema": 1})):
+        path.write_text(invalid, encoding="utf-8")
+        code, output = _evidence_cli(root, "--check-evidence")
+        assert code == 1, output
+        assert "error:" in output
+    path.unlink()
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 1, output
+    assert "latest.json" in output
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+@pytest.mark.parametrize("staged", [False, True])
+def test_evidence_check_rejects_one_byte_tracked_edit(tmp_path: Path, staged: bool) -> None:
+    root = _evidence_tree(tmp_path)
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    source = root / "src/naïve file.txt"
+    source.write_bytes(source.read_bytes().replace(b"alpha", b"Alpha"))
+    if staged:
+        _git(root, "add", "src")
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 1, output
+    assert "digest" in output.lower()
+    assert "src/" in output, "Digest mismatches must show git status"
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_evidence_check_rejects_deleted_tracked_file(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    (root / "src/naïve file.txt").unlink()
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 1, output
+    assert "digest" in output.lower()
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_evidence_digest_ignores_excluded_edits_and_untracked_files(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    original = _evidence(root)["tree_digest"]
+    _write(root, "changes/entry.md", "changed\n")
+    _write(root, ".grace/evidence/other.json", '{"changed": true}\n')
+    _write(root, "src/untracked.txt", "not counted\n")
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 0, output
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    assert _evidence(root)["tree_digest"] == original
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_branch_evidence_passes_on_main_after_squash_merge(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    _git(root, "switch", "-c", "feature")
+    _write(root, "src/naïve file.txt", "branch tree\n")
+    _git(root, "add", "src")
+    _git(root, "commit", "-m", "Feature change")
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    _git(root, "add", ".grace/evidence/latest.json")
+    _git(root, "commit", "-m", "Record branch evidence")
+    branch_commit = _git(root, "rev-parse", "HEAD")
+    branch_tree = _git(root, "rev-parse", "HEAD^{tree}")
+    _git(root, "switch", "main")
+    _git(root, "merge", "--squash", "feature")
+    _git(root, "commit", "-m", "Squashed feature")
+    assert _git(root, "rev-parse", "HEAD") != branch_commit
+    assert _git(root, "rev-parse", "HEAD^{tree}") == branch_tree
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 0, output
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_gates_find_their_basetemp_parent(tmp_path: Path) -> None:
+    """pytest makes --basetemp but not its parent: run_gates must create .tmp/evidence first."""
+    root = _evidence_tree(tmp_path)
+    probe = "import pathlib,sys; sys.exit(0 if pathlib.Path('.tmp/evidence').is_dir() else 5)"
+    code, output = _evidence_cli(root, "--evidence", {"basetemp parent": [sys.executable, "-c", probe]})
+    assert code == 0, output
+    assert [gate["exit"] for gate in _evidence(root)["gates"]] == [0]
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_failed_gate_is_recorded_and_both_evidence_modes_fail(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    gates = {"failure": [sys.executable, "-c", "print('deliberate failure'); exit(3)"], **PASS_GATES}
+    code, output = _evidence_cli(root, "--evidence", gates)
+    assert code == 1, output
+    evidence = _evidence(root)
+    assert [gate["exit"] for gate in evidence["gates"]] == [3, 0, 0], "Do not stop after a failed gate"
+    assert evidence["gates"][0]["summary"] == "deliberate failure"
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 1, output
+    assert "failure" in output and "3" in output
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_evidence_digest_matches_lf_and_crlf_checkouts(tmp_path: Path) -> None:
+    root = _evidence_tree(tmp_path)
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    lf_digest = _evidence(root)["tree_digest"]
+    _git(root, "config", "core.autocrlf", "true")
+    # checkout-index trusts the stat cache and may leave LF bytes; a removed file
+    # is always written fresh with the autocrlf conversion.
+    (root / "src/naïve file.txt").unlink()
+    _git(root, "checkout", "--", "src/naïve file.txt")
+    if b"\r\n" not in (root / "src/naïve file.txt").read_bytes():
+        pytest.skip("This git environment did not produce a CRLF checkout with core.autocrlf=true")
+    code, output = _evidence_cli(root, "--check-evidence")
+    assert code == 0, output
+    code, output = _evidence_cli(root, "--evidence")
+    assert code == 0, output
+    assert _evidence(root)["tree_digest"] == lf_digest
+
+
+@pytest.mark.req("R-GRACE-INDEX.evidence")
+def test_evidence_gate_lists_cover_ci_python_script_steps() -> None:
+    namespace = runpy.run_path(str(SCRIPT))
+    gates = namespace["GATES"]
+    skipped = namespace["GATES_SKIPPED"]
+    assert not (gates.keys() & skipped.keys())
+    assert all(skipped.values()), "Every omitted step needs a reason"
+    workflow = (SCRIPT.parent.parent / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    found = set()
+    for job in ("lint", "test"):
+        match = re.search(rf"^  {job}:\n(.*?)(?=^  \w[^\n]*:|\Z)", workflow, re.M | re.S)
+        assert match, f"Missing CI job: {job}"
+        steps = re.split(r"^      - ", match.group(1), flags=re.M)
+        for step in steps:
+            name = re.match(r"name: ([^\n]+)", step)
+            if name and re.search(r"\bpython scripts/[\w]+\.py\b", step):
+                step_name = name.group(1)
+                found.add(step_name)
+                assert step_name in gates or step_name in skipped, f"Unclassified CI step: {step_name}"
+                if step_name in gates:
+                    script = re.search(r"\bpython (scripts/[\w]+\.py)\b", step)
+                    assert script and script.group(1) in gates[step_name], f"Wrong script for {step_name}"
+    assert "Generated GRACE verification index is current" in found
+    assert "CHANGELOG fragment" in found
+    # The other direction: a gate whose CI step was removed must leave GATES too.
+    script_gates = {name for name, cmd in gates.items() if any(str(part).startswith("scripts/") for part in cmd)}
+    assert script_gates <= found, f"GATES entries with no CI step: {sorted(script_gates - found)}"
+
+
+# END_BLOCK_EVIDENCE

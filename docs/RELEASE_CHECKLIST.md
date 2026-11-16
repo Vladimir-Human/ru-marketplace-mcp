@@ -75,7 +75,11 @@ uv run python scripts/gen_tools_doc.py --check
 uv run python scripts/check_lock_revision.py
 uv run pytest -q -m "not live and not cdp" --cov --cov-report= --cov-fail-under=80
 uv run python scripts/e2e_stdio_check.py
+uv run python scripts/grace_index.py --check-evidence
 ```
+
+Последняя строка проверяет, что `.grace/evidence/latest.json` записан командой
+`uv run python scripts/grace_index.py --evidence` на этом же дереве и все гейты в нём прошли.
 
 Порог покрытия — 80: ровно это значение требует гейт (`--cov-fail-under=80`),
 и `scripts/check_coverage_floor.py` читает его оттуда, а не из текста.
@@ -319,10 +323,11 @@ entered a rouble ranking; a clean install, image build or CI is red.
 ## The steps
 
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
-   plus win32 and darwin, the no-print, version-consistency, test-count and
+   plus win32 and darwin, the no-print, version-consistency and
    lock-revision checks, the 80% coverage floor, `uv run pytest -q scripts` for
    operational gate regressions, and a real stdio MCP session for all sixteen
-   servers. Install the locked DOM test dependencies with
+   servers, and `scripts/grace_index.py --check-evidence` (the evidence file was
+   written by `--evidence` on this exact tree, every gate passing). Install the locked DOM test dependencies with
    `npm ci --no-audit --no-fund`. Relocking `uv.lock` needs uv 0.13.6 or newer
    (`uvx --from uv==0.13.6 uv lock`): an older uv downgrades the lockfile
    revision the images build from. Use `--durations=10` to investigate slow

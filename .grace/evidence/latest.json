@@ -1,68 +1,193 @@
 {
-  "release": "2.9.2",
-  "phase": "unreleased_issue232_fixed_full_offline_gate_passed_live_dns_ab_passed",
-  "base_commit": "2ca619dcf241eb58c672e7fcfc9cf4c7e23eaf47",
-  "branch": "fix/qrator-401-recheck",
-  "requirements": [
-    "R-CDP-NAV-TIMEOUT.antibot-recheck",
-    "R-OFFLINE",
-    "R-TOOL-SCHEMA"
+  "checked_on_utc": "2026-11-16T02:39:23.577598+00:00",
+  "digest_excludes": [
+    ".grace/evidence/",
+    "changes/"
   ],
-  "source_hashes": {
-    ".grace/context/requirements.xml": "055cec63287b0cd62cc75e6078594f99004b6c58efb87d815f24e6c02acb42f9",
-    ".grace/verification/index.xml": "c3ef174d943fe5a003c549e6a7fba764add52157f3ae3a69f4cb95cf839c02a8",
-    "CHANGELOG.md": "6c4afdfe28d2f7b25f031b146b86687d72b993ac83b78cba1da5c68e557819ff",
-    "CONTRIBUTORS.md": "2c16a89216988f5fcbd0b1a5e00a4adee26fe47421910780a86f7c2c3cdc7e13",
-    "README.en.md": "8c9b2c548954d41dc1930c2bcbbe11f01d26598911472517e366ccc29bb14f06",
-    "README.md": "e20d5b215c008d9f92c7ec36b8ab9c2b76a692d093fe38b4b6c86e03d9a67c68",
-    "docs/ANTI_BOT.md": "69353f63ed55e93d8cf1634dd507f23f57a90914172375a618e52886ca6a30c5",
-    "docs/ARCHITECTURE.md": "543f00c0fe1cf818a92c564215d62be82a71fbc4b47c279977a1a80146b151d9",
-    "docs/CDP_SETUP.md": "096b242f85861ba06af24bac3d5f34c7361f7c6f316889e11f2ecd9e5bf4a6ee",
-    "docs/DEPLOYMENT.md": "711d677b6686aabf37b01e053d250b51f83a586224361b001ded173b07982821",
-    "packages/dns-connector/src/dns_connector/server.py": "8b4977359765cf101c7bccfb177b0b4bdc0f992cc947da37a3e0561c1a328138",
-    "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": "02faf3c304b85dc255187d29bd20daa0ef84e04fdd2b5390413086811a23b552",
-    "packages/mcp-core/tests/test_chrome_cdp.py": "06fbf5334135a7f11bd63417e36241c9e3d1e80fa02dce4f5f78e80205295aa6"
-  },
-  "red_checks": {
-    "method": "chrome_cdp.py copied aside, _ANTIBOT_RECHECK_STATUSES set back to frozenset({403}), focused tests run, file restored from the copy",
-    "failed_on_403_only": [
-      "test_goto_and_status_waits_out_an_antibot_reload[401]",
-      "test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200[401]",
-      "test_playwright_antibot_stays_a_block_without_a_good_reload[*-401] (no-reload and history-api cases shown)"
-    ],
-    "controls_pass_on_old_code": [
-      "test_playwright_429_is_not_rechecked",
-      "test_raw_429_is_not_rechecked"
-    ]
-  },
-  "checks": {
-    "uv run ruff check .": "All checks passed!",
-    "uv run ruff format --check .": "458 files already formatted",
-    "uv run mypy (host, linux, win32, darwin)": "Success: no issues found in 116 source files (each)",
-    "scripts/check_test_count.py": "documented test count agrees in 6 places: 3549",
-    "pytest -q -m 'not live and not cdp'": "3547 passed, 2 skipped, 5 deselected",
-    "pytest -q scripts": "320 passed",
-    "pytest test_chrome_cdp.py -k 'antibot or 429_is_not'": "26 passed"
-  },
-  "live": {
-    "date_utc": "2026-11-15 00:04-00:08",
-    "setup": "scraping Chrome 157 over CDP on 127.0.0.1:9222, residential IP; only qrator_* cookies of dns-shop.ru deleted before each run; requests counted in the shared live-budget ledger",
-    "A_old_code_main_2ca619d": "dns_search('наушники') -> transport_down 'DNS navigation blocked (HTTP 401)'; afterwards qrator_jsr, qrator_ssid2 only (no qrator_jsid2)",
-    "B_fixed_code_this_branch": "dns_search('наушники') -> 24 items, _meta.healthy true, real products with prices; qrator cookies absent before, qrator_jsid2 + qrator_jsr after (the challenge ran and cleared inside the call)",
-    "diagnosis_probe": "plain Playwright goto in the same Chrome: main document 401, 120 product links after 2 s",
-    "ledger_after": "total 13/40; citilink 1/8, dns 3/8, ozon 6/8, wildberries 3/8"
-  },
-  "unchanged": [
-    "uv.lock",
-    "package-lock.json",
-    ".grace/graph/index.xml (no boundary, dependency or export change)",
-    "public types and signatures",
-    "Citilink code and messages"
+  "gates": [
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "exit": 0,
+      "name": "Ruff (lint)",
+      "seconds": 0.157,
+      "summary": "All checks passed!"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "exit": 0,
+      "name": "Ruff (format check)",
+      "seconds": 0.14,
+      "summary": "469 files already formatted"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mypy"
+      ],
+      "exit": 0,
+      "name": "mypy (host platform)",
+      "seconds": 8.047,
+      "summary": "Success: no issues found in 116 source files"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "--platform",
+        "win32"
+      ],
+      "exit": 0,
+      "name": "mypy (cross-platform)",
+      "seconds": 1.031,
+      "summary": "Success: no issues found in 116 source files"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "--platform",
+        "darwin"
+      ],
+      "exit": 0,
+      "name": "mypy (cross-platform): darwin",
+      "seconds": 8.094,
+      "summary": "Success: no issues found in 116 source files"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/check_no_print.py"
+      ],
+      "exit": 0,
+      "name": "No stdout writes in connector code",
+      "seconds": 0.391,
+      "summary": "checked 100 file(s): no stdout writes"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/gen_tools_doc.py",
+        "--check"
+      ],
+      "exit": 0,
+      "name": "Generated tool reference is current",
+      "seconds": 3.469,
+      "summary": "{\"ts\":\"2026-11-15T20:35:02\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/check_provenance.py"
+      ],
+      "exit": 0,
+      "name": "Fixture pins describe their fixtures",
+      "seconds": 0.187,
+      "summary": "excepted: 13 completeness gap(s), each with a dated reason"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/check_lock_revision.py"
+      ],
+      "exit": 0,
+      "name": "uv.lock revision is not downgraded",
+      "seconds": 0.094,
+      "summary": "uv.lock revision 5 is at or above the floor 5"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/mcp_wire.py",
+        "compare-mcp",
+        "decision-mcp",
+        "marketplace-mcp",
+        "--baseline",
+        "work/performance/wire-baseline.json",
+        "--max-token-regression-percent",
+        "10"
+      ],
+      "exit": 0,
+      "name": "MCP wire-cost baseline",
+      "seconds": 12.687,
+      "summary": "dns           2 tools  ~   391 tok."
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/check_versions.py"
+      ],
+      "exit": 0,
+      "name": "One version, everywhere",
+      "seconds": 0.157,
+      "summary": "version 2.9.3 agreed in 93 places (17 pyproject.toml, 16 __init__.py, 15 SERVER_VERSION, 19 image tag, 3 deployment release pin, 15 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5 "
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "scripts/grace_index.py",
+        "--check"
+      ],
+      "exit": 0,
+      "name": "Generated GRACE verification index is current",
+      "seconds": 0.5,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=90 gap=10 untraced=0 mappings=537 unmarked_tests=1941"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "-m",
+        "not live and not cdp",
+        "--basetemp=.tmp/evidence/offline-suite",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit": 0,
+      "name": "Run offline test suite",
+      "seconds": 198.843,
+      "summary": "3556 passed, 2 skipped, 5 deselected, 132 warnings in 195.42s (0:03:15)"
+    },
+    {
+      "cmd": [
+        "C:\\Users\\vovap\\w\\a5e\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "scripts",
+        "--basetemp=.tmp/evidence/script-tests",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit": 0,
+      "name": "Operational gate regression tests",
+      "seconds": 48.063,
+      "summary": "408 passed in 46.63s"
+    }
   ],
-  "not_proven": [
-    "Ozon and WB on the reporter's connection: on this machine both already worked on main (Ozon 403 recheck since 2.5.4, WB DOM fallback since 2.7.0)",
-    "Citilink: live it answered Qrator 429 / a 45 s navigation timeout, not 401; this change does not cover it and claims nothing for it",
-    "A Qrator check that takes longer than _ANTIBOT_RECHECK_S (10 s) still ends as NavBlocked(401)"
-  ],
-  "checked_on_utc": "2026-11-15T00:08:19+00:00"
+  "index": {
+    "gap": 10,
+    "tested": 90,
+    "untraced": 0
+  },
+  "schema": 2,
+  "tree_digest": "4f6d1a5106242bc66d42604ed50357912f478844528bdf2cf1c83877b150abf6",
+  "version": "2.9.3"
 }

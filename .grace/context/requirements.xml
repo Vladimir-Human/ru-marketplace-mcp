@@ -334,5 +334,6 @@
   </requirement>
   <requirement id="R-GRACE-INDEX" status="accepted" source="Execution plan v3 A5 job 1, 2026-11-15">
     <says>Generate the verification index and gap list from AST-read pytest req markers without importing tests. Gate untraced requirements, unknown IDs and a stale committed index in lint; preserve existing mappings and declared gaps without hand bookkeeping.</says>
+    <invariant id="R-GRACE-INDEX.evidence" owner="M-GRACE-INDEX" proof="test log" source="Execution plan v3 A5 job 2 brief, 2026-11-16">--evidence runs the local CI gates and writes schema-2 machine facts with one SHA-256 digest of sorted tracked modes, filtered working-tree blobs and paths, excluding exactly .grace/evidence/ and changes/ instead of commit IDs or per-file hashes. --check-evidence runs no gates and passes only for schema 2, successful recorded gates and the matching tree digest: unstaged/staged source edits and deletions fail, while the same checked tree passes after a squash-merge and across LF/CRLF checkouts; use it in Done and tag checks, not CI.</invariant>
   </requirement>
 </requirements>
