@@ -53,9 +53,70 @@ def inputs(audit: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return cases, ids
 
 
+@pytest.fixture
+def measured_costs(audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], int]:
+    """Replay the reviewer's measured request counts through the real cost-table reader."""
+    cases, _ = inputs(audit)
+    overrides = {
+        "wildberries": {"listing": 3, "card": 3},
+        "ozon": {"listing": 3, "card": 3},
+        "avito": {"listing": 3},
+        "lamoda": {"card": 3},
+        "aliexpress": {"card": 2},
+    }
+    history = [
+        {
+            "source": source,
+            **{kind: {"requests": overrides.get(source, {}).get(kind, 1)} for kind in ("listing", "card")},
+        }
+        for source in cases["fixed_queries"]
+    ]
+    monkeypatch.setattr(audit, "REPO_ROOT", tmp_path)
+    (tmp_path / ".live-history.jsonl").write_text("".join(json.dumps(row) + "\n" for row in history), encoding="utf-8")
+    return audit._cost_table(cases, [])
+
+
+@pytest.mark.req("R-LIVE-AUDIT.plans")
+@pytest.mark.parametrize(
+    ("phase", "run"), [(p, n) for p, count in (("A", 2), ("B", 3), ("C", 8)) for n in range(1, count + 1)]
+)
+def test_each_run_fits_measured_costs(
+    audit: Any, measured_costs: dict[tuple[str, str], int], phase: str, run: int
+) -> None:
+    cases, ids = inputs(audit)
+    plan = audit.plan_run(cases, ids, measured_costs, phase, run)
+    assert plan
+    assert sum(sum(call["costs"].values()) for call in plan) <= 36
+    known: Counter[str] = Counter()
+    for call in plan:
+        known.update({source: cost for source, cost in call["costs"].items() if source != "$winner"})
+    assert all(cost <= 7 for cost in known.values())
+    if phase == "C":
+        assert [call["kind"] for call in plan] == ["compare", "verify", "verify", "capture"]
+        assert plan[0]["args"]["query"] == cases["compare_queries"]["1"][run - 1]
+
+
+@pytest.mark.req("R-LIVE-AUDIT.plans")
+def test_wb_uses_longest_cost_guarded_prefix(audit: Any, measured_costs: dict[tuple[str, str], int]) -> None:
+    cases, ids = inputs(audit)
+    plans = [audit.plan_run(cases, ids, measured_costs, "A", n) for n in (1, 2)]
+    wb = [[call for call in plan if call["source"] == "wildberries"] for plan in plans]
+    spent = [sum(call["costs"]["wildberries"] for call in chunk) for chunk in wb]
+    assert all(cost <= 7 for cost in spent)
+    assert spent[0] + wb[1][0]["costs"]["wildberries"] > 7
+    assert [call["tool"] for chunk in wb for call in chunk] == [
+        tool["tool"] for tool in cases["phase_a_tools"]["wildberries"]
+    ]
+    for source in set(cases["fixed_queries"]) - {"wildberries"}:
+        assert sum(any(call["source"] == source for call in plan) for plan in plans) == 1
+    measured_costs[("wildberries", "other")] = 2
+    with pytest.raises(ValueError, match="phase A inventory cannot fit two guarded runs"):
+        audit.plan_run(cases, ids, measured_costs, "A", 1)
+
+
 @pytest.mark.req("R-LIVE-AUDIT.plans")
 @pytest.mark.parametrize("costly", [False, True])
-@pytest.mark.parametrize(("phase", "runs"), [("A", 2), ("B", 3), ("C", 4)])
+@pytest.mark.parametrize(("phase", "runs"), [("A", 2), ("B", 3), ("C", 8)])
 def test_all_run_plans_fit_and_never_repeat(audit: Any, costly: bool, phase: str, runs: int) -> None:
     cases, ids = inputs(audit)
     costs = {("ozon", "listing"): 3}
@@ -76,12 +137,12 @@ def test_all_run_plans_fit_and_never_repeat(audit: Any, costly: bool, phase: str
             assert len({call["source"] for call in plan}) == 4
             assert len(plan) == (16 if costly else 24)
         if phase == "C":
-            assert sum(call["tool"] == "compare_prices" for call in plan) == 2
-            assert sum(call["tool"] == "compare_verify_offer" for call in plan) == 4
+            assert sum(call["tool"] == "compare_prices" for call in plan) == 1
+            assert sum(call["tool"] == "compare_verify_offer" for call in plan) == 2
 
 
 @pytest.mark.req("R-LIVE-AUDIT.plans")
-def test_phase_a_registry_coverage_and_wb_split(audit: Any) -> None:
+def test_phase_a_registry_coverage_and_wb_split(audit: Any, measured_costs: dict[tuple[str, str], int]) -> None:
     cases, ids = inputs(audit)
     expected = {
         tool.name
@@ -89,11 +150,11 @@ def test_phase_a_registry_coverage_and_wb_split(audit: Any) -> None:
         if spec.name in cases["fixed_queries"]
         for tool in registered_tools(importlib.import_module(spec.module).mcp)
     }
-    plans = [audit.plan_run(cases, ids, {}, "A", n) for n in (1, 2)]
+    plans = [audit.plan_run(cases, ids, measured_costs, "A", n) for n in (1, 2)]
     names = [call["tool"] for plan in plans for call in plan]
     assert len(expected) == len(names) == 33
     assert set(names) == expected
-    assert [sum(call["source"] == "wildberries" for call in plan) for plan in plans] == [5, 3]
+    assert [sum(call["source"] == "wildberries" for call in plan) for plan in plans] == [3, 5]
     assert all(
         call["args"] == cases["fixed_queries"][call["source"]]["listing"]["kwargs"]
         for plan in plans
@@ -121,7 +182,7 @@ def test_card_args_use_native_types_and_paths(audit: Any) -> None:
 @pytest.mark.req("R-LIVE-AUDIT.plans")
 def test_invalid_runs_and_later_phase_a_refused(audit: Any) -> None:
     cases, ids = inputs(audit)
-    for phase, run, cycle in [("A", 3, 1), ("B", 0, 1), ("C", 5, 1), ("A", 1, 2), ("C", 1, 999)]:
+    for phase, run, cycle in [("A", 3, 1), ("B", 0, 1), ("C", 9, 1), ("A", 1, 2), ("C", 1, 999)]:
         with pytest.raises(ValueError):
             audit.plan_run(cases, ids, {}, phase, run, cycle=cycle)
 
@@ -130,7 +191,12 @@ def test_invalid_runs_and_later_phase_a_refused(audit: Any) -> None:
 def test_compare_queries_precede_winner_spending(audit: Any) -> None:
     cases, ids = inputs(audit)
     plan = audit.plan_run(cases, ids, {("ozon", "listing"): 3}, "C", 1)
-    assert [call["tool"] for call in plan[:2]] == ["compare_prices", "compare_prices"]
+    assert [call["tool"] for call in plan] == [
+        "compare_prices",
+        "compare_verify_offer",
+        "compare_verify_offer",
+        "capture",
+    ]
 
 
 @pytest.mark.req("R-LIVE-AUDIT.child")
@@ -150,7 +216,7 @@ def test_compare_uses_text_search_sources_only(audit: Any) -> None:
 
     cases, ids = inputs(audit)
     expected = {s for s in COMPARE_SOURCES if BY_NAME[s].text_search}
-    for n in range(1, 5):
+    for n in range(1, 9):
         for call in audit.plan_run(cases, ids, {}, "C", n):
             if call["kind"] == "compare":
                 assert set(call["args"]["sources"]) == expected
@@ -342,6 +408,17 @@ def test_phase_a_schema_catalogue_guide_pii_and_hosts(audit: Any) -> None:
     assert checks["personal_data"] is True
     assert checks["hosts"] is False
     assert checks["error_catalogue"] is False
+    # An image on the source's CDN host is not a page link; a plain-http image still fails.
+    image = {
+        "price": 17,
+        "url": "https://aliexpress.ru/item/1.html",
+        "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/a.jpg",
+    }
+    assert audit.check_answer(image, image, tool, set(), render_error_reference(), cases, "aliexpress")["hosts"] is True
+    image["image_url"] = "http://ae-pic-a1.aliexpress-media.com/kf/a.jpg"
+    assert (
+        audit.check_answer(image, image, tool, set(), render_error_reference(), cases, "aliexpress")["hosts"] is False
+    )
     # Follow-up requirement: errors use their own envelope, never the success schema.
     assert (
         audit.check_answer({"error": "timeout"}, None, tool, set(), render_error_reference(), cases, "ozon")["schema"]
@@ -416,6 +493,204 @@ class FakeSession:
         print("PRIVATE_TITLE https://www.ozon.ru/?email=PRIVATE_QUERY C:\\Users\\PRIVATE_USER")
         result = {"items": [{"sku": 1234567890, "price": 17, "url": "https://www.ozon.ru/product/1234567890/"}]}
         return SimpleNamespace(structured_content=result, content=[], is_error=False)
+
+
+class PausedSourceSession(FakeSession):
+    """MCP edge only: book local ledger entries and return explicit source challenges."""
+
+    def __init__(self, budget: live_budget.Budget, challenged: list[str] | None = None) -> None:
+        super().__init__(budget)
+        self.challenged = challenged or []
+
+    async def list_tools(self, **kwargs: Any) -> Any:
+        return SimpleNamespace(
+            tools=[
+                SimpleNamespace(name=name, output_schema={"type": "object"})
+                for name in ("compare_prices", "compare_verify_offer", "lamoda_search", "lamoda_card", "ozon_card")
+            ],
+            next_cursor=None,
+        )
+
+    async def call_tool(self, tool: str, arguments: dict[str, Any]) -> Any:
+        self.calls.append((tool, arguments))
+        sources = arguments["sources"] if tool == "compare_prices" else ["lamoda"]
+        outcomes = []
+        for source in sources:
+            self.budget.reserve("fake", f"https://www.{source}.ru/")
+            outcomes.append(
+                {"source": source, "error_code": "challenge_required", "retry_after_s": 1}
+                if source in self.challenged
+                else {"source": source, "status": "ok", "elapsed_ms": 1}
+            )
+        result = {"source_outcomes": outcomes, "cheapest": None, "cheapest_comparable": None}
+        if self.challenged:
+            result["cheapest"] = {"source": self.challenged[0], "product_id": "123", "price_rub": 17}
+        return SimpleNamespace(structured_content=result, content=[], is_error=False)
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+@pytest.mark.parametrize("all_paused", [False, True])
+@pytest.mark.parametrize("origin", ["previous", "current"])
+async def test_compare_drops_paused_sources_before_budget(
+    audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, all_paused: bool, origin: str
+) -> None:
+    cases, ids = inputs(audit)
+    monkeypatch.setattr(audit, "REPO_ROOT", tmp_path)
+
+    async def hidden() -> bool:
+        return True
+
+    monkeypatch.setattr(audit, "_window_hidden", hidden)
+    budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / "ledger.json"))
+    names = ["ozon", "lamoda"]
+    paused = names if all_paused else ["lamoda"]
+    session = PausedSourceSession(budget, challenged=paused if origin == "current" else None)
+    first = audit.plan_run(cases, ids, {}, "C", 1)[0]
+    first = {**first, "args": {**first["args"], "sources": names}, "costs": dict.fromkeys(names, 1)}
+    target = {**first, "key": "C:later"}
+    previous = (
+        [
+            {
+                "tool": "lamoda_search",
+                "source": name,
+                "finished_epoch": 0,
+                "result": {"error_code": "challenge_required", "retry_after_s": 1},
+            }
+            for name in paused
+        ]
+        if origin == "previous"
+        else []
+    )
+    if origin == "previous":
+        for _ in range(7):
+            budget.reserve("setup", "https://www.lamoda.ru/")
+    plan = [first, target] if origin == "current" else [target]
+    if origin == "current":
+        plan.append(audit.plan_run(cases, ids, {}, "C", 1)[1])
+    rows = await audit.execute_plan(plan, session, budget, cases, tmp_path, "C", previous=previous)
+    row = next(row for row in rows if row["key"] == target["key"])
+    assert row["dropped_sources"] == sorted(paused)
+    assert row["args"]["sources"] == [name for name in names if name not in paused]
+    assert first["args"]["sources"] == names
+    assert first["costs"] == dict.fromkeys(names, 1)
+    if all_paused:
+        assert row["state"] == "skipped"
+        assert row["error_code"] == "source_paused"
+        assert len(session.calls) == (1 if origin == "current" else 0)
+    else:
+        assert row["state"] == "healthy"
+        assert row["requests"] == 1
+        assert session.calls[-1] == ("compare_prices", {**target["args"], "sources": ["ozon"]})
+    if origin == "current":
+        assert rows[-1]["source"] == paused[0]
+        assert rows[-1]["error_code"] == "source_paused"
+        assert all(tool != "compare_verify_offer" for tool, _ in session.calls)
+    persisted = json.loads((tmp_path / "audit.json").read_text(encoding="utf-8"))["calls"]
+    assert next(row for row in persisted if row["key"] == target["key"])["dropped_sources"] == sorted(paused)
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+async def test_skip_lamoda_reaches_runner_and_compare(
+    audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cases, ids = inputs(audit)
+    monkeypatch.setattr(audit, "REPO_ROOT", tmp_path)
+    (tmp_path / ".live-ids.json").write_text(json.dumps(ids), encoding="utf-8")
+    sessions = []
+
+    async def hidden() -> bool:
+        return True
+
+    @asynccontextmanager
+    async def opener(budget: live_budget.Budget, directory: Path, **kwargs: Any) -> Any:
+        session = PausedSourceSession(budget)
+        sessions.append(session)
+        yield session
+
+    monkeypatch.setattr(audit, "_window_hidden", hidden)
+    monkeypatch.setattr(audit, "open_session", opener)
+    for phase, run in [("A", n) for n in (1, 2)] + [("C", 1)]:
+        budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / f"ledger-{phase}{run}.json"))
+        assert await audit.run(["--phase", phase, "--run", str(run), "--skip", "lamoda"], budget) == 0
+    records = audit._cycle_records(1)
+    lamoda = [row for row in records if row["source"] == "lamoda"]
+    assert len(lamoda) == len(cases["phase_a_tools"]["lamoda"])
+    assert all(row["state"] == "skipped" and row["error_code"] == "source_paused" for row in lamoda)
+    compare = next(row for row in records if row["tool"] == "compare_prices")
+    assert compare["state"] == "healthy"
+    assert compare["dropped_sources"] == ["lamoda"]
+    assert "lamoda" not in compare["args"]["sources"]
+    calls = [call for session in sessions for call in session.calls]
+    assert all(not tool.startswith("lamoda_") for tool, _ in calls)
+    assert all("lamoda" not in args["sources"] for tool, args in calls if tool == "compare_prices")
+
+
+async def _run_phase_a(audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runs: list[int]) -> list[str]:
+    """Run phase A through ``run`` with a fake MCP edge that books one request per call."""
+    _, ids = inputs(audit)
+    (tmp_path / ".live-ids.json").write_text(json.dumps(ids), encoding="utf-8")
+
+    async def hidden() -> bool:
+        return True
+
+    @asynccontextmanager
+    async def opener(budget: live_budget.Budget, directory: Path, **kwargs: Any) -> Any:
+        yield PausedSourceSession(budget)
+
+    monkeypatch.setattr(audit, "_window_hidden", hidden)
+    monkeypatch.setattr(audit, "open_session", opener)
+    for run in runs:
+        budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / f"ledger-A{run}.json"))
+        assert await audit.run(["--phase", "A", "--run", str(run)], budget) == 0
+    return [row["key"] for row in audit._cycle_records(1)]
+
+
+@pytest.mark.req("R-LIVE-AUDIT.plans", "R-LIVE-AUDIT.runner")
+async def test_phase_a_runs_keep_their_split_when_run_one_measures_other_costs(
+    audit: Any, measured_costs: dict[tuple[str, str], int], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """History says WB search and card cost 3; the fake books 1. Run 2 must still take exactly the rest."""
+    cases, _ = inputs(audit)
+    keys = await _run_phase_a(audit, tmp_path, monkeypatch, [1, 2])
+    inventory = ["A:" + spec["tool"] for tools in cases["phase_a_tools"].values() for spec in tools]
+    assert sorted(keys) == sorted(inventory)
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+async def test_phase_a_refuses_a_split_that_moved_between_runs(
+    audit: Any, measured_costs: dict[tuple[str, str], int], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A matrix run between the two phase A runs changes the history; run 2 refuses instead of guessing."""
+    await _run_phase_a(audit, tmp_path, monkeypatch, [1])
+    history = tmp_path / ".live-history.jsonl"
+    rows = [json.loads(line) for line in history.read_text(encoding="utf-8").splitlines()]
+    rows.append({"source": "wildberries", "listing": {"requests": 1}, "card": {"requests": 1}})
+    history.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    with pytest.raises(ValueError, match="phase A split changed"):
+        await _run_phase_a(audit, tmp_path, monkeypatch, [2])
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["--phase", "C", "--run", "8", "--skip", "lamoda,cian"], {"lamoda", "cian"}),
+        (["--phase", "A", "--run", "1", "--skip", " lamoda , cian "], {"lamoda", "cian"}),
+        (["--phase", "A", "--run", "1", "--skip", "wb,yandex"], {"wildberries", "yandex_market"}),
+        (["--phase", "A", "--run", "1", "--skip", "unknown"], None),
+        (["--phase", "A", "--run", "1", "--skip", "lamoda,"], None),
+        (["--phase", "A", "--run", "1", "--skip", ""], None),
+        (["--summary", "--skip", "x"], None),
+        (["--summary", "--skip", "lamoda"], None),
+        (["--summary", "--skip", ""], None),
+    ],
+)
+def test_skip_options_are_validated(audit: Any, argv: list[str], expected: set[str] | None) -> None:
+    if expected is None:
+        with pytest.raises(ValueError, match=r"^invalid audit options$"):
+            audit.select_options(argv)
+    else:
+        assert audit.select_options(argv).skip == expected
 
 
 @pytest.mark.req("R-LIVE-AUDIT.runner")
