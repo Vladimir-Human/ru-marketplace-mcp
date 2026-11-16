@@ -25,7 +25,7 @@ from typing import Any
 import pytest
 from fastmcp import Client, FastMCP
 from mcp_core import runtime
-from mcp_core.domtest import run_extractor
+from mcp_core.domtest import JsdomUnavailable, run_extractor
 from mcp_core.errors import ChallengeRequiredError, ConnectorError, ErrorCode, raise_tool_error_from
 from mcp_core.sources import SOURCES
 
@@ -234,9 +234,13 @@ async def test_live_pacing_floor_and_registry_listing(error_server, source, code
 async def test_lamoda_fixture_public_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     module = importlib.import_module("lamoda_connector.server")
     fixture = Path(__file__).resolve().parents[3] / "lamoda-connector/tests/fixtures/refusal_page_live.html"
-    payload = run_extractor(
-        module._SEARCH_EXTRACT_JS, fixture, page_url="https://www.lamoda.ru/catalogsearch/result/?q=fixture"
-    )
+    try:
+        payload = run_extractor(
+            module._SEARCH_EXTRACT_JS, fixture, page_url="https://www.lamoda.ru/catalogsearch/result/?q=fixture"
+        )
+    except JsdomUnavailable as exc:
+        # jsdom is an optional developer tool (mcp_core.domtest); the jobs that install it run this.
+        pytest.skip(str(exc))
     assert payload["items"] == []
 
     async def fake_render(query: str, ctx: Any) -> dict[str, Any]:
