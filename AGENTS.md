@@ -37,7 +37,7 @@ These rules win over older guidance in other files; report a conflict instead of
 - Parsing and deciding are pure functions tested on fixtures; a tool function keeps only the I/O around them. A test that needs a fake transport tests that shell and nothing else.
 - Refactor and behaviour never share a PR. A move-only PR changes no test assertion; a behaviour PR moves no code.
 - No new file over 1,200 lines and no new function over 150. Today's larger files and functions sit under caps that only go down.
-- A structure gate is coming; until it lands these limits hold by review.
+- `scripts/check_arch.py` (a `lint` step) enforces the import rules and the caps in `scripts/arch_baseline.json`; a cap more than 100 lines (file) or 20 lines (function) above the real size fails too, so a reduction lowers its cap in the same PR. A source fix of 48 hours or less that meets a cap merges under the label `arch-exempt`, and the move is the next PR on that file. `--report` prints the size numbers.
 
 ## Work, review and merge
 
