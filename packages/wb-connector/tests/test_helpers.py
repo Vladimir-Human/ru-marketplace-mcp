@@ -2588,6 +2588,42 @@ def test_the_canary_sees_the_primary_search_path(monkeypatch, v9_response, expec
         assert "primary search path" in notes, "an operator must be able to see WHICH path was refused"
 
 
+def _canary_search_v9(monkeypatch, v9_body: dict) -> dict:
+    async def no_wait():
+        return None
+
+    async def scenario():
+        monkeypatch.setattr(server, "_safe_get_text", _healthy_selfcheck_responder((200, json.dumps(v9_body), None)))
+        monkeypatch.setattr(server, "_polite_wait", no_wait)
+        return (await server.wb_selfcheck()).model_dump()["checks"]["search_v9"]
+
+    return asyncio.run(scenario())
+
+
+def _live_v9() -> dict:
+    return json.loads((Path(__file__).parent / "fixtures" / "search_v9_live.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.req("R-SELFCHECK-GATES-PRICE")
+def test_the_canary_counts_prices_the_way_the_search_tool_reads_them(monkeypatch):
+    """The captured v9 page keeps prices in sizes[].price; all three are priced."""
+    check = _canary_search_v9(monkeypatch, _live_v9())
+    assert check["state"] == "healthy"
+    assert check["priced"] == 3
+
+
+@pytest.mark.req("R-SELFCHECK-GATES-PRICE")
+def test_the_canary_is_drift_when_identified_products_carry_no_price(monkeypatch):
+    body = _live_v9()
+    # The price family stays (so this is not shape drift); every value is unreadable.
+    for product in body["products"]:
+        for size in product.get("sizes") or []:
+            size["price"] = dict.fromkeys(size["price"], 0)
+    check = _canary_search_v9(monkeypatch, body)
+    assert check["state"] == "drift"
+    assert check["reason"] == "no_prices"
+
+
 def test_an_edge_wall_is_not_a_success_and_is_not_cached(monkeypatch):
     """A wall served with HTTP 200 is a refusal, and must never reach the cache.
 

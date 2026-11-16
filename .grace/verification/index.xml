@@ -640,6 +640,10 @@
     <test file="packages/ozon-connector/tests/test_server.py" name="test_fetch_composer_redacts_a_tier1_exception_in_the_client_log" requirements="R-SECRET-REDACTION" title="ctx.debug goes to the client's log, so the Tier-1 exception quoted there" />
     <test file="packages/ozon-connector/tests/test_server.py" name="test_reviews_redacts_the_failing_page_body_in_last_error" requirements="R-SECRET-REDACTION" title="last_error is part of a successful answer, so the upstream body it quotes" />
   </requirement>
+  <requirement id="R-SELFCHECK-GATES-PRICE" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_counts_prices_the_way_the_search_tool_reads_them" requirements="R-SELFCHECK-GATES-PRICE" title="The captured v9 page keeps prices in sizes[].price; all three are priced." />
+    <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" />
+  </requirement>
   <requirement id="R-SHAPE-DRIFT-WARNING" kind="requirement" state="tested">
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" name="test_search_warns_when_a_required_key_family_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="Tiles that still parse without a parser-critical key are structural" />
     <test file="packages/aliexpress-connector/tests/test_shape_reference.py" name="test_selfcheck_reports_shape_drift_when_a_required_path_vanishes" requirements="R-SHAPE-DRIFT-WARNING" title="A page that still yields tiles but lost a parser-critical field is" />
