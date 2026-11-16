@@ -1,3 +1,5 @@
+Installing? Read on. Changing the repository itself? Read [AGENTS.md](AGENTS.md) first.
+
 # Install guide for AI agents (Cline, Claude Code, Cursor, OpenCode, Windsurf)
 
 This file provides the shortest deterministic setup path for AI agents. Full documentation lives in `README.md` and `docs/QUICKSTART.md`.

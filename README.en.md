@@ -85,6 +85,10 @@ HTTP transport is opt-in for remote deployment — see
 
 ## Quickstart
 
+### Security and limits
+- Do not run it in one agent session with tools that read private data and can send it out without your approval.
+- Use a separate scraping Chrome profile, without email or banking. [Details](SECURITY.md#security).
+
 Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 
 Without a checkout, install from PyPI and wire the detected client in one step
@@ -102,7 +106,7 @@ From source, for development:
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3558 offline tests, no network needed
+uv run pytest -q -m "not live and not cdp"    # offline tests, no network needed
 ```
 
 Client configuration mirrors the [Russian section](README.md#подключение-к-mcp-клиенту). The shortest path is the
@@ -579,7 +583,7 @@ disabled source: that request returns `bad_request`, as does inspecting its card
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # 3558 offline tests
+uv run pytest -q -m "not live and not cdp"    # offline tests
 uv run pytest -q -m "not live"                # what CI runs
 uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
 uv run ruff check . && uv run ruff format --check .
@@ -641,7 +645,7 @@ harvesting.
 ## How this was built
 
 I wrote the code and the documentation with AI assistants. They are fast and they
-are confidently wrong, so the project is arranged around verification: 3558 offline
+are confidently wrong, so the project is arranged around verification: offline
 tests, an audit before the release, tests that run the real extractor against
 markup captured from the live site. The release notes say which sources were
 compared against live pages by hand and which were left unverified.

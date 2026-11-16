@@ -1,3 +1,5 @@
+Before changing this repository, read [AGENTS.md](AGENTS.md).
+
 # ru-marketplace-mcp — Gemini CLI & Agent Context
 
 Read-only MCP servers and 15 Agent Skills for 12 Russian and Chinese marketplaces and classifieds: Wildberries, Ozon, Yandex Market, Detsky Mir, Avito, Cian (real estate), AliExpress, Taobao, Megamarket, Lamoda, DNS, and Citilink, plus optional MPStats analytics.

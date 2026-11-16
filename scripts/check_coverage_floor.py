@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Fail if measured offline coverage drops below the documented floor.
 
-The offline test count has ``check_test_count.py`` comparing the documented
-figure to the real one. Coverage had no equivalent: the only thing standing
-between "the suite quietly thinned out" and a merge was the CI job's
-``--cov-fail-under`` flag, evaluated far from the change that caused the drop.
-This gives coverage the same treatment the test count already gets — a script
-that measures and compares, runnable locally and in the gate.
+Without it, the only thing standing between "the suite quietly thinned out"
+and a merge was the CI job's ``--cov-fail-under`` flag, evaluated far from the
+change that caused the drop. This is a script that measures and compares,
+runnable locally and in the gate.
 
 The floor is not hardcoded here. It is read from the CI workflow's
 ``--cov-fail-under`` flag, so this script cross-checks two sources that must
@@ -16,13 +14,12 @@ regresses below it, the failure points at the drop instead of surfacing in a
 distant CI run.
 
 Coverage needs the tests to actually run (a collection is not enough), so this
-costs roughly one offline-suite run rather than the second that
-``check_test_count.py`` costs.
+costs roughly one offline-suite run.
 
 Usage:
     python scripts/check_coverage_floor.py
 
-Local gate companion in the pattern of ``check_test_count.py``: CI already
+Local gate companion: CI already
 enforces the same floor through the coverage job's ``--cov-fail-under``, so
 this script exists to surface a regression at the machine where the change was
 made, before it travels.
