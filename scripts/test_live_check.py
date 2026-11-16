@@ -134,7 +134,7 @@ def test_the_ledger_summary_names_the_requests_the_budget_refused(
     assert lines[-1].startswith("refused before sending (over a cap): ozon 2;")
 
 
-@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
+@pytest.mark.req("R-DOCTOR-EXIT-CODES")
 @pytest.mark.parametrize(
     "argv",
     [
@@ -154,7 +154,7 @@ def test_a_usage_failure_exits_4_not_the_doctors_blocked_code(
 ) -> None:
     """Exit 4 for live_check's own usage errors.
 
-    The CI drift alarm keeps the doctor's 2 ("blocked/inconclusive") green, so a
+    An alarm treats the doctor's 2 ("blocked/inconclusive") as non-alarm, so a
     mis-typed command line must not borrow that code and read as a blocked
     source. Nothing here reaches a marketplace.
     """

@@ -199,7 +199,7 @@ recommended price-comparison profile, ≈2.0k for the decision profile and
 After connecting, run `marketplace-mcp doctor`. Its exits are `0` all selected
 checks healthy, `1` parser drift, `2` acknowledged block or unverified source,
 `3` status-file write failure, and `4` checker or doctor setup/usage failure
-(including an unknown source). Nightly alarms on `1` and `4`, not `2`. A budget
+(including an unknown source). Alarm on `1` and `4`, not on `2`. A budget
 refusal carries `budget_refused` and never counts as a healthy check.
 
 ## The tools

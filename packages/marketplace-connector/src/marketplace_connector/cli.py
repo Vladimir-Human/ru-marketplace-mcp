@@ -1364,7 +1364,7 @@ def _health_exit_code(blocked: int, drifted: int, failed: int) -> int:
     0: all selected checkers succeeded; 1: parser drift; 2: acknowledged
     blocked/inconclusive (including budget refusal); 4: a checker failed.
     Doctor also uses 4 for setup/usage failures and 3 for a status-write failure.
-    Neither 2 nor 4 is health, but nightly must alarm on 4, not on 2.
+    Neither 2 nor 4 is health, but an alarm must trigger on 4, not on 2.
     """
     if failed:
         return DOCTOR_FAILURE_EXIT

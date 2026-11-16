@@ -126,7 +126,7 @@ and is never solved or retried. WB's other probes still use HTTP; see
 | Argument/setup error, exit 4 | Unknown source, option, missing argument, or doctor could not run | Correct the command or setup; no successful verdict was produced |
 
 A failed checker takes precedence over drift, and drift over an inconclusive
-source. Nightly alarms on 1 and 4, not 2. A budget refusal never counts as a
+source. Alarm on `1` and `4`, not on `2`. A budget refusal never counts as a
 healthy check. `unblock` discovery/re-check uses the same hard-failure code;
 `setup` also returns 4 if its health check or unblock re-check fails, otherwise
 its exit still describes whether a client was configured.

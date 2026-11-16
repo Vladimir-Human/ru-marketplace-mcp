@@ -349,11 +349,12 @@
   <requirement id="R-DOCTOR-EXIT-CODES" kind="requirement" state="tested">
     <test file="scripts/test_doctor_exit_codes.py" name="test_supplied_invalid_subcheck_is_hard_under_every_outer_status" requirements="R-DOCTOR-EXIT-CODES" title="R-DOCTOR-EXIT-CODES: supplied invalid entries cannot inherit a valid outer verdict." />
     <test file="scripts/test_doctor_exit_codes.py" name="test_valid_subchecks_keep_the_existing_outer_verdict" requirements="R-DOCTOR-EXIT-CODES" title="R-DOCTOR-EXIT-CODES: checks={} and recognized dict/model entries stay valid." />
+    <test file="scripts/test_live_check.py" name="test_a_usage_failure_exits_4_not_the_doctors_blocked_code" requirements="R-DOCTOR-EXIT-CODES" title="Exit 4 for live_check's own usage errors." />
   </requirement>
   <requirement id="R-DOCTOR-NEXT-STEP" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_cli.py" name="test_doctor_reads_the_wb_dom_fallback_setting" requirements="R-DOCTOR-NEXT-STEP" />
   </requirement>
-  <requirement id="R-DRIFT" kind="rule" state="tested">
+  <requirement id="R-DRIFT" kind="rule" state="tested" gaps="G-LIVE-SMOKE-STRENGTH">
     <test file="packages/mcp-core/tests/test_kit.py" name="test_render_json_refusals_are_json_errors" requirements="R-DRIFT" title="Every render_json refusal must carry the shared error JSON the agent reads" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_all_healthy_is_success" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_drift_dominates" requirements="R-DRIFT" />
@@ -525,7 +526,7 @@
     <test file="scripts/test_live_budget.py" name="test_the_total_cap_raises_before_sending" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_budget.py" name="test_two_installs_share_one_ledger_file" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_conftest.py" name="test_a_live_selection_installs_the_budget_on_the_repository_ledger" requirements="R-LIVE-BUDGET" title="The live branch must count the requests it makes (audit S4-F13)." />
-    <test file="scripts/test_live_conftest.py" name="test_a_live_test_the_budget_refused_is_reported_skipped" requirements="R-LIVE-BUDGET" title="The nightly doctor alarm runs first on the shared ledger, so the canary" />
+    <test file="scripts/test_live_conftest.py" name="test_a_live_test_the_budget_refused_is_reported_skipped" requirements="R-LIVE-BUDGET" title="A doctor run can spend the budget on the shared ledger, so a live test" />
     <test file="scripts/test_live_conftest.py" name="test_an_offline_selection_imports_no_budget" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_conftest.py" name="test_other_failures_and_offline_tests_still_fail" requirements="R-LIVE-BUDGET" title="Only a budget refusal on a live test is a skip: a real failure of a live" />
   </requirement>
@@ -623,13 +624,6 @@
     <test file="packages/mcp-core/tests/test_render_json_hosts.py" name="test_render_json_source_passes_policy_and_refuses_foreign_final_url" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_lookalike_domain_still_fails" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: only the source's own subdomains pass, never a lookalike or a foreign host." />
     <test file="packages/mcp-core/tests/test_source_hosts.py" name="test_a_subdomain_link_the_source_accepted_before_still_passes" requirements="R-NAV-HOSTS,R-NAV-HOSTS.kept-inputs" title="R-NAV-HOSTS.kept-inputs: a mobile or regional link on the source's own domain is not refused." />
-  </requirement>
-  <requirement id="R-NIGHTLY-DRIFT-ALARM" kind="requirement" state="tested" gaps="G-LIVE-SMOKE-STRENGTH">
-    <test file="scripts/test_ci_concurrency.py" name="test_a_broken_live_check_fails_the_alarm" requirements="R-NIGHTLY-DRIFT-ALARM" title="R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure." />
-    <test file="scripts/test_ci_concurrency.py" name="test_the_doctor_alarm_runs_before_the_canary_on_one_ledger" requirements="R-NIGHTLY-DRIFT-ALARM" title="The alarm must get its live requests before the canary spends them." />
-    <test file="scripts/test_ci_concurrency.py" name="test_the_live_job_runs_the_doctor_drift_alarm" requirements="R-NIGHTLY-DRIFT-ALARM" title="The nightly job must run the doctor status check and fail on its alarm." />
-    <test file="scripts/test_live_check.py" name="test_a_usage_failure_exits_4_not_the_doctors_blocked_code" requirements="R-NIGHTLY-DRIFT-ALARM" title="Exit 4 for live_check's own usage errors." />
-    <test file="scripts/test_live_conftest.py" name="test_a_live_test_the_budget_refused_is_reported_skipped" requirements="R-NIGHTLY-DRIFT-ALARM" title="The nightly doctor alarm runs first on the shared ledger, so the canary" />
   </requirement>
   <requirement id="R-NO-FABRICATION" kind="rule" state="tested">
     <test file="packages/avito-connector/tests/test_item_closed.py" name="test_a_closed_state_of_another_item_is_not_this_ads" requirements="R-NO-FABRICATION" title="Another id's closed buyerItem and its banner are not attributed to the requested ad." />

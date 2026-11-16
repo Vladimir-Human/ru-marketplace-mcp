@@ -2,7 +2,7 @@
 
 These hit the real endpoint and are excluded from CI (``-m "not live"``): they
 need network and a Russian-friendly IP. Run them on purpose after a drift
-report, or from the nightly live job — never as part of the offline suite.
+report or a doctor run — never as part of the offline suite.
 A selfcheck must come back healthy: ``drift_detected`` fails the test, while
 ``inconclusive`` (block, challenge or network) skips it.
 """

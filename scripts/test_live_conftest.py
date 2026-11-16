@@ -110,9 +110,9 @@ def _fake_budget(monkeypatch: Any) -> None:
     monkeypatch.setitem(sys.modules, "live_budget", fake_budget)
 
 
-@pytest.mark.req("R-LIVE-BUDGET", "R-NIGHTLY-DRIFT-ALARM")
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_live_test_the_budget_refused_is_reported_skipped(monkeypatch: Any) -> None:
-    """The nightly doctor alarm runs first on the shared ledger, so the canary
+    """A doctor run can spend the budget on the shared ledger, so a live test
     can meet a spent budget: that test did not fail, it was not allowed to run.
     A failure would read as "parser drift or an unrecognised block". The
     refusal is found behind a tool's wrapping error too."""
