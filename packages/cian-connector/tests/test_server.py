@@ -829,3 +829,65 @@ async def test_card_on_the_bot_check_page_is_challenge_required(monkeypatch):
     assert error["error"] == "challenge_required"
     assert error["provider"] == "cian"
     assert "marketplace-mcp unblock cian" in error["user_action"]
+
+
+# R-CIAN-CAPTCHA: the search API's answer in the pre-release run of 2026-11-16
+# (HTTP 403 through the in-page fetch), verbatim.
+CAPTCHA_BODY = json.dumps(
+    {"message": "Captcha required", "errors": [{"key": "", "code": "captchaRequired", "message": "Captcha required"}]},
+    separators=(",", ":"),
+)
+
+
+@pytest.mark.req("R-CIAN-CAPTCHA")
+@pytest.mark.parametrize("status", [403, 200])
+async def test_search_captcha_demand_is_challenge_required(monkeypatch, status):
+    _patch_search(monkeypatch, (status, CAPTCHA_BODY, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_search("sale")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert error["provider"] == "cian"
+    assert "marketplace-mcp unblock cian" in error["user_action"]
+
+
+@pytest.mark.req("R-CIAN-CAPTCHA")
+async def test_card_captcha_demand_is_challenge_required(monkeypatch):
+    _patch_card(monkeypatch, (403, CAPTCHA_BODY, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.cian_card("100000001")
+
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "challenge_required"
+    assert "marketplace-mcp unblock cian" in error["user_action"]
+
+
+@pytest.mark.req("R-CIAN-CAPTCHA")
+@pytest.mark.parametrize(
+    "body",
+    [
+        "<html><body>captchaRequired</body></html>",
+        json.dumps({"data": {"offersSerialized": [{"description": "captchaRequired"}]}}),
+        json.dumps({"errors": [{"code": "somethingElse"}], "note": "captchaRequired"}),
+    ],
+)
+def test_only_the_api_error_code_is_a_captcha_demand(body):
+    assert server._captcha_required(body) is False
+    assert server._captcha_required(CAPTCHA_BODY) is True
+
+
+@pytest.mark.req("R-CIAN-CAPTCHA")
+async def test_captcha_demand_records_no_refusal_but_the_waf_page_does(monkeypatch):
+    before = server._pacer.consecutive_refusals
+    _patch_search(monkeypatch, (403, CAPTCHA_BODY, "cdp"))
+    with pytest.raises(ToolError):
+        await server.cian_search("sale")
+    assert server._pacer.consecutive_refusals == before
+
+    _patch_search(monkeypatch, (403, WAF_BODY, "cdp_blocked"))
+    with pytest.raises(ToolError):
+        await server.cian_search("sale")
+    assert server._pacer.consecutive_refusals == before + 1

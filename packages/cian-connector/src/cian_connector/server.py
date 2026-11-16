@@ -6,7 +6,8 @@ docs/ANTI_BOT.md § Cian). Probed 2026-09-09:
 
 * Plain HTTP is a dead end: Cian's WAF answers every path, the JSON API
   included, with a 403 ``cian_waf_block`` page keyed on IP reputation. There is
-  no captcha to solve and no fingerprint to clear.
+  no fingerprint to clear; since 2026-11-16 the JSON API can demand a captcha
+  (``captchaRequired``), a human step in the scraping Chrome: ``challenge_required``.
 * Inside the operator's Chrome (tier 2) the site's own JSON API answers an
   in-page ``fetch`` POST: structured offers, no HTML parsing. The offer card
   embeds the whole offer in ``window._cianConfig['frontend-offer-card']``.
@@ -29,7 +30,8 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/cian-connector/tests.
+# LINKS: M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA;
+#        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
@@ -39,6 +41,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # cian_card: Read embedded offer-card state and classify removed/blocked pages.
 # cian_selfcheck: Diagnose operator browser/parser health; not an MCP tool.
 # _NoPricesFound: Mark a listing whose items carry no readable price (drift: no_prices).
+# _captcha_required: Whether an API answer is Cian's captcha demand (challenge_required).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -142,6 +145,8 @@ _ROOM_CHOICES = frozenset(get_args(RoomCount))
 _REGION_RE = re.compile(r"^\d{1,7}$")
 _OFFER_ID_RE = re.compile(r"cian\.ru/(?:sale|rent)/[a-z-]+/(\d{6,})(?:[/?#]|$)")
 _WAF_MARKER = "cian_waf_block"
+# The JSON API's captcha demand, live 2026-11-16: HTTP 403, errors[].code captchaRequired.
+_CAPTCHA_CODE = "captchaRequired"
 # The card transport's own envelope: only a state that actually carried the
 # offer is worth caching.
 _CARD_OK_RE = re.compile(r'"kind":\s*"ok"')
@@ -357,8 +362,24 @@ def _blocked_error(tier: str, detail: str = "") -> TransportDownError:
     return blocked_error(message, pacer=_pacer, detail=detail)
 
 
+def _captcha_required(body: str) -> bool:
+    """Whether ``body`` is the JSON API's captcha demand rather than data or the WAF page."""
+    if _CAPTCHA_CODE not in body[:2000]:
+        return False
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return False
+    errors = data.get("errors") if isinstance(data, dict) else None
+    return isinstance(errors, list) and any(isinstance(e, dict) and e.get("code") == _CAPTCHA_CODE for e in errors)
+
+
 def _raise_for_fetch_failure(status: int, body: str, tier: str, what: str) -> None:
     """Map a failed fetch to the shared error taxonomy."""
+    if _captcha_required(body):
+        # A human passes it (R-CIAN-CAPTCHA): no refusal, so the call after the check goes out.
+        message = f"Cian's {what} API answered with a captcha demand (captchaRequired) via {tier}."
+        raise_tool_error(ChallengeRequiredError(message, provider="cian"))
     if status in (401, 403, 429) or _WAF_MARKER in body[:2000]:
         _pacer.record_refusal()
         raise_tool_error(_blocked_error(tier, body))
@@ -837,7 +858,7 @@ async def cian_search(
         status, body, tier = await _fetch_search(query, ctx)
         if status != 200:
             _raise_for_fetch_failure(status, body, tier, "search")
-        if _WAF_MARKER in body[:2000]:
+        if _WAF_MARKER in body[:2000] or _captcha_required(body):
             _raise_for_fetch_failure(403, body, tier, "search")
         try:
             payload = json.loads(body)
