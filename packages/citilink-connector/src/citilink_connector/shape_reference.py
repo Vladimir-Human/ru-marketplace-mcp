@@ -32,6 +32,7 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].product_id:str",
     "items[].title:str",
     "items[].url:str",
+    "placeholder_tiles:int",
     "qrator_wall:bool",
     "title:str",
 )
