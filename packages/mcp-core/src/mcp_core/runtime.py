@@ -20,9 +20,9 @@ Two rules this module exists to enforce, both protocol- or security-critical:
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Resolve and launch stdio or authenticated HTTP-family MCP servers.
-# SCOPE: Environment parsing, launch diagnostics, per-era client scope and graceful handoff cleanup.
-# DEPENDS: FastMCP; mcp_types protocol versions; mcp_core.logging; loaded browser_handoff at shutdown; stdlib.
-# LINKS: M-RUNTIME; M-LOGGING; M-BROWSER-HANDOFF.
+# SCOPE: Transport startup/cleanup and one outgoing error enrichment/redaction boundary.
+# DEPENDS: FastMCP; mcp_types protocol versions; mcp_core.logging/errors/redact/sources; loaded handoffs; stdlib.
+# LINKS: M-RUNTIME; M-LOGGING; M-BROWSER-HANDOFF; M-ERRORS; M-SOURCES; R-ERROR-NEXT-STEP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # STDIO_CLIENT_SCOPE: Stand in for the one stdio client on sessionless connections.
@@ -30,7 +30,10 @@ Two rules this module exists to enforce, both protocol- or security-critical:
 # browser_handoff_lifespan: Close already-loaded handoffs on server shutdown.
 # TransportConfig: Hold transport and loopback/default endpoint configuration.
 # BearerAuthMiddleware: Compare bearer token and optional static tenant identity.
-# ToolErrorRedactionMiddleware: Redact credentials FastMCP leaves in an unexpected ToolError.
+# ToolErrorRedactionMiddleware: Redact all ToolErrors and enrich connector errors with the next call.
+# _error_source: Resolve the provider/alias or the requested tool's registry source.
+# _error_pacing_floor: Read live pacer values through registry paths without importing a connector.
+# install_tool_error_middleware: Install the shared boundary for serving and in-memory fixtures.
 # _parse_transport: Reject unsupported transport names; blank defaults to stdio.
 # _parse_port: Validate configured TCP port bounds.
 # _parse_host: Trim the bind host or select loopback.
@@ -42,11 +45,13 @@ Two rules this module exists to enforce, both protocol- or security-critical:
 
 from __future__ import annotations
 
+import json
 import logging
+import math
 import os
 import secrets
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
@@ -56,8 +61,10 @@ from fastmcp.server.dependencies import get_context, get_http_request
 from fastmcp.server.middleware import Middleware
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
+from mcp_core.errors import ErrorCode, error_next_step
 from mcp_core.logging import log_event
 from mcp_core.redact import redact_error_text
+from mcp_core.sources import ALIASES, BY_NAME, SOURCES, SourceSpec
 
 if TYPE_CHECKING:
     from fastmcp import Context, FastMCP
@@ -190,9 +197,10 @@ class ToolErrorRedactionMiddleware(Middleware):
     ``ValueError`` carrying a proxy URL or a token reaches the client before any
     connector code can redact it. This is the one place that closes the hole for
     every server and every transport. Errors this project raises itself go
-    through ``raise_tool_error``, which already redacts, so their text does not
-    change under the same rules and they pass through untouched
-    (R-SECRET-REDACTION).
+    through ``raise_tool_error``, which already redacts. Their existing fields
+    remain unchanged, while this boundary adds the requested tool name, a pure
+    next-call sentence and a missing retry delay (R-ERROR-NEXT-STEP). New strings
+    are redacted too (R-SECRET-REDACTION).
     """
 
     async def on_call_tool(self, context, call_next):
@@ -206,11 +214,89 @@ class ToolErrorRedactionMiddleware(Middleware):
             # text's own length can cut it, because a secret shorter than
             # "<redacted>" grows the text.
             redacted = redact_error_text(text, max_len=sys.maxsize)
+            try:
+                payload = json.loads(text)
+            except (ValueError, TypeError):
+                payload = None
+            if (
+                isinstance(payload, dict)
+                and isinstance(payload.get("error"), str)
+                and payload.get("error") in {code.value for code in ErrorCode}
+                and isinstance(payload.get("message"), str)
+                and isinstance(payload.get("retryable"), bool)
+                and context is not None
+            ):
+                name = context.message.name
+                source = _error_source(payload.get("provider"), name)
+                if (
+                    payload["error"] in ("rate_limited", "timeout", "transport_down")
+                    and payload.get("retry_after_s") is None
+                ):
+                    payload["retry_after_s"] = _error_pacing_floor(source)
+                server = context.fastmcp_context.fastmcp if context.fastmcp_context else None
+                tool = await server.get_tool(name) if server else None
+                parameters = tuple(tool.parameters.get("properties", {})) if tool else ()
+                # Only a tool this server lists may be named: a standalone server
+                # has neither compare_prices nor marketplace_health.
+                wanted = {"compare_prices", "marketplace_health", source.listing_tool if source else None} - {None}
+                available = {item for item in wanted if server and await server.get_tool(item) is not None}
+                payload["tool"] = name
+                payload["next_step"] = error_next_step(
+                    ErrorCode(payload["error"]),
+                    name,
+                    payload,
+                    source=source,
+                    parameters=parameters,
+                    available=available,
+                )
+                # Keep this boundary unbounded, like the original redaction:
+                # a long refusal must not lose the next_step's no-retry tail.
+                redacted = redact_error_text(json.dumps(payload, ensure_ascii=False), max_len=sys.maxsize)
             if redacted == text:
                 raise
             # __cause__ keeps the original ToolError for a traceback; only the
             # text the client reads changes.
             raise ToolError(redacted) from exc
+
+
+# START_BLOCK_ERROR_RECOVERY
+
+
+def _error_source(provider: str | None, tool: str) -> SourceSpec | None:
+    """Prefer a known error provider; missing/transport providers use the tool prefix."""
+    canonical = ALIASES.get(provider or "", provider or "")
+    source = BY_NAME.get(canonical)
+    return source or next((spec for spec in SOURCES if spec.tool_prefix and tool.startswith(spec.tool_prefix)), None)
+
+
+def _error_pacing_floor(source: SourceSpec | None) -> float:
+    """Read a live source pacer, never import it; profile/unknown transport floor is 3s.
+
+    Registry paths include both WB tiers, so a retry cannot undercut a possible
+    DOM fallback. Source modules are already loaded whenever their tools run;
+    reading them also respects .env configuration and call-time retuning.
+    """
+    floors: list[float] = []
+    if source is not None:
+        module = sys.modules.get(source.module)
+        for path in source.pacing_floor_paths:
+            value = module
+            for attribute in path.split("."):
+                value = getattr(value, attribute, None)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+                floors.append(float(value))
+    return max(floors) if floors else 3.0
+
+
+def install_tool_error_middleware(mcp: FastMCP) -> None:
+    """Install the one shared outgoing error boundary before serving any transport."""
+    installed = getattr(mcp, "middleware", None)
+    if isinstance(installed, Sequence) and any(isinstance(item, ToolErrorRedactionMiddleware) for item in installed):
+        return
+    mcp.add_middleware(ToolErrorRedactionMiddleware())
+
+
+# END_BLOCK_ERROR_RECOVERY
 
 
 def _parse_transport(raw: str | None) -> Transport:
@@ -307,7 +393,7 @@ def run_server(mcp: FastMCP, *, server_name: str) -> int:
     # Installed before anything can run, on every transport: this is the only
     # boundary that sees the ToolError FastMCP builds from an unexpected
     # exception, which carries the raw exception text (R-SECRET-REDACTION).
-    mcp.add_middleware(ToolErrorRedactionMiddleware())
+    install_tool_error_middleware(mcp)
 
     try:
         if config.is_http:

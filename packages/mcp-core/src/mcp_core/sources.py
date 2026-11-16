@@ -30,7 +30,7 @@ shipping.
 #        no imports of connectors and no changes to source selection or public types.
 # DEPENDS: stdlib dataclasses,os,typing.
 # LINKS: M-SOURCES; M-SOURCE-SELECTION; M-CAPABILITIES; M-UNBLOCK; M-MARKETPLACE; M-COMPARE;
-#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING.
+#        R-COMPARE-SOURCE-SELECTION.descriptions; R-MARKETPLACE-PRICE-WORDING; R-ERROR-NEXT-STEP.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # SourceSpec: One shipped server's identity, wiring and access facts.
@@ -121,6 +121,14 @@ class SourceSpec:
     selfcheck: str | None = None
     card_tool: str | None = None
     tools: int = 0
+    # Error recovery reads these attributes of the already-loaded source module;
+    # mcp_core never imports a connector or copies its configurable pacing value.
+    pacing_floor_paths: tuple[str, ...] = ("_min_gap",)
+    listing_tool: str | None = None
+    auth_setting: str | None = None
+    # False where a rate limit is the source's policy rather than a pause to wait
+    # out (Citilink's 429, #249): the error's next step says not to retry.
+    retry_rate_limit: bool = True
     # Access metadata, present for kind="marketplace" only.
     access: str = ""
     # The browser is unavoidable for this source: it cannot answer without it.
@@ -143,6 +151,8 @@ class SourceSpec:
 SOURCES: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="wildberries",
+        listing_tool="wb_search",
+        pacing_floor_paths=("_min_gap", "_settings.dom_min_gap"),
         aliases=("wb",),
         package="wb-connector",
         module="wb_connector.server",
@@ -163,6 +173,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="ozon",
+        listing_tool="ozon_search",
         package="ozon-connector",
         module="ozon_connector.server",
         console_script="ozon-mcp",
@@ -182,6 +193,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="yandex_market",
+        listing_tool="yandex_search",
+        pacing_floor_paths=("_limiter.min_gap_s",),
         aliases=("yandex", "ym"),
         package="yandex-connector",
         module="yandex_connector.server",
@@ -199,6 +212,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="detsky_mir",
+        listing_tool="detmir_category",
+        pacing_floor_paths=("_limiter.min_gap_s",),
         aliases=("detmir",),
         package="detmir-connector",
         module="detmir_connector.server",
@@ -216,6 +231,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="avito",
+        listing_tool="avito_search",
         package="avito-connector",
         module="avito_connector.server",
         console_script="avito-mcp",
@@ -235,6 +251,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="taobao",
+        listing_tool="taobao_search",
         package="taobao-connector",
         module="taobao_connector.server",
         console_script="taobao-mcp",
@@ -260,6 +277,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="megamarket",
+        listing_tool="megamarket_search",
         package="megamarket-connector",
         module="megamarket_connector.server",
         console_script="megamarket-mcp",
@@ -283,6 +301,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="lamoda",
+        listing_tool="lamoda_search",
         package="lamoda-connector",
         module="lamoda_connector.server",
         console_script="lamoda-mcp",
@@ -302,6 +321,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="dns",
+        listing_tool="dns_search",
         package="dns-connector",
         module="dns_connector.server",
         console_script="dns-mcp",
@@ -322,6 +342,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="citilink",
+        listing_tool="citilink_search",
+        retry_rate_limit=False,
         package="citilink-connector",
         module="citilink_connector.server",
         console_script="citilink-mcp",
@@ -342,6 +364,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="aliexpress",
+        listing_tool="aliexpress_search",
         aliases=("ali",),
         package="aliexpress-connector",
         module="aliexpress_connector.server",
@@ -362,6 +385,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="cian",
+        listing_tool="cian_search",
         package="cian-connector",
         module="cian_connector.server",
         console_script="cian-mcp",
@@ -395,6 +419,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         name="mpstats",
+        auth_setting="MPSTATS_MP_AUTH",
         package="mpstats-connector",
         module="mpstats_connector.server",
         console_script="mpstats-mcp",

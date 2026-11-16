@@ -5,7 +5,8 @@ FastMCP answers any non-FastMCP exception a tool raises with
 text. A proxy URL or a token in that text would reach the client unredacted,
 because such an exception never passes through ``raise_tool_error``. The
 middleware is the one place that catches it — and it must leave an error this
-project raised itself, which is already redacted JSON, byte-identical.
+project raised itself, which is already redacted JSON, unchanged apart from the
+new shared tool/next_step guidance.
 
 Everything here is offline and in-memory: a real FastMCP server plus the
 in-memory client, and a recording stand-in for the transport launch.
@@ -63,7 +64,7 @@ async def test_unexpected_exception_reaches_the_client_redacted(monkeypatch):
 @pytest.mark.req("R-SECRET-REDACTION")
 async def test_json_tool_error_from_raise_tool_error_passes_through(monkeypatch):
     """An error the project raised itself is already redacted JSON, so the
-    boundary must hand it to the agent byte-identical."""
+    boundary must preserve its fields while adding the requested next-call guidance."""
     monkeypatch.setenv(runtime.ENV_HTTP_AUTH_TOKEN, TOKEN)
     mcp = _probe_server()
     mcp.add_middleware(runtime.ToolErrorRedactionMiddleware())
@@ -80,7 +81,10 @@ async def test_json_tool_error_from_raise_tool_error_passes_through(monkeypatch)
 
     with pytest.raises(ToolError) as expected:
         raise_tool_error(ChallengeRequiredError("challenge wall", provider="avito.ru"))
-    assert str(excinfo.value) == str(expected.value)
+    original = json.loads(str(expected.value))
+    assert {key: value for key, value in error.items() if key not in {"tool", "next_step"}} == original
+    assert error["tool"] == "challenged"
+    assert "`challenged`" in error["next_step"]
 
 
 # --- the middleware contract on its own -------------------------------------

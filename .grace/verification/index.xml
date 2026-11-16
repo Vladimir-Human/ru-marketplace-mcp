@@ -336,6 +336,18 @@
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_wb_search_positive_empty_survives_a_tool_error_fallback" requirements="R-EMPTY-NOT-SUCCESS" title="R-EMPTY-NOT-SUCCESS: the legacy path raises a plain ToolError on a" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_wb_search_positive_empty_survives_fallback_failure" requirements="R-EMPTY-NOT-SUCCESS" title="R-ITEM-HONESTY: v9's own empty list answers no_results, but the legacy" />
   </requirement>
+  <requirement id="R-ERROR-NEXT-STEP" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_every_code_and_listed_tool_names_a_next_call" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_lamoda_fixture_public_rate_limit" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_live_pacing_floor_and_registry_listing" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_old_drift_starts_with_upgrade" requirements="R-ERROR-NEXT-STEP.guidance" />
+    <test file="packages/marketplace-connector/tests/conformance/test_error_next_step.py" name="test_retry_header_and_refusal_policies" requirements="R-ERROR-NEXT-STEP.guidance,R-ERROR-NEXT-STEP.pacing" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_error_reference_describes_outgoing_fields" requirements="R-ERROR-NEXT-STEP.reference" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_installation_is_shared_and_idempotent" requirements="R-ERROR-NEXT-STEP.boundary" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_metadata_and_new_guidance_are_redacted" requirements="R-ERROR-NEXT-STEP.boundary,R-ERROR-NEXT-STEP.guidance" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_non_connector_json_stays_non_connector" requirements="R-ERROR-NEXT-STEP.boundary" />
+    <test file="packages/mcp-core/tests/test_error_next_step.py" name="test_schema_names_bad_url_parameter" requirements="R-ERROR-NEXT-STEP.guidance" />
+  </requirement>
   <requirement id="R-ERROR-PASSTHROUGH" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_connector_error_passthrough.py" name="test_a_busy_handoff_keeps_its_status_and_retry_delay" requirements="R-ERROR-PASSTHROUGH" title="409 and the delay are what the caller acts on: they must survive." />
     <test file="packages/compare-connector/tests/test_connector_error_passthrough.py" name="test_compare_keeps_the_busy_delay_of_a_source" requirements="R-ERROR-PASSTHROUGH" title="Through compare, the machine fields reach the outcome as well." />
