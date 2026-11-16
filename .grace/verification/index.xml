@@ -268,6 +268,14 @@
     <test file="packages/compare-connector/tests/test_server.py" name="test_foreign_source_detail_handles_missing_and_mixed_native_prices" requirements="R-COMPARE-FOREIGN-DETAIL" title="R-COMPARE-FOREIGN-DETAIL: count present native prices and sort their codes." />
     <test file="packages/compare-connector/tests/test_server.py" name="test_rouble_source_detail_still_counts_only_rouble_prices" requirements="R-COMPARE-FOREIGN-DETAIL" title="R-COMPARE-FOREIGN-DETAIL: missing RUB prices do not change the old detail." />
   </requirement>
+  <requirement id="R-COMPARE-IMAGE-URL" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_a_lazy_load_placeholder_is_not_an_image_url" requirements="R-COMPARE-IMAGE-URL" title="R-COMPARE-IMAGE-URL: the connector's own search item keeps only an http(s) or scheme-relative URL." />
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_fixture_image_reaches_compare_offer" requirements="R-COMPARE-IMAGE-URL" />
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_image_url_is_additive_and_empty_by_default" requirements="R-COMPARE-IMAGE-URL" />
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_malformed_image_payload_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
+    <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
+  </requirement>
   <requirement id="R-COMPARE-RELEVANCE-BOUNDARIES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE,G-COMPARE-RELEVANCE-GATES">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
     <test file="packages/compare-connector/tests/test_relevance_markers.py" name="test_compare_mcp_relevance_markers" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-RELEVANCE-BOUNDARIES: no false drops; real unrequested markers still drop." />

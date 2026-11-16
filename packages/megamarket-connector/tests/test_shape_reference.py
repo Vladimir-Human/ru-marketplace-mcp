@@ -52,8 +52,9 @@ def test_live_search_normalization_matches_shape_golden() -> None:
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
     items, total, container_found = server._parse_items(payload)
 
-    assert shape_signature({"items": items, "total": total, "container_found": container_found}) == list(
-        shape_reference.SEARCH_SHAPE_REFERENCE
+    # The runtime reference still pins parser-critical keys; image_url is optional.
+    assert shape_signature({"items": items, "total": total, "container_found": container_found}) == sorted(
+        [*shape_reference.SEARCH_SHAPE_REFERENCE, "items[].image_url:str"]
     )
 
 

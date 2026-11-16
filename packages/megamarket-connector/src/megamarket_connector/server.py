@@ -802,7 +802,6 @@ def _parse_items(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int | N
         payload.get("data", {}).get("items") if isinstance(payload.get("data"), dict) else None,
     )
     container = next((c for c in candidates if isinstance(c, list)), None)
-    container_found = container is not None
     items_raw = container if container is not None else []
     total = R.first_present(payload, "total", "totalCount", "count")
     if not isinstance(total, int):
@@ -834,10 +833,11 @@ def _parse_items(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int | N
                 "rating": R.coerce_rating(pick("rating", "ratingScore")),
                 "rating_count": R.coerce_int(pick("reviewCount", "reviewsCount", "ratingCount")),
                 "url": pick("webUrl", "url", "link"),
+                "image_url": goods.get("titleImage") if isinstance(goods.get("titleImage"), str) else "",
                 "is_available": available if isinstance(available, bool) else None,
             }
         )
-    return out, total, container_found
+    return out, total, container is not None
 
 
 @mcp.tool(

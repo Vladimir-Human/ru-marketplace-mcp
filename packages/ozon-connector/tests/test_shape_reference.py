@@ -55,7 +55,10 @@ def test_live_composer_normalization_matches_shape_golden() -> None:
     payload = _load()
     items = server._search_items_from_payload(payload)
 
-    assert shape_signature({"items": items}) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
+    # The runtime reference still pins parser-critical keys; image_url is optional.
+    assert shape_signature({"items": items}) == sorted(
+        [*shape_reference.SEARCH_SHAPE_REFERENCE, "items[].image_url:str"]
+    )
 
 
 @pytest.mark.req("R-SHAPE-DRIFT-WARNING")

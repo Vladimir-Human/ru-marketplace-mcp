@@ -1209,7 +1209,6 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
     out: dict[str, Any] = {}
     if isinstance(raw_sku, (str, int)) and not isinstance(raw_sku, bool):
         out["sku"] = raw_sku
-
     action = item.get("action") or {}
     link = action.get("link") if isinstance(action, dict) else None
     if isinstance(link, str) and link:
@@ -1219,7 +1218,11 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
             out["url"] = url
             out["canonical_path"] = canonical
             out["card_input"] = canonical
-
+    tile_image = item.get("tileImage")
+    images = tile_image.get("items") if isinstance(tile_image, dict) else None
+    first = images[0] if isinstance(images, list) and images else None
+    image = first.get("image") if isinstance(first, dict) and first.get("type") == "image" else None
+    out["image_url"] = image.get("link") if isinstance(image, dict) and isinstance(image.get("link"), str) else ""
     main_state = item.get("mainState") or []
     if not isinstance(main_state, list):
         main_state = []
@@ -1313,7 +1316,6 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
                 # The old отзыв/parens filter discarded supported counters (#226).
                 elif rating_count is None:
                     rating_count = R.coerce_count(txt)
-
     out["title"] = title
     out["price"] = price_text
     out["price_original"] = price_original_text
@@ -1413,7 +1415,6 @@ def _search_items_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
     widgets = payload.get("widgetStates") or {}
-
     # Nov 2026 schema: tileGridDesktop-* contains items array of product tiles.
     for key, val in widgets.items():
         if not key.startswith("tileGridDesktop-"):
@@ -1443,7 +1444,6 @@ def _search_items_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 continue  # skip non-product tiles (banners, ads)
             seen.add(sku_key)
             items.append(parsed)
-
     return items
 
 

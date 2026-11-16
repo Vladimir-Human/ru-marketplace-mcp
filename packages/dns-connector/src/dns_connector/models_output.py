@@ -1,9 +1,9 @@
 """Pydantic output models for the DNS-Shop MCP connector."""
 # START_MODULE_CONTRACT
 # PURPOSE: Describe DNS-Shop outputs and qualify shown old prices without claiming verified history.
-# SCOPE: Schema descriptions only; preserve field types, defaults, aliases and serialization.
+# SCOPE: Additive optional search image URL; preserve all existing field types, defaults, aliases and serialization.
 # DEPENDS: mcp_core.models/sources; Pydantic.
-# LINKS: M-DNS; M-SOURCES; R-MARKETPLACE-PRICE-WORDING.
+# LINKS: M-DNS; M-SOURCES; R-MARKETPLACE-PRICE-WORDING; R-COMPARE-IMAGE-URL.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # DnsSearchItemOut/DnsSearchResponse: Describe native search items and their envelope.
@@ -31,6 +31,7 @@ class DnsSearchItemOut(BaseModel):
         default=None, description=f"Strikethrough price in rubles — {MARKETPLACE_PRICE_WORDING}."
     )
     url: str | None = Field(default=None, description="Canonical product URL.")
+    image_url: str = Field(default="", description="Primary product image URL already present on the search tile.")
 
 
 class DnsSearchResponse(BaseModel):

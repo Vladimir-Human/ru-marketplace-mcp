@@ -11,7 +11,7 @@ check before drawing conclusions.
 #        describe comparison sources from the registry without changing field types or behavior.
 # DEPENDS: Pydantic; compare_connector.identity; mcp_core.sources.
 # LINKS: M-COMPARE; M-SOURCES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
-#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions.
+#        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions; R-COMPARE-IMAGE-URL.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
@@ -21,8 +21,11 @@ check before drawing conclusions.
 
 from __future__ import annotations
 
+import re
+from urllib.parse import parse_qsl, urlsplit
+
 from mcp_core.sources import COMPARE_SOURCE_NAMES
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from compare_connector.identity import OfferEvidence, ProductIdentity
 
@@ -73,6 +76,10 @@ class MarketOffer(BaseModel):
     rating_count: int | None = Field(default=None, description="Number of ratings or reviews behind that average.")
     in_stock: bool | None = Field(default=None, description="Stock status, when the marketplace reports it.")
     url: str = Field(default="", description="Direct product URL.")
+    image_url: str = Field(
+        default="",
+        description="Product image URL from the existing search data; empty when unknown, signed or expiring. No image fetch.",
+    )
     identity: ProductIdentity = Field(
         default_factory=ProductIdentity,
         description="Manufacturer and variant identity evidence; empty means identity is unknown.",
@@ -81,6 +88,26 @@ class MarketOffer(BaseModel):
         default=None,
         description="Optional provenance for the native offer and its identity evidence.",
     )
+
+    @field_validator("image_url", mode="before")
+    @classmethod
+    def _search_image_url(cls, value: object) -> str:
+        """R-COMPARE-IMAGE-URL: preserve unsigned HTTP(S) URLs; never resolve a relative path."""
+        if not isinstance(value, str) or not value or re.search(r"[\s\\]", value):
+            return ""
+        url = "https:" + value if value.startswith("//") else value
+        try:
+            parts = urlsplit(url)
+            if parts.scheme not in {"http", "https"} or not parts.hostname or parts.username or parts.password:
+                return ""
+            if any(
+                re.search(r"sig|token|expir|^(?:exp|auth|policy|credential|key-pair-id)$", key, re.IGNORECASE)
+                for key, _ in parse_qsl(parts.query, keep_blank_values=True)
+            ):
+                return ""
+        except ValueError:
+            return ""
+        return url
 
     @model_validator(mode="after")
     def _mirror_rouble_price_into_native(self) -> MarketOffer:
