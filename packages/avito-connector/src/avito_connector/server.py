@@ -419,13 +419,9 @@ class _ItemPageHTML(HTMLParser):
 def _offer_item_id(product: dict[str, Any]) -> int | None:
     """The item id in the canonical URL the page records for this Product.
 
-    Avito redirects /<id> to the canonical item page, and that page's own
-    schema.org offer carries the URL it ended up at. The canonical path ends
-    in the id — the slug before it may have two segments
-    (/moskva/noutbuki/noutbuk_4612345678) or one (/moskva/noutbuk_4612345678) —
-    so the id is the numeric tail of the last segment. A Product with no offer
-    URL, or one whose URL carries no id, answers None: the caller must then
-    treat the page as unproven rather than as the requested item.
+    Avito redirects /<id> to the canonical item page, whose schema.org offer
+    carries that URL; its last segment ends in the id (…/noutbuk_4612345678).
+    No offer URL, or no id in it, answers None: the page is then unproven.
     """
     offers = product.get("offers")
     if isinstance(offers, list):
