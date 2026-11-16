@@ -3,11 +3,11 @@
 START_MODULE_CONTRACT
 PURPOSE: Plan and run P1-4 through budgeted full-profile MCP stdio; retain private evidence.
 SCOPE: Pure A/B/C plans, child-hook refusal, sequential ledger guards, owned raw-CDP captures,
-       schema/catalogue/guide/PII/host checks, compare timing and offline cycle summary.
+       schema/catalogue/guide/PII/host checks, compare timing, compare recordings and offline cycle summary.
 DEPENDS: live_matrix helpers (costs, items, ids, history); live_budget; e2e_stdio_check client;
-         mcp_core.sources,resources,transport.chrome_cdp; jsonschema; stdlib.
-LINKS: M-LIVE-AUDIT, R-LIVE-AUDIT.child, R-LIVE-AUDIT.plans, R-LIVE-AUDIT.capture,
-       R-LIVE-AUDIT.checks, R-LIVE-AUDIT.timing, R-LIVE-AUDIT.runner.
+         compare_recording (the compare recorder); mcp_core.sources,resources,transport.chrome_cdp; jsonschema; stdlib.
+LINKS: M-LIVE-AUDIT, M-COMPARE-RECORDING, R-LIVE-AUDIT.child, R-LIVE-AUDIT.plans, R-LIVE-AUDIT.capture,
+       R-LIVE-AUDIT.checks, R-LIVE-AUDIT.timing, R-LIVE-AUDIT.runner, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   load_cases: Read audit additions while reusing matrix fixed-query validation.
   plan_run: Pure cost-aware run slice with unresolved compare-winner slots.
@@ -15,6 +15,7 @@ START_MODULE_MAP
   json_ld_evidence/capture_card: Product/Offer evidence and two raw-CDP PNGs with owned-tab cleanup.
   check_answer: Output schema, served error catalogue, guide, personal fields and URL host checks.
   compare_trigger: Eight-call cycle timing threshold, with explicit incomplete status.
+  _record_comparison: One recording per compare call, from the sources the child captured.
   execute_plan: One call at a time, guard every resolved source, checkpoint private JSON and ids.
   select_options/run/summary: CLI validation, live runner and request-free T3 skeleton.
 END_MODULE_MAP
@@ -40,6 +41,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+import compare_recording
 import live_budget
 import live_matrix
 
@@ -259,7 +261,7 @@ def plan_run(
 # START_BLOCK_CHILD_SESSION
 
 
-def child_environment(ledger: Path, marker: Path, nonce: str) -> dict[str, str]:
+def child_environment(ledger: Path, marker: Path, nonce: str, capture_dir: Path | None = None) -> dict[str, str]:
     env = dict(os.environ)
     env.update(
         LIVE_BUDGET_LEDGER=str(ledger.resolve()),
@@ -269,6 +271,10 @@ def child_environment(ledger: Path, marker: Path, nonce: str) -> dict[str, str]:
         MARKETPLACE_SOURCES="",
         CHROME_CHALLENGE_HANDOFF_S="0",
     )
+    if capture_dir is not None:
+        # The child writes what the compare adapters read into this directory;
+        # the parent turns it into one recording per compare call.
+        env["COMPARE_CAPTURE_DIR"] = str(capture_dir.resolve())
     return env
 
 
@@ -288,7 +294,7 @@ def require_hook(marker: Path, ledger: Path, nonce: str) -> None:
 
 @contextlib.asynccontextmanager
 async def open_session(
-    budget: live_budget.Budget, directory: Path, *, target: Path | None = None
+    budget: live_budget.Budget, directory: Path, *, target: Path | None = None, capture_dir: Path | None = None
 ) -> AsyncIterator[Any]:
     # Same actual SDK client/initialize protocol as the existing stdio probe.
     from e2e_stdio_check import TIMEOUT_S, ClientSession, StdioServerParameters, stdio_client
@@ -298,11 +304,16 @@ async def open_session(
     directory.mkdir(parents=True, exist_ok=True)
     marker = directory / ("hook-" + uuid.uuid4().hex + ".json")
     nonce = uuid.uuid4().hex
-    args = [str(Path(__file__).with_name("audit_server.py"))]
+    server = Path(__file__).with_name("audit_server.py")
+    args = [str(server)]
     if target is not None:
         args.extend(["--target", str(target)])
+    if capture_dir is not None:
+        # The recorder wraps the search tools before the server starts, so the
+        # comparison the audit measures is the comparison that gets recorded.
+        args = [str(Path(__file__).with_name("compare_recording.py")), "--serve", *args]
     params = StdioServerParameters(
-        command=sys.executable, args=args, env=child_environment(budget.ledger.path, marker, nonce)
+        command=sys.executable, args=args, env=child_environment(budget.ledger.path, marker, nonce, capture_dir)
     )
 
     class AuditSession(ClientSession):
@@ -837,6 +848,49 @@ def _observe_costs(
         measured[(source, kind)] = row["requests"]
 
 
+def _capture_names(capture_dir: Path) -> set[str]:
+    """The capture files the child has written so far."""
+    return {path.name for path in capture_dir.glob("*.json")} if capture_dir.is_dir() else set()
+
+
+def _record_comparison(
+    call: dict[str, Any],
+    capture_dir: Path,
+    before: set[str],
+    row: dict[str, Any],
+    record_dir: Path,
+    prefix: str,
+) -> Path | None:
+    """Write one recording for a compare call, from the sources the child captured.
+
+    The child wrote what each adapter received; this turns those captures and
+    the compare outcome into one recording file. A source that never answered
+    is taken from the outcome, so the replay reproduces the same partial
+    answer. The capture files are removed afterwards: they still hold the
+    unscrubbed regions.
+    """
+    captures: list[dict[str, Any]] = []
+    for path in sorted(capture_dir.glob("*.json")):
+        if path.name in before:
+            continue
+        try:
+            captures.append(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+        path.unlink(missing_ok=True)
+    if not captures:
+        return None
+    result = row.get("result")
+    outcomes = result.get("source_outcomes") if isinstance(result, dict) else []
+    document = compare_recording.assemble_recording(
+        str(call["args"].get("query", "")), compare_recording.now(), captures, outcomes
+    )
+    stem = f"compare-{prefix}{call['key'].replace(':', '-')}"
+    path = compare_recording.write_recording(record_dir, stem, document)
+    print(f"recording: {stem} written; {len(captures)} source(s)")
+    return path
+
+
 async def execute_plan(
     plan: list[dict[str, Any]],
     session: Any,
@@ -847,6 +901,9 @@ async def execute_plan(
     *,
     previous: list[dict[str, Any]] | None = None,
     costs: dict[tuple[str, str], int] | None = None,
+    record_dir: Path | None = None,
+    capture_dir: Path | None = None,
+    record_prefix: str = "",
 ) -> list[dict[str, Any]]:
     """Sequential I/O shell; forecast and actual spending always come from shared ledger.
 
@@ -884,6 +941,11 @@ async def execute_plan(
         if reason is None and not _allowed(budget, call["costs"]):
             reason = "budget_skipped"
         row = _record(call, reason)
+        captures_before = (
+            _capture_names(capture_dir)
+            if capture_dir is not None and record_dir is not None and call["kind"] == "compare"
+            else None
+        )
         if reason is None:
             if call["kind"] == "compare":
                 with _quiet_diagnostics():
@@ -916,6 +978,8 @@ async def execute_plan(
             row["requests_by_source"] = dict(Counter(entry.get("group") for entry in budget.ledger.load()[before:]))
             _observe_costs(call, row, cases, measured)
             _pause_from(row, paused)
+            if captures_before is not None and capture_dir is not None and record_dir is not None:
+                _record_comparison(call, capture_dir, captures_before, row, record_dir, record_prefix)
             if row.get("result") is not None:
                 context[call["tool"]] = row["result"]
             if call["kind"] == "listing":
@@ -957,11 +1021,22 @@ def select_options(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--run", type=int)
     parser.add_argument("--cycle", type=int, default=1)
     parser.add_argument("--summary", action="store_true")
+    parser.add_argument(
+        "--record",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "write one recording per compare call into DIR (phase C only); keep DIR outside the "
+            "repository, or in the gitignored .live-recordings/"
+        ),
+    )
     args = parser.parse_args(argv)
     if (
         args.cycle < 1
-        or (args.summary and (args.phase or args.run is not None))
+        or (args.summary and (args.phase or args.run is not None or args.record is not None))
         or (not args.summary and (args.phase is None or args.run is None))
+        or (args.record is not None and args.phase != "C")
+        or (args.record is not None and not _private_record_dir(args.record))
     ):
         raise ValueError("invalid audit options")
     if not args.summary:
@@ -1009,6 +1084,14 @@ def _cost_table(cases: dict[str, Any], previous: list[dict[str, Any]]) -> dict[t
     return costs
 
 
+def _private_record_dir(path: Path) -> bool:
+    """A recording is private material: DIR is outside the repository or under the ignored .live-recordings/."""
+    resolved = path.resolve()
+    root = REPO_ROOT.resolve()
+    outside = resolved != root and root not in resolved.parents
+    return outside or (root / ".live-recordings") in (resolved, *resolved.parents)
+
+
 async def run(argv: list[str], budget: live_budget.Budget) -> int:
     args = select_options(argv)
     if args.summary:
@@ -1017,6 +1100,7 @@ async def run(argv: list[str], budget: live_budget.Budget) -> int:
     directory = REPO_ROOT / ".live-audit" / str(args.cycle) / f"{args.phase}{args.run}"
     if (directory / "audit.json").exists():
         raise ValueError("audit run already recorded; use a new run/cycle, do not overwrite evidence")
+    capture_dir = (directory / "captures") if args.record is not None else None
     previous = _cycle_records(args.cycle)
     costs = _cost_table(cases, previous)
     plan = plan_run(
@@ -1028,8 +1112,20 @@ async def run(argv: list[str], budget: live_budget.Budget) -> int:
         cycle=args.cycle,
         guard=(min(GUARD[0], budget.total), min(GUARD[1], budget.per_source)),
     )
-    async with open_session(budget, directory) as session:
-        rows = await execute_plan(plan, session, budget, cases, directory, args.phase, previous=previous, costs=costs)
+    async with open_session(budget, directory, capture_dir=capture_dir) as session:
+        rows = await execute_plan(
+            plan,
+            session,
+            budget,
+            cases,
+            directory,
+            args.phase,
+            previous=previous,
+            costs=costs,
+            record_dir=args.record,
+            capture_dir=capture_dir,
+            record_prefix=f"c{args.cycle}-",
+        )
     if args.phase == "C":
         summary(args.cycle)
     return 3 if rows and all(row.get("error_code") == "budget_skipped" for row in rows) else 0

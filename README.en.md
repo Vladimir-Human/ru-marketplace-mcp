@@ -72,6 +72,8 @@ MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
 unified `marketplace-mcp` does not mount its tools at all — they would only
 answer `auth_missing` — so it is optional; the other thirteen servers never
 notice. The standalone `mpstats-mcp` still boots and answers `auth_missing`.
+MPStats now runs its own MCP server, `https://mcp.mpstats.io/mcp?token=<your MPStats token>`:
+connect that one first. The `mpstats_*` tools here are deprecated and go in v2.11.0.
 
 39 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds two
