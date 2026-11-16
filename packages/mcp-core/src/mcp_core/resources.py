@@ -536,7 +536,11 @@ MegamarketSearchResponse; serialized fields and aliases are generated below. pri
 
 ToolError: TransportDownError on ServicePipe refusals (with the fix inline);
 ParserDriftError when a reached-200 body no longer parses.""",
-    "mpstats_item": """## Return Format
+    "mpstats_item": """Deprecated: MPStats runs its own MCP server,
+https://mcp.mpstats.io/mcp?token=<your MPStats token>; use it first. This tool
+goes in v2.11.0, and every result carries info:deprecated_use_official_mpstats_mcp.
+
+## Return Format
 
 MpStatsItemResponse; serialized fields and aliases are generated below. The *_graph series are per-day data, oldest-first.
 price_avg_rub is rubles; totals.sum and totals.sum_prev are sales amounts. Missing
@@ -554,7 +558,11 @@ Args:
     skus: 1..100 positive SKU integers.
     place: 'ozon' or 'wildberries'.
     oz_fbs: Ozon FBS mode flag (default true).""",
-    "mpstats_warehouses": """## Return Format
+    "mpstats_warehouses": """Deprecated: MPStats runs its own MCP server,
+https://mcp.mpstats.io/mcp?token=<your MPStats token>; use it first. This tool
+goes in v2.11.0, and every result carries info:deprecated_use_official_mpstats_mcp.
+
+## Return Format
 
 MpStatsWarehousesResponse; serialized fields and aliases are generated below. Each item carries its native stocks block. Missing
 stock counts are None, never 0.

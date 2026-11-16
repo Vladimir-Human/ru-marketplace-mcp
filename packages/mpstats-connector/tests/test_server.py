@@ -311,7 +311,7 @@ async def test_item_happy_path(monkeypatch):
     assert resp.items[0].price_avg_rub == 4062.0
     assert resp.items[0].stock_now == 500
     assert resp.meta.healthy is True
-    assert resp.meta.warnings == []
+    assert resp.meta.warnings == [server.OFFICIAL_MCP_NOTE]
 
 
 @pytest.mark.asyncio

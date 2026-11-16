@@ -143,6 +143,12 @@ PLACES = frozenset(get_args(Place))
 # endpoint has not been verified and the politeness argument against bulk also
 # grows, so the cap is enforced client-side AND advertised in the schema.
 MAX_SKUS = 100
+# P1-8: MPStats serves its own MCP; every result says so until the tools go in v2.11.0.
+OFFICIAL_MCP_NOTE = (
+    "info:deprecated_use_official_mpstats_mcp: MPStats runs its own MCP server at "
+    "https://mcp.mpstats.io/mcp?token=<your MPStats token>; the mpstats_* tools here are deprecated "
+    "and go in v2.11.0"
+)
 # A SKU is a positive integer; the schema says so, so an invalid batch is
 # refused before the request instead of after it.
 Sku = Annotated[int, Field(gt=0)]
@@ -628,6 +634,9 @@ async def mpstats_item(
 ) -> MpStatsItemResponse:
     """Fetch per-SKU 30-day sales analytics from MPStats (Ozon or Wildberries).
 
+    Deprecated: MPStats runs its own MCP server, ``https://mcp.mpstats.io/mcp?token=<your MPStats token>``;
+    use it first. This tool goes in v2.11.0.
+
     Returns, per SKU: seller/brand identity, current stock and price, a rolling
     orders-per-day average, aggregated totals over the window, and four
     per-day graphs (orders, prices, stock count, rubric positions). Graphs are
@@ -691,7 +700,11 @@ async def mpstats_item(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_item", healthy=not R.health_warnings(warnings), warnings=warnings),
+        meta=MetaOut(
+            source="mpstats_item",
+            healthy=not R.health_warnings(warnings),
+            warnings=[*warnings, OFFICIAL_MCP_NOTE],
+        ),
     )
 
 
@@ -723,6 +736,9 @@ async def mpstats_warehouses(
     ctx: Context | None = None,
 ) -> MpStatsWarehousesResponse:
     """Fetch per-SKU warehouse stock split from MPStats (Ozon or Wildberries).
+
+    Deprecated: MPStats runs its own MCP server, ``https://mcp.mpstats.io/mcp?token=<your MPStats token>``;
+    use it first. This tool goes in v2.11.0.
 
     Returns, per SKU: FBS (seller warehouse) stock count, total FBO (marketplace
     warehouse) stock count, the raw per-warehouse FBO entries when MPStats
@@ -783,7 +799,11 @@ async def mpstats_warehouses(
         days=days,
         count=len(items),
         items=items,
-        meta=MetaOut(source="mpstats_warehouses", healthy=not R.health_warnings(warnings), warnings=warnings),
+        meta=MetaOut(
+            source="mpstats_warehouses",
+            healthy=not R.health_warnings(warnings),
+            warnings=[*warnings, OFFICIAL_MCP_NOTE],
+        ),
     )
 
 
