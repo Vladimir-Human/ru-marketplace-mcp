@@ -81,6 +81,7 @@ async def test_search_a_pricelss_tile_is_none_never_zero(monkeypatch):
     assert result.items[1].price_rub != 0
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_vanishes(monkeypatch):
     """Tiles that still parse without a parser-critical key are structural
     drift the agent must see in the tool's own response, not only via doctor."""

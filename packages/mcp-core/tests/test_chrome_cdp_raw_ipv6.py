@@ -96,6 +96,7 @@ async def _capture_page_url(monkeypatch, host: str, port: int = 9222) -> tuple[s
     return urls[-1], socket.methods
 
 
+@pytest.mark.req("R-CDP-IPV6-NETLOC")
 @pytest.mark.parametrize(
     ("host", "expected"),
     [
@@ -115,6 +116,7 @@ async def test_the_page_socket_url_is_built_for_the_host_we_dial(monkeypatch, ho
     assert "Target.closeTarget" in methods
 
 
+@pytest.mark.req("R-CDP-IPV6-NETLOC")
 async def test_an_ipv6_host_is_bracketed_in_the_browser_socket_too(monkeypatch):
     """One builder for both sockets: the browser URL is valid for ``::1`` too."""
     monkeypatch.setattr(chrome_cdp, "CDP_HOST", "::1")

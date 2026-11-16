@@ -36,6 +36,7 @@ def _patch_dom(monkeypatch: pytest.MonkeyPatch, pages: int) -> None:
     assert pages >= 1
 
 
+@pytest.mark.req("R-WARNING-BUDGET")
 def test_a_cut_warning_list_names_the_number_it_suppressed(monkeypatch: pytest.MonkeyPatch) -> None:
     """R18: thirteen diagnostics stay bounded and say that four were dropped."""
     _patch_dom(monkeypatch, pages=12)

@@ -43,6 +43,7 @@ def _isolated_state(monkeypatch):
 
 
 # START_BLOCK_QUERY_ENCODING
+@pytest.mark.req("R-TAOBAO-QUERY")
 @pytest.mark.parametrize(
     ("query", "encoded"),
     [("iphone 15", "iphone%2015"), ("iphone+15", "iphone%2B15")],
@@ -73,6 +74,7 @@ async def test_search_query_encoding_and_cache_key(monkeypatch, query, encoded):
 
 
 # START_BLOCK_TMALL_CARD_REFUSAL
+@pytest.mark.req("R-TAOBAO-TMALL-CARD")
 @pytest.mark.parametrize(
     "url",
     [
@@ -101,6 +103,7 @@ async def test_card_refuses_tmall_url_without_navigation(monkeypatch, url):
     assert len(server._cache) == 0
 
 
+@pytest.mark.req("R-TAOBAO-TMALL-CARD")
 @pytest.mark.parametrize(
     ("final_url", "expected_error"),
     [

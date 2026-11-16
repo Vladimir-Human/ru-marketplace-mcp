@@ -134,6 +134,7 @@ def test_the_ledger_summary_names_the_requests_the_budget_refused(
     assert lines[-1].startswith("refused before sending (over a cap): ozon 2;")
 
 
+@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
 @pytest.mark.parametrize(
     "argv",
     [
@@ -210,6 +211,7 @@ def preflight_call(tmp_path, monkeypatch, offline_playwright):
     return ["call", module.__name__, "tool", "{}"], ledger, calls
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.temp")
 def test_unwritable_temp_is_repaired_before_tool_code(preflight_call, monkeypatch, offline_playwright, capsys):
     """R-LIVE-PREFLIGHT.temp: the repo fallback takes effect before driver/tool I/O."""
     argv, ledger, calls = preflight_call
@@ -235,6 +237,7 @@ def test_unwritable_temp_is_repaired_before_tool_code(preflight_call, monkeypatc
     assert "preflight temp: fixed" in err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.temp")
 @pytest.mark.parametrize("mode", ["call", "doctor"])
 def test_failed_temp_repair_stops_before_budget(mode, preflight_call, monkeypatch, offline_playwright, capsys):
     """R-LIVE-PREFLIGHT.temp: both unwritable locations leave the ledger untouched."""
@@ -255,6 +258,7 @@ def test_failed_temp_repair_stops_before_budget(mode, preflight_call, monkeypatc
     assert ("New-Item" if sys.platform == "win32" else "mkdir -p") in err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.driver")
 def test_failed_driver_uses_system_node_before_tool(preflight_call, monkeypatch, offline_playwright, capsys, tmp_path):
     """R-LIVE-PREFLIGHT.driver: retry the real preflight with PATH's system node."""
     argv, _ledger, calls = preflight_call
@@ -268,6 +272,7 @@ def test_failed_driver_uses_system_node_before_tool(preflight_call, monkeypatch,
     assert "preflight driver: fixed" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.driver")
 def test_failed_system_driver_stops_before_budget(preflight_call, monkeypatch, offline_playwright, capsys, tmp_path):
     """R-LIVE-PREFLIGHT.driver: a failed retry is setup failure, not a spent request."""
     argv, ledger, calls = preflight_call
@@ -283,6 +288,7 @@ def test_failed_system_driver_stops_before_budget(preflight_call, monkeypatch, o
     assert "PLAYWRIGHT_NODEJS_PATH" in err and node in err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.cdp")
 @pytest.mark.parametrize("mode", ["call", "doctor"])
 def test_unreachable_cdp_stops_before_budget(mode, preflight_call, offline_playwright, capsys):
     """R-LIVE-PREFLIGHT.cdp: attach only, no autostart or connector/budget code."""
@@ -304,6 +310,7 @@ def test_unreachable_cdp_stops_before_budget(mode, preflight_call, offline_playw
 ARTIFACT_EPERM = "EPERM: operation not permitted, mkdtemp 'C:\\Temp\\playwright-artifacts-XXXXXX'"
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.cdp")
 def test_cdp_artifact_failure_moves_temp_into_the_repo_first(preflight_call, offline_playwright, capsys):
     """R-LIVE-PREFLIGHT.cdp: a writable-for-Python %TEMP% that node may not use
     (seen live 2026-11-15) is moved into the repo before any tool code runs."""
@@ -318,6 +325,7 @@ def test_cdp_artifact_failure_moves_temp_into_the_repo_first(preflight_call, off
     assert "preflight cdp: fixed; TEMP=TMP=TMPDIR=" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.cdp")
 def test_cdp_artifact_failure_then_tries_system_node(preflight_call, monkeypatch, offline_playwright, capsys, tmp_path):
     """R-LIVE-PREFLIGHT.cdp: when the repo temp alone does not help, system node is next."""
     argv, _ledger, calls = preflight_call
@@ -331,6 +339,7 @@ def test_cdp_artifact_failure_then_tries_system_node(preflight_call, monkeypatch
     assert "preflight cdp: fixed" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT.cdp")
 def test_cdp_artifact_failure_after_both_fixes_stops_before_budget(
     preflight_call, monkeypatch, offline_playwright, capsys, tmp_path
 ):

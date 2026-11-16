@@ -40,6 +40,7 @@ def _stub_citilink(monkeypatch, rows):
     monkeypatch.setitem(server.SOURCES, "citilink", SimpleNamespace(citilink_search=search))
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_query_asking_128gb_never_crowns_the_64gb_variant(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: old code makes the 64GB offer cheapest_comparable.
 
@@ -56,6 +57,7 @@ async def test_query_asking_128gb_never_crowns_the_64gb_variant(monkeypatch):
     assert "identity_mismatch: 1 offer states 64GB, query asks 128GB; not comparable" in result.warnings
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_offer_without_a_size_in_the_title_stays_comparable(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: unknown is not a contradiction.
 
@@ -70,6 +72,7 @@ async def test_offer_without_a_size_in_the_title_stays_comparable(monkeypatch):
     assert "identity_mismatch: 1 offer states 256GB, query asks 128GB; not comparable" in result.warnings
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 @pytest.mark.parametrize(
     "query,other,matching,expected_warning",
     [
@@ -102,6 +105,7 @@ async def test_ru_and_latin_units_are_one_size(monkeypatch, query, other, matchi
     assert [w for w in result.warnings if w.startswith("identity_mismatch:")] == [expected_warning]
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_several_size_mismatches_cost_one_warning(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: warnings cost tokens, so one per call, not per offer."""
     _stub_citilink(
@@ -118,6 +122,7 @@ async def test_several_size_mismatches_cost_one_warning(monkeypatch):
     assert result.cheapest_comparable.title == "ACME X100 128GB"
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_ram_and_storage_pair_is_not_excluded_by_its_ram_size(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: "8/128GB" names RAM and storage; only the asked size decides.
 
@@ -132,6 +137,7 @@ async def test_ram_and_storage_pair_is_not_excluded_by_its_ram_size(monkeypatch)
     assert "identity_mismatch: 1 offer states 64GB, query asks 128GB; not comparable" in result.warnings
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_query_without_a_size_excludes_nothing(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: a query that states no size has nothing to contradict.
 
@@ -146,6 +152,7 @@ async def test_query_without_a_size_excludes_nothing(monkeypatch):
     assert not [w for w in result.warnings if w.startswith("identity_mismatch:")]
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_terabyte_query_accepts_a_title_in_gigabytes(monkeypatch):
     """R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB, so the units must not split one size.
 

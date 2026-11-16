@@ -13,6 +13,8 @@ import types
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -24,6 +26,7 @@ def _conftest() -> Any:
     return module
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_an_offline_selection_imports_no_budget(monkeypatch: Any) -> None:
     sys.modules.pop("live_budget", None)
     conftest = _conftest()
@@ -38,6 +41,7 @@ def test_an_offline_selection_imports_no_budget(monkeypatch: Any) -> None:
     assert "live_budget" not in sys.modules
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_live_selection_installs_the_budget_on_the_repository_ledger(monkeypatch: Any) -> None:
     """The live branch must count the requests it makes (audit S4-F13).
 
@@ -106,6 +110,7 @@ def _fake_budget(monkeypatch: Any) -> None:
     monkeypatch.setitem(sys.modules, "live_budget", fake_budget)
 
 
+@pytest.mark.req("R-LIVE-BUDGET", "R-NIGHTLY-DRIFT-ALARM")
 def test_a_live_test_the_budget_refused_is_reported_skipped(monkeypatch: Any) -> None:
     """The nightly doctor alarm runs first on the shared ledger, so the canary
     can meet a spent budget: that test did not fail, it was not allowed to run.
@@ -126,6 +131,7 @@ def test_a_live_test_the_budget_refused_is_reported_skipped(monkeypatch: Any) ->
     assert "wb: 8 of 8 requests used" in report.longrepr[2]
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_other_failures_and_offline_tests_still_fail(monkeypatch: Any) -> None:
     """Only a budget refusal on a live test is a skip: a real failure of a live
     test, and anything an offline test raises, keep failing."""

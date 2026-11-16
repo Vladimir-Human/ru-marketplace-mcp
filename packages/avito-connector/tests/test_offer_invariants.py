@@ -109,6 +109,7 @@ def _patch_item_page(monkeypatch, result):
 # --------------------------------------------------------------- avito_search ----
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_items_that_lost_their_titles_and_prices(monkeypatch):
     """Both tiles keep their title/price keys but as nulls, so the page still
     parses, no shape family dies and shape_drift stays quiet — only the new
@@ -174,6 +175,7 @@ async def test_search_a_priced_page_with_titles_stays_healthy(monkeypatch):
     assert result.items[0].price_rub == 45500
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_flags_a_page_whose_every_price_died(monkeypatch):
     """Titles intact, every price gone: the price selector drifted, not the market.
 

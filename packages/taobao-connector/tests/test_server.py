@@ -130,6 +130,7 @@ async def test_search_warns_when_no_item_has_a_price(monkeypatch):
     assert "no_prices_on_page" in result.meta.warnings
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """A rendered payload that still parses but lost a whole alias family is
     drift the agent must see in the tool's own response, not only via doctor."""
@@ -424,6 +425,7 @@ async def test_search_maps_the_title_less_wall_to_transport_down(monkeypatch):
     assert "chrome scraping profile" in error["message"].lower()
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 async def test_search_challenge_message_does_not_promise_a_visible_tab(monkeypatch):
     """R-CHALLENGE-ACTION: retention is off, so no message may claim a visible page."""
     _patch_render(monkeypatch, TITLE_LESS_WALL)

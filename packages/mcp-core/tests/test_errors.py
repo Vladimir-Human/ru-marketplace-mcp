@@ -1,3 +1,4 @@
+import pytest
 from mcp_core.errors import ChallengeRequiredError
 
 
@@ -21,6 +22,7 @@ def test_retained_challenge_has_explicit_expiry():
     assert payload["handoff_id"] == "opaque-handoff-token"
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 def test_challenge_required_says_a_plain_retry_will_not_help():
     """R-CHALLENGE-ACTION: retryable in principle, never self-retryable now."""
     payload = ChallengeRequiredError("complete the browser challenge", provider="citilink").to_dict()
@@ -31,6 +33,7 @@ def test_challenge_required_says_a_plain_retry_will_not_help():
     assert payload["requires_user_action"] is True
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 def test_challenge_without_retention_names_the_unblock_command():
     """R-CHALLENGE-ACTION: with no retained page the action is the real CLI command."""
     payload = ChallengeRequiredError("complete the browser challenge", provider="citilink").to_dict()
@@ -41,6 +44,7 @@ def test_challenge_without_retention_names_the_unblock_command():
     assert "retained" not in payload["user_action"].lower()
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 def test_challenge_with_retention_points_at_the_kept_open_tab():
     """R-CHALLENGE-ACTION: a retained page is completed in place, not re-opened."""
     payload = ChallengeRequiredError(
@@ -56,6 +60,7 @@ def test_challenge_with_retention_points_at_the_kept_open_tab():
     assert "unblock" not in action
 
 
+@pytest.mark.req("R-CHALLENGE-ACTION")
 def test_challenge_accepts_a_source_specific_user_action():
     """R-CHALLENGE-ACTION: a source the CLI cannot unblock states its own step."""
     action = "open wildberries.ru in the scraping-profile Chrome and pass the captcha"

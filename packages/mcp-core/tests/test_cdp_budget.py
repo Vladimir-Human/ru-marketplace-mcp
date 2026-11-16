@@ -101,6 +101,7 @@ async def test_different_hosts_use_the_whole_global_bound(clock):
     assert tracker.peak == 3
 
 
+@pytest.mark.req("R-CDP-BUDGET-SCHEDULING")
 async def test_a_request_waiting_for_its_host_does_not_hold_the_global_slot():
     """A busy host must not spend global capacity while its request queues.
 
@@ -182,6 +183,7 @@ async def test_a_refusing_host_fails_fast_instead_of_queueing(clock):
         assert clock() == started, "no time may be spent waiting on an open breaker"
 
 
+@pytest.mark.req("R-CDP-BUDGET-SCHEDULING")
 async def test_a_request_queued_before_the_breaker_opened_is_refused_too(clock):
     """The turn that comes after the breaker opens is not a permission.
 
@@ -365,6 +367,7 @@ async def test_release_is_idempotent_and_never_double_counts(clock):
     again.release()
 
 
+@pytest.mark.req("R-CDP-BUDGET-SCHEDULING")
 async def test_cancelling_a_queued_request_gives_back_the_host_slot_it_holds():
     """A cancelled waiter must not take its host's slot to the grave.
 

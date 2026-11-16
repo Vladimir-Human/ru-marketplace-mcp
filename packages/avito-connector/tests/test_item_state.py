@@ -47,6 +47,7 @@ def _with_title(html: str, old: str, new: str) -> str:
     return html.replace(f">{old}<", f">{new}<").replace(f'"name": "{old}"', f'"name": "{new}"')
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize(
     ("fixture", "item_id", "expected"),
     [(RESERVED, 9000000011, "reserved"), (ACTIVE, 9000000012, "active")],
@@ -58,6 +59,7 @@ def test_card_availability_from_page_state(fixture, item_id, expected):
     assert evidence
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_reserved_page_says_instock_in_json_ld_and_is_still_reserved():
     html = _page(RESERVED)
     assert "schema.org/InStock" in html
@@ -72,6 +74,7 @@ def test_reserved_page_says_instock_in_json_ld_and_is_still_reserved():
     ]
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("title", ["Не продано, торг", "Зарезервировано? нет, свободно", "Товар зарезервирован, шучу"])
 async def test_a_seller_title_that_looks_like_a_status_does_not_decide(monkeypatch, title):
     """Review #194 P1: item-view/title-info is the seller's own h1; its words used to
@@ -86,6 +89,7 @@ async def test_a_seller_title_that_looks_like_a_status_does_not_decide(monkeypat
     assert all(title not in entry for entry in result.availability_evidence)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_seller_text_in_the_contacts_block_does_not_decide():
     """The contacts block shows the seller's chosen name, so it is never read for the status."""
     html = _page(ACTIVE).replace(
@@ -97,6 +101,7 @@ def test_seller_text_in_the_contacts_block_does_not_decide():
     assert item_state.card_availability(html, 9000000012)[0] == "active"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_reserved_banner_against_free_flags_is_unknown_with_both_sides():
     """Review #194: when the banner and the page flags disagree, say unknown and show both."""
     html = _page(ACTIVE).replace(
@@ -111,6 +116,7 @@ def test_a_reserved_banner_against_free_flags_is_unknown_with_both_sides():
     assert "safeDealDesktop.reserved=false" in evidence
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_reservation_flags_that_disagree_are_unknown():
     bi = {
         "safeDealDesktop": {"reserved": False},
@@ -127,6 +133,7 @@ def test_reservation_flags_that_disagree_are_unknown():
     ]
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("reservation_info", [{"some": "shape"}, "pending", True])
 def test_reservation_info_alone_is_not_a_reservation(reservation_info):
     """Review #194 P3: a truthy reservationInfo of an uncaptured shape counted as reserved."""
@@ -140,6 +147,7 @@ def test_reservation_info_alone_is_not_a_reservation(reservation_info):
     assert item_state.classify(bi, {})[0] == "unknown"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("value", ["true", 1, {"value": True}])
 def test_non_boolean_flags_are_no_signal(value):
     bi = {"item": {"id": 1, "isActive": True, "deliveryInfo": {"isReserved": value}}}
@@ -147,6 +155,7 @@ def test_non_boolean_flags_are_no_signal(value):
     assert item_state.classify(bi, {}) == ("unknown", ["no explicit status signal on the page"])
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_page_state_of_another_item_is_ignored():
     """A recommendation's state must not decide the requested ad's status."""
     html = _page(RESERVED)
@@ -157,6 +166,7 @@ def test_page_state_of_another_item_is_ignored():
     assert (availability, evidence) == ("reserved", ["safedeal-item-card: «Товар зарезервирован»"])
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_status_words_inside_scripts_are_not_banners():
     html = (
         '<div data-marker="safedeal-item-card"><script>var t = "Товар зарезервирован";</script>'
@@ -166,6 +176,7 @@ def test_status_words_inside_scripts_are_not_banners():
     assert item_state.card_availability(html, None)[0] == "unknown"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_active_needs_an_explicit_reservation_flag():
     bi = {"item": {"id": 1, "isActive": True, "deliveryInfo": {}}}
     assert item_state.classify(bi, {})[0] == "unknown"
@@ -175,6 +186,7 @@ def test_active_needs_an_explicit_reservation_flag():
     assert item_state.classify(bi, {})[0] == "unknown"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_card_reports_a_reserved_listing(monkeypatch):
     _serve_page(monkeypatch, _page(RESERVED))
 
@@ -186,6 +198,7 @@ async def test_card_reports_a_reserved_listing(monkeypatch):
     assert result.meta.healthy is True
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_card_reports_an_active_listing(monkeypatch):
     _serve_page(monkeypatch, _page(ACTIVE))
 
@@ -199,6 +212,7 @@ async def test_card_reports_an_active_listing(monkeypatch):
     ]
 
 
+@pytest.mark.req("R-ERRORS")
 @pytest.mark.parametrize(
     "html",
     [
@@ -227,6 +241,7 @@ def _serve_search(monkeypatch) -> None:
     monkeypatch.setattr(server, "_fetch", fake_fetch)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_search_keeps_reserved_hits_by_default(monkeypatch):
     """Review #194 P2: reserved hits vanished by default with only a count left behind."""
     _serve_search(monkeypatch)
@@ -240,6 +255,7 @@ async def test_search_keeps_reserved_hits_by_default(monkeypatch):
     assert result.meta.healthy is True
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_search_drops_reserved_hits_on_request_and_says_so(monkeypatch):
     _serve_search(monkeypatch)
 
@@ -255,6 +271,7 @@ async def test_search_drops_reserved_hits_on_request_and_says_so(monkeypatch):
     assert result.meta.healthy is True
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_search_hit_without_the_flag_is_unknown():
     assert item_state.search_availability({"id": 1}) == "unknown"
     assert item_state.search_availability({"id": 1, "isReserved": "true"}) == "unknown"

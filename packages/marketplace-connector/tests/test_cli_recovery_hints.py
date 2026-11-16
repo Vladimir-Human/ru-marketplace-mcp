@@ -133,6 +133,7 @@ def test_the_checkout_hints_name_files_that_exist():
                 assert (ROOT / relative).is_file(), f"{relative} does not exist in the checkout"
 
 
+@pytest.mark.req("R-RECOVERY-HINT-INSTALL-MODE")
 @pytest.mark.parametrize("mode", ["wheel", "uvx"])
 def test_the_installed_hints_name_no_file_the_package_does_not_ship(mode):
     """The bundle ships no root scripts or docs, so the hint must not name them."""

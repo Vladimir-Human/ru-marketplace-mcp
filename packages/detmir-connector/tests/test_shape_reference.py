@@ -14,6 +14,7 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
 from detmir_connector import server, shape_reference
 from mcp_core.resilience import shape_signature
 
@@ -48,6 +49,7 @@ def _stub_json(monkeypatch, payload: object) -> None:
     monkeypatch.setattr(server, "_fetch_json", fake_fetch)
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_category_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Products that still parse after losing a whole alias family are
     structural drift the agent must see in the tool's own response."""
@@ -78,6 +80,7 @@ async def test_category_a_complete_payload_carries_no_shape_drift_warning(monkey
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     drifted = copy.deepcopy(CATEGORY_PAYLOAD)

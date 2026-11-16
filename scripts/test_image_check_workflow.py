@@ -11,12 +11,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 IMAGE = WORKFLOWS / "image-check.yml"
 REGISTRY = WORKFLOWS / "mcp-registry-publish.yml"
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_triggers_and_watched_paths() -> None:
     text = IMAGE.read_text(encoding="utf-8")
     assert "workflow_dispatch:" in text
@@ -33,6 +36,7 @@ def test_triggers_and_watched_paths() -> None:
         assert f"- {path}" in text, f"image-check.yml no longer watches {path}"
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_actions_keep_the_exact_pinned_shas() -> None:
     text = IMAGE.read_text(encoding="utf-8")
     registry = REGISTRY.read_text(encoding="utf-8")
@@ -43,6 +47,7 @@ def test_actions_keep_the_exact_pinned_shas() -> None:
         assert f"{action}@{pinned[0]}" in text, f"image-check.yml does not reuse the {action} pin"
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_stdio_image_is_loaded_and_probed_at_the_root_version() -> None:
     text = IMAGE.read_text(encoding="utf-8")
     assert "tomllib.load" in text and "pyproject.toml" in text
@@ -53,6 +58,7 @@ def test_stdio_image_is_loaded_and_probed_at_the_root_version() -> None:
     assert "python3 scripts/e2e_stdio_check_docker.py" in text
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_the_http_image_is_built_without_loading_or_pushing() -> None:
     text = IMAGE.read_text(encoding="utf-8")
     assert "file: ./Dockerfile" in text
@@ -60,6 +66,7 @@ def test_the_http_image_is_built_without_loading_or_pushing() -> None:
     assert text.count("push: false") == 2, "both builds must disable push"
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_permissions_are_read_only() -> None:
     text = IMAGE.read_text(encoding="utf-8")
     assert "permissions:\n  contents: read\n" in text

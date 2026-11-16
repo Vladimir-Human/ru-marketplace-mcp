@@ -454,6 +454,7 @@ def test_ozon_search_reports_actionable_cdp_block(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
     with retry_after_s through the real _fetch_composer path, not as a generic
@@ -487,6 +488,7 @@ def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     assert "paused for 47 s after 2 refusals" in error["message"]
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: same contract through _fetch_composer and ozon_card,
     whose broad except Exception used to relabel the pause the same way as the
@@ -668,6 +670,7 @@ def test_ozon_tools_reject_non_object_payloads(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-DRIFT")
 @pytest.mark.parametrize("tool_name", ["ozon_card", "ozon_reviews", "ozon_search"])
 @pytest.mark.parametrize(
     "payload",
@@ -693,6 +696,7 @@ async def test_ozon_tools_require_widget_states_object(monkeypatch, tool_name, p
     assert json.loads(str(excinfo.value))["error"] == "parser_drift"
 
 
+@pytest.mark.req("R-DRIFT")
 @pytest.mark.parametrize("tool_name", ["ozon_card", "ozon_reviews", "ozon_search"])
 async def test_ozon_tools_preserve_empty_widget_states_success(monkeypatch, tool_name):
     async def fake_fetch(path, ctx):
@@ -790,6 +794,7 @@ def test_reviews_marks_partial_when_later_page_fails(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 def test_reviews_redacts_the_failing_page_body_in_last_error(monkeypatch):
     """last_error is part of a successful answer, so the upstream body it quotes
     must be redacted: an Ozon error page can echo a token back, and before the
@@ -830,6 +835,7 @@ def test_reviews_redacts_the_failing_page_body_in_last_error(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 def test_fetch_composer_redacts_a_tier1_exception_in_the_client_log(monkeypatch):
     """ctx.debug goes to the client's log, so the Tier-1 exception quoted there
     must be redacted: a proxy or auth failure can carry the credential."""
@@ -943,6 +949,7 @@ def test_reviews_report_zero_own_reviews_when_the_pool_is_all_neighbours(monkeyp
     _run(scenario())
 
 
+@pytest.mark.req("R-OZON-REVIEW-ITEM-ID")
 def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
     """A drifted non-numeric itemId/products must degrade to None/{} and flag the all-null sample."""
     body = json.dumps(
@@ -981,6 +988,7 @@ def test_reviews_tolerate_drifted_item_id_and_products_shapes(monkeypatch):
     _run(scenario())
 
 
+@pytest.mark.req("R-OZON-REVIEW-ITEM-ID")
 def test_parse_review_item_normalizes_int_and_decimal_string_item_ids_and_rejects_malformed():
     """R-OZON-REVIEW-ITEM-ID (#214): integer and decimal-string itemId values
     normalize to the same positive integer SKU; booleans, non-positive integers
@@ -1010,6 +1018,7 @@ def test_parse_review_item_normalizes_int_and_decimal_string_item_ids_and_reject
         assert parsed["item_id"] is None, f"expected None for {invalid!r}, got {parsed['item_id']!r}"
 
 
+@pytest.mark.req("R-OZON-REVIEW-ITEM-ID")
 def test_reviews_count_own_reviews_across_decimal_string_and_int_item_ids(monkeypatch):
     """R-OZON-REVIEW-ITEM-ID (#214): through public ozon_reviews, decimal-string
     and integer itemId values both attribute reviews to their variant SKU and
@@ -1059,6 +1068,7 @@ def test_reviews_count_own_reviews_across_decimal_string_and_int_item_ids(monkey
     _run(scenario())
 
 
+@pytest.mark.req("R-OZON-REVIEW-ITEM-ID")
 def test_selfcheck_flags_reviews_when_item_id_is_missing_or_unparseable(monkeypatch):
     """R-OZON-REVIEW-ITEM-ID (#214): ozon_selfcheck reports drift on reviews and
     reviews_sort when review texts parse but every item_id is None."""

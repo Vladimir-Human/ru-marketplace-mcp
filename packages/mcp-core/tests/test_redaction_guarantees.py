@@ -28,6 +28,7 @@ _SECRET = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYWlkLXVzZXIifQ.sekretsignature12345"
 _PLAIN_SECRET = "plain-paid-session-secret-7f3a"
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 def test_log_event_redacts_a_raw_secret_field(caplog, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _SECRET)
 
@@ -82,6 +83,7 @@ def test_log_event_leaves_non_string_fields_untouched(caplog):
     assert payload["ratio"] == 0.5
 
 
+@pytest.mark.req("R-SECRET-ENV-VALUES")
 def test_log_event_redacts_a_non_token_shaped_env_secret(caplog, monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _PLAIN_SECRET)
 
@@ -91,6 +93,7 @@ def test_log_event_redacts_a_non_token_shaped_env_secret(caplog, monkeypatch):
     assert _PLAIN_SECRET not in caplog.text
 
 
+@pytest.mark.req("R-SECRET-REDACTION")
 def test_raise_tool_error_redacts_the_raw_message(monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _SECRET)
 
@@ -110,6 +113,7 @@ def test_raise_tool_error_redacts_string_fields(monkeypatch):
     assert _SECRET not in str(excinfo.value)
 
 
+@pytest.mark.req("R-SECRET-ENV-VALUES")
 def test_raise_tool_error_redacts_a_non_token_shaped_env_secret(monkeypatch):
     monkeypatch.setenv("MPSTATS_MP_AUTH", _PLAIN_SECRET)
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
 from fastmcp import Client, FastMCP
 from mcp_core.errors import ErrorCode
 from mcp_core.resources import (
@@ -62,6 +63,7 @@ def _bare_app(tool_name: str) -> FastMCP:
     return app
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_error_reference_lists_every_code_of_the_enum():
     text = render_error_reference()
 
@@ -71,6 +73,7 @@ def test_error_reference_lists_every_code_of_the_enum():
         assert f"`{code.value}`" in text, code
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_error_reference_marks_retryability_from_the_enum():
     text = render_error_reference()
     rows = {line.split("`")[1]: line for line in text.splitlines() if line.startswith("| `")}
@@ -80,6 +83,7 @@ def test_error_reference_marks_retryability_from_the_enum():
         assert expected in rows[code.value], (code, rows[code.value])
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_guide_carries_both_reference_sections_for_the_tool():
     """The guide is the reference half: both headings, for the tool it names."""
     app = _wb_app()
@@ -97,6 +101,7 @@ def test_guide_carries_both_reference_sections_for_the_tool():
     assert GUIDES["wb_card"] in contents
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_a_tool_without_a_guide_entry_serves_no_guide():
     """Registration follows the GUIDES table: no entry, no resource, no stub.
 
@@ -115,6 +120,7 @@ def test_a_tool_without_a_guide_entry_serves_no_guide():
     assert asyncio.run(list_uris()) == [ERROR_REFERENCE_URI]
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_guide_pointer_is_the_line_the_docstring_carries():
     app = _wb_app()
     tool = asyncio.run(app.list_tools())[0]
@@ -124,6 +130,7 @@ def test_guide_pointer_is_the_line_the_docstring_carries():
     assert guide_uri("compare_prices") == "guide://compare/compare_prices"
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_registration_is_idempotent():
     app = _wb_app()
 
@@ -131,6 +138,7 @@ def test_registration_is_idempotent():
     assert register_reference_resources(app) == 0
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_every_guide_is_readable_through_an_in_process_client():
     app = _wb_app()
 
@@ -148,6 +156,7 @@ def test_every_guide_is_readable_through_an_in_process_client():
     assert texts[guide_uri("wb_card")].startswith("# wb_card")
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_mounting_children_keeps_one_owner_of_the_shared_error_uri():
     parent = FastMCP("parent")
     children = [_bare_app("wb_card"), _bare_app("ozon_card")]

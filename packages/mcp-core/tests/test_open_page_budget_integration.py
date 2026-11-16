@@ -87,6 +87,7 @@ async def test_a_non_http_url_is_refused_before_any_permit_is_taken(fake_browser
     assert budget_snapshot()["hosts"] == {}
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_an_open_breaker_surfaces_the_remaining_pause_as_rate_limited(fake_browser, monkeypatch):
     """R-CDP-HOST-PAUSE: the agent must see the remaining pause, not a generic
     retryable transport failure.

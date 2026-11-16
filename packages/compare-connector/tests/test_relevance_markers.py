@@ -18,6 +18,7 @@ from fastmcp import Client
 
 
 # START_BLOCK_RELEVANCE_MARKER_TESTS
+@pytest.mark.req("R-COMPARE-RELEVANCE-BOUNDARIES")
 @pytest.mark.parametrize(
     "query,title,warning",
     [

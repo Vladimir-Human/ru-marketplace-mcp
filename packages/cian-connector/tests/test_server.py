@@ -539,6 +539,7 @@ async def test_a_block_page_is_never_cached(monkeypatch):
     assert len(calls) == 2
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
     with retry_after_s through the real _fetch_search path, not as a generic
@@ -564,6 +565,7 @@ async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeyp
     assert "paused for 47 s after 2 refusals" in error["message"]
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: same contract through _fetch_card and cian_card,
     whose broad except Exception used to relabel the pause the same way as the

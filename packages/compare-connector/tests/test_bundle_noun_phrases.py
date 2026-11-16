@@ -19,6 +19,7 @@ from fastmcp import Client
 
 
 # START_BLOCK_PUBLIC_BUNDLE_COMPARISON_TESTS
+@pytest.mark.req("R-COMPARE-BUNDLE-NOUN-PHRASES", "R-COMPARE-RELEVANCE-BOUNDARIES")
 @pytest.mark.parametrize(
     "query,title,expected_winner,expected_warning_prefixes",
     [

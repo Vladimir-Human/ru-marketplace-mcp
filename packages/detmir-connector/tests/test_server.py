@@ -573,6 +573,7 @@ async def test_different_regions_do_not_share_a_cache_entry(monkeypatch):
     assert urls[0] != urls[1], "a St Petersburg request must not be answerable from Moscow's cache"
 
 
+@pytest.mark.req("R-DETMIR-CACHE-FLAG")
 async def test_card_reports_cache_hit_only_on_a_replayed_answer(monkeypatch, no_delay):
     """R-DETMIR-CACHE-FLAG: a fresh answer is cached=False, the replay is True.
 

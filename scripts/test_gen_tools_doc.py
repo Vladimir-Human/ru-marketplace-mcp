@@ -56,6 +56,7 @@ def measurements() -> tuple[gen.Measurement, ...]:
     return gen.collect_profiles()
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_generated_docs_are_deterministic_between_runs() -> None:
     first = gen.render_docs(gen.collect_profiles())
     second = gen.render_docs(gen.collect_profiles())
@@ -64,6 +65,7 @@ def test_generated_docs_are_deterministic_between_runs() -> None:
     assert "\r" not in first
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_every_tool_of_each_profile_appears_exactly_once(measurements: tuple[gen.Measurement, ...]) -> None:
     for measurement in measurements:
         docs = gen.render_docs((measurement,))
@@ -75,6 +77,7 @@ def test_every_tool_of_each_profile_appears_exactly_once(measurements: tuple[gen
         assert len(set(names)) == len(names)
 
 
+@pytest.mark.req("R-TOOL-RESOURCES")
 def test_each_profile_lists_the_resources_it_serves(measurements: tuple[gen.Measurement, ...]) -> None:
     """The reference half moved to resources, so the docs name them.
 
@@ -95,6 +98,7 @@ def test_each_profile_lists_the_resources_it_serves(measurements: tuple[gen.Meas
     assert "marketplace://errors" in docs
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_profile_table_uses_the_measured_payload_and_stated_token_rule(
     measurements: tuple[gen.Measurement, ...],
 ) -> None:
@@ -117,6 +121,7 @@ def test_profile_table_uses_the_measured_payload_and_stated_token_rule(
         assert measurement.token_estimate == expected_tokens
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_check_rejects_a_stale_docs_file_and_accepts_a_fresh_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -134,6 +139,7 @@ def test_check_rejects_a_stale_docs_file_and_accepts_a_fresh_one(
     assert gen.STALE_DOCS in capsys.readouterr().err
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_readme_cost_blocks_are_rewritten_and_checked(
     tmp_path: Path, measurements: tuple[gen.Measurement, ...]
 ) -> None:
@@ -174,6 +180,7 @@ def test_readme_cost_blocks_are_rewritten_and_checked(
     assert gen.check_outputs(tmp_path) == [gen.STALE_README_EN]
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_parameter_rendering_covers_required_default_enum_and_array() -> None:
     schema = {
         "type": "object",
@@ -219,6 +226,7 @@ def test_dsh_readme_mode_table_is_generated_and_checked(
     assert gen.check_outputs(tmp_path) == [gen.STALE_DSH_README]
 
 
+@pytest.mark.req("R-DOCS-TOOLS")
 def test_the_printed_token_numbers_follow_the_stated_rule(measurements: tuple[gen.Measurement, ...]) -> None:
     """The published cost must be the rule's result, not the estimator's echo (audit S4-F18).
 

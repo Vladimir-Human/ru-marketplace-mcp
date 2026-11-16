@@ -105,6 +105,7 @@ async def test_no_results_without_meta_is_not_invented_degradation(monkeypatch):
     assert not any(w.startswith("source_warning:") for w in result.warnings)
 
 
+@pytest.mark.req("R-EMPTY-NOT-SUCCESS")
 async def test_a_zero_offer_answer_whose_own_diagnostics_failed_is_not_ok(monkeypatch):
     """R-COMPARE-EMPTY-TRUST: an empty answer from a source that reports a
     problem of its own is not an honest no-result.

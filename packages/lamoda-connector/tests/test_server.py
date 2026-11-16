@@ -148,6 +148,7 @@ async def test_search_warns_when_no_tile_has_a_price(monkeypatch):
     assert "no_prices_on_page" in result.meta.warnings
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """A rendered payload that still parses but lost a whole alias family is
     drift the agent must see in the tool's own response, not only via doctor."""

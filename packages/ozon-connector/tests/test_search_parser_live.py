@@ -88,6 +88,7 @@ def _patch_composer(monkeypatch, payload: dict) -> None:
     monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.fields")
 @pytest.mark.parametrize("separator", [" ", "\u00a0", "\u202f", "\u2009"])
 async def test_search_returns_numeric_issue_fields_from_a_captured_tile(monkeypatch, separator):
     """R-OZON-SEARCH-NUMERIC: localized display values become RUB/score/count numbers."""
@@ -110,6 +111,7 @@ async def test_search_returns_numeric_issue_fields_from_a_captured_tile(monkeypa
     assert result.meta.healthy is True, result.meta.warnings
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.count")
 @pytest.mark.parametrize("count_text", ["2\u00a0518 оценок", "2\u202f518", "(2\u2009518)"])
 async def test_search_keeps_supported_review_count_texts(monkeypatch, count_text):
     """R-OZON-SEARCH-NUMERIC: do not discard count forms the shared helper understands."""
@@ -120,6 +122,7 @@ async def test_search_keeps_supported_review_count_texts(monkeypatch, count_text
     assert result.items[0].rating_count == 2518
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.nulls")
 async def test_search_rejects_unparseable_values_without_losing_warnings(monkeypatch):
     """R-OZON-SEARCH-NUMERIC: refused values are null, with the existing drift warnings."""
     payload = _issue_payload("\u00a0", "1.2K отзывов")
@@ -165,6 +168,7 @@ def test_live_composer_payload_parses_to_the_three_tiles() -> None:
         assert got.get("stock") == expected["stock"]
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.fields")
 def test_live_prices_are_numeric_rubles() -> None:
     """R-OZON-SEARCH-NUMERIC: the captured prices leave the parser as RUB floats."""
     for got, expected in zip(_items(), EXPECTED, strict=True):

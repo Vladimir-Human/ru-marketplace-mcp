@@ -449,6 +449,7 @@ def test_install_write_leaves_a_backup_of_the_old_file(claude_config):
     assert backups[0].read_text(encoding="utf-8") == old
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 @pytest.mark.parametrize(
     ("broken", "message"),
     [
@@ -477,6 +478,7 @@ def test_install_write_refuses_malformed_json(claude_config, broken, message, ca
     assert list(claude_config.parent.glob("*.bak-*")) == []
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 def test_install_write_reads_a_config_saved_with_a_utf8_bom(claude_config):
     """A BOM is valid JSON for the operator; some editors add one (audit S1-F3)."""
     claude_config.write_bytes(
@@ -512,6 +514,7 @@ def test_install_write_refuses_a_config_that_is_not_utf8(claude_config, capsys):
     assert list(claude_config.parent.glob("*.bak-*")) == []
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 def test_install_write_never_overwrites_an_earlier_backup(claude_config, monkeypatch):
     """Two writes in the same second must not land on one backup name (audit S1-F4).
 
@@ -535,6 +538,7 @@ def test_install_write_never_overwrites_an_earlier_backup(claude_config, monkeyp
     assert backups[0].read_text(encoding="utf-8") == original
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 def test_install_write_keeps_a_symlinked_config_a_symlink(claude_config, tmp_path):
     """A symlinked config must stay a symlink (audit S1-F2).
 
@@ -660,6 +664,7 @@ def test_install_dry_run_writes_nothing(claude_config, capsys):
     assert str(claude_config) in out
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 def test_install_dry_run_names_but_never_prints_the_rest_of_the_file(claude_config, capsys):
     """Other servers' env blocks may hold keys: a dry run names what it keeps, never its content."""
     claude_config.write_text(
@@ -687,6 +692,7 @@ def test_install_dry_run_names_but_never_prints_the_rest_of_the_file(claude_conf
     assert str(claude_config) in out
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 def test_install_dry_run_with_force_names_the_entry_it_replaces(claude_config, capsys):
     claude_config.write_text(
         json.dumps({"mcpServers": {"marketplace": {"command": "old", "env": {"K": "FAKE-OLD-3"}}}}),
@@ -710,6 +716,7 @@ def test_install_claude_code_write_prints_a_claude_mcp_add_line(capsys):
     assert "compare-mcp" in out
 
 
+@pytest.mark.req("R-CLI-INSTALL")
 @pytest.mark.parametrize("options", [[], ["--profile", "decision"], ["--profile", "full"], ["--per-source"]])
 def test_install_claude_code_paste_block_names_the_project_config(options, capsys):
     """R-CLI-INSTALL: user add lines precede the project-only JSON (audit S1-F1)."""
@@ -739,6 +746,7 @@ def test_install_claude_code_full_profile_prints_the_unified_script(capsys):
     assert "marketplace-mcp" in out
 
 
+@pytest.mark.req("R-CLI-INSTALL-PROFILE")
 @pytest.mark.parametrize(
     ("profile", "script"), [("compare", "compare-mcp"), ("decision", "decision-mcp"), ("full", "marketplace-mcp")]
 )
@@ -883,6 +891,7 @@ def test_config_path_for_cursor_is_under_the_home_directory(monkeypatch, tmp_pat
 # ------------------------------------------------------------------------- usage -----
 
 
+@pytest.mark.req("R-CLI-HELP")
 def test_help_prints_a_short_usage_screen(capsys):
     assert cli.main(["--help"]) == 0
 
@@ -896,12 +905,14 @@ def test_help_prints_a_short_usage_screen(capsys):
     assert len(out.splitlines()) <= 25
 
 
+@pytest.mark.req("R-CLI-HELP")
 def test_help_verb_prints_the_same_screen(capsys):
     assert cli.main(["help"]) == 0
 
     assert "docs/QUICKSTART.md" in capsys.readouterr().out
 
 
+@pytest.mark.req("R-CLI-HELP")
 def test_an_unknown_verb_prints_the_usage_and_exits_two(capsys):
     assert cli.main(["frobnicate"]) == 2
 
@@ -1123,6 +1134,7 @@ def test_doctor_prints_the_next_step_under_the_row(monkeypatch, capsys):
     assert rc == 2
 
 
+@pytest.mark.req("R-DOCTOR-NEXT-STEP", "R-WB-DOM-FALLBACK")
 @pytest.mark.parametrize(
     ("fallback", "expected"),
     [("1", cli.NEXT_STEP_WB_DOM_FALLBACK), ("0", cli.NEXT_STEP_WB_TRANSPORT)],
@@ -1370,6 +1382,7 @@ def test_browser_start_hidden_asks_for_the_off_screen_launch(monkeypatch, capsys
     assert "marketplace-mcp browser show" in out
 
 
+@pytest.mark.req("R-CLI-BROWSER-START")
 def test_browser_start_hidden_that_parked_nothing_says_so(monkeypatch, capsys):
     """Outside Windows (or with CHROME_STEALTH off) --hidden parks nothing (audit A4)."""
     from mcp_core.transport import chrome_cdp
@@ -1431,6 +1444,7 @@ def test_browser_start_rejects_unknown_arguments(capsys):
     assert "takes no arguments besides --hidden" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-CLI-UNBLOCK")
 def test_main_routes_the_unblock_verb(monkeypatch, capsys):
     assert cli.main(["unblock", "ozon", "--dry-run"]) == 0
 

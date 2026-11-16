@@ -66,10 +66,12 @@ def _gallery(media) -> str:
     return f"<script>window.__staticRouterHydrationData = JSON.parse({state});</script>"
 
 
+@pytest.mark.req("R-INPUT-TRUST")
 def test_photo_urls_come_from_the_captured_gallery():
     assert item_state.photo_urls(_page(PHOTOS), 9000000020) == [URL_1, URL_2]
 
 
+@pytest.mark.req("R-INPUT-TRUST")
 def test_photo_urls_skip_videos_foreign_hosts_and_duplicates():
     media = [
         {"isVideo": True, "urls": {"640x480": "https://00.img.avito.st/video.640x480"}},
@@ -83,6 +85,7 @@ def test_photo_urls_skip_videos_foreign_hosts_and_duplicates():
     assert item_state.photo_urls(_gallery(media), 1) == ["https://01.img.avito.st/image/1/big.1280x960", URL_1]
 
 
+@pytest.mark.req("R-INPUT-TRUST")
 @pytest.mark.parametrize(
     "url",
     [
@@ -97,6 +100,7 @@ def test_photo_host_allowlist(url):
     assert item_state.photo_url_allowed(url) is False
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_photos_zero_makes_no_extra_request_and_returns_the_plain_card(monkeypatch):
     """Review #199: photos=0 (the default) must not fetch anything beyond the card page."""
     pages: list[str] = []
@@ -122,6 +126,7 @@ async def test_photos_zero_makes_no_extra_request_and_returns_the_plain_card(mon
     assert len(pages) == 2
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_photos_arrive_as_image_content_after_the_json(monkeypatch, _setup):
     fetched = _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (200, "image/jpeg", JPEG)])
 
@@ -139,6 +144,7 @@ async def test_photos_arrive_as_image_content_after_the_json(monkeypatch, _setup
     assert _setup == [1, 1]
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_fewer_photos_on_the_page_than_asked_is_said(monkeypatch):
     """Review #199: the agent sees why fewer photos arrived than it asked for; v2.9.0 said ok."""
     _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (200, "image/jpeg", JPEG)])
@@ -149,6 +155,7 @@ async def test_fewer_photos_on_the_page_than_asked_is_said(monkeypatch):
     assert [p["delivered"] for p in result.structured_content["photos"]] == [True, True]
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_every_photo_fetch_waits_on_the_sources_pacer(monkeypatch, _setup):
     """No private sleep: the source's gap and its back-off after a refusal apply to every photo, the first included.
 
@@ -162,6 +169,7 @@ async def test_every_photo_fetch_waits_on_the_sources_pacer(monkeypatch, _setup)
     assert not hasattr(server, "_PHOTO_GAP_S")
 
 
+@pytest.mark.req("R-TOOL-SCHEMA")
 async def test_the_advertised_photos_argument_is_capped_at_three_and_off_by_default():
     """Review #199: the cap is 3, not 5; the description is short and points to the guide."""
     tool = next(tool for tool in await server.mcp.list_tools() if tool.name == "avito_card")
@@ -172,6 +180,7 @@ async def test_the_advertised_photos_argument_is_capped_at_three_and_off_by_defa
     assert len(photos["description"]) < 260
 
 
+@pytest.mark.req("R-TRANSPORT")
 @pytest.mark.parametrize(
     ("response", "status", "refusal"),
     [
@@ -201,6 +210,7 @@ async def test_the_first_refusal_stops_the_photo_loop_with_its_status(monkeypatc
     assert refusals == ([1] if refusal else [])
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_a_refusal_after_a_delivered_photo_keeps_that_photo(monkeypatch):
     _serve(monkeypatch, _page(PHOTOS), [(200, "image/jpeg", JPEG), (403, "text/html", b"")])
 
@@ -211,6 +221,7 @@ async def test_a_refusal_after_a_delivered_photo_keeps_that_photo(monkeypatch):
     assert len(result.content) == 2
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_no_photo_is_fetched_for_a_reserved_ad(monkeypatch):
     fetched = _serve(monkeypatch, _page("item_state_reserved_9000000011.html"), [])
 
@@ -220,6 +231,7 @@ async def test_no_photo_is_fetched_for_a_reserved_ad(monkeypatch):
     assert fetched == []
 
 
+@pytest.mark.req("R-TRANSPORT")
 async def test_a_page_without_gallery_reports_none_on_page(monkeypatch):
     fetched = _serve(monkeypatch, _page("item_state_active_9000000012.html"), [])
 
@@ -229,6 +241,7 @@ async def test_a_page_without_gallery_reports_none_on_page(monkeypatch):
     assert fetched == []
 
 
+@pytest.mark.req("R-TRANSPORT")
 def test_a_streamed_photo_over_the_cap_is_aborted(monkeypatch):
     """The download itself is bounded: it stops reading past 2 MB."""
     read: list[int] = []
@@ -252,6 +265,7 @@ def test_a_streamed_photo_over_the_cap_is_aborted(monkeypatch):
     assert sum(read) <= server._PHOTO_MAX_BYTES + 64 * 1024
 
 
+@pytest.mark.req("R-TRANSPORT")
 def test_a_declared_oversized_photo_is_not_read(monkeypatch):
     class FakeResponse:
         status_code = 200
@@ -269,6 +283,7 @@ def test_a_declared_oversized_photo_is_not_read(monkeypatch):
         server._sync_photo_get(URL_1)
 
 
+@pytest.mark.req("R-INPUT-TRUST", "R-TRANSPORT")
 def test_sync_photo_get_disables_redirects_and_rechecks_host(monkeypatch):
     captured_kwargs = {}
 

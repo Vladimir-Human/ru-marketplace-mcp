@@ -18,6 +18,7 @@ VERSION = {
 }
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 def test_windows_identity_preserves_native_version_language_and_brands():
     original = dict(VERSION)
     override = C._windows_chrome_ua_override(VERSION)
@@ -66,6 +67,7 @@ def test_windows_identity_accepts_only_supported_ozon_origins(url):
     C._validate_ozon_compat_url(url)
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 @pytest.mark.parametrize(
     "url",
     [
@@ -142,6 +144,7 @@ def playwright_tab(monkeypatch):
     return state
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 async def test_playwright_applies_override_before_goto_and_keeps_session_until_closed(playwright_tab):
     async with C._playwright_page(OZON, 0, ozon_windows_compat=True):
         names = [name for name, _ in playwright_tab.events]
@@ -213,6 +216,7 @@ def raw_tab(monkeypatch):
     return state
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 async def test_raw_applies_page_scoped_override_before_navigation_and_closes_owned_target(raw_tab):
     async with C._raw_cdp_page(OZON, 0, ozon_windows_compat=True):
         methods = [method for _, method, _ in raw_tab.events]
@@ -282,6 +286,7 @@ async def test_open_page_forwards_compat_to_raw_fallback_and_still_checks_final_
         assert seen == ["raw", "neutral", "closed", "release"]
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 @pytest.mark.parametrize("transport", ["playwright", "raw"])
 @pytest.mark.parametrize(
     ("final_url", "allowed"),

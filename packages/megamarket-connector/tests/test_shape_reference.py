@@ -57,6 +57,7 @@ def test_live_search_normalization_matches_shape_golden() -> None:
     )
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Items that still parse after losing a whole alias family are structural
     drift the agent must see in the tool's own response, not only via doctor."""
@@ -90,6 +91,7 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))

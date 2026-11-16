@@ -200,6 +200,7 @@ def test_the_live_job_stays_schedule_and_dispatch_only() -> None:
     )
 
 
+@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
 def test_the_live_job_runs_the_doctor_drift_alarm() -> None:
     """The nightly job must run the doctor status check and fail on its alarm.
 
@@ -218,6 +219,7 @@ def test_the_live_job_runs_the_doctor_drift_alarm() -> None:
     assert re.search(r"^\s*1\).*exit 1", step, re.M), "the doctor alarm (parser drift, exit 1) must fail the job"
 
 
+@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
 def test_the_doctor_alarm_runs_before_the_canary_on_one_ledger() -> None:
     """The alarm must get its live requests before the canary spends them.
 
@@ -239,6 +241,7 @@ def test_the_doctor_alarm_runs_before_the_canary_on_one_ledger() -> None:
     assert "live_check.py reset" not in live_job, "a reset between the steps would hand the alarm a fresh cap"
 
 
+@pytest.mark.req("R-NIGHTLY-DRIFT-ALARM")
 def test_a_broken_live_check_fails_the_alarm() -> None:
     """R-DOCTOR-EXIT-CODES: exit 4 alarms on checker/doctor/setup/usage failure.
 
@@ -254,6 +257,7 @@ def test_a_broken_live_check_fails_the_alarm() -> None:
     assert "doctor never ran" not in step, "exit 4 also covers a checker that ran and failed"
 
 
+@pytest.mark.req("R-CI-IMAGE-CHECK")
 def test_the_image_check_workflow_uses_an_event_aware_concurrency_group() -> None:
     """A manual image build must not cancel a pull-request build (audit S4-F16).
 

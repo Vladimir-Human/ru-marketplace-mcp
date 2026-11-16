@@ -15,6 +15,7 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
 from mcp_core.resilience import shape_signature
 from ozon_connector import server, shape_reference
 
@@ -49,6 +50,7 @@ def _patch_composer(monkeypatch, payload: dict) -> None:
     monkeypatch.setattr(server, "_fetch_composer", fake_fetch)
 
 
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.wire")
 def test_live_composer_normalization_matches_shape_golden() -> None:
     payload = _load()
     items = server._search_items_from_payload(payload)
@@ -56,6 +58,7 @@ def test_live_composer_normalization_matches_shape_golden() -> None:
     assert shape_signature({"items": items}) == list(shape_reference.SEARCH_SHAPE_REFERENCE)
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Tiles that still parse without their url are structural drift the agent
     must see in the tool's own response: every result silently stopped being
@@ -78,6 +81,7 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     search_body = json.dumps(

@@ -143,6 +143,7 @@ async def test_search_percent_encodes_cyrillic_queries(monkeypatch):
     assert "%D1%81" in seen[-1]
 
 
+@pytest.mark.req("R-YANDEX-HONEST-EMPTY")
 async def test_search_reports_an_explicit_empty_result_as_healthy(monkeypatch):
     """R04 (owner study 2026-11-02): the page's own "nothing found" banner.
 
@@ -163,6 +164,7 @@ async def test_search_reports_an_explicit_empty_result_as_healthy(monkeypatch):
     assert any("no_results" in w for w in result.meta.warnings)
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_warns_when_an_in_stock_item_lost_its_price(monkeypatch):
     """_zone_items reports in_stock from the payload's own isAvailable, so an
     offer can be flagged in stock while every price node stopped matching.
@@ -490,6 +492,7 @@ async def test_fetch_html_caches_within_the_ttl(monkeypatch):
     assert len(calls) == 1
 
 
+@pytest.mark.req("R-YANDEX-CACHE-CONTENT")
 async def test_a_challenge_page_is_never_cached(monkeypatch):
     """R03 (owner study 2026-11-02): only verified content is cached.
 
@@ -753,6 +756,7 @@ def _id_only_ssr_search_page() -> str:
     return '<html><noframes data-apiary="patch">' + json.dumps(patch) + "</noframes></html>"
 
 
+@pytest.mark.req("R-YANDEX-CACHE-CONTENT")
 @pytest.mark.parametrize("shape", ["id-only-collections", "renamed-capture-values"])
 async def test_value_drift_is_evicted_before_the_next_public_search(monkeypatch, shape):
     """R-YANDEX-CACHE-CONTENT: rejected values cannot poison the query's TTL.
@@ -793,6 +797,7 @@ async def test_value_drift_is_evicted_before_the_next_public_search(monkeypatch,
     assert cached.items == recovered.items
 
 
+@pytest.mark.req("R-YANDEX-CACHE-CONTENT", "R-YANDEX-HONEST-EMPTY")
 @pytest.mark.parametrize(
     "fixture,returned",
     [("search_washer.html", 3), ("search_empty.html", 0)],

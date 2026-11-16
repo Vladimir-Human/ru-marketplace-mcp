@@ -136,6 +136,9 @@ jobs:
         # the previous release. Nothing was comparing them; now something is.
         run: uv run python scripts/check_versions.py
 
+      - name: Generated GRACE verification index is current
+        run: uv run python scripts/grace_index.py --check
+
       - name: CHANGELOG fragment
         if: github.event_name == 'pull_request'
         env:

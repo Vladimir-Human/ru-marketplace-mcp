@@ -42,6 +42,7 @@ def _schema_objects(schema: Any, path: str = "$schema") -> Iterator[tuple[str, d
 
 
 # START_BLOCK_DESCRIPTION_CONFORMANCE
+@pytest.mark.req("R-COMPARE-SOURCE-SELECTION.descriptions")
 @pytest.mark.parametrize("surface", ["input", "offer"])
 async def test_compare_descriptions_name_every_compare_source(surface: str) -> None:
     """R-COMPARE-SOURCE-SELECTION.descriptions: name exactly the queryable sources."""
@@ -67,6 +68,7 @@ async def test_compare_descriptions_name_every_compare_source(surface: str) -> N
         assert not excluded & words, (surface, sorted(excluded & words), description)
 
 
+@pytest.mark.req("R-MARKETPLACE-PRICE-WORDING.shared")
 def test_every_marketplace_discount_field_states_its_provenance() -> None:
     """R-MARKETPLACE-PRICE-WORDING: every source's shown discounts are not verified history."""
     phrase = "as the marketplace shows it; not a verified previous price"

@@ -75,6 +75,7 @@ def built_bundle(tmp_path_factory):
 # START_BLOCK_DERIVATION
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_generated_metadata_is_the_independent_member_union():
     root_project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     members = [tomllib.loads(path.read_text(encoding="utf-8")) for path in ROOT.glob("packages/*/pyproject.toml")]
@@ -113,6 +114,7 @@ def test_generated_metadata_is_the_independent_member_union():
     assert all(canonicalize_name(Requirement(text).name) not in workspace_names for text in generated["dependencies"])
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_conflicting_dependency_specifiers_fail(checkout):
     manifest = checkout / "packages" / "ozon-connector" / "pyproject.toml"
     manifest.write_text(
@@ -156,6 +158,7 @@ def test_bundle_alias_is_reserved(checkout):
         bundle.render_pyproject(checkout)
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_print_pyproject_builds_and_writes_nothing(checkout, monkeypatch, capsys):
     monkeypatch.setattr(bundle, "REPO_ROOT", checkout)
     original_render = bundle.render_pyproject
@@ -178,6 +181,7 @@ def test_print_pyproject_builds_and_writes_nothing(checkout, monkeypatch, capsys
 # START_BLOCK_ARTIFACTS
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_wheel_contains_every_import_package_and_py_typed(built_bundle):
     wheel = next(path for path in built_bundle if path.suffix == ".whl")
     with zipfile.ZipFile(wheel) as archive:
@@ -230,6 +234,7 @@ def test_wheel_metadata_and_all_console_scripts(built_bundle):
         assert entry_points["console_scripts"]["ru-marketplace-mcp"] == expected["scripts"]["marketplace-mcp"]
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_sdist_has_relocatable_project_sources_and_readme(built_bundle):
     sdist = next(path for path in built_bundle if path.name.endswith(".tar.gz"))
     with tarfile.open(sdist) as archive:
@@ -248,6 +253,7 @@ def test_sdist_has_relocatable_project_sources_and_readme(built_bundle):
         assert f"{prefix}/README.md" in archive.getnames()
 
 
+@pytest.mark.req("R-PYPI-BUNDLE")
 def test_sources_do_not_look_up_workspace_distribution_metadata():
     """Bundled imports cannot depend on 16 separately installed dist-info directories."""
     for source in ROOT.glob("packages/*/src/**/*.py"):

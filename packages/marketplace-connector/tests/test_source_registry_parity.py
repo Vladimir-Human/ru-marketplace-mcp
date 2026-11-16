@@ -23,6 +23,7 @@ import re
 import tomllib
 from pathlib import Path
 
+import pytest
 from marketplace_connector import cli, unblock
 from marketplace_connector.capabilities import CAPABILITIES as CLI_CAPABILITIES
 from mcp_core.sources import (
@@ -97,6 +98,7 @@ def _connector_packages() -> set[str]:
     return out
 
 
+@pytest.mark.req("R-SOURCE-REGISTRY")
 def test_every_runnable_package_has_exactly_one_registry_entry():
     """The registry is not a list of the sources someone remembered."""
     declared = {spec.package for spec in SOURCES}
@@ -162,6 +164,7 @@ def test_the_ci_inventory_reads_the_registry_instead_of_a_table():
     assert "scripts/e2e_stdio_check.py" in workflow
 
 
+@pytest.mark.req("R-SOURCE-REGISTRY")
 def test_the_literal_mount_table_matches_the_registry():
     """server.py's mounts stay literal: test_dependency_parity.py parses it."""
     assert tuple(_mounted_literal()) == MOUNTS
@@ -190,6 +193,7 @@ def test_the_diagnose_script_probes_exactly_the_registry_drift_sources():
     assert set(ast.literal_eval(literals["DEFAULT_QUERY"])) == DRIFT_PROBE_SOURCES
 
 
+@pytest.mark.req("R-SOURCE-REGISTRY")
 def test_the_cli_and_compare_tables_are_the_registry_projections():
     assert list(CONFIG_SERVERS) == cli.SERVERS
     assert list(SELFCHECKS) == cli._SELFCHECKS

@@ -223,6 +223,7 @@ async def test_selfcheck_loading_at_deadline_is_inconclusive_timeout(monkeypatch
 WIDE_WALL = {**WALL, "anchors_total": 45}
 
 
+@pytest.mark.req("R-TAOBAO-GRID-LOADING")
 async def test_a_page_with_login_routes_is_never_polled_as_a_loading_grid(monkeypatch) -> None:
     """Pre-release audit 2026-10-30: «加载中» alone used to turn this page into a retryable timeout."""
     assert not server._login_wall_markers(WIDE_WALL), "precondition: the link-count gate keeps the markers silent"

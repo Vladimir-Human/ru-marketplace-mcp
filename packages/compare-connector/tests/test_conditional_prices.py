@@ -43,6 +43,7 @@ def _stub_regular_rival(monkeypatch):
     )
 
 
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-NO-FABRICATION")
 @pytest.mark.parametrize("wallet_field", [None, 900])
 async def test_wallet_only_price_cannot_win(monkeypatch, wallet_field):
     """R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival."""
@@ -80,6 +81,7 @@ async def test_wallet_only_price_cannot_win(monkeypatch, wallet_field):
     assert any("wildberries/1" in w and "900 RUB" in w and "WB Wallet" in w for w in result.warnings)
 
 
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE")
 @pytest.mark.parametrize("regular_price", [940, 1000])
 async def test_regular_price_ranks_and_wallet_amount_is_warned(monkeypatch, regular_price):
     """R-COMPARE-CONDITIONAL-PRICE: old code ranks correctly here but loses the 900-RUB Wallet warning."""
@@ -108,6 +110,7 @@ async def test_regular_price_ranks_and_wallet_amount_is_warned(monkeypatch, regu
     assert regular.price_rub == regular.price_native == regular_price
 
 
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE")
 @pytest.mark.parametrize("kind", ["wallet", "subscription", "coupon", "membership"])
 async def test_marked_conditional_price_has_no_winner(monkeypatch, kind):
     """R-COMPARE-CONDITIONAL-PRICE: old code drops the kind and selects 900 even with no everyday price.
@@ -133,6 +136,7 @@ async def test_marked_conditional_price_has_no_winner(monkeypatch, kind):
     assert any("conditional_price:" in w and "900 RUB" in w and "not ranked" in w for w in result.warnings)
 
 
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE")
 @pytest.mark.parametrize("regular_price", [940, 1000, None])
 async def test_subscription_amount_is_named_without_ranking_it(monkeypatch, regular_price):
     """R-COMPARE-CONDITIONAL-PRICE: old code keeps Plus unranked but emits no warning naming its 900 RUB."""

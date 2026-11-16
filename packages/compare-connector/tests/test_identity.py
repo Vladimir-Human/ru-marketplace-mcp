@@ -166,6 +166,7 @@ def test_size_tokens_normalise_units_and_reject_guesses(text, expected):
     assert extract_size_tokens(text) == expected
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 @pytest.mark.parametrize(
     "asked,stated,conflict",
     [
@@ -182,6 +183,7 @@ def test_sizes_compare_in_gigabytes(asked, stated, conflict):
     assert sizes_conflict(frozenset(asked), frozenset(stated)) is conflict
 
 
+@pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 def test_sizes_are_listed_in_capacity_order_across_units():
     """R-COMPARE-VARIANT-IDENTITY: the warning lists sizes by capacity, keeping each title's unit."""
     assert format_size_tokens({"2048GB", "1TB", "512GB", "64GB"}) == "64GB/512GB/1TB/2048GB"

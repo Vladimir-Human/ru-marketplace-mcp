@@ -8,7 +8,7 @@ SDK wrapping, including across repeated compaction and real MCP calls.
 # PURPOSE: Verify compact schemas and SDK result wrapping through in-process MCP.
 # SCOPE: Offline object/union/list/scalar serialization and every shipped compacter caller.
 # DEPENDS: FastMCP; jsonschema; pydantic; mcp_core.output_schema/sources; workspace connectors.
-# LINKS: M-OUTPUT-SCHEMA; R-OUTPUT-SCHEMA-WRAPPING; V-M-OUTPUT-SCHEMA.
+# LINKS: M-OUTPUT-SCHEMA; R-OUTPUT-SCHEMA-WRAPPING; .grace/verification/index.xml.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _heavy_tool: Build a named-model positive control with a heavy schema.
@@ -22,6 +22,7 @@ import asyncio
 import importlib
 from dataclasses import asdict, is_dataclass
 
+import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.tools import Tool
 from jsonschema import validate
@@ -114,6 +115,7 @@ def test_apply_is_idempotent():
 
 
 # START_BLOCK_MCP_WRAPPING_TESTS
+@pytest.mark.req("R-OUTPUT-SCHEMA-WRAPPING")
 async def test_wrapped_outputs_survive_compaction_through_mcp():
     """R-OUTPUT-SCHEMA-WRAPPING: compaction preserves SDK serialization and decoding."""
     app = _heavy_tool()
@@ -164,6 +166,7 @@ async def test_wrapped_outputs_survive_compaction_through_mcp():
 
 
 # START_BLOCK_ALL_CALLER_WRAPPING_TESTS
+@pytest.mark.req("R-OUTPUT-SCHEMA-WRAPPING")
 async def test_every_compacted_tool_preserves_its_sdk_output_contract():
     """R-OUTPUT-SCHEMA-WRAPPING: no local or mounted caller loses SDK wrapping."""
     modules = sorted({source.module for source in SOURCES} | {"compare_connector.decision_server"})

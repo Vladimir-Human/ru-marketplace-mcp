@@ -49,6 +49,7 @@ def uvx_environment(tmp_path, monkeypatch):
 # START_BLOCK_PUBLIC_COMMANDS
 
 
+@pytest.mark.req("R-CLI-INSTALL-UVX")
 @pytest.mark.parametrize(
     ("profile", "script"), [("compare", "compare-mcp"), ("decision", "decision-mcp"), ("full", "marketplace-mcp")]
 )
@@ -68,6 +69,7 @@ def test_install_uvx_writes_the_pinned_release(profile, script, uvx_environment,
     assert "install <client> --write --force" in captured.err
 
 
+@pytest.mark.req("R-CLI-INSTALL-UVX")
 def test_setup_uvx_writes_the_same_pinned_entry(uvx_environment, tmp_path, capsys):
     uv, _, _ = uvx_environment
     assert cli.cmd_setup(["--client", "cursor", "--no-browser", "--no-doctor"]) == 0
@@ -80,6 +82,7 @@ def test_setup_uvx_writes_the_same_pinned_entry(uvx_environment, tmp_path, capsy
     assert "pinned release" in capsys.readouterr().err
 
 
+@pytest.mark.req("R-CLI-INSTALL-UVX")
 def test_install_force_refreshes_the_release_pin(uvx_environment, tmp_path, monkeypatch):
     config = tmp_path / "Claude" / "claude_desktop_config.json"
     assert cli.cmd_install(["claude", "--write"]) == 0

@@ -47,6 +47,7 @@ async def test_an_api_only_wb_is_not_listed_as_needing_a_browser(monkeypatch: py
     assert capability["may_use_cdp"] is False
 
 
+@pytest.mark.req("R-CDP-CAPABILITY-TRUTH")
 async def test_a_dom_wb_is_listed_as_needing_a_browser(monkeypatch: pytest.MonkeyPatch) -> None:
     """In DOM mode the browser is the only way in, and the inventory says so."""
     _wb_mode(monkeypatch, "dom", True)

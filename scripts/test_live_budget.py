@@ -87,6 +87,7 @@ def fake_http(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return sent
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_counting_per_group_and_loopback_is_free(
     tmp_path: Path,
     clock: FakeClock,
@@ -112,6 +113,7 @@ def test_counting_per_group_and_loopback_is_free(
     assert lines[1].startswith("[req 2/40] wildberries 1/8 httpx https://card.wb.ru/")
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_the_per_source_cap_raises_before_sending(tmp_path: Path, clock: FakeClock, fake_http: list[str]) -> None:
     live_budget.install(_budget(tmp_path, clock, per_source=1))
     client = httpx.Client()
@@ -124,6 +126,7 @@ def test_the_per_source_cap_raises_before_sending(tmp_path: Path, clock: FakeClo
     assert len(live_budget.Ledger(tmp_path / "live-budget.json").load()) == 1
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_refused_request_is_said_out_loud_and_counted(
     tmp_path: Path, clock: FakeClock, fake_http: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -147,6 +150,7 @@ def test_a_refused_request_is_said_out_loud_and_counted(
     assert len(live_budget.Ledger(tmp_path / "live-budget.json").load()) == 1
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_the_total_cap_raises_before_sending(tmp_path: Path, clock: FakeClock, fake_http: list[str]) -> None:
     live_budget.install(_budget(tmp_path, clock, total=1))
     client = httpx.Client()
@@ -158,6 +162,7 @@ def test_the_total_cap_raises_before_sending(tmp_path: Path, clock: FakeClock, f
     assert len(fake_http) == 1
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_request_too_soon_waits_out_the_gap(tmp_path: Path, clock: FakeClock, fake_http: list[str]) -> None:
     live_budget.install(_budget(tmp_path, clock))
     client = httpx.Client()
@@ -170,6 +175,7 @@ def test_a_request_too_soon_waits_out_the_gap(tmp_path: Path, clock: FakeClock, 
     assert len(fake_http) == 3
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_the_ozon_subprocess_hook_is_counted(tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> None:
     import ozon_connector.server as ozon_server
 
@@ -192,6 +198,7 @@ def test_the_ozon_subprocess_hook_is_counted(tmp_path: Path, clock: FakeClock, m
     assert [(entry["group"], entry["kind"]) for entry in entries] == [("ozon", "curl(subprocess)")]
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_an_in_page_fetch_is_counted(tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> None:
     from playwright.async_api import Page
 
@@ -210,6 +217,7 @@ def test_an_in_page_fetch_is_counted(tmp_path: Path, clock: FakeClock, monkeypat
     assert [(entry["group"], entry["kind"]) for entry in entries] == [("ozon", "in-page fetch")]
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_missing_hook_point_raises(tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delattr(httpx.AsyncClient, "send", raising=False)
 
@@ -308,6 +316,7 @@ def test_a_refused_run_opens_no_tab_at_all(tmp_path: Path, clock: FakeClock, mon
     assert opened == []
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_two_installs_share_one_ledger_file(tmp_path: Path, clock: FakeClock, fake_http: list[str]) -> None:
     path = tmp_path / "shared.json"
     client = httpx.Client()
@@ -324,6 +333,7 @@ def test_two_installs_share_one_ledger_file(tmp_path: Path, clock: FakeClock, fa
     assert len(fake_http) == 2
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_limits_and_ledger_path_come_from_the_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LIVE_BUDGET_TOTAL", "7")
     monkeypatch.setenv("LIVE_BUDGET_PER_SOURCE", "3")
@@ -343,6 +353,7 @@ def test_a_bad_environment_limit_fails_loudly(monkeypatch: pytest.MonkeyPatch) -
         live_budget.Budget.from_env()
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_reset_archives_the_ledger_and_the_next_request_starts_a_new_run(
     tmp_path: Path, clock: FakeClock, fake_http: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -479,6 +490,7 @@ def test_an_abandoned_lock_file_does_not_stop_the_run(
     assert not lock.exists()
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_raw_cdp_popup_is_booked_before_it_opens(
     tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -514,6 +526,7 @@ def test_a_raw_cdp_popup_is_booked_before_it_opens(
     ]
 
 
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_refused_run_opens_no_raw_popup(tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch) -> None:
     import contextlib
 

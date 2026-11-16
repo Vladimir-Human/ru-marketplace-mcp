@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CI = WORKFLOWS / "ci.yml"
@@ -36,6 +38,7 @@ def _top_permissions(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+@pytest.mark.req("R-CI-TOKEN-SCOPE")
 def test_every_workflow_limits_the_token() -> None:
     files = sorted(WORKFLOWS.glob("*.yml")) + sorted(WORKFLOWS.glob("*.yaml"))
     assert files, "no workflows found"
@@ -52,6 +55,7 @@ def test_every_workflow_limits_the_token() -> None:
     assert unlimited == [], f"jobs that inherit the repository token default: {unlimited}"
 
 
+@pytest.mark.req("R-CI-TOKEN-SCOPE")
 def test_ci_is_read_only_and_no_job_widens_it() -> None:
     text = CI.read_text(encoding="utf-8")
     assert _top_permissions(text) == "  contents: read\n"

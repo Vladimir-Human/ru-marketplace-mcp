@@ -78,6 +78,7 @@ def _serve(monkeypatch, page: str) -> None:
 # ------------------------------------------------------------------- R01 ------
 
 
+@pytest.mark.req("R-YANDEX-MONEY-PARSING")
 async def test_search_refuses_an_ambiguous_price_and_names_it(monkeypatch):
     """R01: '1 999 2 999' is two numbers glued by the grouping space.
 
@@ -168,6 +169,7 @@ def _reference_refusals(warnings: list[str]) -> list[str]:
     return [w for w in warnings if w.startswith("price_unparseable") and "reference" in w]
 
 
+@pytest.mark.req("R-YANDEX-MONEY-PARSING")
 async def test_card_reports_an_ambiguous_struck_through_price(monkeypatch):
     """R01: the pre-discount reference is money too, and refusing it is never quiet.
 
@@ -255,6 +257,7 @@ async def test_ssr_search_reports_an_ambiguous_struck_through_price(monkeypatch)
 # ------------------------------------------------------------------- R02 ------
 
 
+@pytest.mark.req("R-YANDEX-PRICE-ROLE")
 async def test_card_never_borrows_the_plus_price_as_the_everyday_price(monkeypatch):
     """R02: a card with only the subscriber price has no everyday price.
 
@@ -353,6 +356,7 @@ async def _public_native_and_comparison(monkeypatch, page: str):
     return native, comparison
 
 
+@pytest.mark.req("R-YANDEX-MONEY-PARSING", "R-YANDEX-PRICE-ROLE")
 @pytest.mark.parametrize("extraction", ["zone", "ssr"])
 @pytest.mark.parametrize(
     "discount",
@@ -390,6 +394,7 @@ async def test_native_preferred_discount_is_refused_without_reference_fallback(m
     assert any("source_warning:yandex_market:" in w and "price_unparseable" in w for w in comparison["warnings"])
 
 
+@pytest.mark.req("R-YANDEX-MONEY-PARSING")
 @pytest.mark.parametrize("extraction", ["zone", "ssr"])
 @pytest.mark.parametrize(
     "discount_entries,expected",

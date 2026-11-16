@@ -29,6 +29,7 @@ async def _input_schema(tool_name: str) -> dict:
     raise AssertionError(f"{tool_name} is not advertised")
 
 
+@pytest.mark.req("R-SCHEMA-LIMITS")
 @pytest.mark.parametrize("tool_name", TOOLS)
 async def test_the_advertised_schema_states_the_batch_limits(tool_name: str) -> None:
     """The limits are machine-readable, not prose in the description."""

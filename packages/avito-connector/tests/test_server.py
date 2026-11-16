@@ -204,6 +204,7 @@ async def test_search_maps_non_json_to_parser_drift(monkeypatch):
         await server.avito_search("ноутбук")
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_search_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: an open navigation breaker surfaces as rate_limited
     with retry_after_s, through the real _fetch path (tier-1 refusal, then
@@ -244,6 +245,7 @@ async def test_search_warns_on_empty_items_with_nonzero_total(monkeypatch):
     assert "empty_items_with_nonzero_total" in result.meta.warnings
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """A payload that still parses but lost a whole alias family is drift the
     agent must see in the tool's own response, not only via doctor."""
@@ -272,6 +274,7 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_reads_the_data_items_envelope_without_shape_drift(monkeypatch):
     """The third envelope ``_parse_search_items`` accepts: listings served only
     under data.items[] must answer healthy, not read as a page whose every key
@@ -458,6 +461,7 @@ async def test_card_rejects_input_without_an_item_id(bad):
         await server.avito_card(bad)
 
 
+@pytest.mark.req("R-AVITO-ITEM-PATH")
 @pytest.mark.parametrize(
     "bad",
     [
@@ -506,6 +510,7 @@ async def test_card_refuses_non_item_page_paths_before_transport(monkeypatch, ba
     assert calls == []
 
 
+@pytest.mark.req("R-AVITO-ITEM-PATH")
 @pytest.mark.parametrize(
     "bad",
     [
@@ -533,6 +538,7 @@ async def test_card_refuses_separator_escapes_before_transport(monkeypatch, bad)
     assert calls == []
 
 
+@pytest.mark.req("R-AVITO-ITEM-PATH")
 async def test_card_still_opens_a_plain_city_category_slug_path(monkeypatch):
     """The same guard must not touch ordinary slugs: plain ASCII item paths keep
     working, fetched exactly as validated."""
@@ -544,6 +550,7 @@ async def test_card_still_opens_a_plain_city_category_slug_path(monkeypatch):
     assert result.item_id == 4612345678
 
 
+@pytest.mark.req("R-AVITO-ITEM-PATH")
 @pytest.mark.parametrize(
     ("raw", "expected_url"),
     [
@@ -578,6 +585,7 @@ async def test_card_keeps_opening_real_item_urls_normalized(monkeypatch, raw, ex
     assert result.item_id == 4612345678
 
 
+@pytest.mark.req("R-AVITO-ITEM-PATH")
 async def test_card_accepts_a_bare_id_item_url(monkeypatch):
     """/<id> is the item-page shape the bare-id branch itself navigates to."""
     calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
@@ -595,6 +603,7 @@ async def test_card_maps_404_to_not_found(monkeypatch):
         await server.avito_card("4612345678")
 
 
+@pytest.mark.req("R-CDP-HOST-PAUSE")
 async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypatch):
     """R-CDP-HOST-PAUSE: same contract through _fetch_item_page, whose broad
     except Exception used to swallow the pause into a generic CDP failure."""

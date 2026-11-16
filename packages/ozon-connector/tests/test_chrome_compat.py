@@ -11,17 +11,20 @@ from ozon_connector.settings import OzonSettings
 from pydantic import ValidationError
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 def test_chrome_compat_defaults_to_native(monkeypatch):
     monkeypatch.delenv("OZON_CHROME_COMPAT", raising=False)
     assert OzonSettings(_env_file=None).chrome_compat == "native"
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 @pytest.mark.parametrize("mode", ["native", "windows"])
 def test_chrome_compat_reads_supported_mode_from_environment(monkeypatch, mode):
     monkeypatch.setenv("OZON_CHROME_COMPAT", mode)
     assert OzonSettings(_env_file=None).chrome_compat == mode
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 @pytest.mark.parametrize("mode", ["", "linux", "WINDOWS", "windows "])
 def test_chrome_compat_rejects_unknown_mode(monkeypatch, mode):
     monkeypatch.setenv("OZON_CHROME_COMPAT", mode)
@@ -29,6 +32,7 @@ def test_chrome_compat_rejects_unknown_mode(monkeypatch, mode):
         OzonSettings(_env_file=None)
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 @pytest.mark.parametrize("mode", ["native", "windows"])
 async def test_ozon_only_passes_explicit_compat_to_its_owned_cdp_tab(monkeypatch, mode):
     calls = []
@@ -58,6 +62,7 @@ async def test_ozon_only_passes_explicit_compat_to_its_owned_cdp_tab(monkeypatch
     assert not server._cdp_lock.locked()
 
 
+@pytest.mark.req("R-OZON-CHROME-COMPAT")
 async def test_ozon_windows_compat_does_not_turn_a_navigation_403_into_success(monkeypatch):
     @asynccontextmanager
     async def blocked_page(url, **kwargs):

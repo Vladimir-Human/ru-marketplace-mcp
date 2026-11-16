@@ -47,6 +47,7 @@ def _sale_step(payload: dict, component: str) -> dict:
     return next(s["payload"] for s in hit["iva"]["PriceStep"] if s["componentData"]["component"] == component)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_discounted_hit_is_priced_at_what_the_buyer_pays():
     """v2.9.0 read priceDetailed.value, the price before Avito's sale discount."""
     rows = _rows(_payload())
@@ -67,6 +68,7 @@ def test_a_discounted_hit_is_priced_at_what_the_buyer_pays():
     )
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_hit_without_a_discount_is_unchanged():
     row = _rows(_payload())[PLAIN_HIT]
 
@@ -106,6 +108,7 @@ def _shown_price_without_discount(payload):
     hit["iva"]["PriceStep"] = [s for s in hit["iva"]["PriceStep"] if s["componentData"]["component"] != "discount"]
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("edit", [_percent_off, _struck_price_off, _shown_price_above, _shown_price_without_discount])
 def test_a_discount_that_does_not_add_up_gives_no_price(edit):
     payload = copy.deepcopy(_payload())
@@ -117,6 +120,7 @@ def test_a_discount_that_does_not_add_up_gives_no_price(edit):
     assert row["price_conflict"] is True
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 @pytest.mark.parametrize("value", [True, "15", 0, 100, None, [15]])
 def test_a_percent_that_is_not_a_number_is_computed_from_the_prices(value):
     payload = copy.deepcopy(_payload())
@@ -135,6 +139,7 @@ def _serve_search(monkeypatch, payload: dict) -> None:
     monkeypatch.setattr(server, "_fetch", fake_fetch)
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_search_reports_the_sale_and_warns_about_a_discount_that_does_not_add_up(monkeypatch):
     payload = copy.deepcopy(_payload())
     _percent_off(payload)
@@ -156,6 +161,7 @@ def _serve_page(monkeypatch, html: str) -> None:
     monkeypatch.setattr(server, "_fetch_item_page", fake_fetch_item_page)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_a_discounted_card_names_the_struck_price_and_the_percent(monkeypatch):
     """v2.9.0 showed the sale price from the DOM but said nothing of the sale."""
     _serve_page(monkeypatch, _page(f"item_sale_{SALE_CARD}.html"))
@@ -166,6 +172,7 @@ async def test_a_discounted_card_names_the_struck_price_and_the_percent(monkeypa
     assert not any(w.startswith("price_conflict") for w in result.meta.warnings)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 async def test_a_card_without_a_discount_is_unchanged(monkeypatch):
     _serve_page(monkeypatch, _page("item_state_active_9000000012.html"))
 
@@ -185,6 +192,7 @@ def _card_state_edited(edit) -> str:
     return html[: match.start(1)] + encoded + html[match.end(1) :]
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_a_card_discount_that_does_not_add_up_gives_no_price_and_says_so(monkeypatch):
     def struck_price_off(item):
         item["formattedPrice"]["oldString"] = "3 500"
@@ -197,6 +205,7 @@ async def test_a_card_discount_that_does_not_add_up_gives_no_price_and_says_so(m
     assert any(w.startswith("price_conflict: struck price 3500") for w in result.meta.warnings)
 
 
+@pytest.mark.req("R-ITEM-HONESTY")
 async def test_a_page_price_that_is_neither_card_price_is_a_conflict(monkeypatch):
     html = _page(f"item_sale_{SALE_CARD}.html").replace("2 550<span>", "2 100<span>", 1)
     assert "2 100<span>" in html
@@ -208,6 +217,7 @@ async def test_a_page_price_that_is_neither_card_price_is_a_conflict(monkeypatch
     assert any("page price 2100" in w for w in result.meta.warnings)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_product_offer_at_the_struck_price_takes_the_sale_price():
     """A schema.org offer may carry the listing price; the card state says what the buyer pays."""
     item = {"price_rub": 3000.0}
@@ -218,6 +228,7 @@ def test_a_product_offer_at_the_struck_price_takes_the_sale_price():
     assert item == {"price_rub": 2550.0, "old_price_rub": 3000.0, "discount_percent": 15}
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_a_card_percent_missing_is_computed_and_a_shown_price_without_discount_is_a_conflict():
     def no_percent(item):
         del item["formattedPrice"]["saleDiscount"]
@@ -242,5 +253,6 @@ def test_a_card_percent_missing_is_computed_and_a_shown_price_without_discount_i
     assert item_state.card_sale_price(_card_state_edited(empty_strings_no_sale), SALE_CARD) == (None, None)
 
 
+@pytest.mark.req("R-NO-FABRICATION")
 def test_the_sale_of_another_item_is_not_read():
     assert item_state.card_sale_price(_page(f"item_sale_{SALE_CARD}.html"), 9000000099) == (None, None)

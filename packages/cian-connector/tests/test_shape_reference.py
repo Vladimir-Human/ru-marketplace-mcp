@@ -14,6 +14,7 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
 from cian_connector import server, shape_reference
 from mcp_core.resilience import shape_signature
 
@@ -80,6 +81,7 @@ def _patch_card(monkeypatch, result):
     monkeypatch.setattr(server, "_fetch_card", fake)
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_search_warns_when_a_required_key_family_vanishes(monkeypatch):
     """Offers that still parse after losing a whole alias family are structural
     drift the agent must see in the tool's own response, not only via doctor."""
@@ -117,6 +119,7 @@ async def test_search_a_complete_payload_carries_no_shape_drift_warning(monkeypa
     assert not [w for w in result.meta.warnings if w.startswith("shape_drift:")]
 
 
+@pytest.mark.req("R-SHAPE-DRIFT-WARNING")
 async def test_selfcheck_cries_drift_when_a_required_family_vanishes(monkeypatch):
     """The canary must fail the same way the tool does when a family is lost."""
     payload = json.loads((FIXTURES / "search_sale_live.json").read_text(encoding="utf-8"))

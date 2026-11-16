@@ -500,6 +500,7 @@ async def _round_trip(module, tool_name, arguments):
     return text, answer
 
 
+@pytest.mark.req("R-GUIDE-CONTRACTS", "R-OZON-SEARCH-NUMERIC.wire")
 @pytest.mark.parametrize("tool_name", sorted(CALLS))
 async def test_each_guide_matches_public_tool_answer(monkeypatch, tool_name):
     """R-GUIDE-CONTRACTS: no undocumented or phantom serialized fields."""
@@ -538,6 +539,7 @@ async def test_each_guide_matches_public_tool_answer(monkeypatch, tool_name):
 
 
 # START_BLOCK_SEMANTIC_CONTRACT
+@pytest.mark.req("R-GUIDE-CONTRACTS")
 @pytest.mark.parametrize("tool_name", ["aliexpress_card", "aliexpress_search"])
 async def test_aliexpress_challenge_guide_matches_wire_error(monkeypatch, tool_name):
     """R-GUIDE-CONTRACTS: x5sec is challenge_required, not transport_down."""
@@ -561,6 +563,7 @@ async def test_aliexpress_challenge_guide_matches_wire_error(monkeypatch, tool_n
         )
 
 
+@pytest.mark.req("R-GUIDE-CONTRACTS")
 @pytest.mark.parametrize(
     "tool_name,mode",
     [

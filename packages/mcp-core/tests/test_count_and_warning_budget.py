@@ -18,6 +18,7 @@ import pytest
 from mcp_core.resilience import bound_warnings, coerce_count
 
 
+@pytest.mark.req("R-COUNT-PARSE", "R-OZON-SEARCH-NUMERIC.count")
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -69,6 +70,7 @@ def test_a_warning_list_that_fits_is_delivered_unchanged() -> None:
     assert bound_warnings(warnings) == warnings
 
 
+@pytest.mark.req("R-WARNING-BUDGET")
 def test_a_cut_warning_list_names_the_number_it_suppressed() -> None:
     """The delivery stays bounded and says how much it dropped."""
     warnings = [f"schema_warning_{index}: synthetic diagnostic" for index in range(12)]
