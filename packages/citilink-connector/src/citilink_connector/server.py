@@ -85,7 +85,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
-ALLOWED_HOSTS = BY_NAME["citilink"].hosts
+ALLOWED_HOSTS = BY_NAME["citilink"].page_hosts
 SITE_BASE = "https://www.citilink.ru"
 SEARCH_URL = f"{SITE_BASE}/search/"
 

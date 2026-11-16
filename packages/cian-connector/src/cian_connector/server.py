@@ -30,12 +30,12 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 #        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _build_json_query: Construct deal/property/region/range filter queries.
-# _extract_offer_id: Resolve numeric handles or Cian offer URLs.
+# _extract_offer_id: Resolve numeric handles or host-checked Cian offer links, including schemeless links.
 # cian_search: Read filtered offers with explicit price units and partial fields,
 #              plus a runtime shape-drift warning when a required key family vanishes.
 # cian_card: Read embedded offer-card state and classify removed/blocked pages.
@@ -96,7 +96,7 @@ _settings = get_settings()
 SERVER_VERSION = "2.9.4"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
-ALLOWED_HOSTS = BY_NAME["cian"].hosts
+ALLOWED_HOSTS = BY_NAME["cian"].page_hosts
 SITE_BASE = "https://www.cian.ru"
 # www geo-redirects to a regional subdomain remembered in the profile (rostov.cian.ru).
 SEARCH_API = "https://api.cian.ru/search-offers/v2/search-offers-desktop/"
@@ -692,7 +692,7 @@ def _extract_offer_id(raw: str) -> int | None:
     raw = raw.strip()
     if raw.isdigit():
         return int(raw) if len(raw) >= 6 else None
-    match = _OFFER_ID_RE.search(raw) if url_on_hosts(raw, ALLOWED_HOSTS) else None
+    match = _OFFER_ID_RE.search(raw) if url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True) else None
     return int(match.group(1)) if match else None
 
 
