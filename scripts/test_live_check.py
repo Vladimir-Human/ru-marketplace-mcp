@@ -179,6 +179,33 @@ def test_a_failed_budget_install_exits_4(
     assert live_check.main(["selfcheck", "wb"]) == 4
 
 
+@pytest.mark.req("R-LIVE-PREFLIGHT")
+@pytest.mark.parametrize("ready,code", [(True, 0), (False, 4)])
+def test_preflight_alone_reports_its_result_and_installs_no_budget(
+    ready: bool,
+    code: int,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`preflight` runs the setup checks, prints them as they are, and spends nothing."""
+    monkeypatch.setenv("LIVE_BUDGET_LEDGER", str(tmp_path / ".live-budget.json"))
+
+    async def fake_preflight() -> bool:
+        print("cdp: failed; run: marketplace-mcp browser start")
+        return ready
+
+    def no_install() -> live_budget.Budget:
+        raise AssertionError("preflight must not install the budget")
+
+    monkeypatch.setattr(live_check, "_preflight", fake_preflight)
+    monkeypatch.setattr(live_budget, "install", no_install)
+
+    assert live_check.main(["preflight"]) == code
+    assert "marketplace-mcp browser start" in capsys.readouterr().out
+    assert not (tmp_path / ".live-budget.json").exists()
+
+
 # END_BLOCK_DISPATCH_TESTS
 # START_BLOCK_PREFLIGHT_TESTS
 

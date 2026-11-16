@@ -1,0 +1,206 @@
+{
+  "fixed_queries": {
+    "wildberries": {
+      "module": "wb_connector.server",
+      "listing": {
+        "tool": "wb_search",
+        "kwargs": {
+          "query": "наушники sony wh-1000xm5"
+        }
+      },
+      "card": {
+        "tool": "wb_card",
+        "id_argument": "nm_ids",
+        "id_many": true
+      },
+      "item_id_field": "nm_id",
+      "card_id_field": "nm_id",
+      "card_items_field": "items"
+    },
+    "ozon": {
+      "module": "ozon_connector.server",
+      "listing": {
+        "tool": "ozon_search",
+        "kwargs": {
+          "query": "iphone 16 128gb"
+        }
+      },
+      "card": {
+        "tool": "ozon_card",
+        "id_argument": "sku_or_path"
+      },
+      "item_id_field": "sku",
+      "card_id_field": "url",
+      "listing_price_field": "price",
+      "card_price_field": "price"
+    },
+    "yandex_market": {
+      "module": "yandex_connector.server",
+      "listing": {
+        "tool": "yandex_search",
+        "kwargs": {
+          "query": "dyson v15 detect"
+        }
+      },
+      "card": {
+        "tool": "yandex_card",
+        "id_argument": "product_id"
+      },
+      "ledger_source": "yandex",
+      "item_id_field": "product_id",
+      "card_id_field": "product_id",
+      "identity_fields": [
+        "sku_id"
+      ]
+    },
+    "detsky_mir": {
+      "module": "detmir_connector.server",
+      "listing": {
+        "tool": "detmir_category",
+        "kwargs": {
+          "alias": "podguzniki"
+        }
+      },
+      "card": {
+        "tool": "detmir_card",
+        "id_argument": "product_id"
+      },
+      "ledger_source": "detmir",
+      "target_query": "pampers premium care 4",
+      "item_id_field": "product_id",
+      "card_id_field": "product_id",
+      "card_items_field": "product"
+    },
+    "avito": {
+      "module": "avito_connector.server",
+      "listing": {
+        "tool": "avito_search",
+        "kwargs": {
+          "query": "playstation 5 slim"
+        }
+      },
+      "card": {
+        "tool": "avito_card",
+        "id_argument": "item_id_or_url"
+      },
+      "item_id_field": "item_id",
+      "card_id_field": "item_id"
+    },
+    "taobao": {
+      "module": "taobao_connector.server",
+      "listing": {
+        "tool": "taobao_search",
+        "kwargs": {
+          "query": "小米手环9"
+        }
+      },
+      "card": {
+        "tool": "taobao_card",
+        "id_argument": "item_id_or_url"
+      },
+      "item_id_field": "item_id",
+      "card_id_field": "item_id",
+      "listing_price_field": "price_cny",
+      "card_price_field": "price_cny",
+      "card_input_field": "url"
+    },
+    "megamarket": {
+      "module": "megamarket_connector.server",
+      "listing": {
+        "tool": "megamarket_search",
+        "kwargs": {
+          "query": "xiaomi redmi note 14 256gb"
+        }
+      },
+      "card": {
+        "tool": "megamarket_card",
+        "id_argument": "item_id_or_url"
+      },
+      "item_id_field": "item_id",
+      "card_id_field": "item_id"
+    },
+    "lamoda": {
+      "module": "lamoda_connector.server",
+      "listing": {
+        "tool": "lamoda_search",
+        "kwargs": {
+          "query": "кроссовки nike air force 1"
+        }
+      },
+      "card": {
+        "tool": "lamoda_card",
+        "id_argument": "sku_or_url"
+      },
+      "item_id_field": "sku",
+      "card_id_field": "sku"
+    },
+    "dns": {
+      "module": "dns_connector.server",
+      "listing": {
+        "tool": "dns_search",
+        "kwargs": {
+          "query": "ssd samsung 990 pro 1tb"
+        }
+      },
+      "card": {
+        "tool": "dns_card",
+        "id_argument": "product_url"
+      },
+      "item_id_field": "product_id",
+      "card_id_field": "product_id"
+    },
+    "citilink": {
+      "module": "citilink_connector.server",
+      "listing": {
+        "tool": "citilink_search",
+        "kwargs": {
+          "query": "ssd samsung 990 pro 1tb"
+        }
+      },
+      "card": {
+        "tool": "citilink_card",
+        "id_argument": "product_url"
+      },
+      "item_id_field": "product_id",
+      "card_id_field": "product_id"
+    },
+    "aliexpress": {
+      "module": "aliexpress_connector.server",
+      "listing": {
+        "tool": "aliexpress_search",
+        "kwargs": {
+          "query": "xiaomi smart band 9"
+        }
+      },
+      "card": {
+        "tool": "aliexpress_card",
+        "id_argument": "item_id_or_url"
+      },
+      "item_id_field": "item_id",
+      "card_id_field": "item_id"
+    },
+    "cian": {
+      "module": "cian_connector.server",
+      "listing": {
+        "tool": "cian_search",
+        "kwargs": {
+          "deal": "rent",
+          "offer_type": "flat",
+          "region": "1",
+          "rooms": [
+            1
+          ]
+        }
+      },
+      "card": {
+        "tool": "cian_card",
+        "id_argument": "offer_id_or_url"
+      },
+      "item_id_field": "offer_id",
+      "card_id_field": "offer_id",
+      "identity_fields": [
+        "price_unit"
+      ]
+    }
+  }
+}

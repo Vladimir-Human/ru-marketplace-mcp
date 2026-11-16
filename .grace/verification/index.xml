@@ -350,6 +350,37 @@
     <test file="scripts/test_live_conftest.py" name="test_an_offline_selection_imports_no_budget" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_conftest.py" name="test_other_failures_and_offline_tests_still_fail" requirements="R-LIVE-BUDGET" title="Only a budget refusal on a live test is a skip: a real failure of a live" />
   </requirement>
+  <requirement id="R-LIVE-MATRIX" kind="requirement" state="tested">
+    <test file="scripts/test_live_matrix.py" name="test_all_fixed_probes_run_native_listing_and_first_card_offline" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_card_expected_cost_is_measured_by_kind_not_listing_cost" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_cian_delta_requires_known_equal_price_units" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
+    <test file="scripts/test_live_matrix.py" name="test_delta_only_when_both_integer_rub_prices_differ_for_the_same_id" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
+    <test file="scripts/test_live_matrix.py" name="test_diff_uses_previous_release_before_newest_same_release" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_each_catalogue_error_is_mapped_through_public_main" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_exact_recursive_whitelist_and_no_private_result_or_error_output" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.whitelist" />
+    <test file="scripts/test_live_matrix.py" name="test_first_run_prints_no_baseline_and_one_progress_line_per_source" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_first_three_ids_are_saved_without_erasing_unselected_sources" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_fixed_queries_match_registry_and_accept_real_tool_signatures" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_guard_reloads_actual_ledger_before_card_and_costs_are_source_deltas" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_healthy_listing_takes_the_card_state" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_invalid_usage_exits_four_without_tool_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_ledger_at_seven_skips_next_call_without_calling_any_tool" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_mapping_covers_the_repository_error_catalogue" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_measured_zero_request_listing_is_not_replaced_by_ozon_seed" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_needs_human_stops_that_source_but_continues_the_matrix" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_only_and_skip_select_canonical_sources" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_ozon_listing_expected_cost_is_newest_known_or_seed_three" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_prebound_logger_is_suppressed_and_logging_configuration_is_restored" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.whitelist" />
+    <test file="scripts/test_live_matrix.py" name="test_preflight_failure_exits_four_before_install_or_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_raw_caller_exception_and_logs_do_not_leak" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.whitelist" />
+    <test file="scripts/test_live_matrix.py" name="test_stop_rule_drops_cards_by_highest_total_source_cost_until_plan_fits" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_success_requires_items_and_at_least_one_price" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_taobao_cny_prices_never_masquerade_as_rub_delta" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
+    <test file="scripts/test_live_matrix.py" name="test_taobao_first_item_url_preserves_tmall_early_refusal_and_audit_id" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.probes" />
+    <test file="scripts/test_live_matrix.py" name="test_unmeasured_calls_cost_one_and_exact_36_boundary_is_allowed" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_whole_run_refused_by_ledger_exits_three_without_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
+    <test file="scripts/test_live_matrix.py" name="test_yandex_delta_requires_same_product_and_known_same_offer_sku" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
+  </requirement>
   <requirement id="R-LIVE-PREFLIGHT" kind="requirement" state="tested">
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_after_both_fixes_stops_before_budget" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: nothing left to try → both commands printed, ledger untouched." />
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_moves_temp_into_the_repo_first" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: a writable-for-Python %TEMP% that node may not use" />
@@ -357,6 +388,7 @@
     <test file="scripts/test_live_check.py" name="test_failed_driver_uses_system_node_before_tool" requirements="R-LIVE-PREFLIGHT.driver" title="R-LIVE-PREFLIGHT.driver: retry the real preflight with PATH's system node." />
     <test file="scripts/test_live_check.py" name="test_failed_system_driver_stops_before_budget" requirements="R-LIVE-PREFLIGHT.driver" title="R-LIVE-PREFLIGHT.driver: a failed retry is setup failure, not a spent request." />
     <test file="scripts/test_live_check.py" name="test_failed_temp_repair_stops_before_budget" requirements="R-LIVE-PREFLIGHT.temp" title="R-LIVE-PREFLIGHT.temp: both unwritable locations leave the ledger untouched." />
+    <test file="scripts/test_live_check.py" name="test_preflight_alone_reports_its_result_and_installs_no_budget" requirements="R-LIVE-PREFLIGHT" title="`preflight` runs the setup checks, prints them as they are, and spends nothing." />
     <test file="scripts/test_live_check.py" name="test_unreachable_cdp_stops_before_budget" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: attach only, no autostart or connector/budget code." />
     <test file="scripts/test_live_check.py" name="test_unwritable_temp_is_repaired_before_tool_code" requirements="R-LIVE-PREFLIGHT.temp" title="R-LIVE-PREFLIGHT.temp: the repo fallback takes effect before driver/tool I/O." />
   </requirement>
