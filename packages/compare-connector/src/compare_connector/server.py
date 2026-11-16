@@ -86,7 +86,6 @@ from pydantic import Field
 
 from compare_connector.decide import (  # noqa: F401
     ResponseOptions,
-    _conditional_price_warning,
     _dedupe,
     _has_bundle_phrase_prefix,
     _has_bundle_phrase_suffix,
@@ -99,6 +98,7 @@ from compare_connector.decide import (  # noqa: F401
     _relevance_warnings,
     _size_mismatch_warning,
     build_response,
+    decide_conditional_price,
 )
 from compare_connector.identity import (
     ProductIdentity,
@@ -292,16 +292,19 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
 
     Fields are read as typed attributes on ``WbCardItem`` rather than by string
     key, so a rename upstream fails mypy here instead of silently turning a price
-    into ``None``. WB's search can return a distinct no-results response with no
-    ``items`` at all, hence the ``getattr`` guard.
+    into ``None``. WB's search can answer with no ``items`` at all, hence the guard.
     """
     server = SOURCES["wildberries"]
     response = await server.wb_search(query=query, page=1)
 
-    offers: list[MarketOffer] = []
-    conditional_warnings: list[str] = []
+    batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
-        offers.append(
+        # A Wallet-only tile quotes the Wallet price; otherwise the tile price is
+        # the everyday one and the Wallet amount beside it is the conditional one.
+        everyday = item.price_rub if item.price_kind in ("", "regular") else None
+        wallet = item.wallet_price_rub if item.price_kind != "wallet" else item.price_rub
+        decision = decide_conditional_price("wildberries", str(item.nm_id or ""), everyday, wallet, "wallet")
+        batch.append(
             MarketOffer(
                 source="wildberries",
                 product_id=str(item.nm_id or ""),
@@ -309,39 +312,37 @@ async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
                 brand=item.brand,
                 seller=item.supplier,
                 # A struck price is not an everyday fallback for Wallet-only tiles.
-                price_rub=item.price_rub if item.price_kind in ("", "regular") else None,
+                price_rub=decision.rank_price_rub,
                 price_native=item.price_rub,
                 price_kind=item.price_kind or None,
                 rating=item.review_rating,
                 rating_count=item.feedbacks,
-                # WB's legacy bool also uses False for an unreported quantity.
-                # Preserve that distinction in our nullable stock contract.
+                # WB's legacy bool uses False for an unreported quantity;
+                # total_quantity tells an unknown from a sold-out.
                 in_stock=item.in_stock if item.total_quantity is not None else None,
                 url=_wb_product_url(item.nm_id),
             )
         )
-        if item.wallet_price_rub is not None and item.price_kind != "wallet":
-            conditional_warnings.append(
-                _conditional_price_warning("wildberries", str(item.nm_id or ""), item.wallet_price_rub, "wallet")
-            )
-    batch = OfferBatch(offers, response)
-    batch.warnings.extend(conditional_warnings)
+        if decision.note:
+            batch.warnings.append(decision.note)
     return batch
 
 
 async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``yandex_search`` results.
 
-    ``price_rub`` is the everyday price and the only one that ranks;
-    ``price_with_plus`` needs a paid subscription, so it rides along in a separate
-    field where it cannot masquerade as a bargain.
+    ``price_rub`` is the everyday price and the only one that ranks; ``price_with_plus``
+    needs a paid subscription, so it rides along in a separate field, never ranked.
     """
     server = SOURCES["yandex_market"]
     response = await server.yandex_search(query=query, page=1, limit=limit)
 
-    offers: list[MarketOffer] = []
+    batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
-        offers.append(
+        decision = decide_conditional_price(
+            "yandex_market", item.product_id, item.price_rub, item.price_with_plus, "subscription"
+        )
+        batch.append(
             MarketOffer(
                 source="yandex_market",
                 product_id=item.product_id,
@@ -349,7 +350,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 title=item.title,
                 brand=item.brand,
                 seller=item.seller,
-                price_rub=item.price_rub,
+                price_rub=decision.rank_price_rub,
                 price_native=item.price_rub if item.price_rub is not None else item.price_with_plus,
                 price_kind="regular"
                 if item.price_rub is not None
@@ -361,46 +362,48 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
                 url=item.url,
             )
         )
-    return OfferBatch(offers, response)
+        if decision.note:
+            batch.warnings.append(decision.note)
+    return batch
 
 
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
     This adapter was previously written blind — Ozon refuses datacenter IPs, so it
-    could not be exercised from CI or a sandbox — and it guessed wrong. It read
-    ``price_rub``, ``reviews_count``, ``feedbacks``, ``name``, ``id`` and
-    ``brand``; ``OzonSearchItemOut`` declares none of those. Every one silently
-    resolved to ``None``, so Ozon offers arrived with no review count at all and
-    depended on a fallback key for the price.
+    could not be exercised from CI or a sandbox — and it guessed wrong: it read
+    fields ``OzonSearchItemOut`` does not declare, and every one silently
+    resolved to ``None``. Reading typed attributes makes that a type failure.
 
-    Reading typed attributes makes that class of error a type failure rather than
-    a quiet blank. Ozon reports no brand or seller on a search row, so those stay
-    empty by definition rather than by accident, and ``stock`` — which the old
-    version ignored entirely — now populates ``in_stock``.
+    R-COMPARE-CONDITIONAL-PRICE: the Ozon search payload does not expose the Ozon
+    Card price, so the tile price is still the everyday price here — today's
+    behaviour, with the gap declared in the requirement. ``ozon_card`` (price and
+    card_price) is the source of truth where a card is read.
     """
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
 
-    offers: list[MarketOffer] = []
+    batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
-        offers.append(
+        decision = decide_conditional_price("ozon", str(item.sku or ""), _as_price(item.price), None, "card")
+        batch.append(
             MarketOffer(
                 source="ozon",
                 product_id=str(item.sku or ""),
                 title=item.title or "",
-                # Ozon search rows carry neither brand nor seller; a card lookup
-                # does. Left empty rather than invented.
+                # Search rows carry neither brand nor seller; left empty, not invented.
                 brand="",
                 seller="",
-                price_rub=_as_price(item.price),
+                price_rub=decision.rank_price_rub,
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),
                 url=item.url or "",
             )
         )
-    return OfferBatch(offers, response)
+        if decision.note:
+            batch.warnings.append(decision.note)
+    return batch
 
 
 async def _search_avito(query: str, limit: int) -> list[MarketOffer]:

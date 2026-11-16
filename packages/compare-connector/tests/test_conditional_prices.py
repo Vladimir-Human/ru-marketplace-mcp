@@ -84,7 +84,7 @@ async def test_wallet_only_price_cannot_win(monkeypatch, wallet_field):
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE")
 @pytest.mark.parametrize("regular_price", [940, 1000])
 async def test_regular_price_ranks_and_wallet_amount_is_warned(monkeypatch, regular_price):
-    """R-COMPARE-CONDITIONAL-PRICE: old code ranks correctly here but loses the 900-RUB Wallet warning."""
+    """R-COMPARE-CONDITIONAL-PRICE: the everyday price ranks and the lower Wallet amount is named."""
     _stub_native_search(
         monkeypatch,
         "wildberries",
@@ -99,7 +99,7 @@ async def test_regular_price_ranks_and_wallet_amount_is_warned(monkeypatch, regu
 
     result = await server.compare_prices("Kettle", sources=["wildberries", "citilink"])
 
-    assert any("900 RUB" in w and "WB Wallet" in w for w in result.warnings)
+    assert any("info:conditional_price_available: wildberries/1: 900 RUB with wallet" in w for w in result.warnings)
     winner = "wildberries" if regular_price < 950 else "citilink"
     assert result.cheapest.source == winner
     assert result.cheapest_comparable.source == winner

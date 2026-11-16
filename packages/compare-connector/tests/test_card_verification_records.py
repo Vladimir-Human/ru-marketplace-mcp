@@ -95,9 +95,9 @@ async def test_missing_requested_wb_row_does_not_use_another_price(monkeypatch):
     assert result["price_verification"]["matches"] is None
 
 
-@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-NO-FABRICATION")
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.verify", "R-NO-FABRICATION")
 async def test_wb_wallet_only_price_is_not_certified(monkeypatch):
-    """R-COMPARE-CONDITIONAL-PRICE, R-NO-FABRICATION: a DOM card whose price_rub
+    """R-COMPARE-CONDITIONAL-PRICE.verify, R-NO-FABRICATION: a DOM card whose price_rub
     is the Wallet price carries price_kind="wallet". Verifying it against
     expected_price_rub would certify a price only a Wallet holder gets, so the
     comparison stays unknown and the kind is named. Before this the verification
