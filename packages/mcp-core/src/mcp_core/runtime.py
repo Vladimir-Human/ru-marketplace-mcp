@@ -238,7 +238,9 @@ class ToolErrorRedactionMiddleware(Middleware):
                 parameters = tuple(tool.parameters.get("properties", {})) if tool else ()
                 # Only a tool this server lists may be named: a standalone server
                 # has neither compare_prices nor marketplace_health.
-                wanted = {"compare_prices", "marketplace_health", source.listing_tool if source else None} - {None}
+                wanted = {"compare_prices", "marketplace_health"}
+                if source is not None and source.listing_tool is not None:
+                    wanted.add(source.listing_tool)
                 available = {item for item in wanted if server and await server.get_tool(item) is not None}
                 payload["tool"] = name
                 payload["next_step"] = error_next_step(
