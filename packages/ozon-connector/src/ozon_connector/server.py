@@ -1199,14 +1199,13 @@ def _is_search_stock_label(text: str) -> bool:
 def _parse_search_tile(item: Any) -> dict[str, Any]:
     """Parse a single tileGridDesktop item (Ozon search result, Nov 2026 schema).
 
-    Top-level keys: action, brandLogo, id, isAdult, mainState, multiButton,
-    sku, tileImage, topRightButtons, trackingInfo.
-    Title and price live as atoms inside mainState (priceV2, textAtom, etc.).
+    Top-level keys: action, brandLogo, id, isAdult, mainState, multiButton, sku, tileImage,
+    topRightButtons, trackingInfo. Title and price live as atoms inside mainState (priceV2, textAtom, etc.).
     """
     if not isinstance(item, dict):
         return {}
     raw_sku = item.get("sku") or item.get("id")
-    out: dict[str, Any] = {}
+    out: dict[str, Any] = {"price_kind": None}
     if isinstance(raw_sku, (str, int)) and not isinstance(raw_sku, bool):
         out["sku"] = raw_sku
     action = item.get("action") or {}
@@ -1264,12 +1263,15 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
             entries = [
                 e for e in raw_price_entries if isinstance(e, dict) and isinstance(e.get("text"), str) and e.get("text")
             ]
-            # Visual order on the page: entries[0] is the current/sale price (big),
-            # entries[1] (if present) is the strikethrough original. textStyle values
-            # vary across categories ("PRICE", "BIG_PRICE", "SALE_PRICE", etc.) so we
-            # rely on order, not on the style label.
+            # Visual order: entries[0] is the price on the tile, entries[1] the struck
+            # original; textStyle values vary across categories ("PRICE", "BIG_PRICE",
+            # "SALE_PRICE"), so the order decides, not the style label.
             if entries and not price_text:
                 price_text = entries[0].get("text")
+                # priceStyle.styleType names the price's condition; only CARD_PRICE is decided.
+                style = pv.get("priceStyle")
+                if isinstance(style, dict) and style.get("styleType") == "CARD_PRICE":
+                    out["price_kind"] = "card"
             if len(entries) >= 2 and not price_original_text:
                 price_original_text = entries[1].get("text")
         elif t == "labelList":
@@ -1289,10 +1291,9 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
             llv2 = atom.get("labelListV2") or {}
             if not isinstance(llv2, dict):
                 continue
-            # A tile carries TWO labelListV2 atoms: "tile-list-labels"
-            # (badges like "Оригинал") and "tile-list-rating" (star rating +
-            # review count). Only the rating list holds what we want; skip the
-            # other so badge text can't be mistaken for a rating/count.
+            # A tile carries TWO labelListV2 atoms: "tile-list-labels" (badges like
+            # "Оригинал") and "tile-list-rating" (star rating + review count). Only
+            # the rating list holds what we want, so badge text can't be a rating.
             test_info = llv2.get("testInfo") or {}
             auto_id = (test_info.get("automatizationId") if isinstance(test_info, dict) else None) or ""
             if auto_id and auto_id != "tile-list-rating":
@@ -1310,10 +1311,9 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
                 # A plain decimal score is the rating, not a counter/magnitude.
                 if rating is None and re.fullmatch(r"\d[.,]\d+", txt.strip()):
                     rating = txt
-                # Pass every other rating-list text to the shared strict count
-                # parser: it handles отзывов/оценок, bare grouped digits and
-                # parentheses, and refuses magnitude forms instead of guessing.
-                # The old отзыв/parens filter discarded supported counters (#226).
+                # Every other rating-list text goes to the shared strict count
+                # parser: отзывов/оценок, grouped digits and parentheses are supported,
+                # magnitude forms refused (the old filter dropped supported counters, #226).
                 elif rating_count is None:
                     rating_count = R.coerce_count(txt)
     out["title"] = title

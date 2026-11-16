@@ -373,30 +373,32 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
-    This adapter was previously written blind — Ozon refuses datacenter IPs, so it
-    could not be exercised from CI or a sandbox — and it guessed wrong: it read
-    fields ``OzonSearchItemOut`` does not declare, and every one silently
-    resolved to ``None``. Reading typed attributes makes that a type failure.
+    This adapter was previously written blind — Ozon refuses datacenter IPs — and
+    it guessed wrong: it read fields ``OzonSearchItemOut`` does not declare, and
+    every one silently resolved to ``None``. Reading typed attributes makes that a type failure.
 
-    R-COMPARE-CONDITIONAL-PRICE: the Ozon search payload does not expose the Ozon
-    Card price, so the tile price is still the everyday price here — today's
-    behaviour, with the gap declared in the requirement. ``ozon_card`` (price and
-    card_price) is the source of truth where a card is read.
+    R-COMPARE-CONDITIONAL-PRICE: a CARD_PRICE tile quotes the Ozon Card price, so
+    it is conditional-only: no everyday price, no ranking, the amount in price_native,
+    named once by the shared helper. Other tile styles keep today's behaviour.
     """
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
     batch = OfferBatch([], response)
     for item in (getattr(response, "items", None) or [])[:limit]:
-        decision = decide_conditional_price("ozon", str(item.sku or ""), _as_price(item.price), None, "card")
+        price, card = _as_price(item.price), getattr(item, "price_kind", None) == "card"
+        sku = str(item.sku or "")
+        decision = decide_conditional_price("ozon", sku, None if card else price, price if card else None, "card")
         batch.append(
             MarketOffer(
                 source="ozon",
-                product_id=str(item.sku or ""),
+                product_id=sku,
                 title=item.title or "",
                 # Search rows carry neither brand nor seller; left empty, not invented.
                 brand="",
                 seller="",
                 price_rub=decision.rank_price_rub,
+                price_native=price,
+                price_kind="card" if card else None,
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),

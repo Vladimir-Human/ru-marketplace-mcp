@@ -157,6 +157,30 @@ def _items() -> list[dict]:
     return server._search_items_from_payload(payload)
 
 
+def _captured_tile(sku: str) -> dict:
+    """One tile of the capture, exactly as Ozon served it."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    grid = next(value for key, value in payload["widgetStates"].items() if key.startswith("tileGridDesktop-"))
+    for tile in json.loads(grid)["items"]:
+        if str(tile.get("sku")) == sku:
+            return tile
+    raise AssertionError(f"the capture holds no tile {sku}")
+
+
+def _tile_with_style(sku: str, style_type: str) -> dict:
+    """The captured tile under another ``priceStyle.styleType``.
+
+    The capture itself carries no CUSTOM tile, so the CUSTOM case is the
+    captured CARD_PRICE tile with the style value rewritten: the markup is the
+    capture's own, only the style differs.
+    """
+    tile = json.loads(json.dumps(_captured_tile(sku)))
+    for atom in tile["mainState"]:
+        if atom.get("type") == "priceV2":
+            atom["priceV2"].setdefault("priceStyle", {})["styleType"] = style_type
+    return server._parse_search_tile(tile)
+
+
 def test_live_composer_payload_parses_to_the_three_tiles() -> None:
     items = _items()
     assert len(items) == 3, f"expected the three captured tiles, got {len(items)}"
@@ -190,3 +214,21 @@ def test_live_tiles_carry_a_canonical_card_input() -> None:
     for got in _items():
         assert got.get("card_input"), "a live product tile lost its card_input"
         assert got.get("url", "").startswith("https://www.ozon.ru/product/")
+
+
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE.adapters")
+def test_only_a_card_price_tile_is_marked_as_a_card_price() -> None:
+    """R-COMPARE-CONDITIONAL-PRICE.adapters: the card price is named, other styles are not.
+
+    The capture's second tile (sku 2796072502, 32 296 ₽) carries
+    ``priceStyle.styleType CARD_PRICE``: that amount is the Ozon-card price,
+    not an everyday price, so the parser marks it ``price_kind "card"``. The
+    two SALE_PRICE tiles stay ``None`` — a sale price is not decided here, and
+    an undecided style must never borrow another tile's kind.
+    """
+    kinds = {str(item.get("sku")): item.get("price_kind") for item in _items()}
+
+    assert kinds["2796072502"] == "card"
+    assert kinds["3497076095"] is None
+    assert kinds["4695873085"] is None
+    assert _tile_with_style("2796072502", "CUSTOM").get("price_kind") is None
