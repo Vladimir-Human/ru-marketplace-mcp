@@ -1,0 +1,9 @@
+{
+  "url": "https://www.lamoda.ru/catalogsearch/result/?q=%D0%BA%D1%80%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BA%D0%B8",
+  "captured_at": "2026-11-16",
+  "sha256": "1fef745e98f565faa5b36a482099eba7042015e547d9bbe69915e98612e9d5a9",
+  "method": "saved from an open tab of the operator's scraping Chrome with page.content() (no new request), after the page loaded 200 and reloaded itself to HTTP 403; the client address was replaced with 203.0.113.7 (RFC 5737) and the request id with TESTREQUEST1; the logo svg body was emptied; everything else is verbatim",
+  "ground_truth": {
+    "note": "Lamoda's refusal page: eyebrow 'Проверка безопасности', heading 'Запрос отклонен', a support report block, and no check to pass. The same browser was served normally about 20 minutes later; the owner's everyday browser on the same machine was never refused. 'Проверка' alone made the old classifier call it a challenge (needs_human)."
+  }
+}
