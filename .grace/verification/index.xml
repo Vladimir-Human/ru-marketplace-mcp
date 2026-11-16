@@ -581,6 +581,11 @@
     <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_skip_reason_names_the_missing_token" requirements="R-MPSTATS-MOUNT-GATE" />
     <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_standalone_mpstats_server_keeps_its_tools" requirements="R-MPSTATS-MOUNT-GATE" title="The gate lives in the unified mount, never in the standalone server." />
   </requirement>
+  <requirement id="R-MPSTATS-OFFICIAL-MCP" kind="requirement" state="tested">
+    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_guides_point_to_the_official_server" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: guide://mpstats/&lt;tool&gt; names the official server and the note." />
+    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_tool_descriptions_point_to_the_official_server_first" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the agent reads the pointer before anything else in the description." />
+    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_every_result_carries_the_official_server_note" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the note is an info: note naming the server; it does not touch healthy." />
+  </requirement>
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_foreign_url_arguments_never_reach_transport" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/marketplace-connector/tests/conformance/test_nav_hosts.py" name="test_url_inventory_includes_each_url_capable_source" requirements="R-NAV-HOSTS.invariant" />
