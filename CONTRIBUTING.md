@@ -67,7 +67,7 @@ CHANGELOG под заголовками `### Added/Changed/Deprecated/Removed/Fi
 - Fixed product card reading (#230).
 ```
 
-CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13.
+CI прогоняет то же самое на Ubuntu, Windows и macOS против Python 3.12 и 3.13; 3.14 (все три ОС) и 3.15 (Ubuntu, Windows) идут без блокировки слияния.
 
 **Кросс-платформенный прогон mypy обязателен, если трогаешь платформозависимый
 код.** На Linux mypy считает `os.killpg`, `os.getpgid` и `signal.SIGKILL`
@@ -222,7 +222,8 @@ changes without an entry (including move-only PRs). Example `changes/230.md`:
 - Fixed product card reading (#230).
 ```
 
-CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13; lint,
+CI runs the tests on Ubuntu, Windows and macOS against Python 3.12 and 3.13 (plus 3.14 on all three and 3.15 on
+Ubuntu and Windows, non-blocking); lint,
 types and the no-print and version checks run once, on Ubuntu — mypy covers the other
 platforms through `--platform`, not by running there.
 

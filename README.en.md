@@ -608,7 +608,7 @@ among the candidates — still runs. jsdom is a developer tool only; no connecto
 depends on it.
 
 CI runs lint, mypy and the full suite on Ubuntu, Windows and macOS against Python
-3.12 and 3.13. Windows-specific process handling is unit-tested on every platform via
+3.12 and 3.13; 3.14 (all three OSes) and 3.15 (Ubuntu, Windows) run too, without blocking a merge. Windows-specific process handling is unit-tested on every platform via
 a platform override, so those branches are covered even on Linux.
 
 Adding a marketplace: [docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md).
