@@ -69,6 +69,7 @@ GATES: dict[str, list[str]] = {
     ],
     "One version, everywhere": [sys.executable, "scripts/check_versions.py"],
     "Generated GRACE verification index is current": [sys.executable, "scripts/grace_index.py", "--check"],
+    "Architecture structure gate": [sys.executable, "scripts/check_arch.py"],
     "Run offline test suite": [
         sys.executable,
         "-m",
