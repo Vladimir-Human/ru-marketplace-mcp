@@ -61,12 +61,12 @@ These rules win over older guidance in other files; report a conflict instead of
 
 ## Live runs
 
-- Only on the owner's machine with the owner's Chrome: at most three runs a day, at least three hours apart.
+- Only on the owner's machine with the owner's Chrome. There is no limit on runs a day: the budget below and each source's own answer protect the sites and the owner's browser. After `rate_limited` or a refusal page, call that source again only after its `retry_after_s`.
 - Always through `scripts/live_check.py`. Its preflight checks writable temp space, the Playwright driver and a bare CDP connect, and on Windows moves TEMP into the repo or switches to system Node by itself; no manual workarounds.
 - `live_check.py preflight` runs those setup checks alone (no request). `live_check.py matrix [--only a,b] [--skip c]` measures each source once (a fixed-query listing and its first card) and appends whitelisted rows to the gitignored `.live-history.jsonl`; it runs on demand only, never on a schedule.
 - `scripts/live_budget.py` counts outgoing marketplace requests, not tool calls: 40 per run, 8 per source, at least 3 s between requests to one source. Screenshot navigations are booked in the same ledger.
 - Before every call read the ledger. A call that would take the run past 36 requests or a source past 7 is skipped, recorded as `skipped: budget` and carried to the next run. Count each call at its measured cost (1 until measured; an Ozon search costs 3).
-- Set `CHROME_CHALLENGE_HANDOFF_S=0`. On a challenge record `needs_human` and move on: no retry of that source that day, no window brought on-screen.
+- Set `CHROME_CHALLENGE_HANDOFF_S=0`. On a challenge record `needs_human` and move on: no retry of that source until the owner has passed the check, no window brought on-screen unless the owner asks.
 
 ## Releases
 
@@ -74,7 +74,7 @@ These rules win over older guidance in other files; report a conflict instead of
 
 1. `main` is green.
 2. A matrix run on the commit to be tagged (a patch: only the sources it changes). `healthy` in the previous release's run and `drift` now blocks.
-3. `refused`, `needs_human` or `inconclusive` now → one rerun at least 3 h later. Still not healthy and the release changes that source → the same call on the previous tag: old passes and new fails blocks; both fail → release and name the source under known limits.
+3. `refused`, `needs_human` or `inconclusive` now → one rerun after the source's `retry_after_s` or after the owner has passed the check. Still not healthy and the release changes that source → the same call on the previous tag: old passes and new fails blocks; both fail → release and name the source under known limits.
 4. `scripts/bump_version.py` and the version gate pass; the version is not on PyPI yet.
 5. Every release-note claim is backed by a public-tool call on that source.
 6. At least 24 h since the previous tag unless it fixes that tag's regression; at most one tag a day.
