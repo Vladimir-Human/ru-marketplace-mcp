@@ -455,6 +455,20 @@
     <test file="packages/marketplace-connector/tests/conformance/test_schema_descriptions.py" name="test_every_marketplace_discount_field_states_its_provenance" requirements="R-MARKETPLACE-PRICE-WORDING.shared" title="R-MARKETPLACE-PRICE-WORDING: every source's shown discounts are not verified history." />
   </requirement>
   <requirement id="R-MARKETPLACES" kind="requirement" state="gap" gaps="G-MARKETPLACES-UNTESTED" />
+  <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_failed_home_load_is_not_reopened_or_deadlocked" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_hidden_redirect_navigates_only_the_existing_tab" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_navigation_policy_failure_is_not_degraded_into_a_search" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_one_home_load_and_same_tab_fetches_preserve_caches" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_only_explicit_code_seven_gets_ip_reputation_advice" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_redirect_fetch_cannot_feed_an_offsite_url_into_parse" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_refusal_stops_search_without_another_request" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_retry_after_survives_the_refused_step" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_selfcheck_preserves_the_refusal_reason" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_xpvnsulc_is_a_human_challenge_not_a_standing_refusal" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_server.py" name="test_card_failed_envelope_never_becomes_requested_id_success" requirements="R-MEGAMARKET-ONE-LOAD" />
+    <test file="packages/megamarket-connector/tests/test_server.py" name="test_post_maps_http_refusal_to_rate_limited" requirements="R-MEGAMARKET-ONE-LOAD" />
+  </requirement>
   <requirement id="R-METRICS" kind="requirement" state="tested">
     <test file="scripts/test_metrics_snapshot.py" name="test_a_failing_source_is_recorded_and_the_rest_still_count" requirements="R-METRICS" />
     <test file="scripts/test_metrics_snapshot.py" name="test_a_fresh_lock_stops_a_second_run_and_a_stale_one_is_taken_over" requirements="R-METRICS" />

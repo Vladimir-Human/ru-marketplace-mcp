@@ -332,6 +332,7 @@ async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypat
     assert "paused for 47 s after 2 refusals" in error["message"]
 
 
+@pytest.mark.req("R-MEGAMARKET-ONE-LOAD")
 @pytest.mark.parametrize(
     ("payload", "expected_error", "refusal"),
     [
@@ -374,7 +375,7 @@ async def test_card_reports_the_host_pause_with_its_remaining_cooldown(monkeypat
         ),
         pytest.param(
             {"success": False, "errors": [{"code": 429, "message": "Too many requests"}]},
-            "transport_down",
+            "rate_limited",
             True,
             id="nested-rate-refusal",
         ),
@@ -399,7 +400,7 @@ async def test_card_failed_envelope_never_becomes_requested_id_success(monkeypat
             await server.megamarket_card("1234567")
         error = json.loads(str(excinfo.value))
         assert error["error"] == expected_error
-        assert error["retryable"] is (expected_error == "transport_down")
+        assert error["retryable"] is (expected_error in ("transport_down", "rate_limited"))
 
     assert len(calls) == 2, "failed envelopes must never be cached as successful catalog data"
     assert successes == []
@@ -407,7 +408,8 @@ async def test_card_failed_envelope_never_becomes_requested_id_success(monkeypat
 
 
 @pytest.mark.parametrize("status", [401, 403, 429])
-async def test_post_preserves_existing_http_refusal_handling(monkeypatch, status):
+@pytest.mark.req("R-MEGAMARKET-ONE-LOAD")
+async def test_post_maps_http_refusal_to_rate_limited(monkeypatch, status):
     refusals = []
 
     async def fake_cdp_post(api_path, body, ctx):
@@ -419,7 +421,9 @@ async def test_post_preserves_existing_http_refusal_handling(monkeypatch, status
     with pytest.raises(ToolError) as excinfo:
         await server.megamarket_card("1234567")
 
-    assert json.loads(str(excinfo.value))["error"] == "transport_down"
+    error = json.loads(str(excinfo.value))
+    assert error["error"] == "rate_limited"
+    assert error["retry_after_s"] == 1200
     assert refusals == [True]
 
 
@@ -1179,7 +1183,18 @@ def _patch_page(monkeypatch, final_url):
     """Fake the CDP probe: open_page lands on final_url."""
 
     class FakePage:
-        url = final_url
+        url = "https://megamarket.ru/"
+
+        async def evaluate(self, expression, arg=None):
+            # Redirect metadata now comes from fetch, not another opened tab.
+            return {"status": 200, "url": final_url}
+
+        async def goto(self, url, **kwargs):
+            self.url = final_url
+            return None
+
+        async def wait_for_timeout(self, milliseconds):
+            pass
 
     class FakeCtx:
         async def __aenter__(self):
