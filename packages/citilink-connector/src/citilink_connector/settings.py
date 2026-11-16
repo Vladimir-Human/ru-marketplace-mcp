@@ -19,7 +19,15 @@ class CitilinkSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    timeout: float = Field(default=30.0, gt=0)
+    timeout: float = Field(
+        default=30.0,
+        ge=5,
+        le=45,
+        description=(
+            "Seconds the rendered page's extractor may take before the read is abandoned. "
+            "This is the budget of the browser read, not of the navigation."
+        ),
+    )
     min_gap: float = Field(default=3.0, ge=0)
     cache_ttl: float = Field(default=120.0, ge=0, description="Seconds to cache upstream reads. 0 disables caching.")
     max_body_bytes: int = Field(default=_DEFAULT_MAX_BODY_BYTES, gt=0)

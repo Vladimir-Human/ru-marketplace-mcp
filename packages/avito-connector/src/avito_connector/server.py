@@ -57,7 +57,9 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _fetch: Try JSON-shaped HTTP results before operator-browser fallback for search.
 # _fetch_item_page: Read paced, serialized, host-allowlisted rendered HTML over CDP.
 # _ItemPageHTML: Collect JSON-LD scripts and non-script page text.
-# parse_item_page: Normalize schema.org Product first; use item-view DOM only when absent; reject empty cards and removed ads.
+# parse_item_page: Normalize schema.org Product first; use item-view DOM only when absent; reject empty cards and removed ads;
+#                  a Product without a sku is checked by the item id in its canonical URL.
+# _offer_item_id: Read the item id from the canonical URL the page records for a Product, or None.
 # _parse_item_dom: Require matching page item id; read marked title, explicit rouble price and description.
 # _SellerPageHTML: Collect seller markers, title, rating metadata and profile links.
 # parse_item_seller: Read nullable seller reputation, explicit company label and canonical profile link.
@@ -162,11 +164,17 @@ AVITO_HEADERS = {
 _ITEM_ID_RE = re.compile(r"_(\d{6,})(?:\?|/|$)")
 # Paths a full URL may keep: an item-page shape only — /<id>, /<slug>_<id> or
 # /<city>/<category>/<slug>_<id>, the shapes of every captured item URL and
-# fixture. Everything else, including a one-segment personal prefix with an
-# item-like tail (/profile/x_1234567890), a path continuing past the id and any
-# path carrying a backslash or a percent escape (a separator to the browser,
-# plain text to this regex), never reaches the operator's logged-in browser.
-_ITEM_URL_PATH_RE = re.compile(r"/(?:(?:[^/]+/){2})?(?:[^/]+_)?(\d{6,})/?")
+# fixture. Every segment is a plain ASCII slug ([A-Za-z0-9_-]): that is what
+# every captured Avito item path uses, and anything else — a one-segment
+# personal prefix with an item-like tail (/profile/x_1234567890), a path
+# continuing past the id, a non-ASCII segment, a backslash or a percent escape
+# (a separator to the browser, plain text to a wider regex) — never reaches
+# the operator's logged-in browser.
+_SLUG_CHARS = r"[A-Za-z0-9_-]"
+_ITEM_URL_PATH_RE = re.compile(rf"/(?:(?:{_SLUG_CHARS}+/){{2}})?(?:{_SLUG_CHARS}+_)?(\d{{6,}})/?")
+# The canonical item URL carries the id in the tail of its last segment, however
+# many segments the slug in front of it has (see _offer_item_id).
+_URL_TAIL_ID_RE = re.compile(r"(?:.*_)?(\d{6,})")
 # The /<city>/<category>/ shape cannot tell a city slug from a route prefix by
 # form alone, so first segments that are Avito's own personal or service routes
 # are refused outright: an item-shaped tail under them is not an item page.
@@ -408,11 +416,41 @@ class _ItemPageHTML(HTMLParser):
             self._json_ld = False
 
 
+def _offer_item_id(product: dict[str, Any]) -> int | None:
+    """The item id in the canonical URL the page records for this Product.
+
+    Avito redirects /<id> to the canonical item page, and that page's own
+    schema.org offer carries the URL it ended up at. The canonical path ends
+    in the id — the slug before it may have two segments
+    (/moskva/noutbuki/noutbuk_4612345678) or one (/moskva/noutbuk_4612345678) —
+    so the id is the numeric tail of the last segment. A Product with no offer
+    URL, or one whose URL carries no id, answers None: the caller must then
+    treat the page as unproven rather than as the requested item.
+    """
+    offers = product.get("offers")
+    if isinstance(offers, list):
+        offers = next((offer for offer in offers if isinstance(offer, dict)), {})
+    if not isinstance(offers, dict):
+        return None
+    url = R.flatten_text(offers.get("url"))
+    if not url:
+        return None
+    try:
+        path = urllib.parse.urlsplit(url).path
+    except ValueError:
+        return None
+    segment = path.rstrip("/").rsplit("/", 1)[-1]
+    match = _URL_TAIL_ID_RE.fullmatch(segment)
+    return int(match.group(1)) if match else None
+
+
 def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
     """Extract the first schema.org Product, preferring a matching requested sku.
 
     Supports @graph and bare Product objects. Only RUB (or unspecified currency)
     offers become price_rub; absent/unknown prices are None, never invented zero.
+    A Product without a sku carries no identity of its own, so the canonical URL
+    the page records for it must name the requested item.
     If there is no Product, use identity-checked item-view DOM markers with an
     explicit rouble price. location, posted_at, views and seller stay None;
     seller parsing is separate. Availability is classified separately
@@ -467,6 +505,12 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
         if item_id is not None and (len(products) != 1 or products[0].get("sku") not in (None, "")):
             raise ParserDriftError(f"avito_card: no schema.org Product for item {item_id} on its page")
         product = products[0]
+        # A lone Product without a sku says nothing about WHICH ad it describes, so
+        # the canonical URL the page itself records must name the requested item:
+        # that URL is where the /<id> request redirects to. An id that is absent
+        # or names another ad is the same mismatch as a wrong sku.
+        if item_id is not None and _offer_item_id(product) != item_id:
+            raise ParserDriftError(f"avito_card: no schema.org Product for item {item_id} on its page")
     offers = product.get("offers")
     if isinstance(offers, list):
         offers = next((offer for offer in offers if isinstance(offer, dict)), {})
