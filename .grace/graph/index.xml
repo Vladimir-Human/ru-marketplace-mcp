@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <graph project="ru-marketplace-mcp" paths="Repository-relative implementation paths; runtime paths are environment-dependent" evidence="Static inspection only; no tests or live services run">
   <modules>
+    <module id="M-ARCH-GATE" file="scripts/check_arch.py" purpose="AST-only production import boundaries, measured size caps, pure-module checks and optional T7 report; arch-exempt downgrades only size overruns" depends="stdlib argparse,ast,json,pathlib,subprocess; M-SOURCES data" exports="main">
+      <file path="scripts/arch_baseline.json" note="Measured file/function caps and pure-list paths; missing entries and excessive slack fail." />
+      <file path="scripts/test_check_arch.py" note="Requirement-derived planted production trees, real-tree baseline, exemption and report checks." />
+      <file path="packages/marketplace-connector/tests/conformance/conftest.py" note="Every registry source is a named fixture parameter for future conformance rules; existing schema-description tests stay unchanged." />
+      <file path=".github/workflows/ci.yml" note="One lint step immediately before CHANGELOG fragment; the arch-exempt label enables --exempt." />
+    </module>
     <module id="M-GRACE-INDEX" file="scripts/grace_index.py" purpose="Deterministic AST verification index; local gate execution and schema-2 evidence bound to the filtered tracked working-tree digest, checked without gates or commit identity" depends="M-VERSION-SITES; Git, local gate tools; stdlib argparse,ast,dataclasses,datetime,hashlib,json,os,pathlib,re,subprocess,sys,tempfile,time,xml.etree.ElementTree" exports="generate,tree_digest,run_gates,write_evidence,check_evidence,main">
       <file path=".grace/context/requirements.xml" note="Requirement, rule and invariant ID registry." />
       <file path=".grace/verification/manual.xml" note="Hand-kept gaps and historical notes; only declared requirement gaps affect generated states." />
