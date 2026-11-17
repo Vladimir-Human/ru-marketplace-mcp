@@ -147,6 +147,8 @@ class SourceSpec:
     drift_probe: bool = False
     # Mounted only when its own credential is configured (R-MPSTATS-MOUNT-GATE).
     mount_gated: bool = False
+    # Classifieds: a search row never states new or used, only the card does (R-COMPARE-CONDITION-ON-CARD).
+    condition_on_card: bool = False
     note: str = ""
 
     def __post_init__(self) -> None:
@@ -279,6 +281,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         config_key="avito",
         selfcheck="avito_selfcheck",
         card_tool="avito_card",
+        condition_on_card=True,
         tools=3,
         access="cdp",
         requires_cdp=True,
