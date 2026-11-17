@@ -13,8 +13,8 @@ architecture gate's pure list.
 # START_MODULE_CONTRACT
 # PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers and size conflicts, and build the comparison answer.
 # SCOPE: Pure decisions over the results a comparison gathered; no source access, no browser, no model, no stdout.
-# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT.
-# DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib re, collections.abc, dataclasses.
+# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
+# DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib json, re, collections.abc, dataclasses.
 # SCHEMA: CompareResponse keeps its fields, types and meanings; this module only fills them.
 # LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING.
 # END_MODULE_CONTRACT
@@ -32,11 +32,14 @@ architecture gate's pure list.
 # decide_conditional_price: The one rule for an everyday price beside a conditional one.
 # _conditional_price_note: Name the excluded amount, not the offer whose everyday price may still rank.
 # _mixed_regions_notes: Name the regions when answered sources priced in different ones.
+# _omitted_note: Name how many offers the size budget left out and how to get them.
+# _fit_answer: Leave whole offers out from the end until the answer fits ANSWER_CHAR_LIMIT characters.
 # build_response: Rank eligible RUB offers with per-source completeness and warnings.
 # END_MODULE_MAP
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -448,20 +451,60 @@ def _mixed_regions_notes(outcomes: list[SourceOutcome]) -> list[str]:
     return ["info:mixed_regions: " + ", ".join(f"{outcome.source}={outcome.region}" for outcome in known)]
 
 
+# R-INTERFACE-GUARDS.output-size: the answer an agent reads stays within this many
+# characters of JSON (Claude Code warns at about 10k tokens and cuts at 25k).
+ANSWER_CHAR_LIMIT = 40_000
+
+
+def _json_size(value: CompareResponse | MarketOffer) -> int:
+    return len(json.dumps(value.model_dump(mode="json"), ensure_ascii=False))
+
+
+def _omitted_note(omitted: int, total: int, limit: int) -> str:
+    return (
+        f"info:offers_omitted: {omitted} of {total} offers left out from the end of the ranked list "
+        f"to keep the answer under {limit} characters; for more, ask fewer sources or a lower per_source_limit"
+    )
+
+
+def _fit_answer(response: CompareResponse, limit: int = ANSWER_CHAR_LIMIT) -> CompareResponse:
+    """Leave whole offers out from the end of the ranked list until the answer fits.
+
+    The end of the list holds the unpriced offers, then the dearest ones; nothing is
+    cut inside an offer. total_offers keeps the full count, cheapest and
+    cheapest_comparable keep their own copies, and one info note names how many offers
+    were left out and how to get them.
+    """
+    size = _json_size(response)
+    if size <= limit:
+        return response
+    offers = list(response.offers)
+    # json.dumps joins list items with ", ": each offer costs its JSON plus 2, and so
+    # does the note (sized at its longest count) in the warnings list.
+    costs = [_json_size(offer) + 2 for offer in offers]
+    size += len(json.dumps(_omitted_note(response.total_offers, response.total_offers, limit), ensure_ascii=False)) + 2
+    while offers and size > limit:
+        offers.pop()
+        size -= costs.pop()
+    while True:
+        note = _omitted_note(response.total_offers - len(offers), response.total_offers, limit)
+        fitted = response.model_copy(update={"offers": offers, "warnings": [*response.warnings, note]})
+        if not offers or _json_size(fitted) <= limit:
+            return fitted
+        offers = offers[:-1]
+
+
 def build_response(
     query: str,
     results: list[tuple[SourceOutcome, list[MarketOffer]]],
     options: ResponseOptions,
 ) -> CompareResponse:
-    """Rank the gathered offers and build the comparison answer.
+    """Rank the gathered offers and build the comparison answer within its size budget.
 
-    The decision is pure: it reads what the sources answered and returns the
-    ranked list, the winners and the warnings. No marketplace is contacted
-    here, and nothing is written to stdout.
-
-    `query` is the stripped query the tool validated, `results` are the
-    (outcome, offers) pairs the gather returned, and `options` carries what
-    the tool knew before the gather.
+    Pure: it reads what the sources answered and returns the ranked list, the winners
+    and the warnings; no marketplace is contacted, nothing goes to stdout. `query` is
+    the stripped query the tool validated, `results` the (outcome, offers) pairs the
+    gather returned, `options` what the tool knew before the gather.
     """
     outcomes = [outcome for outcome, _ in results]
     offers: list[MarketOffer] = _dedupe(offer for _, source_offers in results for offer in source_offers)
@@ -582,17 +625,19 @@ def build_response(
         ok_sources=len(ok_sources),
         failed=len(failed_sources),
     )
-    return CompareResponse(
-        query=query,
-        sources_queried=options.active,
-        sources_ok=ok_sources,
-        complete=not failed_sources,
-        total_offers=len(ranked),
-        cheapest=cheapest,
-        cheapest_comparable=cheapest_comparable,
-        price_spread_rub=price_spread,
-        offers=ranked,
-        source_outcomes=outcomes,
-        warnings=warnings,
-        server_version=options.server_version,
+    return _fit_answer(
+        CompareResponse(
+            query=query,
+            sources_queried=options.active,
+            sources_ok=ok_sources,
+            complete=not failed_sources,
+            total_offers=len(ranked),
+            cheapest=cheapest,
+            cheapest_comparable=cheapest_comparable,
+            price_spread_rub=price_spread,
+            offers=ranked,
+            source_outcomes=outcomes,
+            warnings=warnings,
+            server_version=options.server_version,
+        )
     )

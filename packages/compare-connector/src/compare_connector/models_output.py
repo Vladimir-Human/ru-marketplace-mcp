@@ -16,7 +16,7 @@ check before drawing conclusions.
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
 # SourceOutcome: Report source access, diagnostics and recovery signals.
-# CompareResponse: Return eligible winners, all offers and warnings.
+# CompareResponse: Return eligible winners, the ranked offers (whole offers cut past 40,000 characters) and warnings.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -197,7 +197,10 @@ class CompareResponse(BaseModel):
     )
     offers: list[MarketOffer] = Field(
         default_factory=list,
-        description="All offers, cheapest first. Offers without a price are kept at the end.",
+        description=(
+            "Offers, cheapest first; offers without a price at the end. An answer over 40,000 characters "
+            "leaves whole offers out from the end: total_offers keeps the full count and a warning says how many."
+        ),
     )
     source_outcomes: list[SourceOutcome] = Field(
         default_factory=list,
