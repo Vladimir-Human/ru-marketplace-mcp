@@ -54,6 +54,21 @@ async def test_every_recording_replays_through_todays_adapters(path: Path) -> No
             assert outcome.status == "ok"
 
 
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+@pytest.mark.parametrize("path", sorted(RECORDINGS.glob("*.json")), ids=lambda path: path.name)
+def test_committed_payloads_contain_only_what_the_recorder_can_produce(path: Path) -> None:
+    """Re-cut every typed payload: the corpus must not invent response/item fields."""
+    document = json.loads(path.read_text(encoding="utf-8"))
+    for source, entry in document["sources"].items():
+        if "response" not in entry:
+            continue
+        payload = entry["response"]
+        cut = replay.RECORDING.cut_response(source, replay.rebuild(source, payload))
+        assert {key: value for key, value in cut.items() if key != "observed_at"} == {
+            key: value for key, value in payload.items() if key != "observed_at"
+        }
+
+
 async def test_the_replay_ranks_the_recorded_everyday_prices() -> None:
     """The replayed answer ranks the everyday prices and leaves the conditional ones out."""
     recording = recorded("kettle-wb-yandex.json")
@@ -82,9 +97,11 @@ async def test_a_source_that_errored_replays_as_a_partial_answer() -> None:
     assert any("partial" in warning for warning in result.warnings)
 
 
-async def test_recorded_regions_stay_two_placeholders_and_the_replay_adds_nothing() -> None:
-    """Two regions in one recording stay two placeholders; the replay invents no note of its own."""
+async def test_synthetic_regions_stay_two_placeholders_and_the_replay_adds_nothing() -> None:
+    """Plant regions only for the helper check; neither corpus source reports one."""
     recording = recorded("kettle-wb-yandex.json")
+    for index, entry in enumerate(recording["sources"].values(), 1):
+        entry["response"]["region"] = f"R{index}"
     regions = {entry["response"].get("region") for entry in recording["sources"].values() if "response" in entry}
     assert regions == {"R1", "R2"}
     assert replay.mixed_regions(recording) is True
@@ -92,6 +109,113 @@ async def test_recorded_regions_stay_two_placeholders_and_the_replay_adds_nothin
     result = await replay.replay(recording)
 
     assert not any(warning.startswith("info:mixed_regions") for warning in result.warnings)
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+@pytest.mark.parametrize("source", ["ozon", "megamarket", "dns", "aliexpress"])
+async def test_a_recorded_image_replays_as_the_same_offer_image(source: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Synthetic typed search answers exercise the real adapters before and after recording."""
+    from types import SimpleNamespace
+
+    plan = replay.RECORDING.SOURCE_PLANS[source]
+    image_field = "image" if source == "yandex_market" else "image_url"
+    item = replay._model(plan.item_model)(
+        **{image_field: "https://cdn.example/kettle.jpg", "title": "Synthetic kettle"}
+    )
+    response = replay._model(plan.response_model)(items=[item], meta={"healthy": True, "warnings": []})
+
+    async def search(**kwargs):
+        return response
+
+    monkeypatch.setattr(replay.server, "SOURCES", {source: SimpleNamespace(**{plan.tool: search})})
+    live = await replay.server.compare_prices("kettle", sources=[source])
+    document = replay.RECORDING.build_recording(
+        "kettle", "2026-11-16T10:00:00Z", {source: {"response": replay.RECORDING.cut_response(source, response)}}
+    )
+    result = await replay.replay(document)
+
+    assert live.offers[0].image_url == "https://cdn.example/kettle.jpg"
+    assert result.offers[0].image_url == live.offers[0].image_url
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recorded_ozon_card_price_tile_replays_as_conditional_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price."""
+    from types import SimpleNamespace
+
+    plan = replay.RECORDING.SOURCE_PLANS["ozon"]
+    item = replay._model(plan.item_model)(sku=2796072502, title="Synthetic kettle", price=32296.0, price_kind="card")
+    response = replay._model(plan.response_model)(items=[item], meta={"healthy": True, "warnings": []})
+
+    async def search(**kwargs):
+        return response
+
+    monkeypatch.setattr(replay.server, "SOURCES", {"ozon": SimpleNamespace(**{plan.tool: search})})
+    live = await replay.server.compare_prices("kettle", sources=["ozon"])
+    document = replay.RECORDING.build_recording(
+        "kettle", "2026-11-16T10:00:00Z", {"ozon": {"response": replay.RECORDING.cut_response("ozon", response)}}
+    )
+    result = await replay.replay(document)
+
+    assert live.offers[0].price_kind == "card" and live.offers[0].price_rub is None
+    assert (result.offers[0].price_kind, result.offers[0].price_rub, result.offers[0].price_native) == (
+        live.offers[0].price_kind,
+        live.offers[0].price_rub,
+        live.offers[0].price_native,
+    )
+    assert result.cheapest is None
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recorded_avito_region_reaches_the_replayed_outcome() -> None:
+    from avito_connector.models_output import AvitoSearchResponse
+
+    response = AvitoSearchResponse(items=[], location_id="650400", meta={"healthy": True, "warnings": []})
+    document = replay.RECORDING.build_recording(
+        "kettle", "2026-11-16T10:00:00Z", {"avito": {"response": replay.RECORDING.cut_response("avito", response)}}
+    )
+    result = await replay.replay(document)
+
+    assert document["sources"]["avito"]["response"]["region"] == "R1"
+    assert result.source_outcomes[0].region == "R1"
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recorded_timeout_replays_with_the_timeout_error_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+    from types import SimpleNamespace
+
+    async def search(**kwargs):
+        await asyncio.Event().wait()
+
+    module = SimpleNamespace(avito_search=search)
+    replay.RECORDING.capture_sources(tmp_path, {"avito": module})
+    monkeypatch.setattr(replay.server, "SOURCES", {"avito": module})
+    monkeypatch.setattr(replay.server, "SOURCE_TIMEOUT_S", 0.01)
+    live = await replay.server.compare_prices("kettle", sources=["avito"])
+    captures = [json.loads(path.read_text(encoding="utf-8")) for path in tmp_path.glob("*.json")]
+    document = replay.RECORDING.assemble_recording(
+        "kettle", "2026-11-16T10:00:00Z", captures, [outcome.model_dump() for outcome in live.source_outcomes]
+    )
+    result = await replay.replay(document)
+    assert result.source_outcomes[0].status == "timeout"
+    assert result.source_outcomes[0].error_code == "timeout"
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+@pytest.mark.parametrize(
+    "version",
+    [{"schema": 2}, {"schema": None}, {"schema": "1"}, {"schema": True}, {"schema": 1.0}, {}],
+    ids=["unknown", "null", "string", "boolean", "float", "missing"],
+)
+async def test_replay_refuses_an_unknown_or_missing_recording_schema(version: dict) -> None:
+    document = recorded("kettle-partial.json")
+    del document["schema"]
+    document.update(version)
+    with pytest.raises(ValueError, match="recording schema"):
+        await replay.replay(document)
 
 
 async def test_an_unrecorded_request_fails_the_replay() -> None:

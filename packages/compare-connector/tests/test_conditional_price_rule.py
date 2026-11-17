@@ -18,18 +18,21 @@ is replaced, the real comparison adapter reads it.
 # START_MODULE_MAP
 # _stub_native_search: Replace a source tool while keeping the real comparison adapter.
 # _r0_ozon_search_tile: The R0 Ozon pair's search payload, shaped like the committed capture.
+# _captured_ozon_tile: One tile of the committed Ozon capture.
 # test_the_helper_ranks_by_the_everyday_price: An everyday price beside a lower conditional amount.
 # test_the_helper_refuses_to_rank_a_conditional_price_alone: A conditional amount alone never ranks.
 # test_the_helper_says_nothing_about_a_conditional_price_that_is_not_lower: An equal or higher amount.
 # test_the_helper_says_nothing_without_any_price: Missing amounts stay missing.
 # test_wb_ranks_by_the_everyday_price_and_names_the_wallet_amount: The WB adapter.
 # test_yandex_ranks_by_the_everyday_price_and_names_the_plus_amount: The Yandex adapter.
-# test_ozon_search_keeps_todays_behaviour_and_the_gap_is_declared: The Ozon adapter and the declared gap.
+# test_ozon_card_price_tiles_are_conditional_only_and_never_rank: The Ozon adapter and a CARD_PRICE tile.
 # test_build_response_ranks_by_the_everyday_price_and_never_the_conditional_one: The comparison's own ranking.
 # END_MODULE_MAP
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -41,6 +44,9 @@ from ozon_connector import server as ozon
 from ozon_connector.models_output import OzonSearchResponse
 from wb_connector.models_output import WbCardItem, WbSearchResponse
 from yandex_connector.models_output import YandexProduct, YandexSearchResponse
+
+# The Ozon capture the Ozon connector parses (2026-08-07, provenance beside it).
+OZON_CAPTURE = Path(__file__).resolve().parents[2] / "ozon-connector/tests/fixtures/search_composer_live.json"
 
 
 # START_BLOCK_CONDITIONAL_PRICE_RULE_TESTS
@@ -76,6 +82,16 @@ def _r0_ozon_search_tile() -> dict:
             },
         ],
     }
+
+
+def _captured_ozon_tile(sku: str) -> dict:
+    """One tile of the committed Ozon capture, exactly as Ozon served it."""
+    payload = json.loads(OZON_CAPTURE.read_text(encoding="utf-8"))
+    grid = next(value for key, value in payload["widgetStates"].items() if key.startswith("tileGridDesktop-"))
+    for tile in json.loads(grid)["items"]:
+        if str(tile.get("sku")) == sku:
+            return tile
+    raise AssertionError(f"the capture holds no tile {sku}")
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.rule")
@@ -175,25 +191,44 @@ async def test_yandex_ranks_by_the_everyday_price_and_names_the_plus_amount(monk
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.adapters")
-async def test_ozon_search_keeps_todays_behaviour_and_the_gap_is_declared(monkeypatch):
-    """R-COMPARE-CONDITIONAL-PRICE.adapters: the Ozon search payload exposes no card price.
+async def test_ozon_card_price_tiles_are_conditional_only_and_never_rank(monkeypatch):
+    """R-COMPARE-CONDITIONAL-PRICE.adapters: an Ozon card price is never the everyday price.
 
-    The R0 tile's price is the Ozon Card price, but the Ozon connector does not
-    expose that (``priceStyle.styleType`` is not read by the tile parser), so the
-    comparison still treats the tile price as the everyday one — today's
-    behaviour, with the gap declared in the requirement.
+    Two tiles carry ``priceStyle.styleType CARD_PRICE``: the capture's own tile
+    2796072502 (32 296 ₽) and the R0 tile (65 367 ₽). Both amounts are the
+    Ozon Card price, so both are conditional-only: no everyday price, no
+    ranking, the amount in ``price_native`` and named once in the
+    ``conditional_price`` warning.
     """
-    native = OzonSearchResponse(items=[ozon._parse_search_tile(_r0_ozon_search_tile())])
-    assert native.items[0].price == 65367.0
+    native = OzonSearchResponse(
+        items=[
+            ozon._parse_search_tile(_captured_ozon_tile("2796072502")),
+            ozon._parse_search_tile(_r0_ozon_search_tile()),
+        ]
+    )
+    assert native.items[0].price == 32296.0
+    assert native.items[0].price_kind == "card"
     _stub_native_search(monkeypatch, "ozon", "ozon_search", native)
 
     result = await server.compare_prices("Kettle", sources=["ozon"])
 
-    offer = result.offers[0]
-    assert offer.price_rub == 65367.0
-    assert offer.price_kind is None
-    assert result.cheapest is not None and result.cheapest.price_rub == 65367.0
-    assert not [w for w in result.warnings if "conditional_price" in w]
+    offers = {offer.product_id: offer for offer in result.offers}
+    captured = offers["2796072502"]
+    r0 = offers["1688765035"]
+    assert captured.price_rub is None
+    assert captured.price_native == 32296.0
+    assert captured.price_kind == "card"
+    assert r0.price_rub is None
+    assert r0.price_native == 65367.0
+    assert r0.price_kind == "card"
+    assert result.cheapest is None
+    assert result.cheapest_comparable is None
+    # One warning names the captured tile's amount, and the source's own note
+    # says it once — the comparison never repeats it.
+    assert len([w for w in result.warnings if "conditional_price: ozon/2796072502" in w]) == 1
+    assert (
+        len([w for w in result.source_outcomes[0].warnings if w.startswith("conditional_price: ozon/2796072502")]) == 1
+    )
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.no-fabrication")

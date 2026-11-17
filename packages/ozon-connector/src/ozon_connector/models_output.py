@@ -10,13 +10,13 @@ The ``meta`` field is populated from the ``_meta`` key that
 
 # START_MODULE_CONTRACT
 # PURPOSE: Define typed Ozon card, review, search and selfcheck wire responses.
-# SCOPE: Review author identity removed; nullable RUB prices, 0..5 ratings, integer counts and unchanged aliases/envelopes.
+# SCOPE: Review author identity removed; nullable RUB prices, 0..5 ratings, integer counts, the tile's price kind and unchanged aliases/envelopes.
 # DEPENDS: Pydantic; mcp_core.models.
-# LINKS: R-NO-PERSONAL-DATA; M-OZON; R-OZON-SEARCH-NUMERIC; R-COMPARE-IMAGE-URL.
+# LINKS: R-NO-PERSONAL-DATA; M-OZON; R-OZON-SEARCH-NUMERIC; R-COMPARE-IMAGE-URL; R-COMPARE-CONDITIONAL-PRICE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # OzonCardResponse/OzonReviewsResponse: Card and review response models.
-# OzonSearchItemOut/OzonSearchResponse: Numeric tile values and bounded search results.
+# OzonSearchItemOut/OzonSearchResponse: Numeric tile values, the tile's price kind and bounded search results.
 # OzonSelfcheckResponse: Operator-only canary response.
 # END_MODULE_MAP
 
@@ -121,6 +121,14 @@ class OzonSearchItemOut(BaseModel):
     price_original: float | None = Field(
         default=None,
         description="Strikethrough reference price in rubles, not an offer; None when absent or unparseable.",
+    )
+    price_kind: str | None = Field(
+        default=None,
+        description=(
+            "'card' when the tile's priceV2.priceStyle.styleType is CARD_PRICE — that price is the "
+            "Ozon-card price, not an everyday price. None when the style is not CARD_PRICE: the other "
+            "tile styles (SALE_PRICE, CUSTOM) are not decided here and stay unreported."
+        ),
     )
     rating: float | None = Field(
         default=None, description="Product rating on the 0..5 scale; None when absent or invalid."

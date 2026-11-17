@@ -5,11 +5,11 @@ START_MODULE_CONTRACT
 PURPOSE: Find personal names, phones and e-mails in the committed fixtures and
          recordings, replace every hit with a fixed placeholder of the same shape,
          and hold the private-material rule (placeholder regions only, no Windows
-         user path, no scraping-profile directory) as a gate.
+         user path, no scraping-profile directory, no city-bearing Avito recording URL) as a gate.
 SCOPE: packages/*/tests/fixtures/**, committed recordings and the private-material
        trees packages/*/tests/, scripts/ and docs/; JSON and HTML fixtures; a pure
        scan(path, data) and a --write mode.
-DEPENDS: Standard-library argparse, dataclasses, hashlib, json, pathlib, re.
+DEPENDS: Standard-library argparse, dataclasses, hashlib, json, pathlib, re, urllib.parse.
 LINKS: M-SCRUB-FIXTURES, R-FIXTURE-PERSONAL-DATA.
 END_MODULE_CONTRACT
 START_MODULE_MAP
@@ -17,7 +17,7 @@ START_MODULE_MAP
   scrub: The same fixture with every hit replaced.
   scan_file: Every personal value in one file on disk.
   scrub_file: The file's bytes with every hit replaced.
-  private_material_problems: User paths, profile directory names, non-placeholder recording regions.
+  private_material_problems: User paths, profile directories, non-placeholder regions and city-bearing Avito recording URLs.
   main: Check mode (one masked line per hit) or --write mode.
 END_MODULE_MAP
 
@@ -58,6 +58,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -847,8 +848,23 @@ def _is_recording(path: Path, root: Path) -> bool:
     return "recordings" in relative.parts or path.name.endswith(".provenance.json")
 
 
+def _avito_url_problem(value: Any) -> bool:
+    """An Avito recording URL must not retain a city path or query/fragment."""
+    if not isinstance(value, str):
+        return False
+    try:
+        parts = urlsplit(value)
+        host = (parts.hostname or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    if host not in {"avito.ru", "www.avito.ru"}:
+        return False
+    item_path = re.fullmatch(r"/(?:[A-Za-z0-9_-]+_)?\d{6,}/?", parts.path)
+    return item_path is None or bool(parts.query or parts.fragment)
+
+
 def _region_problems(relative: str, data: Any) -> list[str]:
-    """Recording region fields that hold something other than a placeholder.
+    """Recording regions without placeholders and Avito URLs retaining city context.
 
     Only the region's own value counts: a structured region (a search filter
     with a type and a value) is not a region name and is left alone.
@@ -858,6 +874,9 @@ def _region_problems(relative: str, data: Any) -> list[str]:
     def walk(node: Any, keys: tuple[Any, ...]) -> None:
         if isinstance(node, dict):
             for key, value in node.items():
+                if "recordings" in Path(relative).parts and key == "url" and _avito_url_problem(value):
+                    where = _key_path((*keys, key))
+                    problems.append(f"{relative}: {where} retains Avito city context; use a city-free item URL")
                 if key in {"region", "regions"}:
                     for index, leaf in enumerate(_region_values(value)):
                         if not REGION_PLACEHOLDER_RE.match(leaf):

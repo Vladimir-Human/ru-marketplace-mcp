@@ -19,6 +19,7 @@ personal data once the scrub has run.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -326,6 +327,66 @@ def test_a_real_user_path_next_to_an_allowed_fake_still_fails(tmp_path: Path) ->
 
     assert len(problems) == 1
     assert problems[0].startswith("packages/mcp-core/tests/test_process.py: a Windows user path")
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record", "R-FIXTURE-PERSONAL-DATA.private")
+@pytest.mark.parametrize("host", ["www.avito.ru", "avito.ru"])
+def test_the_gate_rejects_an_avito_city_url_and_accepts_its_city_free_form(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], host: str
+) -> None:
+    """Plant only synthetic recording data; the gate must report no unmasked city."""
+    recordings = tmp_path / "packages" / "compare-connector" / "tests" / "benchmark" / "recordings"
+    recordings.mkdir(parents=True)
+    path = recordings / "city.json"
+    payload = {
+        "schema": 1,
+        "query": "kettle",
+        "sources": {
+            "avito": {
+                "response": {
+                    "region": "R1",
+                    "items": [{"url": f"https://{host}/moskva/bytovaya_tehnika/kettle_4612345678"}],
+                }
+            }
+        },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(gate, "ROOT", tmp_path)
+
+    assert gate.main() == 1
+    output = capsys.readouterr().out
+    assert "sources.avito.response.items[0].url" in output
+    assert "moskva" not in output
+
+    for url in (f"https://{host}/4612345678", f"https://{host}/kettle_4612345678"):
+        payload["sources"]["avito"]["response"]["items"][0]["url"] = url
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        assert gate.main() == 0
+        capsys.readouterr()
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record", "R-FIXTURE-PERSONAL-DATA.private")
+def test_fixture_provenance_may_keep_its_avito_capture_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The city-free URL rule applies to recordings, not a fixture's provenance."""
+    fixtures = tmp_path / "packages" / "avito-connector" / "tests" / "fixtures"
+    fixtures.mkdir(parents=True)
+    # Synthetic empty fixture and matching pin keep unrelated completeness
+    # checks valid; the URL is planted data, not a capture's provenance claim.
+    fixture_bytes = b"{}\n"
+    (fixtures / "item.json").write_bytes(fixture_bytes)
+    path = fixtures / "item.provenance.json"
+    path.write_text(
+        json.dumps(
+            {
+                "url": "https://www.avito.ru/moskva/bytovaya_tehnika/kettle_4612345678",
+                "sha256": hashlib.sha256(fixture_bytes).hexdigest(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gate, "ROOT", tmp_path)
+
+    assert gate.main() == 0
 
 
 # --- the gate itself -------------------------------------------------------
