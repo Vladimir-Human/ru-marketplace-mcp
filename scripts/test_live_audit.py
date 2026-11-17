@@ -1136,6 +1136,44 @@ async def test_the_audit_writes_one_recording_per_compare_call(audit: Any, tmp_p
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+async def test_a_lone_card_read_writes_no_recording(audit: Any, tmp_path: Path) -> None:
+    """A compare call that only re-read an Ozon card (no search) is no comparison to record."""
+    cases, ids = inputs(audit)
+    monkey_capture = tmp_path / "captures"
+    record_dir = tmp_path / "records"
+    budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / "ledger.json"))
+
+    class CardOnlySession(FakeSession):
+        async def list_tools(self, **kwargs: Any) -> Any:
+            return SimpleNamespace(
+                tools=[SimpleNamespace(name="compare_prices", output_schema={"type": "object"})], next_cursor=None
+            )
+
+        async def call_tool(self, tool: str, arguments: dict[str, Any]) -> Any:
+            self.calls.append((tool, arguments))
+            monkey_capture.mkdir(parents=True, exist_ok=True)
+            card = {"source": "ozon", "query": "", "card": "42", "response": {"price": 990.0, "card_price": 900.0}}
+            (monkey_capture / "0001-ozon.json").write_text(json.dumps(card), encoding="utf-8")
+            return SimpleNamespace(structured_content={"source_outcomes": []}, content=[], is_error=False)
+
+    plan = [c for c in audit.plan_run(cases, ids, {}, "C", 1) if c["kind"] == "compare"][:1]
+    await audit.execute_plan(
+        plan,
+        CardOnlySession(budget),
+        budget,
+        cases,
+        tmp_path,
+        "C",
+        record_dir=record_dir,
+        capture_dir=monkey_capture,
+        record_prefix="c1-",
+    )
+
+    assert not list(record_dir.glob("*.json"))
+    assert not list(monkey_capture.glob("*.json"))
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
 def test_recording_is_a_phase_c_option_only(audit: Any) -> None:
     """The recorder belongs to the compare phase; the other phases refuse it."""
     outside = str(audit.REPO_ROOT.parent / "compare-recordings")
