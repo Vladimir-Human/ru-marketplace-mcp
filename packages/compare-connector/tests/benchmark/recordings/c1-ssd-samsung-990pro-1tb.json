@@ -1,0 +1,1041 @@
+{
+  "query": "ssd samsung 990 pro 1tb",
+  "captured_at": "2026-11-17T01:34:34.352917Z",
+  "sources": {
+    "aliexpress": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1005008640400607",
+            "title": "Новый ТвердоТельный Накопитель 990 Pro SSD1TB 2TB 4TB SSD 980PRO M.2 2280 NVME",
+            "price_rub": 11376.99,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008640400607.html",
+            "image_url": "https://st.aestatic.net/items-img-14/R/D/P/7/Se65e92c8e58349849451e12306844968z.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008308966979",
+            "title": "до 10 дней, от 353 ₽",
+            "price_rub": 27919.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005008308966979.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S0c2739e034d54aca9cb631ed133152aaQ.png_480x480.png"
+          },
+          {
+            "item_id": "1005013530030787",
+            "title": "SAMSUNG SSD M2 NVMe 500 ГБ 990 PRO",
+            "price_rub": 30049.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013530030787.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Scbb748ed14f44eafb8cd05ef46f56ddfg.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005013619990141",
+            "title": "Samsung 980 Pro/990 Pro M.2 SSD 1/2/4 ТБ",
+            "price_rub": 9229.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013619990141.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S2fbc062eb9024cfbb28280660c957695Z.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008390271201",
+            "title": "SSD накопитель Samsung 990 Pro MZ-V9P1T0BW 1ТБ, M.2 2280, PCIe 4.0 x4, NVMe, M.2",
+            "price_rub": 30755.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008390271201.html",
+            "image_url": "https://st.aestatic.net/items-img-8/R/7/M/G/932f706389333f1ca8fb9dd66da1b69b.webp_480x480.jpg"
+          },
+          {
+            "item_id": "1005008389958891",
+            "title": "SSD Samsung 990 Pro 1ТБ",
+            "price_rub": 32133.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008389958891.html",
+            "image_url": "https://st.aestatic.net/items-img-22/R/L/K/A/89fa34971db7a215bde75d22d625e997.jpg_480x480.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "1 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care"
+          ]
+        },
+        "observed_at": "2026-11-17T01:34:29.787198Z"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "39779619c38e0fd2",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0BW]",
+            "price_rub": 25799.0,
+            "url": "https://www.dns-shop.ru/product/39779619c38e0fd2/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0bw/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/01155a935b64a4b738db50d8fa67d4dd/c0e0fdbb70b14fa69e223b44b1ea251d48ea8fde682cf2a535075882a6c7a1aa.jpg"
+          },
+          {
+            "product_id": "26135ef669a0ed20",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0CW]",
+            "price_rub": 25499.0,
+            "url": "https://www.dns-shop.ru/product/26135ef669a0ed20/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0cw/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/2e239d253071fd9972dcbc5c370805c6/7ccd2c4f1037a8ead9660e5047919581ca920ad17cc82af0f3271020ffee6685.jpg"
+          },
+          {
+            "product_id": "242b2ce5038ed582",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0B/AM]",
+            "price_rub": 25599.0,
+            "url": "https://www.dns-shop.ru/product/242b2ce5038ed582/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0bam/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/006fa4f4064dbaca4d2267ae9680eb50/21c351038577f9d3bf2d49057c542850151f0f9b011d10a2f7b5a282ceae7fcc.jpg"
+          },
+          {
+            "product_id": "bbc98685e8545c52",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0GW]",
+            "price_rub": 34999.0,
+            "url": "https://www.dns-shop.ru/product/bbc98685e8545c52/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0gw/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/9d412178a37add22da4d7ebfba8ddc30/8601aabab540d65f8dfed27557206b466d271713fa6d1bd67f0997faf68e24e7.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:34:28.190408Z"
+      }
+    },
+    "taobao": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1048502744107",
+            "title": "samsung二手pm9a1三星980 990PRO 970EVOPLUS M2 NVME固态硬盘1T",
+            "shop_name": "字节存储",
+            "price_cny": 999.0,
+            "url": "https://item.taobao.com/item.htm?id=1048502744107"
+          },
+          {
+            "item_id": "627360208108",
+            "title": "三星990pro固态硬盘2tb台式4t内置m2游戏1t高速ssd 9100 PCIE5.0",
+            "shop_name": "三星千兆专卖店",
+            "price_cny": 1209.0,
+            "url": "https://detail.tmall.com/item.htm?id=627360208108"
+          },
+          {
+            "item_id": "1033269381172",
+            "title": "Samsung/三星 1TB 990pro固态硬盘ssd台式机 2t笔记本固态m2游戏",
+            "shop_name": "柠檬小店456",
+            "price_cny": 1375.0,
+            "url": "https://item.taobao.com/item.htm?id=1033269381172"
+          },
+          {
+            "item_id": "1095963506397",
+            "title": "三星990PRO固态硬盘1TB 2TB笔记本台式电脑通用M.2官方质保5年",
+            "shop_name": "深圳华夏有为科技",
+            "price_cny": 1120.0,
+            "url": "https://item.taobao.com/item.htm?id=1095963506397"
+          },
+          {
+            "item_id": "1091894147698",
+            "title": "三星990pro 1T 2T M.2固态硬盘nvme适用台式笔记本电脑SSDpcie4.0",
+            "shop_name": "深圳南通服务器商城",
+            "price_cny": 1096.0,
+            "url": "https://item.taobao.com/item.htm?id=1091894147698"
+          },
+          {
+            "item_id": "1096755740720",
+            "title": "三星990PRO1TB 2TB NVMe M.2 PCIe4.0台式机笔记本电脑固态硬盘",
+            "shop_name": "华夏服务器商城",
+            "price_cny": 1199.0,
+            "url": "https://item.taobao.com/item.htm?id=1096755740720"
+          },
+          {
+            "item_id": "1045978542606",
+            "title": "三星1TB 2TB SSD固态硬盘M.2 7450MB/S 990PRO990EVOPlus全新盒装",
+            "shop_name": "追月电脑配件批发店",
+            "price_cny": 1157.0,
+            "url": "https://item.taobao.com/item.htm?id=1045978542606"
+          },
+          {
+            "item_id": "1080298164078",
+            "title": "【官方推荐】三星980Pro 990EVO 500G 1T 2T笔记本电脑M2固态硬盘",
+            "shop_name": "广深智慧科技",
+            "price_cny": 670.0,
+            "url": "https://item.taobao.com/item.htm?id=1080298164078"
+          },
+          {
+            "item_id": "1096028586373",
+            "title": "三星 990PRO 1T 2T NVME M.2 PCIe4.0笔记本电脑固态硬盘SSD 国行",
+            "shop_name": "全球人工智能商城",
+            "price_cny": 1099.0,
+            "url": "https://item.taobao.com/item.htm?id=1096028586373"
+          },
+          {
+            "item_id": "1040216869737",
+            "title": "512G二手三星500G 980 990 PRO 970EVOPLUS M2 NVME500固态硬盘1T",
+            "shop_name": "字节星核存储",
+            "price_cny": 388.0,
+            "url": "https://item.taobao.com/item.htm?id=1040216869737"
+          },
+          {
+            "item_id": "1083480150604",
+            "title": "三星m2固态硬盘 980PRO 990PRO 990EVOplus 1T/2T 笔记本电脑SSD",
+            "shop_name": "华夏科技小店",
+            "price_cny": 452.0,
+            "url": "https://item.taobao.com/item.htm?id=1083480150604"
+          },
+          {
+            "item_id": "1045756870631",
+            "title": "三星990PRO 1TB 2280 NVMe固态硬盘PCIe 4.0 ssd MZ-V9P1T0",
+            "shop_name": "一手电子产品",
+            "price_cny": 700.0,
+            "url": "https://item.taobao.com/item.htm?id=1045756870631"
+          },
+          {
+            "item_id": "1096164694491",
+            "title": "三星990PRO 1T 2T固态硬盘NVME M.2台式机笔记本电脑PCIE4.0 SSD",
+            "shop_name": "华南科技服务器",
+            "price_cny": 1117.0,
+            "url": "https://item.taobao.com/item.htm?id=1096164694491"
+          },
+          {
+            "item_id": "696560367462",
+            "title": "三星 990/9100 PRO 1T 2T 4T M.2 固态硬盘 全新正品国行 开专票",
+            "shop_name": "凯盛电脑",
+            "price_cny": 1429.0,
+            "url": "https://item.taobao.com/item.htm?id=696560367462"
+          },
+          {
+            "item_id": "1075178348584",
+            "title": "三星980 990pro PM9A1 981A 512g 1t 2t M.2NVME二手固态硬盘SSD",
+            "shop_name": "全球人工智能商城",
+            "price_cny": 222.0,
+            "url": "https://item.taobao.com/item.htm?id=1075178348584"
+          },
+          {
+            "item_id": "1094059649773",
+            "title": "三星990Pro 1/2TB台式机笔记本电脑SSD M.2固态硬盘 pcie4.0 NVMe",
+            "shop_name": "华夏科技小店",
+            "price_cny": 1120.0,
+            "url": "https://item.taobao.com/item.htm?id=1094059649773"
+          },
+          {
+            "item_id": "1075101313598",
+            "title": "三星990 PRO 1TB 2TB 4TB M.2 NVMe PCIe4.0固态硬盘SSD",
+            "shop_name": "沁芯服务器",
+            "price_cny": 1568.0,
+            "url": "https://item.taobao.com/item.htm?id=1075101313598"
+          },
+          {
+            "item_id": "1054649577785",
+            "title": "三星980 二手2TB 990 PRO 970EVOPLUS M2 NVME固态硬盘1Tb PM9A1",
+            "shop_name": "字节大健康存储",
+            "price_cny": 388.0,
+            "url": "https://item.taobao.com/item.htm?id=1054649577785"
+          },
+          {
+            "item_id": "1052819624212",
+            "title": "Samsung/三星 980PRO/990PRO 250 500G 1T 2T 固态硬盘 M2 970SSD",
+            "shop_name": "极客芯电脑配件",
+            "price_cny": 275.0,
+            "url": "https://item.taobao.com/item.htm?id=1052819624212"
+          },
+          {
+            "item_id": "1096246568473",
+            "title": "三星990PRO1T 2T固态硬盘M.2 NVME台式电脑笔记本扩容PCIE4.0 SSD",
+            "shop_name": "全球AI科技",
+            "price_cny": 1099.0,
+            "url": "https://item.taobao.com/item.htm?id=1096246568473"
+          },
+          {
+            "item_id": "1041104617732",
+            "title": "三星990PRO固态硬盘2t游戏m2笔记本ssd台式机电脑pcie4.0电竞2TB",
+            "shop_name": "百亿补贴品牌优选",
+            "price_cny": 1679.0,
+            "url": "https://detail.tmall.com/item.htm?id=1041104617732"
+          },
+          {
+            "item_id": "995562529793",
+            "title": "三星990pro二手M.2固态硬盘256g 512g 1t台式机笔记本电脑PCIE4.0",
+            "shop_name": "深圳南通服务器商城",
+            "price_cny": 222.0,
+            "url": "https://item.taobao.com/item.htm?id=995562529793"
+          },
+          {
+            "item_id": "1064903310077",
+            "title": "三星 980 二手2TB 990 PRO 970EVOPLUS M2 NVME固态硬盘1Tb PM9A1",
+            "shop_name": "比特硬盘",
+            "price_cny": 377.0,
+            "url": "https://item.taobao.com/item.htm?id=1064903310077"
+          },
+          {
+            "item_id": "886445241052",
+            "title": "三星990 PRO固态硬盘ssd 1/2/4TB NVMe m2笔记本PS5台式机PCIe4.0",
+            "shop_name": "intel英特尔旗舰店",
+            "price_cny": 1699.0,
+            "url": "https://detail.tmall.com/item.htm?id=886445241052"
+          },
+          {
+            "item_id": "1072155591259",
+            "title": "三星970EVO 980 990PRO PM981 9A1 500G 1T 2T M2固态硬盘二手SSD",
+            "shop_name": "华夏存储服务器",
+            "price_cny": 219.0,
+            "url": "https://item.taobao.com/item.htm?id=1072155591259"
+          },
+          {
+            "item_id": "1057486554743",
+            "title": "三星1TB 2TB SSD固态硬盘M.2 7450MB/S 990PRO990EVOPlus全新盒装",
+            "shop_name": "柠檬小店456",
+            "price_cny": 1270.0,
+            "url": "https://item.taobao.com/item.htm?id=1057486554743"
+          },
+          {
+            "item_id": "1064844071508",
+            "title": "samsung二手pm9a1三星 2T 990PRO 4T 980PRO M2 NVME固态硬盘1T",
+            "shop_name": "字节存储",
+            "price_cny": 365.0,
+            "url": "https://item.taobao.com/item.htm?id=1064844071508"
+          },
+          {
+            "item_id": "1068717315996",
+            "title": "samsung三星990pro 1T二手 2TBM2 NVME固态硬盘4Tb 990evoplus 8T",
+            "shop_name": "字节大健康存储",
+            "price_cny": 365.0,
+            "url": "https://item.taobao.com/item.htm?id=1068717315996"
+          },
+          {
+            "item_id": "1094604995735",
+            "title": "三星990PRO1T 2T固态硬盘NVME M.2台式机笔记本电脑PCIE4.0SSD",
+            "shop_name": "全球服务器商城",
+            "price_cny": 1120.0,
+            "url": "https://item.taobao.com/item.htm?id=1094604995735"
+          },
+          {
+            "item_id": "762622508202",
+            "title": "三星PM9A1/980PRO M2 NVME 256G 512G 1T 2T 2280PCIE4.0固态硬盘",
+            "shop_name": "拓盈通固态企业店",
+            "price_cny": 430.0,
+            "url": "https://item.taobao.com/item.htm?id=762622508202"
+          },
+          {
+            "item_id": "1092686431064",
+            "title": "三星990 Pro SSD固态硬盘1TB 2TB M.2 NVMe协议PCle4.0全新盒装",
+            "shop_name": "铸航电竞pc",
+            "price_cny": 1389.0,
+            "url": "https://item.taobao.com/item.htm?id=1092686431064"
+          },
+          {
+            "item_id": "692376292316",
+            "title": "【自营】三星990PRO固态硬盘1TB台式机m2游戏盘pcie4.0笔记本PS5",
+            "shop_name": "天猫国际自营全球超级店",
+            "price_cny": 1566.72,
+            "url": "https://detail.tmall.com/item.htm?id=692376292316"
+          },
+          {
+            "item_id": "884468356153",
+            "title": "Samsung/三星 980/990PRO 500G 1T 2T固态M2 970evoplus电脑SSD",
+            "shop_name": "月牙城科技",
+            "price_cny": 285.0,
+            "url": "https://item.taobao.com/item.htm?id=884468356153"
+          },
+          {
+            "item_id": "1065242395706",
+            "title": "Samsung/三星 980PRO 990PRO 512G1T NVMEM2 PM9A1 固态硬盘 拆机",
+            "shop_name": "多多硬盘",
+            "price_cny": 328.0,
+            "url": "https://item.taobao.com/item.htm?id=1065242395706"
+          },
+          {
+            "item_id": "1058429422980",
+            "title": "Samsung/三星 980PRO 990PRO 970EVO 2280M.2NVME固态硬盘拆机",
+            "shop_name": "慧彩硬盘批发",
+            "price_cny": 779.0,
+            "url": "https://item.taobao.com/item.htm?id=1058429422980"
+          },
+          {
+            "item_id": "1058509084984",
+            "title": "三星980pro990pro 512g 1t 2t台式机笔记本电脑二手M.2固态硬盘",
+            "shop_name": "极客湾科技",
+            "price_cny": 399.0,
+            "url": "https://item.taobao.com/item.htm?id=1058509084984"
+          },
+          {
+            "item_id": "1081665715665",
+            "title": "三星1TB 2TB SSD固态硬盘M.2 7450MB/S 990PRO990EVOPlus二手拆机",
+            "shop_name": "电脑产品直销",
+            "price_cny": 750.0,
+            "url": "https://item.taobao.com/item.htm?id=1081665715665"
+          },
+          {
+            "item_id": "1075164613032",
+            "title": "三星990 EVO Plus/990 PRO 1T/2T/4T M.2 PCIe4.0固态硬盘SSD",
+            "shop_name": "沁芯服务器",
+            "price_cny": 1398.0,
+            "url": "https://item.taobao.com/item.htm?id=1075164613032"
+          },
+          {
+            "item_id": "1070490931640",
+            "title": "三星硬盘990pro1T/2TSSD固态硬盘PCIe4.0 990evoplus硬盘华硕9100",
+            "shop_name": "intel英特尔旗舰店",
+            "price_cny": 1399.0,
+            "url": "https://detail.tmall.com/item.htm?id=1070490931640"
+          },
+          {
+            "item_id": "1039330161774",
+            "title": "samsung拆机二手三星990PRO 2T 970EVOPLUS M2 980NVME固态硬盘1T",
+            "shop_name": "字节科技存储",
+            "price_cny": 388.0,
+            "url": "https://item.taobao.com/item.htm?id=1039330161774"
+          },
+          {
+            "item_id": "1054687281054",
+            "title": "三星PM9A1 980二手1Tb 990 PRO 970EVOPLUS M2 NVME固态硬盘 2TB",
+            "shop_name": "字节硬盘",
+            "price_cny": 388.0,
+            "url": "https://item.taobao.com/item.htm?id=1054687281054"
+          },
+          {
+            "item_id": "933372650876",
+            "title": "三星990Pro 1T 2T 4TB NVME固态硬盘PCIe4.0散热片版MZ-V9P4T0CW",
+            "shop_name": "数码存储小子",
+            "price_cny": 2480.0,
+            "url": "https://item.taobao.com/item.htm?id=933372650876"
+          },
+          {
+            "item_id": "1067178225698",
+            "title": "三星9100PRO 990PRO 1T/2TB/4TBM.2NVME高速固态硬盘",
+            "shop_name": "南京玩家硬件国度",
+            "price_cny": 2099.0,
+            "url": "https://item.taobao.com/item.htm?id=1067178225698"
+          },
+          {
+            "item_id": "1008233043660",
+            "title": "Samsung/三星 980PRO 500GB/1T M.2 SSD固态硬盘2280NVMe 970EVO",
+            "shop_name": "星云数码配件中心",
+            "price_cny": 469.0,
+            "url": "https://item.taobao.com/item.htm?id=1008233043660"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:34:25.866527Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 562015955,
+            "name": "990PRO 1TB Внутренний SSD 1 ТБ M.2 NVMe 2280 PCIE4.0",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 19376.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 19376.0,
+            "review_rating": 5.0,
+            "feedbacks": 60,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1914825689,
+            "name": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 17204.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1914803436,
+            "name": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 17204.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2017673737,
+            "name": "1 ТБ Внутренний SSD 9100 PRO Gen5, подходит для PS5",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 30873.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 543338298,
+            "name": "990PRO 1ТБ Внутренний SSD-диск",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 20937.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 20937.0,
+            "review_rating": 5.0,
+            "feedbacks": 10,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 271790025,
+            "name": "ССД для компьютера 1TB MZ-V9P1T0BW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 27661.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 27661.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 238071303,
+            "name": "Внутренние SSD SSD 990 PRO 1 ТБ",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 26298.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 26298.0,
+            "review_rating": 4.9,
+            "feedbacks": 344,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 489618316,
+            "name": "Внутренний SSD 1000Gb 990 Pro MZ-V9P1T0BW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 30845.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 12,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 562016080,
+            "name": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 17073.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 17073.0,
+            "review_rating": 5.0,
+            "feedbacks": 80,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 743740923,
+            "name": "990PRO 1TB PCIE4.0 M.2 NVMe SSD Внутренний SSD",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 19376.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 18,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 561073066,
+            "name": "SSD диск 990 PRO 1TB M.2 2280 PCIe 4.0 x4 (MZ-V9P1T0BW)",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 27951.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 27951.0,
+            "review_rating": 4.9,
+            "feedbacks": 7,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 715729588,
+            "name": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 17083.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 17083.0,
+            "review_rating": 5.0,
+            "feedbacks": 11,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1061057609,
+            "name": "SSD диск 990 PRO 1000GB M.2 2280 PCIe 4.0 x4 (MZ-V9P1T0B AM)",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 29937.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 29937.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1914826382,
+            "name": "990PRO 1TB Внутренний SSD 1 ТБ M.2 NVMe 2280 PCIE4.0",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 19695.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 455503137,
+            "name": "Накопитель SSD 990 PRO, 1000GB MZ-V9P1T0BW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 39931.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 305332207,
+            "name": "SSD Внутренний 1000Gb 990 Pro MZ V9P1T0BW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 28633.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 28633.0,
+            "review_rating": 4.8,
+            "feedbacks": 120,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 682549825,
+            "name": "SSD-накопитель 1 TB 9100 PRO",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 34600.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 455495177,
+            "name": "SSD-накопитель 1ТБ 990 PRO с радиатором",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 33361.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 682550026,
+            "name": "SSD-накопитель 1ТБ 990 PRO с радиатором",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 33361.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1801221513,
+            "name": "SSD самсунг для пк 1TB MZ-V9P1T0CW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 29684.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 29684.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 243610389,
+            "name": "SSD 1 TB SSD M.2 2280 ssd для ноутбука",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 27483.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 27483.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1801210300,
+            "name": "SSD самсунг для пк 1TB MZ-V9P1T0CW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 33613.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 33613.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 416773066,
+            "name": "SSD диск MZ-V9P1T0BW, 1024 ГБ PCI-Express",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 25580.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 25580.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 262596216,
+            "name": "Твердотельный накопитель SSD 990 PRO 1TB M.2",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 26473.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 712038988,
+            "name": "Внутренний SSD накопитель 1 ТБ 990 PRO M2 2280",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 31672.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 31672.0,
+            "review_rating": 5.0,
+            "feedbacks": 22,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1456862751,
+            "name": "SSD самсунг для пк 1TB MZ-V9P1T0BW",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 110199.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2009716577,
+            "name": "Твердотельный накопитель SSD 990 PRO 1TB M.2",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 44729.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1273043642,
+            "name": "Твердотельный накопитель SSD 990 PRO 1TB M.2",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 31335.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 314255551,
+            "name": "1 ТБ Внутренний SSD-диск 990 PRO подходит для PS5",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 26077.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 4,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 286641284,
+            "name": "SSD накопитель 990 Pro MZ-V9P1T0BW 1ТБ, M.2 2280, PCIe 4.0 x…",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 38111.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2071018811,
+            "name": "1 ТБ Внутренний SSDдиск MZV9P1T0BW, M.2, PCIE 4.0 64",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 80815.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 80815.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 712051691,
+            "name": "Внутренний SSD накопитель 1 ТБ 990 PRO M2 2280",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 31672.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 31672.0,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 815922454,
+            "name": "Твердотельный накопитель SSD 990 PRO MZ-V9P1T0BW",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 30887.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 172280391,
+            "name": "1 ТБ Внутренний SSD, M.2, PCI-E Gen4x4 (MZ-V9P1T0BW)",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 36767.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 36767.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2016871143,
+            "name": "SSD 990 PRO, 1 ТБ, PCIe Gen4 M.2 2280",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 18032.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 18032.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 437318813,
+            "name": "SSD-диск 1 TB 9100 PRO с радиатором (Работает с PS5)",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 36176.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2099287720,
+            "name": "Твердотельный накопитель 1000Gb SSD 990 PRO NVMe4.0 M.2 HS",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 58370.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 570000648,
+            "name": "SSD-накопитель 1 TB 9100 PRO",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 34600.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 34600.0,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 295763372,
+            "name": "SSD накопитель 1ТБ 990 Pro MZ-V9P1T0CW, M.2 2280, PCIe 4.0 x…",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 39877.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 39877.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 682549965,
+            "name": "SSD-диск 1 TB 9100 PRO с радиатором (Работает с PS5)",
+            "brand": "Samsung",
+            "supplier": "",
+            "price_rub": 36176.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 36176.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T01:34:33.004813Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "102179593379",
+            "sku_id": "101858368744",
+            "title": "SSD диск Samsung 990 PRO, 1000GB, M.2 2280, PCIe 4.0 x4 (MZ-V9P1T0BW)",
+            "brand": "",
+            "seller": "ОНЛАЙНТРЕЙД.РУ",
+            "price_rub": 27346.0,
+            "price_with_plus": 26799.0,
+            "rating": 4.9,
+            "rating_count": 207,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/ssd-disk-samsung-ssd-m2-990-pro-1tb-pcie-40-x4-v-nand-tlc-mz-v9p1t0bw/102179593379",
+            "image": "https://avatars.mds.yandex.net/get-mpic/19928735/2a0000019ef4d8aa28578f772544b9493c9d/orig"
+          },
+          {
+            "product_id": "102685666274",
+            "sku_id": "103776296822",
+            "title": "Внутренний SSD диск SAMSUNG 990 PRO, 1000GB, M.2, NVMe 2.0, PCIe 4.0 x4 (MZ-V9P1T0CW)",
+            "brand": "",
+            "seller": "Getsy",
+            "price_rub": 26937.0,
+            "price_with_plus": 26398.0,
+            "rating": 4.9,
+            "rating_count": 1090,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/vnutrenniy-ssd-disk-samsung-990-pro-1000gb-m2-nvme-20-pcie-40-x4-mz-v9p1t0cw/102685666274",
+            "image": "https://avatars.mds.yandex.net/get-mpic/18109862/2a0000019bc5c39c32e130c9aa35ef4c4b96/orig"
+          },
+          {
+            "product_id": "102263012476",
+            "sku_id": "103776296822",
+            "title": "SSD диск Samsung 990 PRO, 1000GB, M.2 2280, PCIe 4.0 x4 (MZ-V9P1T0CW)",
+            "brand": "",
+            "seller": "ОНЛАЙНТРЕЙД.РУ",
+            "price_rub": 28627.0,
+            "price_with_plus": 28054.0,
+            "rating": 4.8,
+            "rating_count": 30,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/ssd-disk-samsung-m2-990-pro-1tb-pcie-40-x4-v-nand-tlc-with-heatsink-mz-v9p1t0cw/102263012476",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20361715/2a0000019ef61041ef0b98568a76c09b6050/orig"
+          },
+          {
+            "product_id": "6087402062",
+            "sku_id": "6148832388",
+            "title": "Твердотельный накопитель SSD Samsung 990 PRO Black M.2 2280 MZ-V9P1T0BW 1TB",
+            "brand": "",
+            "seller": "Яндекс Маркет",
+            "price_rub": 27530.0,
+            "price_with_plus": 26979.0,
+            "rating": 5.0,
+            "rating_count": 1,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/tverdotelnyy-nakopitel-ssd-samsung-990-pro-black-m2-2280-mz-v9p1t0bw-1tb/6087402062",
+            "image": "https://avatars.mds.yandex.net/get-mpic/12306721/2a0000018f55f9e6fbb6e4487cf68276141c/orig"
+          },
+          {
+            "product_id": "102186233209",
+            "sku_id": "101858368744",
+            "title": "SSD-накопитель Samsung 990PRO 1ТБ, M.2, PCIe 4.0 (MZ-V9P1T0BW)",
+            "brand": "",
+            "seller": "TopComputer",
+            "price_rub": 29442.0,
+            "price_with_plus": 28853.0,
+            "rating": 4.9,
+            "rating_count": 163,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/ssd-nakopitel-samsung-990pro-mz-v9p1t0bw-1tb-m2/102186233209",
+            "image": "https://avatars.mds.yandex.net/get-mpic/5366523/2a000001944a5e5b8ef0f9e2a0afaac6b085/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:34:17.302522Z"
+      }
+    }
+  },
+  "schema": 1
+}

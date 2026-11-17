@@ -1,0 +1,133 @@
+{
+  "_about": "A7 constructed traps (2026-11-17): per recorded query, two copies of the replay in which one real recorded offer priced below the labelled cheapest_comparable winner (the highest-priced such offer) gets a new title: the winner's product with one dimension changed (condition, accessory for the device, another model, memory or size). The edited offer is not the asked product by construction, so the query's cheapest_comparable label set stands.",
+  "traps": [
+    {
+      "recording": "c1-dyson-v15-detect",
+      "class": "condition",
+      "source": "aliexpress",
+      "product_id": "1005007397007555",
+      "recorded_title": "Аккумулятор RRTGKLL 25.2V 6000mAh для Dyson V15",
+      "title": "Вертикальный пылесос dyson V15 detect absolute, б/у"
+    },
+    {
+      "recording": "c1-dyson-v15-detect",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005007397007555",
+      "recorded_title": "Аккумулятор RRTGKLL 25.2V 6000mAh для Dyson V15",
+      "title": "Аккумулятор для пылесоса dyson V15 detect absolute"
+    },
+    {
+      "recording": "c1-headphones-sony-wh1000xm5",
+      "class": "model",
+      "source": "aliexpress",
+      "product_id": "1005012792618471",
+      "recorded_title": "Амбушюры для наушников SONY WH-1000XM3 из овчины",
+      "title": "Наушники беспроводные Sony WH-1000XM4"
+    },
+    {
+      "recording": "c1-headphones-sony-wh1000xm5",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005012792618471",
+      "recorded_title": "Амбушюры для наушников SONY WH-1000XM3 из овчины",
+      "title": "Чехол для наушников Sony WH-1000XM5"
+    },
+    {
+      "recording": "c1-iphone16-128gb",
+      "class": "model",
+      "source": "aliexpress",
+      "product_id": "1005011665761155",
+      "recorded_title": "Смартфон Apple iPhone 14 Pro, 6/128ГБ, 6/256ГБ, Б/у",
+      "title": "Смартфон Apple iPhone 16 Pro, 8/128ГБ"
+    },
+    {
+      "recording": "c1-iphone16-128gb",
+      "class": "memory",
+      "source": "aliexpress",
+      "product_id": "1005011665761155",
+      "recorded_title": "Смартфон Apple iPhone 14 Pro, 6/128ГБ, 6/256ГБ, Б/у",
+      "title": "Смартфон Apple iPhone 16, 8/256ГБ"
+    },
+    {
+      "recording": "c1-lego-42151",
+      "class": "condition",
+      "source": "aliexpress",
+      "product_id": "1005005213450242",
+      "recorded_title": "Акриловая витрина для Lego 42151 Bolide",
+      "title": "Конструктор LEGO Technic 42151 Болид Бугатти, витринный образец"
+    },
+    {
+      "recording": "c1-lego-42151",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005005213450242",
+      "recorded_title": "Акриловая витрина для Lego 42151 Bolide",
+      "title": "Набор подсветки для LEGO Technic 42151 Болид Бугатти"
+    },
+    {
+      "recording": "c1-pampers-premium-care-4",
+      "class": "size",
+      "source": "aliexpress",
+      "product_id": "1005009157807350",
+      "recorded_title": "Happyflute, впитывающий 5-слойный подгузник для детей, многоразовый подгузник для детей, тканевый подгузник",
+      "title": "Подгузники Pampers Premium Care для малышей 11-16 кг, 5 размер XL, 44 шт"
+    },
+    {
+      "recording": "c1-pampers-premium-care-4",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005009157807350",
+      "recorded_title": "Happyflute, впитывающий 5-слойный подгузник для детей, многоразовый подгузник для детей, тканевый подгузник",
+      "title": "Контейнер для подгузников Pampers Premium Care 4"
+    },
+    {
+      "recording": "c1-ps5-slim",
+      "class": "condition",
+      "source": "aliexpress",
+      "product_id": "1005012118763973",
+      "recorded_title": "STARTRC GAMES Станция охлаждения для PS5 Slim/Pro",
+      "title": "Игровая консоль PS5 Slim цифровая версия - 825 ГБ, восстановленная"
+    },
+    {
+      "recording": "c1-ps5-slim",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005012118763973",
+      "recorded_title": "STARTRC GAMES Станция охлаждения для PS5 Slim/Pro",
+      "title": "Геймпад для PS5 Slim, белый"
+    },
+    {
+      "recording": "c1-redmi-note14-256gb",
+      "class": "model",
+      "source": "aliexpress",
+      "product_id": "1005006097411438",
+      "recorded_title": "Смартфон Xiaomi Redmi Note 17 4G, 6/128ГБ, 6/256ГБ, 8/256ГБ, global",
+      "title": "Смартфон Xiaomi Redmi Note 14 Pro 4G NFC, 8/256 GB, Черный"
+    },
+    {
+      "recording": "c1-redmi-note14-256gb",
+      "class": "memory",
+      "source": "aliexpress",
+      "product_id": "1005006097411438",
+      "recorded_title": "Смартфон Xiaomi Redmi Note 17 4G, 6/128ГБ, 6/256ГБ, 8/256ГБ, global",
+      "title": "Смартфон Xiaomi Redmi Note 14 4G NFC, 8/128 GB, Черный"
+    },
+    {
+      "recording": "c1-ssd-samsung-990pro-1tb",
+      "class": "memory",
+      "source": "wildberries",
+      "product_id": "1914825689",
+      "recorded_title": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+      "title": "2000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P2T0CW]"
+    },
+    {
+      "recording": "c1-ssd-samsung-990pro-1tb",
+      "class": "model",
+      "source": "wildberries",
+      "product_id": "1914825689",
+      "recorded_title": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
+      "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 EVO Plus [MZ-V9S1T0BW]"
+    }
+  ]
+}

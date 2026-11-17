@@ -173,13 +173,16 @@ def test_size_tokens_normalise_units_and_reject_guesses(text, expected):
         ({"1TB"}, {"1024GB"}, False),
         ({"1024GB"}, {"1TB"}, False),
         ({"2TB"}, {"2048GB", "16GB"}, False),
-        ({"1TB"}, {"1000GB"}, True),
+        ({"1TB"}, {"1000GB"}, False),
+        ({"1000GB"}, {"1TB"}, False),
+        ({"1TB"}, {"960GB"}, True),
+        ({"1TB"}, {"1023GB"}, True),
         ({"1TB"}, {"2TB"}, True),
         ({"512GB"}, {"1TB"}, True),
     ],
 )
 def test_sizes_compare_in_gigabytes(asked, stated, conflict):
-    """R-COMPARE-VARIANT-IDENTITY: 1 TB = 1024 GB, as storage is sold; no rounding to 1000."""
+    """R-COMPARE-VARIANT-IDENTITY: 1 TB reads as 1024 GB or 1000 GB, as storage is sold; nothing in between."""
     assert sizes_conflict(frozenset(asked), frozenset(stated)) is conflict
 
 

@@ -1,10 +1,11 @@
 """Replay the recorded compare calls through today's adapters (plan item A7).
 
 The benchmark corpus is replayed, never re-fetched: every test here runs the
-committed synthetic recordings through the compare connector's own adapters and
+committed recordings through the compare connector's own adapters and
 `decide.build_response`, with one recording-backed stub in place of the
-marketplace search calls. No marketplace is contacted, and the recordings carry
-invented titles and prices only.
+marketplace search calls. No marketplace is contacted. The kettle-* recordings
+carry invented titles and prices; the c<cycle>-* ones are scrubbed live
+recordings from the audit cycles (score.py and test_score.py judge them).
 
 START_MODULE_CONTRACT
 PURPOSE: Prove that a recorded compare call replays through today's adapters unchanged.
@@ -13,7 +14,7 @@ DEPENDS: compare_connector.server, compare_connector.decide; the connector outpu
 LINKS: M-COMPARE, M-COMPARE-RECORDING, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   recorded: Read one committed recording.
-  test_*: Requirement-derived replays over the synthetic corpus.
+  test_*: Requirement-derived replays over the committed corpus.
 END_MODULE_MAP
 END_MODULE_CONTRACT
 """

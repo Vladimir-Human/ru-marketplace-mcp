@@ -11,9 +11,9 @@ Nothing in this module fetches, waits, sleeps or writes to stdout: it is on the
 architecture gate's pure list.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers and size conflicts, and build the comparison answer.
+# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers, other models and size conflicts, and build the comparison answer.
 # SCOPE: Pure decisions over the results a comparison gathered; no source access, no browser, no model, no stdout.
-# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
+# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
 # DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib json, re, collections.abc, dataclasses.
 # SCHEMA: CompareResponse keeps its fields, types and meanings; this module only fills them.
 # LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING.
@@ -47,7 +47,7 @@ from dataclasses import dataclass
 
 from mcp_core.logging import log_event
 
-from compare_connector.identity import extract_size_tokens, format_size_tokens, sizes_conflict
+from compare_connector.identity import extract_size_tokens, format_size_tokens, model_mismatch, sizes_conflict
 from compare_connector.models_output import CompareResponse, MarketOffer, SourceOutcome
 
 
@@ -567,13 +567,16 @@ def build_response(
     cheapest = priced[0] if priced else None
     # A size the query states and the title contradicts is explicit text, not a
     # heuristic, so it keeps the offer out of the like-for-like candidate rather
-    # than merely warning about it. The offer keeps its rank and may remain
-    # plain cheapest; only cheapest_comparable skips it.
+    # than merely warning about it; so does a title missing a model word or number
+    # the query names (R-COMPARE-MODEL-TOKENS). The offer keeps its rank and may
+    # remain plain cheapest; only cheapest_comparable skips it.
     query_sizes = extract_size_tokens(query)
     comparable: list[MarketOffer] = []
     size_excluded: list[frozenset[str]] = []
     for offer in priced:
         if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
+            continue
+        if model_mismatch(query, offer.title, offer.brand):
             continue
         title_sizes = extract_size_tokens(offer.title)
         if sizes_conflict(query_sizes, title_sizes):
@@ -626,13 +629,12 @@ def build_response(
         warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
         warnings.append(
-            "comparable_price: the raw cheapest listing is an accessory, a different condition or a different "
-            "variant; cheapest_comparable is the safer like-for-like candidate"
+            "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; "
+            "cheapest_comparable is the safer like-for-like candidate"
         )
     elif cheapest is not None and cheapest_comparable is None:
         warnings.append(
-            "comparable_price: every priced listing looks like an accessory, a different condition "
-            "or a different variant"
+            "comparable_price: every priced listing looks like an accessory, a different condition, variant or model"
         )
     if foreign:
         currencies = ", ".join(sorted({offer.currency for offer in foreign}))
