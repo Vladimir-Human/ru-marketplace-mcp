@@ -45,7 +45,8 @@ FACT_FIELDS = (
     "currency",
     "identity",
 )
-# Red run: all 50 seeds of these exact recordings/families still selected an ambiguous title.
+# Red run: all 50 seeds of these exact recordings still selected a title stuffed with other models.
+# The memory family passes since R-COMPARE-SIZE-LIST (a title listing several sizes is no candidate).
 # The c1 recordings joined with A7 (#310); every one of them fails both families the same way.
 EXCLUSIONS = {
     (name, attack, seed)
@@ -61,7 +62,7 @@ EXCLUSIONS = {
         "c1-redmi-note14-256gb.json",
         "c1-ssd-samsung-990pro-1tb.json",
     )
-    for attack in ("models", "memory")
+    for attack in ("models",)
     for seed in range(50)
 }
 
@@ -270,7 +271,7 @@ async def test_compare_regular_price_and_winner_ignore_cheaper_conditional_price
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
-    reason="A title stuffed with other models or a list of sizes still becomes cheapest_comparable (known gap)",
+    reason="A title stuffed with other models still becomes cheapest_comparable (known gap)",
 )
 async def test_recording_ambiguous_title_minimal_violation(name: str, attack: str, seed: int) -> None:
     result = await replay.replay(_seller_mutation(_recording(RECORDINGS / name), seed, attack))
