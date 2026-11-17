@@ -140,6 +140,8 @@ def _numeric_card_id(source: str, value: str) -> int:
         path = {
             "wildberries": r"/catalog/([0-9]+)/detail\.aspx/?",
             "detsky_mir": r"/product/index/id/([0-9]+)/?",
+            # The url a compare_prices Yandex offer carries (ssr.card_url).
+            "yandex_market": r"/card/[^/]+/([0-9]+)/?",
         }[source]
         try:
             parsed = urlsplit(candidate)

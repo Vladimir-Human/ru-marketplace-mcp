@@ -786,7 +786,9 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
         requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
         result = await tool(nm_ids=[int(requested_numeric_id)])
     elif name == "yandex_market":
-        result = await tool(product_id=product_id_or_url, include_reviews=include_reviews)
+        # yandex_card takes digits only; the offer's own /card/<slug>/<id> url resolves here.
+        requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
+        result = await tool(product_id=requested_numeric_id, include_reviews=include_reviews)
     elif name == "detsky_mir":
         requested_numeric_id = str(_numeric_card_id(name, product_id_or_url))
         result = await tool(product_id=int(requested_numeric_id))
