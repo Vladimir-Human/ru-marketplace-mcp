@@ -1,0 +1,672 @@
+{
+  "query": "кофемашина delonghi magnifica s ecam22.110",
+  "captured_at": "2026-11-17T19:14:31.923529Z",
+  "sources": {
+    "aliexpress": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1005011847952998",
+            "title": "Трубка паровой черная для Delonghi Magnifica S ECAM22.110",
+            "price_rub": 1019.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005011847952998.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sc2f81022d1264421a824a27d99163083z.png_480x480.png"
+          },
+          {
+            "item_id": "1005008603556887",
+            "title": "Delonghi ECAM510.55.M серебристая автоматическая кофемашина",
+            "price_rub": 8266.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008603556887.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sccf314cc2fc740fcb007dfdcc8c2d09aK.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291056244",
+            "title": "Кофемашина De'Longhi Magnifica Start ECAM220.31.SB",
+            "price_rub": 43404.92,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006291056244.html",
+            "image_url": "https://st.aestatic.net/items-img/R/5/7/L/Sa501cbc7509642b39354026e08bb9938k.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291062255",
+            "title": "Кофемашина De'Longhi Magnifica Smart+ ECAM 250.33.TB",
+            "price_rub": 35929.92,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006291062255.html",
+            "image_url": "https://st.aestatic.net/items-img/R/F/K/P/S661b1fa5511a4f7b84f214b1cc4e6554a.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006290976645",
+            "title": "Кофемашина De'Longhi Magnifica S ECAM 22.110.W",
+            "price_rub": 37532.49,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006290976645.html",
+            "image_url": "https://st.aestatic.net/items-img/R/4/L/7/S819af47ee73843e59a58b62412d11f20G.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006290962754",
+            "title": "Кофемашина De'Longhi Magnifica Smart ECAM 230.13.B",
+            "price_rub": 41532.56,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006290962754.html",
+            "image_url": "https://st.aestatic.net/items-img/R/G/J/P/S6e38e183a6ee474f908a58b629c08469y.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005008639473602",
+            "title": "Кофемашина Delonghi ECO310/ECO311",
+            "price_rub": 4355.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008639473602.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S5c5e29c1c0da483095e0d7a29079255aM.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008915257614",
+            "title": "Кофемашина De'Longhi Dedica EC680/EC685",
+            "price_rub": 3982.32,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008915257614.html",
+            "image_url": "https://st.aestatic.net/items-img/R/E/O/7/S2da0b3a455184a0a9fb01008f9a3bb5dB.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005009126114472",
+            "title": "De'Longhi ECAM45 LatteCrema Eletta Explore кофемашина",
+            "price_rub": 16449.83,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005009126114472.html",
+            "image_url": "https://st.aestatic.net/items-img-3/R/2/H/B/045e9e60b5b3b60257ffb7c92790a848.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291046331",
+            "title": "Кофемашина De'Longhi Magnifica Evo ECAM 292.81.B",
+            "price_rub": 46809.23,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006291046331.html",
+            "image_url": "https://st.aestatic.net/items-img/R/6/B/N/Sca60a87bc0744eadbe2863c76d0ce6ccd.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006290966774",
+            "title": "Кофемашина De'Longhi Magnifica Evo ECAM290.21.B",
+            "price_rub": 42553.85,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006290966774.html",
+            "image_url": "https://st.aestatic.net/items-img/R/D/6/M/Sfa10e956facc452380329e8e59caa410I.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291100066",
+            "title": "Кофемашина De'Longhi Magnifica Evo ECAM290.31.SB",
+            "price_rub": 40681.48,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006291100066.html",
+            "image_url": "https://st.aestatic.net/items-img/R/C/J/I/S7036d87610704056906b095dc0463a180.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291062253",
+            "title": "Кофемашина De'Longhi Magnifica S ECAM 22.110.SB",
+            "price_rub": 40000.62,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006291062253.html",
+            "image_url": "https://st.aestatic.net/items-img/R/6/8/5/S9dea9b1f0084465f9c9e64dfd9b5fca1R.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005007582642531",
+            "title": "Кофемашина De'Longhi La Specialista Arte EC9155.W",
+            "price_rub": 47149.67,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005007582642531.html",
+            "image_url": "https://st.aestatic.net/items-img/R/4/5/8/A35b79950541b49bd8f36ca43c1abc83fF.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006291092118",
+            "title": "Кофемашина DeLonghi Magnifica Evo ECAM292.52.GB",
+            "price_rub": 50809.3,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005006291092118.html",
+            "image_url": "https://st.aestatic.net/items-img/R/5/O/F/S6e5a2a9c50f147d7b155c86cc8c3e0e8i.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005006290916989",
+            "title": "Кофемашина DeLonghi La Specialista Arte EC9155.MB",
+            "price_rub": 41532.56,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005006290916989.html",
+            "image_url": "https://st.aestatic.net/items-img/R/E/E/K/S2da6ce775b4d418aae2311d50d74b4ecC.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005007582616625",
+            "title": "Кофемашина De'Longhi La Specialista Arte Evo EC9255.T",
+            "price_rub": 49447.58,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005007582616625.html",
+            "image_url": "https://st.aestatic.net/items-img/R/1/D/K/A443441593cf8410489642ea3119e1580C.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005007582635556",
+            "title": "Кофемашина De'Longhi La Specialista Prestigio EC9255.M",
+            "price_rub": 55405.11,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005007582635556.html",
+            "image_url": "https://st.aestatic.net/items-img/R/D/4/1/Aa4333305a5764d2e8273a9e35cde5b0eh.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006290965724",
+            "title": "Кофемашина De'Longhi DINAMICA ECAM 350.15 B",
+            "price_rub": 62979.7,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005006290965724.html",
+            "image_url": "https://st.aestatic.net/items-img/R/P/K/9/S3d520b37ac4e4995b7411bc6792cd9632.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005008361302649",
+            "title": "Кофемашина Gaggia Classic Evo RI9481/13",
+            "price_rub": 53958.28,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005008361302649.html",
+            "image_url": "https://st.aestatic.net/items-img/R/E/G/I/Af9c940909777407b80415de43756d26fo.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006992117710",
+            "title": "Кофемашина Krups Evidence Essential EA891110",
+            "price_rub": 52936.99,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005006992117710.html",
+            "image_url": "https://st.aestatic.net/items-img/R/0/G/F/Sb1ec522669d148bb9f2234d2f793c4fdx.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008361164900",
+            "title": "Кофемашина Gaggia EG210904",
+            "price_rub": 21872.67,
+            "rating": 4.0,
+            "url": "https://aliexpress.ru/item/1005008361164900.html",
+            "image_url": "https://st.aestatic.net/items-img/R/6/4/K/Ab40b0496f4d043d7996b5dfe4c2d02a4T.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005007686032696",
+            "title": "Кофемашина De'longhi Rivelia Jade Green EXAM441.55.GR Delonghi",
+            "price_rub": 73703.27,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005007686032696.html",
+            "image_url": "https://st.aestatic.net/items-img/R/I/I/6/A10e44ea786f14871a377bf5c1de8b294u.jpg_480x480.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:14:31.807446Z"
+      }
+    },
+    "citilink": {
+      "error": {
+        "code": "rate_limited",
+        "message": "citilink rate-limited"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "4622ddd4251aa834",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 22.110.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/4622ddd4251aa834/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-22110sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/021e205db3021c111d8faac0f63dd631/53914a1ff3d55503227fb0ca66c46416ab3dd61ce34e3f25ad99a49e08218905.jpg"
+          },
+          {
+            "product_id": "18b4da702607a834",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 22.110.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/18b4da702607a834/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-22110b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/a631b356852aa88b590fae85e3b2aeec/9adaa914ce696967a3470f5c46f5848287b81bb0590486baaea79c8c4a3ee6b2.jpg"
+          },
+          {
+            "product_id": "52148f1985921032",
+            "title": "Кофемашина автоматическая Delonghi Magnifica S ECAM20.110.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/52148f1985921032/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam20110b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/709c5f2aa5a3bbbee4a608e7ba23878d/fed18b8f90f908b06cab77e3b5972ab0a379fc999824b7b29aa8ca951fe6c4f2.jpg"
+          },
+          {
+            "product_id": "bdd2db7e64ee5c69",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 21.117.SB/S серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/bdd2db7e64ee5c69/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-21117sbs-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/2bc7a0f7925bb8ee10b885b0fe8fcc4e/c11a82544277d824d71d5af285afc43b7fa87e1c36c0d43171a3d0cdea4bd76a.jpg"
+          },
+          {
+            "product_id": "dc22443955c5ed20",
+            "title": "Кофемашина автоматическая DeLonghi ECAM 22.110.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/dc22443955c5ed20/kofemasina-avtomaticeskaa-delonghi-ecam-22110sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/64e8bf5ee4248145b773869ef85571b6/f0af03a9a2c7ad052b32ceb99ad9cdc020f40395bef9399faa9e0e7283b66bcb.jpg"
+          },
+          {
+            "product_id": "c501550aecb83b82",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Start ECAM220.60.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/c501550aecb83b82/kofemasina-avtomaticeskaa-delonghi-magnifica-start-ecam22060b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/a429e006bc72cd500e3d0e79f2fc57ce/0edad9de9696fce8adfebc592078b807d82587f9ff4f90fda28bd8b1408ce2ad.jpg"
+          },
+          {
+            "product_id": "769b80cb60bced20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Evo ECAM 290.81.TB черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/769b80cb60bced20/kofemasina-avtomaticeskaa-delonghi-magnifica-evo-ecam-29081tb-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/b4cecda5b417624676550808b6f79384/b77619c628ddde4f2e877d69e46519872e1ff59a9ae555bf6a65445cc56ca031.png"
+          },
+          {
+            "product_id": "aad504e060baed20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Start ECAM 220.22.GB черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/aad504e060baed20/kofemasina-avtomaticeskaa-delonghi-magnifica-start-ecam-22022gb-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/8ee78890fa2f3334c394d12ba73a2f6e/25af1f2b98af6f34e0bf4c7c8df618e6b7fb35dd97c955860567c9ae5a4f7cbf.jpg"
+          },
+          {
+            "product_id": "9d81ec93a8c61573",
+            "title": "Кофемашина автоматическая Delonghi Magnifica Start ECAM220.80.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/9d81ec93a8c61573/kofemasina-avtomaticeskaa-delonghi-magnifica-start-ecam22080sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/392ee0d39add77ad7c06afaa0bdcfa3a/6f96cc8634d9b7e1227f86298ea7b22938c1ecbdeac85e2ff8e47b006d79f749.jpg"
+          },
+          {
+            "product_id": "4b27e09720dfd582",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Plus ECAM320.61.G серый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/4b27e09720dfd582/kofemasina-avtomaticeskaa-delonghi-magnifica-plus-ecam32061g-seryj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/195a6f633add88facd6d415cee8566bc/ca4b2ef4f4f253bbfa71dfe188c6df54f069740c51c251c1626bd1fe9b954e95.jpg"
+          },
+          {
+            "product_id": "04b0bec4e12567c5",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Plus ECAM320.60.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/04b0bec4e12567c5/kofemasina-avtomaticeskaa-delonghi-magnifica-plus-ecam32060b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/4965659ad41ca08abb6533a27ff3b66e/e8196537de04ab33e1fbec21d932d2dae6dd9c59d20dcad2e4f418a64ae449c6.jpg"
+          },
+          {
+            "product_id": "97908347122bd582",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Evo ECAM290.83.TB серый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/97908347122bd582/kofemasina-avtomaticeskaa-delonghi-magnifica-evo-ecam29083tb-seryj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/ffee8417a72dff62148ee53a0697d3a3/73169c7e15485c34f30a6ce2eb905d7e6dc666ecd1289dfcdbd5285c6cda2e92.jpg"
+          },
+          {
+            "product_id": "5a52ab767f323330",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 22.114.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/5a52ab767f323330/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-22114b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/d222accc441d13d013a886936fca33d1/508270becf6ba5bd8e5fcdafa1fbd32b893fbf0182263a71d7935e38ccf6e1db.jpg"
+          },
+          {
+            "product_id": "9ad2292e60bbed20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Evo ECAM 290.61.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/9ad2292e60bbed20/kofemasina-avtomaticeskaa-delonghi-magnifica-evo-ecam-29061b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/375cf2cac3cdec27e18f6b2510aa1d19/4cb2d35f16534d31d4b63cfe2b2ab7a4ea8c54790f67fa5121ea56cb7dab6a02.jpg"
+          },
+          {
+            "product_id": "63095c9540dc3333",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S Smart ECAM 250.31.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/63095c9540dc3333/kofemasina-avtomaticeskaa-delonghi-magnifica-s-smart-ecam-25031sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/8e9452c54798a7a0786d898ae7b3abe3/eaf6369fb2b062643083a2201f52454bbfc608d0d9e2419f6ab7dba7ca4698e1.jpg"
+          },
+          {
+            "product_id": "2cf31684a257d0a4",
+            "title": "Кофемашина автоматическая Delonghi Magnifica S ECAM 12.121 B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/2cf31684a257d0a4/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-12121-b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/40873f195d48422fddc097f7283af2b2/13fc7716261529a2ea91cc4e87f8f746bd82bd756fe51e6244706fec9ce3deeb.jpg"
+          },
+          {
+            "product_id": "b8855ae4a255d0a4",
+            "title": "Кофемашина автоматическая Delonghi Magnifica Plus ECAM 320.60 W белый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/b8855ae4a255d0a4/kofemasina-avtomaticeskaa-delonghi-magnifica-plus-ecam-32060-w-belyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/79cd1c025c1b0e4f51074b1b2ad01be3/f19093cf4addd9f91942bedf35736e532495d4c74e29531a657586ecd021a8f6.jpg"
+          },
+          {
+            "product_id": "d71b5f1f2e14bdd5",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Plus ECAM320.70.TB серый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/d71b5f1f2e14bdd5/kofemasina-avtomaticeskaa-delonghi-magnifica-plus-ecam32070tb-seryj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/cf97ade36d2103ff5fd03d6afd69c6cc/5fe55ad39b8f8384c69f03075a6defeefbf23b2a67ff3c5006375197c2463b47.jpg"
+          },
+          {
+            "product_id": "1ed19e3e60c1ed20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Start ECAM 220.21.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/1ed19e3e60c1ed20/kofemasina-avtomaticeskaa-delonghi-magnifica-start-ecam-22021b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/e00fa88dc0845ad2845d386358aa022d/647795bd1026bf2461cb5b176e120573925174565ad4ccb762c305cb75ebf805.jpg"
+          },
+          {
+            "product_id": "135f91b694906200",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica EVO ECAM 290.22.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/135f91b694906200/kofemasina-avtomaticeskaa-delonghi-magnifica-evo-ecam-29022b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/3337e98c62cd51efc4cfa7f2640b5481/f53af6dfee60048cd17fb2d5ecafaa7cdac244c1ae91a628109d4eea94e33e8a.jpg"
+          },
+          {
+            "product_id": "b189f98bae4b57bf",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Evo ECAM290.85.SBX серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/b189f98bae4b57bf/kofemasina-avtomaticeskaa-delonghi-magnifica-evo-ecam29085sbx-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/68be0a4a973ccd440695e5f1cc5aa9c2/2303ff67cb5e2c51b9d0e3a60ebe2426d9a30ad0c1841878cd0b15994b1c4258.jpg"
+          },
+          {
+            "product_id": "eca97800fe09ed20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 22.115.B черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/eca97800fe09ed20/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-22115b-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/28b17aefefd7d22de6aa55442f5572c9/dc7f94ae0de1104d7a8481c03b1e2738413920c0d0ef79b3860280719f8212c7.jpg"
+          },
+          {
+            "product_id": "fe546142db7d3332",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica S ECAM 250.23.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/fe546142db7d3332/kofemasina-avtomaticeskaa-delonghi-magnifica-s-ecam-25023sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/4fef823556a449a8502a659c16fd214a/0efe8af883d04a0a5534ec251c402eb6ec66788d04144ff5b969e51b29935e31.jpg"
+          },
+          {
+            "product_id": "ea968d6c6610ed20",
+            "title": "Кофемашина автоматическая DeLonghi Magnifica Start ECAM 220.30.SB серебристый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/ea968d6c6610ed20/kofemasina-avtomaticeskaa-delonghi-magnifica-start-ecam-22030sb-serebristyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/6798feedd1cd2ce5152ef2289434222c/4e4acdd057b03accc2a2ed6252c48e3bf8012ad6fe976f69d4644e3e58b4944f.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "no_prices_on_page"
+          ]
+        },
+        "observed_at": "2026-11-17T19:14:19.984313Z"
+      }
+    },
+    "taobao": {
+      "error": {
+        "code": "challenge_required",
+        "message": "Taobao requires user action in the Chrome scraping profile. Complete the login/CAPTCHA challenge there, then call this tool again after the user confirms it is done."
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 321732162,
+            "name": "Кофемашина с ручным капучинатором Magnifica S EСAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 30382.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 30382.0,
+            "review_rating": 4.7,
+            "feedbacks": 7432,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 846207869,
+            "name": "Кофемашина автоматическая Magnifica S ECAM 22.110 SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 47717.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 47717.0,
+            "review_rating": 5.0,
+            "feedbacks": 16,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 262976624,
+            "name": "Кофемашина Magnifica S ECAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 32042.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 32042.0,
+            "review_rating": 4.8,
+            "feedbacks": 69,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 962114368,
+            "name": "Кофемашина Magnifiсa S ECAM 22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 38412.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 38412.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 214690617,
+            "name": "Кофемашина Magnifica S ECAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 35051.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 35051.0,
+            "review_rating": 4.9,
+            "feedbacks": 134,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 201851605,
+            "name": "Кофемашина Magnifica S Smart ECAM250.31.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 40784.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 40784.0,
+            "review_rating": 4.7,
+            "feedbacks": 20,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 781306247,
+            "name": "Кофемашина автоматическая Magnifica S ECAM 22.110 SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 40492.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 40492.0,
+            "review_rating": 4.8,
+            "feedbacks": 61,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 224993906,
+            "name": "Кофемашина ECAM 250.31 SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 48765.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 48765.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 262897951,
+            "name": "Кофемашина автоматическая Magnifica S ECAM 22.110 SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 37572.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 37572.0,
+            "review_rating": 4.9,
+            "feedbacks": 333,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 11839385,
+            "name": "Кофемашина автоматическая Magnifica S ECAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 41402.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 41402.0,
+            "review_rating": 4.7,
+            "feedbacks": 76,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 254159195,
+            "name": "Кофемашина Magnifica ECAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 49162.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 316762155,
+            "name": "Кофемашина magnifica S ECAM 22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 41564.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 41564.0,
+            "review_rating": 5.0,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 548067472,
+            "name": "Кофемашина автоматическая Magnifica S EСAM 22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 39677.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1973428797,
+            "name": "Кофемашина автоматическая Magnifica S ECAM22.110.SB",
+            "brand": "DeLonghi",
+            "supplier": "",
+            "price_rub": 78604.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 78604.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T19:14:30.344428Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "103195382801",
+            "sku_id": "100237209270",
+            "title": "Кофемашина автоматическая Magnifica ECAM22.110. B",
+            "brand": "",
+            "seller": "Официальный магазин Delonghi",
+            "price_rub": 36422.0,
+            "price_with_plus": 35694.0,
+            "rating": 5.0,
+            "rating_count": 14,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/avtomaticheskaya-kofemashina-delonghi-ecam22110-b-1450-vt-15-bar-13-stepeney-pomola-odnovremennoye-prigotovleniye-dvukh-chashek-ruchnoy-kapuchinator-elektronnoye-upravleniye-chernaya/103195382801",
+            "image": "https://avatars.mds.yandex.net/get-mpic/18498696/2a0000019f41e3665acfe8eff822469a68cd/orig"
+          },
+          {
+            "product_id": "102204063980",
+            "sku_id": "100237209270",
+            "title": "Автоматическая кофемашина DeLonghi ECAM22.110. B, 1450 Вт, 15 бар, 13 степеней помола, одновременное приготовление двух чашек, ручной капучинатор, электронное управление, черная",
+            "brand": "",
+            "seller": "giper_fm",
+            "price_rub": 36414.0,
+            "price_with_plus": 35686.0,
+            "rating": 5.0,
+            "rating_count": 16,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/kofemashina-avtomaticheskaya-zernovaya-delonghi-magnifica-s-ecam22110-b-s-ruchnym-kapuchinatorom-i-funktsiyey-prigotovleniya-2-portsiy-zernovaya-13-stepeney-pomola-18-l-15-bar-chernyy/102204063980",
+            "image": "https://avatars.mds.yandex.net/get-mpic/7658228/2a000001910a4eab4216f04e591e374135cf/orig"
+          },
+          {
+            "product_id": "4655140657",
+            "sku_id": "100237209270",
+            "title": "Кофемашина автоматическая De’Longhi ECAM 22.110. B, 15 бар, черный",
+            "brand": "",
+            "seller": "Холодильник.ру",
+            "price_rub": 39220.0,
+            "price_with_plus": 38436.0,
+            "rating": 5.0,
+            "rating_count": 7,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/kofemashina-avtomaticheskaya-delonghi-ecam-22110-b-15-bar-chernyy/4655140657",
+            "image": "https://avatars.mds.yandex.net/get-mpic/13072406/2a000001951ce5b6f22d7ed5550ae3eaf357/orig"
+          },
+          {
+            "product_id": "102523676610",
+            "sku_id": "100237209271",
+            "title": "Кофемашина автоматическая Magnifica S ECAM 22.110 SB",
+            "brand": "",
+            "seller": "Официальный магазин Delonghi",
+            "price_rub": 36422.0,
+            "price_with_plus": 35694.0,
+            "rating": 4.8,
+            "rating_count": 5,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/kofemashina-avtomaticheskaya-zernovaya-delonghi-magnifica-s-ecam22110-sb-s-ruchnym-kapuchinatorom-i-funktsiyey-prigotovleniya-2-portsiy-13-stepeney-pomola-serebristyy/102523676610",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20936313/picc03161d58a48f9a29d0e376821e47a77/orig"
+          },
+          {
+            "product_id": "4548012303",
+            "sku_id": "100237209271",
+            "title": "Кофемашина DeLonghi ECAM Magnifica 22.110, электронное управление, 1450Вт, автоотключение",
+            "brand": "",
+            "seller": "ПРОФИ ТЕХНО",
+            "price_rub": 38837.0,
+            "price_with_plus": 38060.0,
+            "rating": 4.9,
+            "rating_count": 40,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/kofemashina-delonghi-ecam-22110-sb/4548012303",
+            "image": "https://avatars.mds.yandex.net/get-mpic/15131989/2a0000019f96efdbb5dff18a2e0ef8b63590/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:14:08.099262Z"
+      }
+    }
+  },
+  "schema": 1
+}

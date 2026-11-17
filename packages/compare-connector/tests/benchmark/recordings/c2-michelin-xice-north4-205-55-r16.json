@@ -1,0 +1,655 @@
+{
+  "query": "шины michelin x-ice north 4 205/55 r16",
+  "captured_at": "2026-11-17T19:19:20.784035Z",
+  "sources": {
+    "aliexpress": {
+      "error": {
+        "code": "parser_drift",
+        "message": "rendered search page yielded zero product tiles — either the query matched nothing or the DOM shape moved; verify manually"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "ab0e41a938c9ed20",
+            "title": "Руль FLASHFIRE Suzuka Racing Wheel ES900R черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/ab0e41a938c9ed20/rul-flashfire-suzuka-racing-wheel-es900r-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/b8bcbb379c4a9d587dc9872c9384c773/18c134bee78acf4316043b5762999337687e028a98a6c0a37b1e0cc19c22de76.jpg"
+          },
+          {
+            "product_id": "eee94da5f6b44eaf",
+            "title": "Руль FLASHFIRE ES900R черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/eee94da5f6b44eaf/rul-flashfire-es900r-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/be21c3060cc0438769cc022e3ff13bb8/74ab9b9574630389a98e635b5e8ddd8161dfc42bb6f8ca59cac52a28b4eba5d3.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "no_prices_on_page"
+          ]
+        },
+        "observed_at": "2026-11-17T19:19:12.693414Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 14811393,
+            "name": "Шины зимние X-Ice North 4 XL XL 215 65 R16",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 24200.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 14,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 780653641,
+            "name": "Шины зимние 205 60 R16 96H X-Ice SNOW",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 23965.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23965.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 544854088,
+            "name": "Шины зимние 265 55 R20 113T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 48278.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 48278.0,
+            "review_rating": 5.0,
+            "feedbacks": 12,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 577294207,
+            "name": "Шины зимние 235 55 R20 X-ice north 4 suv XL 105T шипованные",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 49224.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 49224.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 313726493,
+            "name": "Шины зимние 235 55 R18 104T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 41954.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 41954.0,
+            "review_rating": 4.6,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 218681013,
+            "name": "шины зимние 235 55 R20 105T XL",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 49198.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 49198.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 789042084,
+            "name": "Шины зимние 265 55R20 X-ICE NORTH 4 SUV 113T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 49633.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 49633.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 783934305,
+            "name": "Шина 255 55 R20 X-Ice North 4 SUV 110T XL",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 48726.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 48726.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 982857209,
+            "name": "Шина 205 55 R16 Energy XM2 + 91V",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 13194.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 13194.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 141319587,
+            "name": "Шины зимние R20 265 55 113T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 59791.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 59791.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1529512448,
+            "name": "Шина 215 55R17 XL X- ICE NORTH 4 98T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 37444.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 423415253,
+            "name": "Шины зимние 255 55 R20 110T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 68146.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1898542229,
+            "name": "Шина 215 55R17 XL X- ICE NORTH 4 98T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 37444.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 269919388,
+            "name": "Шины зимние 285 45 R20 112T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 50505.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1804434653,
+            "name": "Шины летние 205 55 R16 91H Primacy 4+",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 25222.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 25222.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 269918532,
+            "name": "Шины зимние 265 40 R22 106T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 61348.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 61348.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1209823777,
+            "name": "X-Ice North 4 SUV Шины зимние 265 55 R20 113T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 58425.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 535909954,
+            "name": "Шины зимние 255 50R20 X-ICE NORTH 4 SUV 109T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 51380.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 313731290,
+            "name": "Шины зимние 265 45 R21 108T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 52153.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 52153.0,
+            "review_rating": 4.4,
+            "feedbacks": 7,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 457217706,
+            "name": "Шины зимние R20 285 50 116T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 62732.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 62732.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1035907593,
+            "name": "Примат 5 Шины летние 205 55 R16 91W",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 17242.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 313724757,
+            "name": "Шины зимние 225 55 R19 103 101T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 41913.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 41913.0,
+            "review_rating": 3.8,
+            "feedbacks": 22,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 197940638,
+            "name": "Шины зимние R18 265 60 114T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 60894.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 60894.0,
+            "review_rating": 5.0,
+            "feedbacks": 10,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 414280539,
+            "name": "Шины зимние 235 65 R17 108T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 43894.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 43894.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 414281694,
+            "name": "Шины зимние 245 45 R20 103T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 49701.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 49701.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 14811538,
+            "name": "X-Ice North 4 XL R20 255 50 109T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 47162.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 47162.0,
+            "review_rating": 5.0,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1266359905,
+            "name": "Шина летняя Grenlander 205 55 R16 94W",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 7463.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 7463.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1266359585,
+            "name": "Шина летняя HABILEAD 205 55 R16 91V",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 7683.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 7683.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1582186589,
+            "name": "Шины зимние 295 45 R20 114T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 52786.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 52786.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1847035905,
+            "name": "Шины зимние 235 50 R19 103T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 51788.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 51788.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 178064122,
+            "name": "Шины зимние R18 225 60 104T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 50668.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 50668.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1847035990,
+            "name": "Шины зимние 265 65 R17 116T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 58711.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 58711.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 269917810,
+            "name": "Шины зимние 245 45 R20 103T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 44456.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 44456.0,
+            "review_rating": 4.3,
+            "feedbacks": 6,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1929536882,
+            "name": "Шина 225 50R17 XL X- ICE NORTH 4 98T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 40075.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 815076249,
+            "name": "Шины зимние 265 55 R20 113T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 53974.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 53974.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1266359064,
+            "name": "Шина летняя Grenlander 205 55 R16 91V",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 7093.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 7093.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1529525000,
+            "name": "Шина 265 50R20 XL X- ICE NORTH 4 111T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 63787.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 191376376,
+            "name": "Шины зимние R20 245 45 103T X-Ice North 4 SUV",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 61050.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 61050.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1332964368,
+            "name": "Шина 245 45R18 XL X-Ice North 4 100T TL",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 40894.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1985015274,
+            "name": "Шина 225 45R18 XL X- ICE NORTH 4 95T",
+            "brand": "MICHELIN",
+            "supplier": "",
+            "price_rub": 41774.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T19:19:20.705823Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "102894899510",
+            "sku_id": "4603144716",
+            "title": "Зимняя шипованная шина Kumho WI32 205/55 R16 94 T, зимняя автомобильная резина",
+            "brand": "",
+            "seller": "ШИНСЕРВИС - автосервисные центры",
+            "price_rub": 7018.0,
+            "price_with_plus": 6878.0,
+            "rating": 4.9,
+            "rating_count": 51,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zimnyaya-shipovannaya-shina-kumho-wi32-20555-r16-94t/102894899510",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20197730/pic741361c9e5e01c272eed6a8e33b4ad45/orig"
+          },
+          {
+            "product_id": "102299338604",
+            "sku_id": "101282755244",
+            "title": "Зимняя шипованная шина Sailun Ice Blazer WST3 205/55 R16 94T шип XL",
+            "brand": "",
+            "seller": "",
+            "price_rub": 5664.0,
+            "price_with_plus": 5551.0,
+            "rating": 4.8,
+            "rating_count": 689,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/avtoshina-sailun-ice-blazer-wst3-20555-r16-94t-ship-xl/102299338604",
+            "image": "https://avatars.mds.yandex.net/get-mpic/16503961/2a0000019acda2504d808bbd89d7636957c7/orig"
+          },
+          {
+            "product_id": "102959957368",
+            "sku_id": "4603144716",
+            "title": "Зимние шины KUMHO WI32 205/55R16 94T XL, зимняя автомобильная резина",
+            "brand": "",
+            "seller": "ВИРБАКавто",
+            "price_rub": 7243.0,
+            "price_with_plus": 7098.0,
+            "rating": 5.0,
+            "rating_count": 4,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zimniye-shiny-kumho-wi32-20555r16-94t-xl/102959957368",
+            "image": "https://avatars.mds.yandex.net/get-mpic/22011224/pic009e22ab9bd2c829090f5c58caa96f0c/orig"
+          },
+          {
+            "product_id": "102337139122",
+            "sku_id": "101282761727",
+            "title": "Зимняя шипованная шина Cordiant Snow Cross 2 205/55 R16 94 T, зимняя автомобильная резина",
+            "brand": "",
+            "seller": "ШИНСЕРВИС - автосервисные центры",
+            "price_rub": 6216.0,
+            "price_with_plus": 6092.0,
+            "rating": 4.9,
+            "rating_count": 55,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zimnyaya-shina-cordiant-snow-cross-2-20555-r16-94t/102337139122",
+            "image": "https://avatars.mds.yandex.net/get-mpic/17735185/piccb89d7eb72421afe195cc8f649053c7c/orig"
+          },
+          {
+            "product_id": "103136078699",
+            "sku_id": "103683603962",
+            "title": "Зимние шины PIRELLI Ice Zero Friction 205/55R16 94T XL, зимняя автомобильная резина",
+            "brand": "",
+            "seller": "ВИРБАКавто",
+            "price_rub": 7944.0,
+            "price_with_plus": 7785.0,
+            "rating": 4.9,
+            "rating_count": 137,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zimniye-shiny-pirelli-ice-zero-friction-20555r16-94t-xl/103136078699",
+            "image": "https://avatars.mds.yandex.net/get-mpic/18729742/picb398b2a3846f9bd18c489b7b0f413c9a/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:19:01.991370Z"
+      }
+    }
+  },
+  "schema": 1
+}

@@ -1,0 +1,703 @@
+{
+  "query": "nintendo switch oled",
+  "captured_at": "2026-11-17T19:15:42.460067Z",
+  "sources": {
+    "aliexpress": {
+      "error": {
+        "code": "parser_drift",
+        "message": "rendered search page yielded zero product tiles — either the query matched nothing or the DOM shape moved; verify manually"
+      }
+    },
+    "citilink": {
+      "error": {
+        "code": "rate_limited",
+        "message": "citilink rate-limited"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "e0116a4a8354ed20",
+            "title": "Игровая консоль Nintendo Switch OLED",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/e0116a4a8354ed20/igrovaa-konsol-nintendo-switch-oled/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/2c704a0a38fadeebf2ffcab036d3e5e9/fbc5afc37b7e2cf5e729bc69d8385b6b2c7344eb85588f43e4fb28e7f01ac512.jpg"
+          },
+          {
+            "product_id": "316dcd206be5ed20",
+            "title": "Игровая консоль Nintendo Switch OLED – Mario Red Edition красный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/316dcd206be5ed20/igrovaa-konsol-nintendo-switch-oled-mario-red-edition-krasnyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/a06d29970d51e8220f340dc580f3d608/1a6747ef79b616bac6a0df095ca6d1b9b599a6613c14ba56b40d42092384b2d2.jpg"
+          },
+          {
+            "product_id": "58e33a1542e4ed20",
+            "title": "Игровая консоль Nintendo Switch OLED – The Legend of Zelda: Tears of the Kingdom Edition черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/58e33a1542e4ed20/igrovaa-konsol-nintendo-switch-oled-the-legend-of-zelda-tears-of-the-kingdom-edition-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/c9affb96d5ce690e642537e7d088f9eb/fd958562f1f25ac8e80ac7b444bdf831b096122ca14823c9a077ffcad0a5693a.jpg"
+          },
+          {
+            "product_id": "9548c2c78350ed20",
+            "title": "Игровая консоль Nintendo Switch OLED – Splatoon 3 Edition черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/9548c2c78350ed20/igrovaa-konsol-nintendo-switch-oled-splatoon-3-edition-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/19da14b672596d9bc8c50a9f68b1df6f/b0e3645170398cb0289f838852b417af8758265e3698b8685ed4c0849fab99a4.jpg"
+          },
+          {
+            "product_id": "e3013c4f834ded20",
+            "title": "Игровая консоль Nintendo Switch OLED – Pokemon Skarlet and Violet Edition черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/e3013c4f834ded20/igrovaa-konsol-nintendo-switch-oled-pokemon-skarlet-and-violet-edition-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/fd211ad457749c52a825a938acab84c6/b1f19cd2b0027fa07d032366c9b39b6f5db53f83dc7784a231029aff6ea0ee21.jpg"
+          },
+          {
+            "product_id": "63e2618964b1ed20",
+            "title": "Игровая консоль Nintendo Switch OLED – Splatoon 3 Edition зеленый, фиолетовый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/63e2618964b1ed20/igrovaa-konsol-nintendo-switch-oled-splatoon-3-edition-zelenyj-fioletovyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/69c0607ef5a1e080983cf2ed3e4321e7/0b32e9c7e33b3d17236b266067424efaf7048b02b522cf105509567182cd839b.jpg"
+          },
+          {
+            "product_id": "531e100f005aed20",
+            "title": "Игровая консоль Nintendo Switch OLED – The Legend of Zelda: Tears of the Kingdom Edition черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/531e100f005aed20/igrovaa-konsol-nintendo-switch-oled-the-legend-of-zelda-tears-of-the-kingdom-edition-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/a461483b49ee760cd97cb9b4e5fe1562/22651a70a8701339c3bb9476d79c8c25d68ed3e2083cbdca99cf703fd54455ee.jpg"
+          },
+          {
+            "product_id": "381eb3b964a9ed20",
+            "title": "Игровая приставка Nintendo Switch - OLED-модель Splatoon KOR ( без поддержки Nintendo eShop ) / ПИ",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/381eb3b964a9ed20/igrovaa-pristavka-nintendo-switch-oled-model-splatoon-kor-bez-podderzki-nintendo-eshop-pi/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/fca65b19b9a79a4da16c9a08e21bfc20/61d9d534fa3940faacb0968115dab22844477c42ad369c39c229f98e00f79bcb.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "no_prices_on_page"
+          ]
+        },
+        "observed_at": "2026-11-17T19:15:34.290735Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 634461808,
+            "name": "Switch OLED 64 ГБ Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 24719.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.9,
+            "feedbacks": 50,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 634461809,
+            "name": "Switch OLED 64 ГБ Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 24916.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 8,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 760424918,
+            "name": "Switch OLED 64 ГБ Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 24719.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 760424919,
+            "name": "Switch OLED 64 ГБ Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 24916.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1285753271,
+            "name": "Игровая приставка Switch OLED 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 30901.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2032421251,
+            "name": "Switch OLED White 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 20399.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 20399.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 565698621,
+            "name": "Игровая приставка Switch OLED 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 27549.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 565698620,
+            "name": "Игровая приставка Switch OLED 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 27549.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1908905607,
+            "name": "Игровая приставка Switch OLED 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 23789.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23789.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 263211548,
+            "name": "Switch OLED Прошитая игровая приставка + 220 игр",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 85242.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 85242.0,
+            "review_rating": 4.9,
+            "feedbacks": 139,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2032421250,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 20399.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 20399.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2032422036,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 20399.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 20399.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2060164782,
+            "name": "Switch OLED White 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21995.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21995.0,
+            "review_rating": 4.8,
+            "feedbacks": 54,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1472123212,
+            "name": "Игровая приставка Switch oled русский язык 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 23794.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23794.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 301750960,
+            "name": "Защитное стекло на Nintendo Switch Oled аксессуары",
+            "brand": "MagicGlassStore",
+            "supplier": "",
+            "price_rub": 796.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 796.0,
+            "review_rating": 4.8,
+            "feedbacks": 5937,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2060092388,
+            "name": "Switch OLED White 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 20946.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 20946.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 332516228,
+            "name": "Игровая приставка Switch OLED 64 ГБ, белый HK",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 26992.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 26992.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 439009133,
+            "name": "Switch OLED white 512gb прошитая",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 51516.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 51516.0,
+            "review_rating": 5.0,
+            "feedbacks": 31,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 439003416,
+            "name": "Switch OLED white 256gb прошитая",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 44957.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 44957.0,
+            "review_rating": 4.8,
+            "feedbacks": 28,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 819622632,
+            "name": "Switch OLED прошитая 128gb",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 43828.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 11,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 154170009,
+            "name": "Switch OLED Прошитая игровая приставка + 50 игр",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 47661.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 47661.0,
+            "review_rating": 5.0,
+            "feedbacks": 40,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1417685750,
+            "name": "Switch OLED White 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21943.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21943.0,
+            "review_rating": 5.0,
+            "feedbacks": 14,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2060815439,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 22336.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22336.0,
+            "review_rating": 4.4,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2134016622,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21303.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21303.0,
+            "review_rating": 4.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1558783308,
+            "name": "Switch OLED White 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21943.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21943.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1316959062,
+            "name": "Switch OLED White 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21943.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21943.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2032422294,
+            "name": "Switch OLED 64ГБ OLED White",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21995.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21995.0,
+            "review_rating": 4.4,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 379449810,
+            "name": "Игровая приставка Switch OLED 64 ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 27742.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 27742.0,
+            "review_rating": 4.8,
+            "feedbacks": 78,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 85359997,
+            "name": "Сумка кейс для Nintendo Switch Oled, чехол для Нинтендо",
+            "brand": "Dexgame",
+            "supplier": "",
+            "price_rub": 755.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 755.0,
+            "review_rating": 4.9,
+            "feedbacks": 621,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2060164783,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 22336.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22336.0,
+            "review_rating": 4.8,
+            "feedbacks": 54,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1315711151,
+            "name": "Игровая приставка Switch OLED 64 ГБ, неоновый",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 33751.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 33751.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1483566374,
+            "name": "Switch OLED White 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 21943.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 21943.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 980515841,
+            "name": "Switch OLED 64 ГБ Splatoon 3 Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 26477.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 493799815,
+            "name": "Switch OLED 64GB, версия для Гонконга, консоль, красно-синяя",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 22791.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22791.0,
+            "review_rating": 4.9,
+            "feedbacks": 18,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1563836815,
+            "name": "Switch OLED Neon 64ГБ",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 22279.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22279.0,
+            "review_rating": 5.0,
+            "feedbacks": 9,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 633237615,
+            "name": "Switch OLED Лучшая цена Оригинал Чек Гарантия",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 28307.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 73,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1304255191,
+            "name": "Switch OLED 64 ГБ Игровая приставка",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 29375.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 29375.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 495663534,
+            "name": "Защитное стекло на Nintendo Switch Oled",
+            "brand": "WAROZ",
+            "supplier": "",
+            "price_rub": 521.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 521.0,
+            "review_rating": 4.7,
+            "feedbacks": 113,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 634230428,
+            "name": "Switch OLED Neon [Гарантия 12 мес] Оригинал, быстрая доставк…",
+            "brand": "Nintendo",
+            "supplier": "",
+            "price_rub": 29264.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 29264.0,
+            "review_rating": 4.8,
+            "feedbacks": 92,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 239332356,
+            "name": "Прошитая Nintendo Switch OLED White 512GB с чипом (Новая)",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 46815.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 46815.0,
+            "review_rating": 4.9,
+            "feedbacks": 107,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T19:15:42.380259Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "4824516160",
+            "sku_id": "101453086732",
+            "title": "Игровая приставка Nintendo Switch OLED 64 ГБ, белый",
+            "brand": "",
+            "seller": "",
+            "price_rub": 26339.0,
+            "price_with_plus": 25812.0,
+            "rating": 4.9,
+            "rating_count": 688,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-nintendo-switch-oled-64-gb-belyy/4824516160",
+            "image": "https://avatars.mds.yandex.net/get-mpic/4977072/img_id4659133673044625928.jpeg/orig"
+          },
+          {
+            "product_id": "6057175923",
+            "sku_id": "5209340258",
+            "title": "Игровая приставка Nintendo Switch OLED, 64Gb, White",
+            "brand": "",
+            "seller": "",
+            "price_rub": 32094.0,
+            "price_with_plus": 31452.0,
+            "rating": 5.0,
+            "rating_count": 2,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-nintendo-switch-oled-64gb-white/6057175923",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20656428/2a0000019ef2f5bb5ad5563867169336273a/orig"
+          },
+          {
+            "product_id": "5966228264",
+            "sku_id": "6056139336",
+            "title": "Игровая приставка Nintendo Switch OLED, 64GB, White",
+            "brand": "",
+            "seller": "",
+            "price_rub": 32678.0,
+            "price_with_plus": 32024.0,
+            "rating": 4.8,
+            "rating_count": 3310,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-nintendo-switch-oled-64gb-white/5966228264",
+            "image": "https://avatars.mds.yandex.net/get-mpic/15429936/2a000001971e819f4c8511bec9b99ef9dacc/orig"
+          },
+          {
+            "product_id": "4824574700",
+            "sku_id": "4824574700",
+            "title": "Игровая приставка Nintendo Switch OLED White, 7″ OLED, 64 ГБ, японская версия",
+            "brand": "",
+            "seller": "",
+            "price_rub": 28058.0,
+            "price_with_plus": 27497.0,
+            "rating": 4.8,
+            "rating_count": 458,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-nintendo-switch-oled-64-gb-bez-igr-belyy/4824574700",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20760620/pic04e8bcf26f544eac40da7a3594094e22/orig"
+          },
+          {
+            "product_id": "6034760067",
+            "sku_id": "5209340258",
+            "title": "Игровая приставка Nintendo Switch OLED, 64Gb, White",
+            "brand": "",
+            "seller": "1221 market",
+            "price_rub": 32240.0,
+            "price_with_plus": 31595.0,
+            "rating": null,
+            "rating_count": null,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-nintendo-switch-oled-64gb-white/6034760067",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20656428/2a0000019ef2f5bb5ad5563867169336273a/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:15:23.189893Z"
+      }
+    }
+  },
+  "schema": 1
+}

@@ -15,6 +15,7 @@ START_MODULE_MAP
   recording: One committed recording by stem.
   apply_trap: A copy of a recording with one offer's title replaced.
   judge: exact, confident_wrong, honest_unknown or abstain for one winner against one label set.
+  expected: The right verdict for a label set (exact, or abstain for an empty one).
   run: Replay every labelled recording and every trap and return the report.
 END_MODULE_MAP
 END_MODULE_CONTRACT
@@ -75,13 +76,26 @@ def _winner(answer: Any, target: str) -> tuple[str, str] | None:
     return None if offer is None else (offer.source, str(offer.product_id))
 
 
-async def _case(stem: str, recorded: dict[str, Any], kind: str) -> dict[str, Any]:
+def expected(accepted: list[list[str]]) -> str:
+    """The right verdict for a label set: a hit when the set names offers, no winner when it is empty."""
+    return "exact" if accepted else "abstain"
+
+
+async def _case(stem: str, recorded: dict[str, Any], kind: str, trap: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A trap that retitles a labelled winner names the set that then stands in its own cheapest_comparable."""
     answer = await replay.replay(recorded)
-    labels = LABELS[stem]
+    labels = dict(LABELS[stem])
+    if trap is not None and "cheapest_comparable" in trap:
+        labels["cheapest_comparable"] = trap["cheapest_comparable"]
     case: dict[str, Any] = {"recording": stem, "kind": kind}
     for target in TARGETS:
         winner = _winner(answer, target)
-        case[target] = {"winner": list(winner) if winner else None, "verdict": judge(winner, labels[target])}
+        verdict = judge(winner, labels[target])
+        case[target] = {
+            "winner": list(winner) if winner else None,
+            "verdict": verdict,
+            "expected": expected(labels[target]),
+        }
     return case
 
 
@@ -89,7 +103,7 @@ async def run() -> dict[str, Any]:
     """Every labelled recording, then every trap; counts per target, traps also per class."""
     cases = [await _case(stem, recording(stem), "recorded") for stem in sorted(LABELS)]
     for trap in TRAPS:
-        case = await _case(trap["recording"], apply_trap(recording(trap["recording"]), trap), trap["class"])
+        case = await _case(trap["recording"], apply_trap(recording(trap["recording"]), trap), trap["class"], trap)
         cases.append(case)
     report: dict[str, Any] = {"cases": cases}
     for group, chosen in (
@@ -112,5 +126,5 @@ if __name__ == "__main__":
     result = asyncio.run(run())
     print(json.dumps({key: value for key, value in result.items() if key != "cases"}, ensure_ascii=False, indent=2))
     for case in result["cases"]:
-        if case["cheapest_comparable"]["verdict"] != "exact" or case["cheapest"]["verdict"] != "exact":
+        if any(case[target]["verdict"] != case[target]["expected"] for target in TARGETS):
             print(case["recording"], case["kind"], case["cheapest"]["verdict"], case["cheapest_comparable"])

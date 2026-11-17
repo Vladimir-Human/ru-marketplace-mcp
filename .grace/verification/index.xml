@@ -419,11 +419,17 @@
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_recorded_query_picks_labelled_winners" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_recording_still_replays_through_the_recording_stub" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_retitles_exactly_its_offer" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_an_empty_label_set_expects_no_winner_and_a_trap_may_name_its_own_set" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_every_live_recording_has_labels_and_two_traps" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_the_judge_names_each_outcome" requirements="R-COMPARE-BENCHMARK-SCORE" />
   </requirement>
   <requirement id="R-COMPARE-BUNDLE-NOUN-PHRASES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-BUNDLE-NOUN-PHRASES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
+  </requirement>
+  <requirement id="R-COMPARE-COMPARABLE-OUTLIER" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_a_cheap_true_match_or_a_thin_set_is_kept" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_compare_prices_names_the_skipped_outlier_which_stays_cheapest" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_leading_offers_under_a_quarter_of_the_median_are_split_off" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
   </requirement>
   <requirement id="R-COMPARE-CONDITION-ON-CARD" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_condition_on_card.py" name="test_an_avito_row_is_never_cheapest_comparable_for_an_unqualified_query" requirements="R-COMPARE-CONDITION-ON-CARD" />
@@ -478,6 +484,10 @@
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_compare_prices_skips_another_model_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_the_offer_brand_field_names_the_brand_a_title_leaves_out" requirements="R-COMPARE-MODEL-TOKENS" title="Wildberries keeps the brand out of the product name (recorded: &quot;Смартфон iPhone 14 128 ГБ&quot;, brand Apple)." />
+  </requirement>
+  <requirement id="R-COMPARE-OWN-CHARGING-CASE" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_a_charging_case_the_listing_sells_stays_an_accessory" requirements="R-COMPARE-OWN-CHARGING-CASE" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_an_earbuds_own_charging_case_is_no_accessory" requirements="R-COMPARE-OWN-CHARGING-CASE" />
   </requirement>
   <requirement id="R-COMPARE-PRICE-CONTEXT" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_price_context.py" name="test_avito_fixture_location_reaches_outcome" requirements="R-COMPARE-PRICE-CONTEXT" />
