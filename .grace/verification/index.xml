@@ -701,6 +701,8 @@
     <test file="scripts/test_live_audit.py" name="test_wb_uses_longest_cost_guarded_prefix" requirements="R-LIVE-AUDIT.plans" />
   </requirement>
   <requirement id="R-LIVE-BUDGET" kind="requirement" state="tested">
+    <test file="scripts/test_live_budget.py" name="test_a_lock_file_another_process_is_deleting_is_waited_out" requirements="R-LIVE-BUDGET" title="CI, windows-latest py3.13, 2026-11-17: while another process deletes the lock file," />
+    <test file="scripts/test_live_budget.py" name="test_a_lock_file_that_cannot_be_created_stops_the_run_after_the_wait" requirements="R-LIVE-BUDGET" title="A PermissionError that never clears is bounded by the same wait and named in the refusal." />
     <test file="scripts/test_live_budget.py" name="test_a_missing_hook_point_raises" requirements="R-LIVE-BUDGET" />
     <test file="scripts/test_live_budget.py" name="test_a_raw_cdp_popup_is_booked_before_it_opens" requirements="R-LIVE-BUDGET" title="Review #195 P2: the raw popup opens with ``opener._send(window.open)``," />
     <test file="scripts/test_live_budget.py" name="test_a_refused_request_is_said_out_loud_and_counted" requirements="R-LIVE-BUDGET" title="A refusal the connector turns into transport_down must still be visible (live run 2026-10-30)." />

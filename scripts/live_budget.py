@@ -197,7 +197,9 @@ def _ledger_lock(path: Path | None) -> Iterator[None]:
     while True:
         try:
             handle = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as busy:
+        except (FileExistsError, PermissionError) as busy:
+            # Windows answers PermissionError, not FileExistsError, while another
+            # process is deleting the lock file (CI, 2026-11-17): busy, try again.
             if _lock_is_stale(lock_path):
                 with contextlib.suppress(OSError):
                     os.unlink(lock_path)
@@ -205,7 +207,8 @@ def _ledger_lock(path: Path | None) -> Iterator[None]:
             if time.monotonic() >= deadline:
                 raise BudgetExhausted(
                     f"live budget ledger is locked by another run: {lock_path} "
-                    f"(waited {int(LOCK_TIMEOUT_S)} s; the lock is removed after {int(LOCK_STALE_S)} s)"
+                    f"(waited {int(LOCK_TIMEOUT_S)} s; the lock is removed after {int(LOCK_STALE_S)} s; "
+                    f"last error: {type(busy).__name__})"
                 ) from busy
             time.sleep(LOCK_RETRY_S)
             continue
