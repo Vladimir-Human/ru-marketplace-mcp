@@ -1,0 +1,3 @@
+### Fixed
+- Ozon: если Chrome запущен, но запрос во вкладке Ozon не уложился во время или сорвался, ошибка больше не советует «запустить Chrome». Она говорит, что Chrome работает и перезапускать его не надо, и советует повторить вызов один раз, а если он шёл вместе с другими площадками, то отдельно. Совет запустить Chrome остаётся для случая, когда браузер недоступен (#NNN).
+- Ozon: when Chrome is running and the request inside the Ozon tab times out or fails, the error no longer says to start Chrome. It says Chrome is running and must not be restarted, and to retry once, alone if the call ran beside other marketplaces. The start-Chrome advice stays for an unreachable browser (#NNN).

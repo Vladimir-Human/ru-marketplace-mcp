@@ -1007,6 +1007,10 @@
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_wrapped_outputs_survive_compaction_through_mcp" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: compaction preserves SDK serialization and decoding." />
     <test file="packages/wb-connector/tests/test_output_schema.py" name="test_wb_search_mcp_answers_match_advertised_schema" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: no phantom result field; errors stay MCP errors." />
   </requirement>
+  <requirement id="R-OZON-CDP-FAILURE-HINT" kind="requirement" state="tested">
+    <test file="packages/ozon-connector/tests/test_cdp_failure_hint.py" name="test_a_timeout_inside_a_reachable_chrome_does_not_say_start_chrome" requirements="R-OZON-CDP-FAILURE-HINT" />
+    <test file="packages/ozon-connector/tests/test_cdp_failure_hint.py" name="test_an_unreachable_browser_still_says_start_chrome" requirements="R-OZON-CDP-FAILURE-HINT" />
+  </requirement>
   <requirement id="R-OZON-CHROME-COMPAT" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_ozon_compat.py" name="test_compat_rechecks_final_origin_in_both_transports" requirements="R-OZON-CHROME-COMPAT" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_ozon_compat.py" name="test_playwright_applies_override_before_goto_and_keeps_session_until_closed" requirements="R-OZON-CHROME-COMPAT" />
