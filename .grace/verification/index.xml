@@ -534,6 +534,7 @@
     <test file="scripts/test_live_audit.py" name="test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_source" requirements="R-LIVE-AUDIT.runner" title="A call our own budget cut short is skipped: budget, pauses nothing, and costs one request more next time." />
     <test file="scripts/test_live_audit.py" name="test_a_tool_error_without_a_refusal_line_keeps_its_own_code" requirements="R-LIVE-AUDIT.runner" title="Only the budget's own line relabels an error: a refusal printed before the call does not count." />
     <test file="scripts/test_live_audit.py" name="test_all_run_plans_fit_and_never_repeat" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_arguments_from_one_answer_come_from_one_node" requirements="R-LIVE-AUDIT.plans" title="Shard and query of wb_category_products come from the same wb_categories node (audit cycle 1)." />
     <test file="scripts/test_live_audit.py" name="test_capture_dimensions_scale_and_finally_close" requirements="R-LIVE-AUDIT.capture" />
     <test file="scripts/test_live_audit.py" name="test_card_args_use_native_types_and_paths" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_compare_drops_paused_sources_before_budget" requirements="R-LIVE-AUDIT.runner" />
