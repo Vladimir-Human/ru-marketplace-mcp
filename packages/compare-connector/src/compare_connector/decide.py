@@ -361,7 +361,8 @@ def _conditional_price_note(source: str, product_id: str, price: float, kind: st
     elif kind == "card":
         condition = "Ozon card" if source == "ozon" else "card"
     elif kind == "subscription":
-        condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
+        # Yandex's yaBank price: paying with Yandex Pay («Пэй»), earlier Yandex Plus (audit 2026-11-17).
+        condition = "paying with Yandex Pay" if source == "yandex_market" else "paid subscription"
     return (
         f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
         f"requires {condition}; not ranked"
@@ -415,9 +416,10 @@ def decide_conditional_price(
         return ConditionalPriceDecision(None, note)
     if conditional_price_rub >= everyday_price_rub:
         return ConditionalPriceDecision(everyday_price_rub, None)
+    label = "Yandex Pay" if (source, kind) == ("yandex_market", "subscription") else kind
     note = (
         f"info:conditional_price_available: {source}/{product_id or '?'}: "
-        f"{conditional_price_rub:g} {currency.upper()} with {kind}"
+        f"{conditional_price_rub:g} {currency.upper()} with {label}"
     )
     return ConditionalPriceDecision(everyday_price_rub, note)
 
