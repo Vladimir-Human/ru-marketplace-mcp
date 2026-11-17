@@ -10,6 +10,7 @@ START_MODULE_MAP
   get: Read the local HTTPS server without DNS resolution or a proxy.
   test_fixture_routes: Assert exact captured bytes, empty 404s off-route and loopback peers.
   test_reply_sequence: Assert that a scripted 401 Refresh becomes a sticky 200 without altering fixture bytes.
+  test_signal_reply: A real held HTTPS reply needs its signal or cancels on reset, without changing fixture bytes.
   test_missing_launch_guard: Delete/override an isolation switch; the real launcher must fail before Popen.
   test_extra_flags_default: The empty-default keyword-only hook leaves normal launch arguments unchanged.
 END_MODULE_MAP
@@ -17,10 +18,12 @@ END_MODULE_MAP
 
 from __future__ import annotations
 
+import asyncio
 import http.client
 import inspect
 import re
 import ssl
+import threading
 import tomllib
 from types import SimpleNamespace
 
@@ -80,6 +83,31 @@ def test_reply_sequence():
             status, _, body = get(server, "www.dns-shop.ru", "/search/")
             assert status == 200 and body == fixture_bytes("dns_search")
         assert [entry.status for entry in server.requests] == [401, 200, 200]
+
+
+@pytest.mark.req("R-CDP-SIM-INFRA.fixtures")
+@pytest.mark.parametrize("finish", ["signal", "reset"])
+async def test_signal_reply(finish):
+    """A held reply serves exact committed bytes only after signalling, or cancels on reset."""
+    arrived, clear = threading.Event(), threading.Event()
+    with FixtureServer() as server:
+        server.route("www.dns-shop.ru", "/search/", Reply("dns_search", wait_for=clear, arrived=arrived))
+        call = asyncio.create_task(asyncio.to_thread(get, server, "www.dns-shop.ru", "/search/"))
+        try:
+            async with asyncio.timeout(5):
+                assert await asyncio.to_thread(arrived.wait, 2)
+                assert not call.done(), "the server must not emit its success fixture before the signal"
+                if finish == "signal":
+                    clear.set()
+                    status, _, body = await call
+                    assert status == 200 and body == fixture_bytes("dns_search")
+                else:
+                    server.reset()
+                    with pytest.raises(http.client.RemoteDisconnected):
+                        await call
+        finally:
+            clear.set()
+            await asyncio.gather(call, return_exceptions=True)
 
 
 # END_BLOCK_SERVER_CONTRACT
@@ -145,9 +173,9 @@ def test_extra_flags_default(monkeypatch, tmp_path):
 
 @pytest.mark.req("R-CDP-SIM-INFRA.ci")
 def test_marker_and_ci_configuration():
-    from . import test_scenarios
+    from . import test_scenarios, test_scenarios_more
 
-    for marks in (pytestmark, test_scenarios.pytestmark):
+    for marks in (pytestmark, test_scenarios.pytestmark, test_scenarios_more.pytestmark):
         assert {mark.name for mark in marks} == {"cdp", "cdp_sim"}
     config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     markers = [marker.split(":", 1)[0] for marker in config["tool"]["pytest"]["ini_options"]["markers"]]
