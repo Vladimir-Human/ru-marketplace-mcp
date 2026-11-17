@@ -11,7 +11,7 @@
 # PRICE_PATHS: priceV2 text amounts inside JSON-encoded widgetStates values, not rating atoms.
 # _parse: Decode only the outer envelope; the real parser decodes its widgets.
 # test_capture_equivalent/test_capture_no_invented_price: Shared PYTHON_SEEDS per fixture and mutation.
-# test_removed_current_price_role_violation: Strict xfails for exact m2 original-to-current promotions.
+# test_removed_current_price_keeps_the_original_in_its_role: The m2 seeds that once promoted the original price.
 # END_MODULE_MAP
 
 import json
@@ -29,10 +29,10 @@ CASES = ("search_composer_live.json",)
 PRICE_PATHS = (r"^widgetStates\.tileGridDesktop.*\.items\[\]\.mainState\[\]\.priceV2\.price\[\]\.text$",)
 PRICE_FIELDS = ("price", "price_original")
 ID_FIELDS = ("sku",)
-# Each exact (search_composer_live.json, m2, seed) is test_removed_current_price_role_violation.
-# server._parse_search_tile drops the empty current entry, promoting the next/original price.
+# The m2 seeds that removed the tile's current price text: server._parse_search_tile used to
+# drop the empty entry and promote the ORIGINAL_PRICE one to price (fixed 2026-11-17).
 CURRENT_PRICE_SEEDS = (0, 2, 9, 11, 12, 14, 19, 24, 25, 27, 28, 31, 32, 38, 40, 41, 42, 43, 44, 46, 49)
-EXCLUSIONS = tuple(("search_composer_live.json", "m2", seed) for seed in CURRENT_PRICE_SEEDS)
+EXCLUSIONS: tuple[tuple[str, str, int], ...] = ()
 
 
 def _parse(raw: str) -> list:
@@ -86,13 +86,9 @@ def test_capture_no_invented_price(name: str, mutation: str) -> None:
 # START_BLOCK_MINIMAL_VIOLATIONS
 
 
-@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price")
-@pytest.mark.xfail(
-    strict=True, reason="P2-1 violation: removed current text promotes the item's original price to price"
-)
+@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price", "R-OZON-SEARCH-NUMERIC.roles")
 @pytest.mark.parametrize("seed", CURRENT_PRICE_SEEDS)
-def test_removed_current_price_role_violation(seed: int) -> None:
-    # Exactly (search_composer_live.json, m2, seed) is excluded above for each case.
+def test_removed_current_price_keeps_the_original_in_its_role(seed: int) -> None:
     raw = (FIXTURES / "search_composer_live.json").read_text(encoding="utf-8")
     mutated = mutation_case(
         raw, "m2", seed, kind="json", price_paths=PRICE_PATHS, price_nodes=(), markers=DECOY_MARKERS
@@ -111,3 +107,28 @@ def test_removed_current_price_role_violation(seed: int) -> None:
 
 
 # END_BLOCK_MINIMAL_VIOLATIONS
+
+
+@pytest.mark.req("R-OZON-SEARCH-NUMERIC.roles")
+@pytest.mark.parametrize(
+    "entries",
+    [
+        [{"textStyle": "PRICE"}, {"text": "27 949 ₽", "textStyle": "ORIGINAL_PRICE"}],
+        [{"text": "27 949 ₽", "textStyle": "ORIGINAL_PRICE"}],
+        [{"text": "27 949 ₽", "textStyle": "ORIGINAL_PRICE"}, {"text": "17 324 ₽", "textStyle": "PRICE"}],
+    ],
+    ids=["current-text-gone", "current-entry-gone", "original-listed-first"],
+)
+def test_an_original_price_entry_never_becomes_the_tile_price(entries: list) -> None:
+    tile = server._parse_search_tile(
+        {
+            "sku": 1,
+            "mainState": [
+                {"type": "priceV2", "priceV2": {"price": entries, "priceStyle": {"styleType": "CARD_PRICE"}}}
+            ],
+        }
+    )
+    current = next((e["text"] for e in entries if e.get("textStyle") == "PRICE" and e.get("text")), None)
+    assert tile["price"] == (17324.0 if current else None)
+    assert tile["price_original"] == 27949.0
+    assert tile.get("price_kind") == ("card" if current else None)
