@@ -387,7 +387,8 @@ async def _render_search(url: str, ctx: Context | None) -> dict[str, Any]:
     and doctor reported parser drift; the next navigation priced them. One more navigation, only in that case.
     """
     payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
-    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    raw_items = payload.get("items")
+    items = raw_items if isinstance(raw_items, list) else []
     priced = any(isinstance(item, dict) and str(item.get("price_text") or "").strip() for item in items)
     if items and not priced and not _is_qrator_wall(payload):
         payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)

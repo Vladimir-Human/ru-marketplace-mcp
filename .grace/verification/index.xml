@@ -576,6 +576,7 @@
     <test file="scripts/test_gen_tools_doc.py" name="test_the_printed_token_numbers_follow_the_stated_rule" requirements="R-DOCS-TOOLS" title="The published cost must be the rule's result, not the estimator's echo (audit S4-F18)." />
   </requirement>
   <requirement id="R-DOCTOR-EXIT-CODES" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/test_cli.py" name="test_doctor_status_file_creates_missing_parent_directories" requirements="R-DOCTOR-EXIT-CODES" />
     <test file="scripts/test_doctor_exit_codes.py" name="test_supplied_invalid_subcheck_is_hard_under_every_outer_status" requirements="R-DOCTOR-EXIT-CODES" title="R-DOCTOR-EXIT-CODES: supplied invalid entries cannot inherit a valid outer verdict." />
     <test file="scripts/test_doctor_exit_codes.py" name="test_valid_subchecks_keep_the_existing_outer_verdict" requirements="R-DOCTOR-EXIT-CODES" title="R-DOCTOR-EXIT-CODES: checks={} and recognized dict/model entries stay valid." />
     <test file="scripts/test_live_check.py" name="test_a_usage_failure_exits_4_not_the_doctors_blocked_code" requirements="R-DOCTOR-EXIT-CODES" title="Exit 4 for live_check's own usage errors." />

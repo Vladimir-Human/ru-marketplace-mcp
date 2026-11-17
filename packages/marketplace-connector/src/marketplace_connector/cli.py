@@ -1450,12 +1450,7 @@ def cmd_doctor(argv: list[str]) -> int:
         }
         target = pathlib.Path(status_file)
         try:
-            with tempfile.NamedTemporaryFile(
-                "w", dir=target.parent, delete=False, suffix=".tmp", encoding="utf-8"
-            ) as fh:
-                json.dump(report, fh, indent=2, ensure_ascii=False)
-                tmp = fh.name
-            pathlib.Path(tmp).replace(target)
+            _atomic_write_json(target, report)
             print(f"\n  status written to {target}")
         except OSError as exc:
             print(f"\n  could not write status file {target}: {exc}", file=sys.stderr)
