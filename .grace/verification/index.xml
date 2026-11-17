@@ -721,6 +721,12 @@
     <test file="packages/marketplace-connector/tests/conformance/test_schema_descriptions.py" name="test_every_marketplace_discount_field_states_its_provenance" requirements="R-MARKETPLACE-PRICE-WORDING.shared" title="R-MARKETPLACE-PRICE-WORDING: every source's shown discounts are not verified history." />
   </requirement>
   <requirement id="R-MARKETPLACES" kind="requirement" state="gap" gaps="G-MARKETPLACES-UNTESTED" />
+  <requirement id="R-MCPB-BUNDLE" kind="requirement" state="tested">
+    <test file="scripts/test_build_mcpb.py" name="test_the_bundle_pins_the_published_package_at_this_version" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_entry_point_starts_the_compare_profile_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_manifest_has_the_mcpb_0_4_required_fields_for_a_uv_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_zip_is_deterministic_and_holds_no_environment" requirements="R-MCPB-BUNDLE" />
+  </requirement>
   <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_code_seven_body_on_an_http_refusal_keeps_its_servicepipe_verdict" requirements="R-MEGAMARKET-ONE-LOAD" />
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_failed_home_load_is_not_reopened_or_deadlocked" requirements="R-MEGAMARKET-ONE-LOAD" />
