@@ -257,10 +257,14 @@ def prices_from_tile(tile: dict[str, Any]) -> tuple[float | None, float | None]:
     ``old_price_rub`` an older build wrote, so a cache entry that outlives a
     deploy does not start answering with nulls.
 
-    ``price_texts`` is an ordered list of candidates; the first that parses to a
-    real positive price wins, and the largest remaining candidate above it is
-    treated as the strikethrough. A candidate list is never averaged or
-    min-ed — that guesswork is what produced instalment prices.
+    ``price_texts`` carries ordered candidates; the first readable glyph-attached
+    candidate supplies a missing current price. A tile whose extractor marks its
+    price layout (``old_price_marked`` true) takes its old price only from
+    ``old_price_text`` (or a legacy numeric ``old_price_rub``): missing or
+    unreadable text stays null (R-OLD-PRICE-BY-MARKER). Any other tile uses
+    ``old_price_text`` when it reads, else the largest remaining candidate above
+    the current price. An old price at or below the current price is dropped.
+    Candidates are never averaged or min-ed into an invented price.
     """
     # `price_meta` is a machine-readable numeric attribute the site publishes for
     # its own analytics (Citilink: data-meta-price="59990"). When present it needs
@@ -299,7 +303,7 @@ def prices_from_tile(tile: dict[str, Any]) -> tuple[float | None, float | None]:
     old_price = coerce_price(tile.get("old_price_text"))
     if old_price is None:
         old_price = coerce_price(tile.get("old_price_rub"))
-    if old_price is None and price is not None:
+    if not tile.get("old_price_marked") and old_price is None and price is not None:
         above = [c for c in (*attached[1:], *other) if c > price]
         if above:
             old_price = max(above)

@@ -66,7 +66,7 @@
     <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
-    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_driver_rejects_missing_price_target" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_html" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_json" requirements="R-CAPTURE-MUTATION.equivalent" />
@@ -823,6 +823,16 @@
     <test file="packages/mcp-core/tests/test_build_age.py" name="test_tool_error_adds_only_optional_old_build_and_preserves_all_other_fields" requirements="R-OLD-BUILD-INFO" />
     <test file="scripts/test_bump_version.py" name="test_an_existing_core_package_must_declare_its_release_date" requirements="R-OLD-BUILD-INFO" />
     <test file="scripts/test_bump_version.py" name="test_release_date_is_a_separate_declared_site_bumped_to_today" requirements="R-OLD-BUILD-INFO" />
+  </requirement>
+  <requirement id="R-OLD-PRICE-BY-MARKER" kind="requirement" state="tested">
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_stays_unknown" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_an_unmarked_tile_with_a_null_old_price_text_keeps_the_rank_rule" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_legacy_numeric_old_price_is_still_accepted" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_marked_old_price_at_or_below_current_is_unknown" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_marked_old_price_wins" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_missing_marked_old_price_stays_unknown" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_unmarked_tile_keeps_rank_rule" requirements="R-OLD-PRICE-BY-MARKER" />
+    <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_unreadable_marked_old_price_stays_unknown" requirements="R-OLD-PRICE-BY-MARKER" />
   </requirement>
   <requirement id="R-OUTPUT-PAGE-URLS" kind="requirement" state="tested">
     <test file="packages/detmir-connector/tests/test_page_links.py" name="test_a_product_link_on_another_host_is_dropped_and_a_missing_one_is_built" requirements="R-OUTPUT-PAGE-URLS.detmir" />
