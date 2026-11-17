@@ -337,8 +337,9 @@ confirmed stock for ranking but does not discard unconfirmed offers.
 cheapest is the raw lowest eligible price; cheapest_comparable additionally
 excludes accessories, goods made for the device, copies, other conditions,
 explicit size mismatches and titles that miss a Latin model word or number of
-the query or add Pro, Max and the like after it. Neither proves exact
-manufacturer identity. price_spread_rub needs two ranked prices.
+the query or add Pro, Max and the like after it. Avito rows never say new or
+used, so they qualify only when the query asks for a used item. Neither proves
+exact manufacturer identity. price_spread_rub needs two ranked prices.
 complete=false and source_outcomes/warnings mean a partial comparison, not
 proof of the cheapest price across sources that failed or returned degraded data.
 Before quoting the winner's price or calling it the cheapest, call

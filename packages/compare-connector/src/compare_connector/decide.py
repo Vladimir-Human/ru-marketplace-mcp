@@ -46,6 +46,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from mcp_core.logging import log_event
+from mcp_core.sources import BY_NAME
 
 from compare_connector.identity import extract_size_tokens, format_size_tokens, model_mismatch, sizes_conflict
 from compare_connector.models_output import CompareResponse, MarketOffer, SourceOutcome
@@ -275,6 +276,17 @@ def _looks_like_another_condition(title: str, query: str) -> bool:
     asking for 'не б/у' must not make a genuinely used listing comparable.
     """
     return _has_unrequested_marker(title, query, _CONDITION_MARKERS)
+
+
+def _condition_unstated(source: str, query: str) -> bool:
+    """R-COMPARE-CONDITION-ON-CARD: a classifieds row may be used and its search row cannot say.
+
+    Live, 2026-11-17: an Avito "iPhone 16, 128 ГБ" row was cheapest_comparable for
+    "iphone 16 128gb"; its card said «Б/у». Such a row is a candidate only when the
+    query itself names a used or refurbished condition.
+    """
+    spec = BY_NAME.get(source)
+    return bool(spec and spec.condition_on_card) and not _marker_pattern(_CONDITION_MARKERS).search(query)
 
 
 def _looks_like_an_accessory(title: str, query: str) -> bool:
@@ -576,7 +588,7 @@ def build_response(
     for offer in priced:
         if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
             continue
-        if model_mismatch(query, offer.title, offer.brand):
+        if model_mismatch(query, offer.title, offer.brand) or _condition_unstated(offer.source, query):
             continue
         title_sizes = extract_size_tokens(offer.title)
         if sizes_conflict(query_sizes, title_sizes):
