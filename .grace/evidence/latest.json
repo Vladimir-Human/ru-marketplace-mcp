@@ -1,0 +1,203 @@
+{
+  "checked_on_utc": "2026-11-17T10:12:04.976534+00:00",
+  "digest_excludes": [
+    ".grace/evidence/",
+    "changes/"
+  ],
+  "gates": [
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "exit": 0,
+      "name": "Ruff (lint)",
+      "seconds": 0.265,
+      "summary": "All checks passed!"
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "exit": 0,
+      "name": "Ruff (format check)",
+      "seconds": 0.204,
+      "summary": "576 files already formatted"
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "mypy"
+      ],
+      "exit": 0,
+      "name": "mypy (host platform)",
+      "seconds": 10.875,
+      "summary": "Success: no issues found in 127 source files"
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "mypy",
+        "--platform",
+        "win32"
+      ],
+      "exit": 0,
+      "name": "mypy (cross-platform)",
+      "seconds": 0.89,
+      "summary": "Success: no issues found in 127 source files"
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "mypy",
+        "--platform",
+        "darwin"
+      ],
+      "exit": 0,
+      "name": "mypy (cross-platform): darwin",
+      "seconds": 7.86,
+      "summary": "Success: no issues found in 127 source files"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/check_no_print.py"
+      ],
+      "exit": 0,
+      "name": "No stdout writes in connector code",
+      "seconds": 0.421,
+      "summary": "checked 111 file(s): no stdout writes"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/gen_tools_doc.py",
+        "--check"
+      ],
+      "exit": 0,
+      "name": "Generated tool reference is current",
+      "seconds": 2.797,
+      "summary": "{\"ts\":\"2026-11-17T03:58:20\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/check_provenance.py"
+      ],
+      "exit": 0,
+      "name": "Fixture pins describe their fixtures",
+      "seconds": 0.485,
+      "summary": "excepted: 13 completeness gap(s), each with a dated reason"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/check_lock_revision.py"
+      ],
+      "exit": 0,
+      "name": "uv.lock revision is not downgraded",
+      "seconds": 0.093,
+      "summary": "uv.lock revision 5 is at or above the floor 5"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/mcp_wire.py",
+        "compare-mcp",
+        "decision-mcp",
+        "marketplace-mcp",
+        "--baseline",
+        "work/performance/wire-baseline.json",
+        "--max-token-regression-percent",
+        "10"
+      ],
+      "exit": 0,
+      "name": "MCP wire-cost baseline",
+      "seconds": 10.454,
+      "summary": "dns           2 tools  ~   391 tok."
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/check_versions.py"
+      ],
+      "exit": 0,
+      "name": "One version, everywhere",
+      "seconds": 0.171,
+      "summary": "version 2.9.4 agreed in 93 places (17 pyproject.toml, 16 __init__.py, 15 SERVER_VERSION, 19 image tag, 3 deployment release pin, 15 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5 "
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/grace_index.py",
+        "--check"
+      ],
+      "exit": 0,
+      "name": "Generated GRACE verification index is current",
+      "seconds": 0.547,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=128 gap=10 untraced=0 mappings=1039 unmarked_tests=1934"
+    },
+    {
+      "cmd": [
+        "python",
+        "scripts/check_arch.py"
+      ],
+      "exit": 0,
+      "name": "Architecture structure gate",
+      "seconds": 0.75,
+      "summary": ""
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-m",
+        "not live and not cdp",
+        "--basetemp=.tmp/evidence/offline-suite",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit": 0,
+      "name": "Run offline test suite",
+      "seconds": 737.047,
+      "summary": "4784 passed, 2 skipped, 5 deselected in 733.93s (0:12:13)"
+    },
+    {
+      "cmd": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "scripts",
+        "--basetemp=.tmp/evidence/script-tests",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit": 0,
+      "name": "Operational gate regression tests",
+      "seconds": 73.235,
+      "summary": "673 passed in 71.62s (0:01:11)"
+    }
+  ],
+  "index": {
+    "gap": 10,
+    "tested": 128,
+    "untraced": 0
+  },
+  "schema": 2,
+  "tree_digest": "484bde566432e1d74837c193919aea685844f68a33a6ebc8460e39ca8577cee1",
+  "version": "2.9.4"
+}
