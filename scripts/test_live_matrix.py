@@ -4,7 +4,8 @@ START_MODULE_CONTRACT
 PURPOSE: Prove the matrix's whitelist, ledger guard, same-id RUB delta and fixed probes through the public CLI.
 SCOPE: Fake marketplace calls, preflight and metadata; real temporary ledger/history/ids files; no network or Chrome.
 DEPENDS: live_check, live_matrix, live_budget; mcp_core errors/sources; pytest; stdlib.
-LINKS: M-LIVE-MATRIX, R-LIVE-MATRIX, R-LIVE-MATRIX.whitelist, R-LIVE-MATRIX.guard, R-LIVE-MATRIX.delta, R-LIVE-MATRIX.probes.
+LINKS: M-LIVE-MATRIX, R-LIVE-MATRIX, R-LIVE-MATRIX.whitelist, R-LIVE-MATRIX.guard, R-LIVE-MATRIX.delta, R-LIVE-MATRIX.probes,
+       R-LIVE-PAUSE.
 START_MODULE_MAP
   MatrixEdges                 offline I/O edges using the actually installed temporary ledger
   matrix_edges                isolate files, installation, preflight and metadata
@@ -27,6 +28,7 @@ import logging
 import os
 import re
 import sys
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -571,6 +573,31 @@ def test_ledger_at_seven_skips_next_call_without_calling_any_tool(
     assert row["error_code"] == "budget_skipped"
     assert row["listing"]["error_code"] == "budget_skipped"
     assert row["listing"]["requests"] == 0
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+def test_a_marketplace_still_paused_is_skipped_without_a_call(
+    matrix_edges: MatrixEdges, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The 2026-11-17 rerun went to Megamarket 17 minutes into its 1200 s pause; the matrix now skips it."""
+    edge = matrix_edges
+    pause = {"until": time.time() + 1200, "until_utc": "2026-11-17 16:51:36", "code": "rate_limited"}
+    (edge.root / "ledger-pauses.json").write_text(json.dumps({"pauses": {"megamarket": pause}}), encoding="utf-8")
+    assert edge.run("--only", "megamarket,lamoda") == 0
+    assert [source for source, _kind, _kwargs in edge.calls] == ["lamoda", "lamoda"]
+    skipped = next(row for row in edge.rows() if row["source"] == "megamarket")
+    assert (skipped["state"], skipped["error_code"]) == ("inconclusive", "retry_after_skipped")
+    assert skipped["listing"]["requests"] == 0 and skipped["card"] is None
+    out = capsys.readouterr().out
+    assert "megamarket: paused by the marketplace until 2026-11-17 16:51:36 UTC; listing probe skipped" in out
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+def test_a_skipped_probe_never_becomes_the_measured_cost(matrix_edges: MatrixEdges) -> None:
+    measured = _history_row("megamarket", listing_requests=2)
+    skipped = _history_row("megamarket", run_id="2025-01-02T00:00:00Z", listing_requests=0)
+    skipped["listing"]["error_code"] = "retry_after_skipped"
+    assert matrix_edges.matrix._expected_cost([measured, skipped], "megamarket", "listing") == 2
 
 
 @pytest.mark.req("R-LIVE-MATRIX")

@@ -757,6 +757,15 @@
     <test file="scripts/test_live_matrix.py" name="test_whole_run_refused_by_ledger_exits_three_without_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
     <test file="scripts/test_live_matrix.py" name="test_yandex_delta_requires_same_product_and_known_same_offer_sku" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
   </requirement>
+  <requirement id="R-LIVE-PAUSE" kind="requirement" state="tested">
+    <test file="scripts/test_live_audit.py" name="test_a_site_pause_seen_in_the_audit_is_kept_for_later_runs" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_a_marketplace_pause_refuses_requests_there_until_it_ends" requirements="R-LIVE-PAUSE" title="A rerun 17 minutes after a 1200 s retry_after went out anyway (2026-11-17); the budget now says no." />
+    <test file="scripts/test_live_budget.py" name="test_a_noted_pause_outlives_reset_and_binds_the_next_run" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_retry_after_reads_only_a_positive_finite_pause" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_check.py" name="test_a_tool_error_with_retry_after_pauses_the_marketplaces_the_call_used" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_matrix.py" name="test_a_marketplace_still_paused_is_skipped_without_a_call" requirements="R-LIVE-PAUSE" title="The 2026-11-17 rerun went to Megamarket 17 minutes into its 1200 s pause; the matrix now skips it." />
+    <test file="scripts/test_live_matrix.py" name="test_a_skipped_probe_never_becomes_the_measured_cost" requirements="R-LIVE-PAUSE" />
+  </requirement>
   <requirement id="R-LIVE-PREFLIGHT" kind="requirement" state="tested">
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_after_both_fixes_stops_before_budget" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: nothing left to try → both commands printed, ledger untouched." />
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_moves_temp_into_the_repo_first" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: a writable-for-Python %TEMP% that node may not use" />
