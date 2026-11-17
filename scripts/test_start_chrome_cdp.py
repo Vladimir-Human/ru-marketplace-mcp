@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PS1 = REPO_ROOT / "scripts" / "start_chrome_cdp.ps1"
 SH = REPO_ROOT / "scripts" / "start_chrome_cdp.sh"
@@ -131,3 +133,15 @@ def test_the_shell_launcher_asks_the_endpoint_before_saying_already_running():
 
     assert probe < already < listener
     assert "does not answer as a CDP endpoint" in text
+
+
+@pytest.mark.req("R-CHROME-LAUNCHER")
+def test_the_powershell_launcher_discovers_env_localappdata_and_edge_binaries():
+    text = _read(PS1)
+
+    override_idx = text.index("$env:CHROME_BINARY")
+    progfiles_idx = text.index("${env:ProgramFiles}\\Google\\Chrome\\Application\\chrome.exe")
+    localapp_idx = text.index("${env:LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe")
+    edge_idx = text.index("Microsoft\\Edge\\Application\\msedge.exe")
+    assert override_idx < progfiles_idx < localapp_idx < edge_idx
+    assert "Name='chrome.exe' OR Name='msedge.exe'" in text

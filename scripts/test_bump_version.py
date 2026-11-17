@@ -57,6 +57,12 @@ def mini_tree(tmp_path: Path) -> Path:
     )
     _write(
         tmp_path,
+        "llms-install.md",
+        "The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.3`) is built from Dockerfile.stdio.\n"
+        '  "ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.3",\n',
+    )
+    _write(
+        tmp_path,
         "server.json",
         '{\n  "version": "1.2.3",\n  "packages": [\n    {\n'
         '      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"\n    }\n  ]\n}\n',
@@ -99,6 +105,7 @@ def test_the_expected_declaration_files_are_pinned_in_this_test(mini_tree: Path)
         "dsh/README.md",
         "dsh/package.json",
         "gemini-extension.json",
+        "llms-install.md",
         "packages/a/pyproject.toml",
         "packages/a/src/a/__init__.py",
         "packages/a/src/a/server.py",
@@ -134,6 +141,26 @@ def test_the_bump_reaches_the_dsh_bundle_readme_image_tag(mini_tree: Path) -> No
     readme = (mini_tree / "dsh" / "README.md").read_text(encoding="utf-8")
     assert "ru-marketplace-mcp:1.3.0" in readme
     assert OLD not in readme
+
+
+@pytest.mark.req("R-VERSION", "R-RELEASE-BUMP")
+def test_the_bump_and_check_cover_llms_install_image_tags(mini_tree: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """llms-install.md pins the GHCR tag in inline Markdown code and JSON args (audit T1-5)."""
+    assert check_versions.main([], root=mini_tree) == 0
+    assert bump_version.bump(mini_tree, NEW) == 0
+
+    doc = (mini_tree / "llms-install.md").read_text(encoding="utf-8")
+    assert doc.count("ghcr.io/vladimir-human/ru-marketplace-mcp:1.3.0") == 2
+    assert OLD not in doc
+    assert ":latest" not in (Path(__file__).resolve().parents[1] / "llms-install.md").read_text(encoding="utf-8")
+
+    _write(
+        mini_tree,
+        "llms-install.md",
+        "The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.9`) is stale.\n",
+    )
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "llms-install.md:1: 1.2.9 should be 1.3.0" in capsys.readouterr().err
 
 
 @pytest.mark.req("R-RELEASE-BUMP")

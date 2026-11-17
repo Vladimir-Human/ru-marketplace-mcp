@@ -38,6 +38,59 @@ a server, targeted health checks, and verifying an offer before recommending it.
 
 **2.7.0 verification:** on 30 October, from one address, Wildberries fell back to its rendered search page after the API refused (HTTP 403) and returned 40 results, all priced. The other sources' code is unchanged since v2.6.0; they were checked in the [v2.6.0 run](docs/releases/RELEASE_NOTES_v2.6.0.md) the same day (12 of 13 sources; MPStats has no token). [v2.7.0 details](docs/releases/RELEASE_NOTES_v2.7.0.md).
 
+### A real answer
+
+`compare_prices(query="iphone 16 128gb")`. The marketplaces' answers were recorded in Chrome on the owner's machine on 17 November 2026 at 01:29 UTC (audit cycle 1, record `packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json`) and replayed through `2.10.0` (commit `058846ba`). Cut to the fields an agent reads first; the full answer also includes `source_outcomes` and all 25 entries in `offers`.
+
+```json
+{
+  "query": "iphone 16 128gb",
+  "sources_queried": ["aliexpress", "citilink", "dns", "taobao", "wildberries", "yandex_market"],
+  "sources_ok": ["aliexpress", "dns", "taobao", "wildberries", "yandex_market"],
+  "complete": false,
+  "total_offers": 25,
+  "cheapest": {
+    "source": "aliexpress",
+    "product_id": "1005009110731940",
+    "title": "MOVESPEED флешка USB Type C 64/128/256/512 ГБ",
+    "price_rub": 1531.0,
+    "currency": "rub",
+    "rating": 4.8,
+    "url": "https://aliexpress.ru/item/1005009110731940.html"
+  },
+  "cheapest_comparable": {
+    "source": "aliexpress",
+    "product_id": "1005008110020734",
+    "title": "Смартфон Apple iPhone 16, 8/128ГБ",
+    "price_rub": 64990.0,
+    "currency": "rub",
+    "rating": 5.0,
+    "url": "https://aliexpress.ru/item/1005008110020734.html"
+  },
+  "price_spread_rub": 93459.0,
+  "warnings": [
+    "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
+    "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
+    "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+    "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+    "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
+    "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
+    "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
+    "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
+    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+    "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
+    "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+  ],
+  "server_version": "2.10.0"
+}
+```
+
+The raw cheapest listing is a USB stick whose title contains "128", so the answer names `cheapest_comparable`, the phone itself, and warns about the price outlier. The Wildberries price that needs WB Wallet is shown but not ranked. Citilink refused this call, and the answer says it is incomplete.
+
 ## What you get
 
 | Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
@@ -122,6 +175,8 @@ It detects Claude Desktop, Cursor and Claude Code, writes the config with the
 compare profile by default, starts the scraping Chrome, runs doctor's checks and
 offers `unblock` for a walled source. `--dry-run` prints the steps and files
 without writing, starting or requesting anything.
+
+For Claude Desktop without a terminal, download the one-click bundle `ru-marketplace-mcp-compare-<version>.mcpb` from [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) and open it in Claude Desktop (installs the `compare` profile via `uv`; checked on Windows, not on macOS).
 
 To write one named client's config instead, let the CLI write the file:
 
@@ -533,11 +588,12 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY`                                                            |
 | `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                  |
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                   |
-| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                         |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `USE_PROFILE_ADDRESS` (0/1, default 0 — the profile's private address list is not read; 1 = the logged-in profile's default address, prices "as the operator sees them") |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
+| `CIAN_`              | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `MAX_BODY_BYTES`, `REGION`                                                              |
 | `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                |
 | `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                           |
 | `MPSTATS_`           | `MP_AUTH` (the only required one — without it the tools return `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
@@ -585,9 +641,8 @@ disabled source: that request returns `bad_request`, as does inspecting its card
 
 ```bash
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # offline tests
-uv run pytest -q -m "not live"                # what CI runs
-uv run pytest -q -m "not live" --cov          # coverage, CI enforces a 70% floor
+uv run pytest -q -m "not live and not cdp"    # offline tests (what CI runs)
+uv run pytest -q -m "not live and not cdp" --cov --cov-fail-under=80  # coverage, CI enforces an 80% floor
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors

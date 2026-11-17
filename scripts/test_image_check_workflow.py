@@ -31,6 +31,9 @@ def test_triggers_and_watched_paths() -> None:
         "uv.lock",
         "pyproject.toml",
         "packages/*/pyproject.toml",
+        "packages/*/src/**",
+        "scripts/e2e_stdio_check*.py",
+        "scripts/stdio_probe.py",
         ".github/workflows/image-check.yml",
     ):
         assert f"- {path}" in text, f"image-check.yml no longer watches {path}"

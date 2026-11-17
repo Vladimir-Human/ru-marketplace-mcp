@@ -16,6 +16,9 @@ on:
       - uv.lock
       - pyproject.toml
       - packages/*/pyproject.toml
+      - packages/*/src/**
+      - scripts/e2e_stdio_check*.py
+      - scripts/stdio_probe.py
       - .github/workflows/image-check.yml
 
 permissions:

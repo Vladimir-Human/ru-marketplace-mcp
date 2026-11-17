@@ -101,6 +101,59 @@ Chrome, какие хосты остывают, какую страницу от
 
 **Проверка 2.7.0:** 30 октября с одного адреса Wildberries при отказе API (HTTP 403) сам прочитал поиск через Chrome: 40 товаров, у всех цена. Код остальных источников с v2.6.0 не менялся; их проверял [прогон v2.6.0](docs/releases/RELEASE_NOTES_v2.6.0.md#статус-живой-проверки) того же дня (12 из 13 источников, MPStats без токена). [Подробности v2.7.0](docs/releases/RELEASE_NOTES_v2.7.0.md#что-проверено).
 
+### Настоящий ответ
+
+`compare_prices(query="iphone 16 128gb")`. Ответы площадок записаны в Chrome на машине владельца 17 ноября 2026 года в 01:29 UTC (аудит, цикл 1, запись `packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json`) и пропущены через код `2.10.0` (коммит `058846ba`). Оставлены поля, которые агент читает первыми; полный ответ ещё содержит `source_outcomes` и все 25 предложений в `offers`.
+
+```json
+{
+  "query": "iphone 16 128gb",
+  "sources_queried": ["aliexpress", "citilink", "dns", "taobao", "wildberries", "yandex_market"],
+  "sources_ok": ["aliexpress", "dns", "taobao", "wildberries", "yandex_market"],
+  "complete": false,
+  "total_offers": 25,
+  "cheapest": {
+    "source": "aliexpress",
+    "product_id": "1005009110731940",
+    "title": "MOVESPEED флешка USB Type C 64/128/256/512 ГБ",
+    "price_rub": 1531.0,
+    "currency": "rub",
+    "rating": 4.8,
+    "url": "https://aliexpress.ru/item/1005009110731940.html"
+  },
+  "cheapest_comparable": {
+    "source": "aliexpress",
+    "product_id": "1005008110020734",
+    "title": "Смартфон Apple iPhone 16, 8/128ГБ",
+    "price_rub": 64990.0,
+    "currency": "rub",
+    "rating": 5.0,
+    "url": "https://aliexpress.ru/item/1005008110020734.html"
+  },
+  "price_spread_rub": 93459.0,
+  "warnings": [
+    "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
+    "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
+    "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+    "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+    "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
+    "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
+    "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
+    "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
+    "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
+    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+    "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
+    "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+  ],
+  "server_version": "2.10.0"
+}
+```
+
+Самым дешёвым формально оказалась флешка: в её названии есть «128». Поэтому ответ отдельно называет `cheapest_comparable`, то есть сам телефон, и предупреждает о выбросе цены. Цена Wildberries, которая действует только с WB Кошельком, показана, но в сравнении не участвует. Ситилинк в этом вызове ответил отказом, и ответ говорит, что он неполный.
+
 ## Подключение к MCP-клиенту
 
 Каждый сервер — консольная команда, поэтому пути в конфиге не зашиваются.
@@ -119,6 +172,8 @@ Cursor и Claude Code, пишет им конфиг (по умолчанию п�
 ```console
 marketplace-mcp setup
 ```
+
+Или без терминала — бандл в один клик `ru-marketplace-mcp-compare-<версия>.mcpb` из ассетов [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases): откройте файл в Claude Desktop (установит профиль `compare` через `uv`; проверено на Windows, на macOS не проверялось).
 
 Если клиент нетипичный или нужен один конкретный, тот же конфиг пишет
 `install --write`:
@@ -399,11 +454,12 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 | `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE` и другие), `CACHE_TTL`, `PROXY`                                                                     |
 | `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                        |
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                         |
-| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`,                                                                                               |
+| `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
 | `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
 | `MEGAMARKET_`        | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `USE_PROFILE_ADDRESS` (0/1, по умолчанию 0 — приватный список адресов профиля не читается; 1 = адрес по умолчанию из залогиненного профиля, цены «как видит оператор») |
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                       |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                                |
+| `CIAN_`              | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `MAX_BODY_BYTES`, `REGION`                                                                    |
 | `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                      |
 | `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                                 |
 | `MPSTATS_`           | `MP_AUTH` (единственный обязательный — без него инструменты отвечают `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
@@ -437,9 +493,8 @@ TTL.
 git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
 cd ru-marketplace-mcp
 uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # офлайн-тесты, сеть не нужна
-uv run pytest -q -m "not live"                # то, что гоняет CI
-uv run pytest -q -m "not live" --cov          # покрытие, порог 70% в CI
+uv run pytest -q -m "not live and not cdp"    # офлайн-тесты, сеть не нужна (то, что гоняет CI)
+uv run pytest -q -m "not live and not cdp" --cov --cov-fail-under=80  # покрытие, порог 80% в CI
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # что проверять — в [tool.mypy] files
 uv run mypy --platform win32                  # ловит ошибки, видимые только на Windows

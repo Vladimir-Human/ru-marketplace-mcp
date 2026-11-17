@@ -21,6 +21,9 @@ concurrency:
 permissions:
   contents: write # required to create/update the GitHub Release and upload assets
 
+env:
+  UV_FROZEN: "1"
+
 jobs:
   release:
     name: Build packages and publish GitHub Release

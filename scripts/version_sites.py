@@ -45,7 +45,7 @@ PYPROJECT_VERSION = re.compile(r'^version[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 DUNDER_VERSION = re.compile(r'^__version__[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 RELEASE_DATE = re.compile(r'^__release_date__[ \t]*=[ \t]*"([^"]*)"', re.MULTILINE)
 SERVER_VERSION = re.compile(r'^SERVER_VERSION[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
-IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)")
+IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"'`)]*)")
 # The OCI identifier is a JSON string; the version runs to its closing quote.
 OCI_IDENTIFIER = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)(?=\")")
 # A top-level JSON key. The indentation is captured so a nested "version"
@@ -131,7 +131,7 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     core_init = packages / "mcp-core" / "src" / "mcp_core" / "__init__.py"
     manifests = _sorted([root / "pyproject.toml", *packages.glob("*/pyproject.toml")])
     deployment_doc = root / "docs" / "DEPLOYMENT.md"
-    image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
+    image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md", root / "llms-install.md"]
     server_manifest = root / "server.json"
     dsh_manifest = root / "dsh" / "package.json"
     all_plugin_manifests = (

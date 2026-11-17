@@ -78,12 +78,30 @@ if (Get-CdpVersion) {
     exit 0
 }
 
-$chrome = "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
-if (-not (Test-Path $chrome)) {
-    $chrome = "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+$chrome = $null
+$browserCandidates = @()
+if ($env:CHROME_BINARY) {
+    $browserCandidates += $env:CHROME_BINARY
 }
-if (-not (Test-Path $chrome)) {
-    Write-Error "Chrome not found at standard paths"
+$browserCandidates += @(
+    "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+)
+if ($env:LOCALAPPDATA) {
+    $browserCandidates += "${env:LOCALAPPDATA}\Google\Chrome\Application\chrome.exe"
+}
+$browserCandidates += @(
+    "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+)
+foreach ($candidate in $browserCandidates) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        $chrome = $candidate
+        break
+    }
+}
+if (-not $chrome) {
+    Write-Error "Chrome or Edge not found (checked CHROME_BINARY, ProgramFiles, LOCALAPPDATA, and Microsoft Edge)"
     exit 1
 }
 
@@ -94,7 +112,7 @@ try {
     # The whole switch, quoted or bare, anchored at its end: a sibling profile
     # such as "Chrome-Scraping-2" is not this one.
     $profilePattern = '--user-data-dir="?' + [regex]::Escape($Profile) + '("|\s|$)'
-    $running = Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction Stop
+    $running = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction Stop
     foreach ($proc in $running) {
         if ($proc.CommandLine -and $proc.CommandLine -match $profilePattern) {
             $profileInUse = $true
