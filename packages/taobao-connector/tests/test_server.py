@@ -796,11 +796,14 @@ _OFF_HOST_INPUTS = [
     "https://evil.example/item.htm?id=123456789012",
     "https://taobao.com.evil.example/item.htm?id=123456789012",
     "//evil.example/item.htm?id=123456789012",
+    "evil.example/item.htm?id=123456789012",
+    "ozon.ru/product/123456789012/?id=123456789012",
     "file:///etc/passwd?id=123456789012",
     "javascript:fetch('/item.htm?id=123456789012')",
 ]
 
 
+@pytest.mark.req("R-NAV-HOSTS.invariant")
 @pytest.mark.parametrize("hostile", _OFF_HOST_INPUTS)
 def test_extract_item_id_refuses_off_host_input(hostile):
     assert server._extract_item_id(hostile) is None

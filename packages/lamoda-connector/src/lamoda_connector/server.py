@@ -168,12 +168,18 @@ def _extract_sku(raw: str) -> str | None:
     expects the canonical uppercase form.
     """
     raw = raw.strip()
+    if not raw:
+        return None
+    if _SKU_RE.fullmatch(raw):
+        return raw.upper()
     parts = urllib.parse.urlsplit(raw)
-    if parts.scheme or parts.netloc:
-        if not url_on_hosts(raw, ALLOWED_HOSTS):
-            return None
-        raw = parts.path
-    match = _SKU_RE.search(raw)
+    if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
+        path = parts.path
+    elif url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
+        path = (parts if parts.scheme else urllib.parse.urlsplit("https://" + raw)).path
+    else:
+        return None
+    match = _SKU_RE.search(path)
     return match.group(1).upper() if match else None
 
 

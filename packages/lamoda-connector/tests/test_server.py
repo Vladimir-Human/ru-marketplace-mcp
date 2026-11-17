@@ -329,9 +329,13 @@ async def test_selfcheck_price_shape_drift_survives_challenge_copy(monkeypatch):
 # ------------------------------------------------------------------- helpers ----
 
 
+@pytest.mark.req("R-NAV-HOSTS.invariant")
 def test_extract_sku():
     assert server._extract_sku("MP002XM1RMM3") == "MP002XM1RMM3"
     assert server._extract_sku("https://www.lamoda.ru/p/mp002xm1rmm3/shoes/") == "MP002XM1RMM3"
+    assert server._extract_sku("www.lamoda.ru/p/mp002xm1rmm3/shoes/") == "MP002XM1RMM3"
+    assert server._extract_sku("evil.example/p/mp002xm1rmm3/") is None
+    assert server._extract_sku("ozon.ru/product/mp002xm1rmm3/") is None
     assert server._extract_sku("кроссовки") is None
 
 

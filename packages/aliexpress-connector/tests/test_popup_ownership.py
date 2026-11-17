@@ -212,8 +212,7 @@ async def test_card_popup_challenge_is_json_with_the_challenge_contract(popups, 
     assert error["requires_user_action"] is True
     assert error["retryable_now"] is False
     assert error["status_code"] == 403
-    assert "aliexpress.ru" in error["user_action"]
-    assert "unblock aliexpress" not in error["user_action"]
+    assert "marketplace-mcp unblock aliexpress" in error["user_action"]
     assert "challenge" in error["message"]
     assert popups.owned.closed
 

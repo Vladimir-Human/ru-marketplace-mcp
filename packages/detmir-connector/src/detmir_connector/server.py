@@ -38,6 +38,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
 # _fetch_json: Perform bounded, retried API reads and classify failures.
+# _cacheable_json: Keep rejected payloads out of the in-process cache (R-CACHE-VALIDATED).
 # _body_error_status: Detect error status embedded inside HTTP-success JSON.
 # _parse_product: Normalize product fields and preserve missing-price semantics.
 # _page_url: Keep a page link on Detsky Mir's own site (R-OUTPUT-PAGE-URLS.detmir).
@@ -210,12 +211,33 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
             raise_tool_error(ParserDriftError(f"{label}: response was not valid JSON ({exc})", provider="detmir"))
             raise AssertionError("unreachable") from exc  # pragma: no cover
 
-    cached = _cache.get(url)
-    if cached is not None:
-        log_event(f"{label}: cache hit", level=logging.DEBUG, logger_name=__name__)
-        return cached
-    # Public tools store only after their body-status, parse and output checks.
-    return await fetch()
+    return await _cache.get_or_fetch(url, fetch, cache_if=lambda payload: _cacheable_json(payload, label))
+
+
+def _cacheable_json(payload: Any, label: str) -> bool:
+    """Keep payloads a public tool will reject out of the cache (R-CACHE-VALIDATED)."""
+    try:
+        if _body_error_status(payload) is not None:
+            return False
+        if label == "detmir_card":
+            node = _product_node(payload)
+            if node is None:
+                return False
+            _parse_product(node)
+            return True
+        if label == "detmir_category":
+            if isinstance(payload, list):
+                items_raw = payload
+            elif isinstance(payload, dict):
+                items_raw = _as_list(payload.get("items"))
+            else:
+                return False
+            for item in items_raw:
+                _parse_product(item)
+            return True
+        return isinstance(payload, dict)
+    except Exception:
+        return False
 
 
 def _body_error_status(payload: Any) -> int | None:
@@ -439,8 +461,6 @@ async def detmir_card(
             cached=was_cached,
         ),
     )
-    if not was_cached:
-        _cache.set(url, payload)
     return result
 
 
@@ -568,8 +588,6 @@ async def detmir_category(
         region=region_used,
         meta=MetaOut(source="detmir_category", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
-    if _cache.get(url) is None:
-        _cache.set(url, payload)
     return result
 
 
@@ -684,8 +702,6 @@ async def detmir_categories(
         region=region_used,
         meta=MetaOut(source="detmir_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
-    if _cache.get(url) is None:
-        _cache.set(url, payload)
     return result
 
 

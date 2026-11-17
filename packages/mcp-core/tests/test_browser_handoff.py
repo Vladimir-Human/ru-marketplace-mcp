@@ -59,6 +59,7 @@ def call(**kwargs):
             "operation": "search",
             "read": blocked,
             "challenge": lambda payload: payload.get("challenge"),
+            "allowed_hosts": {"shop.test"},
             **kwargs,
         }
     )
@@ -730,3 +731,13 @@ async def test_termination_settles_queued_snapshot_before_getter_resumes(browser
     capture.assert_not_called()
     assert lease.requests.empty()
     assert browser[0].closed and not handoff._leases
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+@pytest.mark.parametrize("bad_hosts", [None, (), set(), {""}, {"   "}])
+async def test_read_with_handoff_requires_allowed_hosts_under_retention(browser, monkeypatch, bad_hosts):
+    monkeypatch.setenv("CHROME_CHALLENGE_HANDOFF_S", "180")
+    with pytest.raises(ValueError, match="allowed_hosts is required"):
+        await call(allowed_hosts=bad_hosts)
+    assert not browser
+    assert not handoff._leases

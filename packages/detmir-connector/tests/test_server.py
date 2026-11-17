@@ -646,3 +646,30 @@ async def test_selfcheck_says_blocked_when_the_edge_refuses(monkeypatch, no_dela
     assert result.status == "inconclusive"
     notes = [note for entry in result.checks.values() for note in entry.notes]
     assert any("blocked at the edge" in note for note in notes), notes
+
+
+@pytest.mark.req("R-CACHE-VALIDATED")
+async def test_concurrent_card_misses_collapse_onto_one_upstream_fetch(monkeypatch, no_delay):
+    """Concurrent identical misses share one fetch; rejected payloads stay uncached."""
+    import asyncio
+
+    calls = 0
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_get(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return 200, json.dumps(CARD_PAYLOAD)
+
+    monkeypatch.setattr(server, "get_text_with_retries", slow_get)
+    tasks = [asyncio.create_task(server.detmir_card(product_id=6673568)) for _ in range(4)]
+    await asyncio.wait_for(started.wait(), timeout=2)
+    await asyncio.sleep(0.05)
+    release.set()
+    results = await asyncio.gather(*tasks)
+
+    assert calls == 1
+    assert all(r.product.price_rub == results[0].product.price_rub for r in results)

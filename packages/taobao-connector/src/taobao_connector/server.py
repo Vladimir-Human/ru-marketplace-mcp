@@ -184,9 +184,13 @@ def _search_url(query: str, page: int = 1) -> str:
 
 
 def _is_tmall_url(raw: str) -> bool:
-    """Recognize only the exact unsupported card host; never accept its id for navigation."""
-    parts = urllib.parse.urlsplit(raw.strip())
-    return parts.scheme in ("", "http", "https") and (parts.hostname or "").rstrip(".").lower() == "detail.tmall.com"
+    """Recognize unsupported Tmall card hosts; never accept their id for navigation."""
+    candidate = raw.strip()
+    if not candidate or candidate.isdigit():
+        return False
+    if candidate.startswith("//"):
+        candidate = "https:" + candidate
+    return url_on_hosts(candidate, ("detail.tmall.com", ".tmall.com"), allow_schemeless=True)
 
 
 def _extract_item_id(raw: str) -> str | None:
@@ -201,23 +205,12 @@ def _extract_item_id(raw: str) -> str | None:
     raw = raw.strip()
     if raw.isdigit() and 9 <= len(raw) <= 13:
         return raw
-    parts = urllib.parse.urlsplit(raw)
-    if parts.scheme:
-        if parts.scheme not in ("http", "https"):
-            return None
-        if not url_on_hosts(raw, ALLOWED_HOSTS):
-            return None
-    elif raw.startswith("//"):
-        # Scheme-relative: the authority belongs to someone else, so the host
-        # check above never runs and an off-host URL would yield an id instead
-        # of a refusal. The card only ever navigates ITEM_BASE, so nothing
-        # leaks — but silently reading an id out of a stranger's URL is not a
-        # contract worth keeping.
+    if not url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
         return None
-    match = _ITEM_ID_RE.search(raw)
-    if match:
-        return match.group(1)
-    return None
+    parts = urllib.parse.urlsplit(raw)
+    query = (parts if parts.scheme else urllib.parse.urlsplit("https://" + raw)).query
+    match = _ITEM_ID_RE.search("?" + query)
+    return match.group(1) if match else None
 
 
 # END_BLOCK_CONFIG_AND_INPUTS

@@ -80,8 +80,9 @@ async def test_search_query_encoding_and_cache_key(monkeypatch, query, encoded):
     [
         "https://detail.tmall.com/item.htm?id=1096307293333",
         "//detail.tmall.com/item.htm?id=1096307293333",
+        "detail.tmall.com/item.htm?id=1096307293333",
     ],
-    ids=["https", "scheme_relative"],
+    ids=["https", "scheme_relative", "schemeless"],
 )
 async def test_card_refuses_tmall_url_without_navigation(monkeypatch, url):
     """R-TAOBAO-TMALL-CARD: a known unsupported host needs an actionable, non-retryable refusal."""

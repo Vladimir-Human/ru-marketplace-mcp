@@ -116,6 +116,7 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
     # fail merely because SourceSpec.hosts has not been implemented yet.
     host = (getattr(spec, "hosts", ()) or (spec.unblock_page or "https://www.wildberries.ru").split("/")[2:3])[0]
     host = host.lstrip(".")
+    cross_host = "wildberries.ru" if spec.name == "ozon" else "ozon.ru"
     foreign = [
         "https://example.com/x",
         "http://127.0.0.1:9222/json/version",
@@ -126,6 +127,8 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
         "file:///product/123456789/",
         "ftp://example.com/product/123456789/",
         "//example.com/product/123456789/",
+        "evil.example/",
+        f"{cross_host}/",
     ]
     # Valid-looking paths and query ids must not rescue an off-host authority.
     paths = (
