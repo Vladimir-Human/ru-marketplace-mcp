@@ -131,7 +131,10 @@ JSON-RPC — это единственное место, где число пр�
 ledger` показывает, сколько уже израсходовано. Запрос сверх лимита
 останавливает прогон до отправки, а не после. Новый прогон начинается после
 `python scripts/live_check.py reset`: журнал прошлого прогона не удаляется, а
-переименовывается в `.live-budget-<время>.json`.
+переименовывается в `.live-budget-<время>.json`. Если площадка ответила ошибкой
+с `retry_after_s`, запросы к ней не уходят до конца этой паузы, и `reset` её не
+снимает: пауза хранится в `.live-budget-pauses.json`, а `matrix` записывает
+такой источник как `retry_after_skipped`.
 
 `python scripts/live_check.py matrix` проверяет каждый источник один раз: список
 по фиксированному запросу и первую карточку из него. После живой проверки
@@ -357,7 +360,10 @@ entered a rouble ranking; a clean install, image build or CI is red.
    `.live-budget.json` at the repository root; `python scripts/live_check.py
    ledger` reports what one run has spent. A request over a cap stops the run
    before it is sent. `python scripts/live_check.py reset` starts a new run; the
-   old ledger is kept as `.live-budget-<time>.json`, not deleted. `python scripts/live_check.py matrix`
+   old ledger is kept as `.live-budget-<time>.json`, not deleted. A marketplace
+   that answered with `retry_after_s` gets no request until that pause ends,
+   across `reset` (`.live-budget-pauses.json`); `matrix` records it as
+   `retry_after_skipped`. `python scripts/live_check.py matrix`
    checks every source once (a fixed-query listing and its first card). After the pre-release
    live check, update "Последняя проверка перед релизом" in `docs/LIVE_STATUS.md`, and after a
    full `matrix` run its table too. Run each `*_selfcheck`: `success` means the transport
