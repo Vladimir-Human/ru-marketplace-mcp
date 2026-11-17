@@ -110,7 +110,7 @@ def test_capture_m5_m6_task_facts(name: str, mutation: str) -> None:
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
-    reason="Ozon selects a preceding conditional/split display instead of the unchanged regular price; P2-1 forbids connector fixes",
+    reason="Ozon selects a preceding conditional/split display instead of the unchanged regular price (known gap G-CAPTURE-MUTATION-ADJACENT-PRICE)",
 )
 def test_adjacent_price_keeps_ozon_regular_price(mutation: str, seed: int) -> None:
     raw = (capture.FIXTURES / "search_composer_live.json").read_text(encoding="utf-8")

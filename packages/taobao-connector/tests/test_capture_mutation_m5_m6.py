@@ -78,7 +78,7 @@ def test_capture_m5_m6_task_facts(name: str, mutation: str, tmp_path: Path) -> N
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
-    reason="Reviewed adjacent conditional/split display changes the regular price; P2-1 forbids connector fixes",
+    reason="Reviewed adjacent conditional/split display changes the regular price (known gap G-CAPTURE-MUTATION-ADJACENT-PRICE)",
 )
 def test_adjacent_price_minimal_violation(name: str, mutation: str, seed: int, tmp_path: Path) -> None:
     raw = (capture.FIXTURES / name).read_text(encoding="utf-8")

@@ -8,8 +8,10 @@
 #        R-CAPTURE-MUTATION.ambiguous-title; R-CAPTURE-MUTATION.permutation.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
-# _recording/_seller_mutation/_permutation: Copy recorded answers, change only authorized fields or order.
-# _facts/_never_comparable: Shared winner/price/identity/order and ambiguous-title oracles.
+# _recording/_seller_mutation/_taken/_permutation: Copy recorded answers; change only seller fields or the
+#     order of the rows compare_prices reads.
+# _facts/_seller_facts/_permutation_facts/_never_comparable: Winner/price/identity/order oracles (m6a allows
+#     the size guard; m6c lets price ties and the unranked tail keep the marketplace order).
 # test_recording_*: Fifty seeds, real typed rebuild/adapters/build_response, no marketplace calls.
 # test_compare_regular_price_and_winner_ignore_cheaper_conditional_price: Direct pure decision check.
 # test_*_negative_control: Planted bad winners/order must fail the same oracle.
@@ -44,9 +46,21 @@ FACT_FIELDS = (
     "identity",
 )
 # Red run: all 50 seeds of these exact recordings/families still selected an ambiguous title.
+# The c1 recordings joined with A7 (#310); every one of them fails both families the same way.
 EXCLUSIONS = {
     (name, attack, seed)
-    for name in ("kettle-partial.json", "kettle-wb-yandex.json")
+    for name in (
+        "kettle-partial.json",
+        "kettle-wb-yandex.json",
+        "c1-dyson-v15-detect.json",
+        "c1-headphones-sony-wh1000xm5.json",
+        "c1-iphone16-128gb.json",
+        "c1-lego-42151.json",
+        "c1-pampers-premium-care-4.json",
+        "c1-ps5-slim.json",
+        "c1-redmi-note14-256gb.json",
+        "c1-ssd-samsung-990pro-1tb.json",
+    )
     for attack in ("models", "memory")
     for seed in range(50)
 }
@@ -89,6 +103,20 @@ def _seller_mutation(recording: dict, seed: int, attack: str = "instructions") -
     return changed
 
 
+# compare_prices takes this many rows per source by default; the marketplace's own order decides which.
+TAKEN = 5
+
+
+def _taken(recording: dict) -> dict:
+    """The rows compare_prices actually reads, so m6c permutes one result set, not which rows get in."""
+    changed = copy.deepcopy(recording)
+    for entry in changed["sources"].values():
+        response = entry.get("response", {})
+        if isinstance(response.get("items"), list):
+            response["items"] = response["items"][:TAKEN]
+    return changed
+
+
 def _permutation(recording: dict, seed: int) -> dict:
     changed = copy.deepcopy(recording)
     rng = random.Random(seed)
@@ -103,6 +131,44 @@ def _facts(clean, mutated) -> None:
         assert match_product_identity(before.identity, after.identity) == match_product_identity(
             before.identity, before.identity
         )
+
+
+def _seller_facts(clean, mutated) -> None:
+    """m6a oracle: a flooded title may push whole offers past the answer-size guard, nothing else.
+
+    R-INTERFACE-GUARDS.output-size leaves whole offers out from the end of the ranked list and says so;
+    the kept offers, both winners and total_offers must still be the clean answer's.
+    """
+    kept = len(mutated.offers)
+    if kept < len(clean.offers):
+        assert mutated.total_offers == clean.total_offers, "total_offers changed"
+        assert any(w.startswith("info:offers_omitted:") for w in mutated.warnings), "offers left out silently"
+        clean = clean.model_copy(update={"offers": clean.offers[:kept]})
+    _facts(clean, mutated)
+
+
+def _offer_key(offer) -> str:
+    dumped = offer.model_dump()
+    return json.dumps({field: dumped.get(field) for field in FACT_FIELDS}, sort_keys=True, ensure_ascii=False)
+
+
+def _permutation_facts(clean, mutated) -> None:
+    """m6c oracle: the same winning prices, the same offers and the same price sequence.
+
+    Offers that tie on the everyday price, and the unranked tail, keep the marketplace's own order
+    (its relevance), so among equal prices the order and the winner may follow the permutation.
+    """
+    keys = sorted(map(_offer_key, clean.offers))
+    assert keys == sorted(map(_offer_key, mutated.offers)), "task facts changed: offers"
+    for name in ("cheapest", "cheapest_comparable"):
+        before, after = getattr(clean, name), getattr(mutated, name)
+        assert (before is None) == (after is None), f"task facts changed: {name}"
+        if before is not None:
+            price = (before.price_rub, before.price_kind, before.currency)
+            assert price == (after.price_rub, after.price_kind, after.currency), f"task facts changed: {name}"
+            assert _offer_key(after) in keys, f"task facts changed: {name} is not a clean offer"
+    prices = [offer.price_rub for offer in clean.offers], [offer.price_rub for offer in mutated.offers]
+    assert prices[0] == prices[1], "task facts changed: price order"
 
 
 def _never_comparable(result) -> None:
@@ -131,7 +197,7 @@ async def test_recording_seller_instructions_keep_prices_ids_identity_and_winner
     for seed in range(PYTHON_SEEDS):
         changed = _seller_mutation(recording, seed)
         try:
-            _facts(clean, await replay.replay(changed))
+            _seller_facts(clean, await replay.replay(changed))
         except AssertionError as exc:
             raise AssertionError(f"{path.name}, m6a, seed={seed}: {exc}") from exc
     assert _recording(path) == recording
@@ -152,10 +218,11 @@ async def test_recording_keyword_stuffed_and_accessory_titles_never_win(path: Pa
 @pytest.mark.parametrize("path", PATHS, ids=lambda path: path.name)
 async def test_recording_permutations_keep_winners_and_offer_order(path: Path) -> None:
     recording = _recording(path)
-    clean = await replay.replay(recording)
+    taken = _taken(recording)
+    clean = await replay.replay(taken)
     for seed in range(PYTHON_SEEDS):
         try:
-            _facts(clean, await replay.replay(_permutation(recording, seed)))
+            _permutation_facts(clean, await replay.replay(_permutation(taken, seed)))
         except AssertionError as exc:
             raise AssertionError(f"{path.name}, m6c, seed={seed}: {exc}") from exc
     assert _recording(path) == recording
@@ -203,7 +270,7 @@ async def test_compare_regular_price_and_winner_ignore_cheaper_conditional_price
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
-    reason="A7 model/memory-stuffed seller titles still become cheapest_comparable; P2-1 forbids compare fixes",
+    reason="A title stuffed with other models or a list of sizes still becomes cheapest_comparable (known gap)",
 )
 async def test_recording_ambiguous_title_minimal_violation(name: str, attack: str, seed: int) -> None:
     result = await replay.replay(_seller_mutation(_recording(RECORDINGS / name), seed, attack))
@@ -233,9 +300,9 @@ async def test_permutation_oracle_rejects_planted_order_or_winner(violation: str
         broken.offers.reverse()
     else:
         broken.cheapest = next(offer for offer in clean.offers if offer != clean.cheapest)
-    _facts(clean, clean)
+    _permutation_facts(clean, clean)
     with pytest.raises(AssertionError, match="task facts changed"):
-        _facts(clean, broken)
+        _permutation_facts(clean, broken)
 
 
 @pytest.mark.req("R-CAPTURE-MUTATION.seller-text")
@@ -246,6 +313,21 @@ async def test_recording_seller_oracle_rejects_planted_identity_facts() -> None:
     _facts(clean, clean)
     with pytest.raises(AssertionError, match="task facts changed"):
         _facts(clean, broken)
+
+
+@pytest.mark.req("R-CAPTURE-MUTATION.seller-text")
+async def test_seller_oracle_rejects_offers_left_out_silently_or_a_changed_kept_offer() -> None:
+    clean = await replay.replay(_recording(RECORDINGS / "c1-iphone16-128gb.json"))
+    assert len(clean.offers) > 2
+    note = "info:offers_omitted: 1 of N offers left out"
+    _seller_facts(clean, clean.model_copy(update={"offers": clean.offers[:-1], "warnings": [*clean.warnings, note]}))
+    with pytest.raises(AssertionError, match="left out silently"):
+        _seller_facts(clean, clean.model_copy(update={"offers": clean.offers[:-1]}))
+    broken = clean.model_copy(deep=True, update={"warnings": [*clean.warnings, note]})
+    broken.offers = broken.offers[:-1]
+    broken.offers[0].price_rub = 1
+    with pytest.raises(AssertionError, match="task facts changed"):
+        _seller_facts(clean, broken)
 
 
 # END_BLOCK_NEGATIVE_CONTROLS

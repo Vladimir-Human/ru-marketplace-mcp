@@ -51,7 +51,7 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
-  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested">
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE,G-CAPTURE-MUTATION-STUFFED-TITLES">
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
@@ -74,6 +74,7 @@
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_permutations_keep_winners_and_offer_order" requirements="R-CAPTURE-MUTATION.permutation" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_instructions_keep_prices_ids_identity_and_winners" requirements="R-CAPTURE-MUTATION.seller-text" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_oracle_rejects_planted_identity_facts" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_seller_oracle_rejects_offers_left_out_silently_or_a_changed_kept_offer" requirements="R-CAPTURE-MUTATION.seller-text" />
     <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/detmir-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
@@ -86,10 +87,8 @@
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
-    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_captured_output_url_minimal_violation" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_captured_public_outputs_have_https_own_host_urls_or_null" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_profile_offer_urls_use_each_nested_offer_source_not_a_union" requirements="R-CAPTURE-MUTATION.output-urls" />
-    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_recorded_compare_output_url_minimal_violation" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_recorded_compare_outputs_have_https_own_host_urls_or_null" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_url_field_inventory_includes_every_registered_source_and_output" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_url_oracle_rejects_planted_bad_urls_in_every_discovered_field" requirements="R-CAPTURE-MUTATION.output-urls" />

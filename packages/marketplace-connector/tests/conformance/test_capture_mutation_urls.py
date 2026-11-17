@@ -1,7 +1,7 @@
 """P2-1 m6d: recursive URL-output conformance, not the existing input-host gate."""
 
 # START_MODULE_CONTRACT
-# PURPOSE: Check page URLs on page_hosts (explicit Tmall exception); images are HTTPS/non-empty or null.
+# PURPOSE: Check page URLs on page_hosts (explicit Tmall exception); images are HTTPS, "" (no image) or null.
 # SCOPE: Registry/schema discovery, all existing captured output samples, and explicit planted oracle controls.
 #        No marketplace/browser request; empty strings are not null and HTTP is not HTTPS.
 # DEPENDS: pytest; FastMCP; stdlib importlib,re,urllib.parse; mcp_core.sources/kit/output_schema;
@@ -75,8 +75,6 @@ def _inventory() -> dict[str, dict[str, set[str]]]:
 INVENTORY = _inventory()
 URL_FIELDS = {name for tools in INVENTORY.values() for fields in tools.values() for name in fields}
 MARKETPLACES = tuple(spec for spec in SOURCES if spec.kind == "marketplace")
-# Reviewer red run: dns_search emits image_url='' on this exact fixture.
-EXCLUSIONS = {("dns", "dns_search", "search_grid.html")}
 
 
 # END_BLOCK_URL_DISCOVERY
@@ -91,7 +89,8 @@ def _source_in_object(output: dict, source: SourceSpec) -> SourceSpec:
 
 
 def _assert_url(value: Any, source: SourceSpec, path: str, image: bool) -> None:
-    if value is None:
+    # Five public models declare image_url: str = "" for a tile without a picture; "" is their "no image".
+    if value is None or (image and value == ""):
         return
     assert isinstance(value, str), f"{source.name}:{path}: URL is neither a string nor null: {value!r}"
     try:
@@ -145,7 +144,7 @@ def test_url_field_inventory_includes_every_registered_source_and_output() -> No
 @pytest.mark.req("R-CAPTURE-MUTATION.output-urls")
 @pytest.mark.parametrize(
     "sample",
-    [sample for sample in SAMPLES if (sample.source, sample.tool, sample.fixture) not in EXCLUSIONS],
+    SAMPLES,
     ids=lambda sample: f"{sample.source}.{sample.tool}/{sample.fixture}",
 )
 async def test_captured_public_outputs_have_https_own_host_urls_or_null(
@@ -160,14 +159,12 @@ async def test_captured_public_outputs_have_https_own_host_urls_or_null(
 
 
 RECORDINGS = Path(__file__).resolve().parents[4] / "packages/compare-connector/tests/benchmark/recordings"
-# Red runs: unknown images are empty strings rather than null in these exact outputs.
-RECORDING_EXCLUSIONS = {"kettle-partial.json", "kettle-wb-yandex.json"}
 
 
 @pytest.mark.req("R-CAPTURE-MUTATION.output-urls")
 @pytest.mark.parametrize(
     "path",
-    [path for path in sorted(RECORDINGS.glob("*.json")) if path.name not in RECORDING_EXCLUSIONS],
+    sorted(RECORDINGS.glob("*.json")),
     ids=lambda path: path.name,
 )
 async def test_recorded_compare_outputs_have_https_own_host_urls_or_null(path: Path) -> None:
@@ -177,36 +174,6 @@ async def test_recorded_compare_outputs_have_https_own_host_urls_or_null(path: P
 
 
 # END_BLOCK_CAPTURED_OUTPUTS
-# START_BLOCK_MINIMAL_VIOLATIONS
-
-
-@pytest.mark.req("R-CAPTURE-MUTATION.output-urls")
-@pytest.mark.parametrize(
-    "sample",
-    [sample for sample in SAMPLES if (sample.source, sample.tool, sample.fixture) in EXCLUSIONS],
-    ids=lambda sample: f"{sample.source}.{sample.tool}/{sample.fixture}/m6d-seed-0",
-)
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="DNS search emits image_url='' instead of null; P2-1 forbids connector fixes",
-)
-async def test_captured_output_url_minimal_violation(sample: Sample, monkeypatch: pytest.MonkeyPatch) -> None:
-    await test_captured_public_outputs_have_https_own_host_urls_or_null(sample, monkeypatch)
-
-
-@pytest.mark.req("R-CAPTURE-MUTATION.output-urls")
-@pytest.mark.parametrize("name", ("kettle-partial.json",))
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="A7 compare output uses an empty image_url instead of null; P2-1 forbids compare fixes",
-)
-async def test_recorded_compare_output_url_minimal_violation(name: str) -> None:
-    await test_recorded_compare_outputs_have_https_own_host_urls_or_null(RECORDINGS / name)
-
-
-# END_BLOCK_MINIMAL_VIOLATIONS
 # START_BLOCK_NEGATIVE_CONTROLS
 
 
@@ -227,8 +194,7 @@ def test_url_oracle_rejects_planted_bad_urls_in_every_discovered_field(spec: Sou
     good = f"https://{host}/p21-control"
     valid = {"result": {"items": [{field: [None, good]}]}}
     assert_output_urls(valid, spec)
-    bad = (
-        "",
+    bad: tuple[Any, ...] = (
         f"http://{host}/p21-control",
         f"https://{host}@attacker.invalid/x",
         "//attacker.invalid/x",
@@ -240,8 +206,9 @@ def test_url_oracle_rejects_planted_bad_urls_in_every_discovered_field(spec: Sou
     if IMAGE_NAME.search(field):
         # Declared gap: SourceSpec has no image-host registry, so foreign CDNs are allowed.
         assert_output_urls({field: "https://cdn.example.invalid/image.jpg"}, spec)
+        assert_output_urls({field: ""}, spec)
     else:
-        bad += ("https://attacker.invalid/x", f"https://{host}.attacker.invalid/x")
+        bad += ("", "https://attacker.invalid/x", f"https://{host}.attacker.invalid/x")
     for value in bad:
         with pytest.raises(AssertionError, match="URL"):
             assert_output_urls({"result": {"items": [{field: [None, good, value]}]}}, spec)
