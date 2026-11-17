@@ -87,7 +87,7 @@
     <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
-    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
@@ -1061,6 +1061,9 @@
   </requirement>
   <requirement id="R-WB-DOM-NAVIGATION-RETRY" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_reopens_once_after_navigation_destroys_evaluation" requirements="R-WB-DOM-NAVIGATION-RETRY" />
+  </requirement>
+  <requirement id="R-WB-ORIGINAL-PRICE-ROLE" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-WB-ORIGINAL-PRICE-ROLE" />
   </requirement>
   <requirement id="R-WB-SELFCHECK-DOM" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_selfcheck_dom.py" name="test_dom_selfcheck_uses_the_tools_parsers_and_avoids_api_hosts" requirements="R-WB-SELFCHECK-DOM" title="R-WB-SELFCHECK-DOM: captured named/priced products prove both DOM paths." />

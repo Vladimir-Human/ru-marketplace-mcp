@@ -10,7 +10,7 @@
 # CASES: Captured search_v9_live/card_v4_live inputs.
 # _parse: Decode and flatten products through the shared real parser.
 # test_capture_equivalent/test_capture_no_invented_price: Shared PYTHON_SEEDS per fixture and mutation.
-# test_missing_original_price_role_violation: Strict xfails for exact m2/m4 current-to-original substitutions.
+# test_missing_original_price_stays_unknown: The m2/m4 seeds that once copied the current price into the original.
 # END_MODULE_MAP
 
 import json
@@ -28,8 +28,8 @@ CASES = ("search_v9_live.json", "card_v4_live.json")
 PRICE_PATHS = (r"^products\[\]\.(?:sizes\[\]\.price\.(?:product|total|basic)|salePriceU|priceU)$",)
 PRICE_FIELDS = ("price_rub", "price_original_rub")
 ID_FIELDS = ("nm_id",)
-# Every exact (name, mutation, seed) is test_missing_original_price_role_violation below.
-# _extract_price_rub substitutes product for an absent/refused basic amount, changing the original field.
+# The (name, mutation, seed) cases that removed or refused the basic amount: _extract_price_rub used to
+# substitute product for it, changing the original field (fixed 2026-11-17).
 ORIGINAL_PRICE_SEEDS = {
     "search_v9_live.json": (
         2,
@@ -87,12 +87,13 @@ ORIGINAL_PRICE_SEEDS = {
         49,
     ),
 }
-EXCLUSIONS = tuple(
+ROLE_CASES = tuple(
     (name, mutation, seed)
     for name, seeds in ORIGINAL_PRICE_SEEDS.items()
     for mutation in ("m2", "m4")
     for seed in seeds
 )
+EXCLUSIONS: tuple[tuple[str, str, int], ...] = ()
 
 
 def _parse(raw: str) -> list:
@@ -146,13 +147,9 @@ def test_capture_no_invented_price(name: str, mutation: str) -> None:
 # START_BLOCK_MINIMAL_VIOLATIONS
 
 
-@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price")
-@pytest.mark.xfail(
-    strict=True, reason="P2-1 violation: missing/refused original amount is replaced by the current price"
-)
-@pytest.mark.parametrize("name,mutation,seed", EXCLUSIONS)
-def test_missing_original_price_role_violation(name: str, mutation: str, seed: int) -> None:
-    # Exactly (name, mutation, seed) is excluded above for each case, never a whole mutation/fixture.
+@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price", "R-WB-ORIGINAL-PRICE-ROLE")
+@pytest.mark.parametrize("name,mutation,seed", ROLE_CASES)
+def test_missing_original_price_stays_unknown(name: str, mutation: str, seed: int) -> None:
     raw = (FIXTURES / name).read_text(encoding="utf-8")
     mutated = mutation_case(
         raw, mutation, seed, kind="json", price_paths=PRICE_PATHS, price_nodes=(), markers=DECOY_MARKERS
