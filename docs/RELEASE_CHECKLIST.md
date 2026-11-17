@@ -16,7 +16,7 @@
 **Go** — всё сразу:
 
 - офлайн-гейт зелёный, покрытие выше порога 80;
-- `e2e_stdio_check.py` даёт 32/32 (16 серверов в обоих протоколах), у всех
+- `e2e_stdio_check.py` даёт 30/30 (15 серверов в обоих протоколах), у всех
   серверов версия релиза;
 - `python scripts/live_check.py doctor` вернул `0`, либо `2` с понятным
   объяснением по каждому непроверенному источнику. Строка `refused before
@@ -101,10 +101,10 @@ npm ci --no-audit --no-fund
 
 ## 2. Консистентность версий
 
-Одна версия живёт в восьмидесяти восьми местах: семнадцать `pyproject.toml`,
-шестнадцать `__version__`, пятнадцать `SERVER_VERSION`, пятнадцать пинов
+Одна версия живёт в восьмидесяти восьми местах: шестнадцать `pyproject.toml`,
+пятнадцать `__version__`, четырнадцать `SERVER_VERSION`, четырнадцать пинов
 `mcp-core==` в `pyproject.toml` коннекторов, `server.json`, OCI identifier, `dsh/package.json`,
-девятнадцать тегов образа в `docker-compose.yml`, `docs/DEPLOYMENT.md` и `dsh/README.md` и три пина
+пять манифестов плагинов, восемнадцать тегов образа в `docker-compose.yml`, `docs/DEPLOYMENT.md` и `dsh/README.md` и три пина
 релиза в `docs/DEPLOYMENT.md`. Вручную такое не
 сверяется — при подготовке 1.2.1 тринадцать `__version__` остались на прошлой
 версии и никто этого не заметил. Поэтому сверяет скрипт, он входит в гейт:
@@ -247,7 +247,7 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-Пуш тега запускает release workflow: он собирает 32 артефакта (16 wheel и 16
+Пуш тега запускает release workflow: он собирает 30 артефактов (15 wheel и 15
 sdist) и прикладывает их к релизу.
 
 ## PyPI (maintainer)
@@ -256,7 +256,7 @@ sdist) и прикладывает их к релизу.
 [DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer): это единственный
 список точных полей для владельца. Владелец выполнил её 2026-10-31, и теперь каждый
 тег `v*` публикует бандл; без настройки (например, в форке) job пропускается.
-Токен API не нужен. Публикуется только дополнительный бандл, а не 16 workspace-пакетов.
+Токен API не нужен. Публикуется только дополнительный бандл, а не 15 workspace-пакетов.
 
 Перед выпуском проверьте:
 
@@ -268,7 +268,7 @@ sdist) и прикладывает их к релизу.
   `workflow_dispatch` тоже запускайте на теге, не на ветке;
 - конфиг из uv tool использует пин релиза, обновляемый через `install --write --force`.
 
-32 артефакта существующего GitHub Release workflow остаются как прежде.
+30 артефактов существующего GitHub Release workflow остаются как прежде.
 
 ## 8. Проверка после публикации
 
@@ -282,7 +282,7 @@ uv run python scripts/e2e_stdio_check.py
 ```
 
 Проверить страницу релиза глазами: текст на месте, таблица проверенных
-источников отрисовалась, приложено 32 файла (16 wheel и 16 sdist).
+источников отрисовалась, приложено 30 файлов (15 wheel и 15 sdist).
 
 Проверить PyPI: на https://pypi.org/project/ru-marketplace-mcp/ видна версия X.Y.Z
 с одним wheel и одним sdist, а пакет запускается без checkout:
@@ -305,7 +305,7 @@ for.
 ## Go / no-go
 
 **Go** — all at once: the offline gate is green and above the 80% coverage
-floor; `e2e_stdio_check.py` reports 32/32 (16 servers in both protocols) at
+floor; `e2e_stdio_check.py` reports 30/30 (15 servers in both protocols) at
 the release version; `python scripts/live_check.py doctor` returns `0`, or `2`
 with a clear account of every unverified source (a closing `refused before
 sending` line means the budget stopped those marketplaces' requests, so their
@@ -335,7 +335,7 @@ entered a rouble ranking; a clean install, image build or CI is red.
 1. **Offline gate** — lock check, frozen sync, tests, ruff, mypy on the host
    plus win32 and darwin, the no-print, version-consistency and
    lock-revision checks, the 80% coverage floor, `uv run pytest -q scripts` for
-   operational gate regressions, and a real stdio MCP session for all sixteen
+   operational gate regressions, and a real stdio MCP session for all fifteen
    servers, and `scripts/grace_index.py --check-evidence` (the evidence file was
    written by `--evidence` on this exact tree, every gate passing). Install the locked DOM test dependencies with
    `npm ci --no-audit --no-fund`. Relocking `uv.lock` needs uv 0.13.6 or newer
@@ -343,8 +343,8 @@ entered a rouble ranking; a clean install, image build or CI is red.
    revision the images build from. Use `--durations=10` to investigate slow
    tests; total runtime alone does not prove network access.
 2. **Version consistency** — `scripts/check_versions.py` compares all
-   eighty-eight declarations (seventeen `pyproject.toml`, sixteen `__version__`,
-   fifteen `SERVER_VERSION`, fifteen `mcp-core==` pins, nineteen image tags,
+   eighty-eight declarations (sixteen `pyproject.toml`, fifteen `__version__`,
+   fourteen `SERVER_VERSION`, fourteen `mcp-core==` pins, five plugin manifests, eighteen image tags,
    three deployment-guide release pins, `server.json`, its OCI image identifier,
    and `dsh/package.json`) against the root `pyproject.toml`;
    `e2e_stdio_check.py` then reports what the running servers
@@ -384,7 +384,7 @@ entered a rouble ranking; a clean install, image build or CI is red.
    tagging, run the `Image check` workflow: it builds both images and drives the
    stdio image through a real MCP session. Without it a broken Dockerfile or a
    missing package surfaces only after the tag push, once the image is already
-   published. The tag push builds and attaches 32 artifacts (16 wheels and 16
+   published. The tag push builds and attaches 30 artifacts (15 wheels and 15
    sdists).
 8. **Verify after publishing** — clone the tag fresh, sync, and run
    `e2e_stdio_check.py`, then read the release page. Check that
@@ -398,8 +398,8 @@ Follow the single owner-registration checklist in
 [DEPLOYMENT.md — PyPI (maintainer)](DEPLOYMENT.md#pypi-maintainer). The owner
 completed it on 2026-10-31, so every `v*` tag now publishes the bundle; without it
 (in a fork, say) the publish job is skipped. No API token is used. Only the additional
-bundle goes to PyPI, not the 16 workspace distribution names. Check the generated
+bundle goes to PyPI, not the 15 workspace distribution names. Check the generated
 metadata and both local artifacts, the **PyPI bundle installs** CI job, and the
 wheel `METADATA` version against the selected `v*` tag (also for manual dispatch).
-The existing 32 GitHub Release artifacts and Docker builds stay unchanged;
+The existing 30 GitHub Release artifacts and Docker builds stay unchanged;
 uv-tool client entries pin a release and refresh it with `install --write --force`.

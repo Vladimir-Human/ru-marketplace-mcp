@@ -20,9 +20,7 @@ import uuid
 
 from stdio_probe import StdioProbe
 
-# The probe pins MPSTATS_MP_AUTH empty, so the token-less default surface is
-# 39 tools and 13 mounted sources: without a token the unified server does not
-# mount the two mpstats tools (R-MPSTATS-MOUNT-GATE).
+# The default surface is 39 tools and 13 mounted sources.
 EXPECTED_TOOLS = 39
 EXPECTED_MOUNTS = 13
 TIMEOUT_S = 120.0
@@ -49,7 +47,7 @@ def probe(image: str, expected_version: str) -> int:
 
 def _probe(image: str, container: str, expected_version: str) -> int:
     deadline = time.monotonic() + TIMEOUT_S
-    with StdioProbe(["docker", "run", "--rm", "--name", container, "-i", "-e", "MPSTATS_MP_AUTH=", image]) as session:
+    with StdioProbe(["docker", "run", "--rm", "--name", container, "-i", image]) as session:
         initialized = session.initialize("docker-stdio-probe", deadline)
         server_info = initialized.get("serverInfo")
         version = server_info.get("version") if isinstance(server_info, dict) else None

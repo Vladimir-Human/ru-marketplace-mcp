@@ -1,4 +1,4 @@
-# The 15 skills are always available and cost only their catalog rows.
+# The 14 skills are always available and cost only their catalog rows.
 # All MCP rows stay disabled until RU_MARKETPLACE_MCP_DIR is set. Once
 # enabled they are paid on EVERY request. The per-mode estimate (compare-mcp
 # smallest, decision-mcp next with the shortlist card inspector, marketplace-mcp
@@ -48,7 +48,7 @@
           - decision-mcp
         failOnStartupError: false
 
-    # Deliberate full-mount choice: 41 model-facing tools (39 without an MPSTATS token), the largest tool
+    # Deliberate full-mount choice: 39 model-facing tools, the largest tool
     # list per request (see docs/TOOLS.md). Operator-only *_selfcheck tools are no longer published over
     # MCP; `marketplace-mcp doctor` still runs them from the CLI.
     - id: ru-marketplace-full

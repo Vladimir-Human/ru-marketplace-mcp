@@ -83,7 +83,6 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "citilink": ("citilink.ru",),
     "aliexpress": ("aliexpress.ru", "aliexpress.com"),
     "cian": ("cian.ru",),
-    "mpstats": ("mpstats.io",),
 }
 
 _MISSING = object()

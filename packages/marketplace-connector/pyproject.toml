@@ -29,7 +29,6 @@ dependencies = [
     "aliexpress-connector",
     "cian-connector",
     "compare-connector",
-    "mpstats-connector",
 ]
 
 [project.scripts]
@@ -57,4 +56,3 @@ citilink-connector = { workspace = true }
 aliexpress-connector = { workspace = true }
 cian-connector = { workspace = true }
 compare-connector = { workspace = true }
-mpstats-connector = { workspace = true }

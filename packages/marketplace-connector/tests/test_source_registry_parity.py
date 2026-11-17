@@ -156,8 +156,7 @@ def test_the_ci_inventory_reads_the_registry_instead_of_a_table():
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     # The smoke job's tool inventory and console-script check both read
-    # mcp_core.sources now; the copies they replaced had already drifted
-    # (mpstats sat in one table and not the other).
+    # mcp_core.sources now.
     assert "from mcp_core.sources import SOURCES" in workflow
     assert "uv run which megamarket-mcp" not in workflow
     assert '"megamarket": 2' not in workflow

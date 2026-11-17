@@ -259,13 +259,7 @@ jobs:
           # MCP tools (they run via `marketplace-mcp doctor`), so every
           # connector count is one lower than the pre-dsh-packaging contract.
           # Both the server list and the expected counts come from the source
-          # registry (mcp_core.sources): the inline copies this replaces had
-          # already drifted — mpstats sat in EXPECTED but was never imported,
-          # and the loop still printed a clean "all servers registered their
-          # expected tools" while checking 11 of 12.
-          # mpstats is imported directly, like every other connector here: the
-          # mount gate that hides it from an unconfigured unified profile lives
-          # in marketplace_connector, not in the connector (R-MPSTATS-MOUNT-GATE).
+          # registry (mcp_core.sources).
           from mcp_core.sources import SOURCES
 
           servers = {}
@@ -395,7 +389,7 @@ jobs:
           test -f "$installed/cordis.patch.yml"
           skills=$(find "$installed/skills" -name SKILL.md | wc -l)
           echo "vendored skills: $skills"
-          test "$skills" -eq 15
+          test "$skills" -eq 14
 
       - name: All MCP rows are still disabled by default
         # The safety promise of this bundle: skills are free, MCP tools are opt-in.

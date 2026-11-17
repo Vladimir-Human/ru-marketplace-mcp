@@ -226,19 +226,6 @@ services:
       - "127.0.0.1:8015:8000"
     restart: unless-stopped
 
-  # mpstats-mcp is the optional paid source: without MPSTATS_MP_AUTH the server
-  # starts but its tools return auth_missing. No Chrome needed — plain httpx.
-  mpstats:
-    build: .
-    image: ru-marketplace-mcp:2.9.4
-    command: ["mpstats-mcp"]
-    environment:
-      <<: *http-environment
-      # MPSTATS_MP_AUTH: "eyJ0eXAi..."  # JWT from a logged-in mpstats.io plugin session
-    ports:
-      - "127.0.0.1:8012:8000"
-    restart: unless-stopped
-
   # --- Optional Chrome sidecar for tier-2 sources. Uncomment to enable. ---
   # chrome:
   #   image: zenika/alpine-chrome:latest

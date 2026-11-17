@@ -44,7 +44,7 @@ from mcp_core.sources import SOURCES
 # START_BLOCK_OFFLINE_EDGES
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SOURCE_NAMES = tuple(spec.name for spec in SOURCES if spec.kind == "marketplace" and spec.name != "mpstats")
+SOURCE_NAMES = tuple(spec.name for spec in SOURCES if spec.kind == "marketplace")
 BUDGET_GROUPS = {"yandex_market": "yandex", "detsky_mir": "detmir"}
 ROW_KEYS = {
     "run_id",
@@ -771,7 +771,6 @@ def test_only_and_skip_select_canonical_sources(
     assert matrix_edges.run(*argv) == 0
     assert {row["source"] for row in matrix_edges.rows()} == selected
     assert {source for source, _, _ in matrix_edges.calls} == selected
-    assert "mpstats" not in {source for source, _, _ in matrix_edges.calls}
 
 
 @pytest.mark.req("R-LIVE-MATRIX")
@@ -781,7 +780,6 @@ def test_only_and_skip_select_canonical_sources(
     [
         ("--only", "not-a-source"),
         ("--skip", "not-a-source"),
-        ("--only", "mpstats"),
         ("--unexpected",),
         ("--only",),
     ],

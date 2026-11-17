@@ -190,7 +190,6 @@ NEXT_STEP_WB_DOM_FALLBACK = (
     "WB's API refuses this address; `wb_card` and `wb_search` fall back to the scraping Chrome "
     "automatically. Set `WB_TRANSPORT=dom` to make doctor check that path too."
 )
-NEXT_STEP_MPSTATS_AUTH = "Set `MPSTATS_MP_AUTH` in the MCP server's environment (your MPStats token)."
 NEXT_STEP_DRIFT = (
     "Parser drift: run `uv run python scripts/diagnose_drift.py {source}` and open an issue with its output."
 )
@@ -217,7 +216,7 @@ NEXT_STEP_SELFCHECK_ERROR = (
 
 # The sources scripts/diagnose_drift.py can actually probe: its SOURCES keys
 # plus its API_SOURCES. Everything else (wildberries, ozon, yandex_market,
-# detsky_mir, avito, aliexpress, cian, mpstats) is rejected by that script's
+# detsky_mir, avito, aliexpress, cian) is rejected by that script's
 # argparse, so it must not be advertised as the way to diagnose them. The set
 # comes from the source registry's drift_probe facts; a test parses the script
 # and keeps both honest.
@@ -1073,7 +1072,6 @@ def cmd_install(argv: list[str]) -> int:
     else:
         print(f"#   - Profile {chosen_profile}: {PROFILE_DETAILS[chosen_profile]}.")
         print(f"#   - Some sources need your Chrome (CDP) — see {_cdp_setup_pointer()}.")
-        print("#   - mpstats is optional paid analytics — requires MPSTATS_MP_AUTH in the server environment.")
         print()
         print("# Need one entry per source instead? Add --per-source.")
         print("# Need another tool set? Add --profile decision or --profile full.")
@@ -1255,8 +1253,6 @@ def next_step(
             "The live budget refused this check; this says nothing about the source. "
             "Start a new bounded run with `python scripts/live_check.py reset`."
         )
-    if "auth_missing" in reasons:
-        return NEXT_STEP_MPSTATS_AUTH
     if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
         # With the fallback on, the tools already read WB through the DOM path;
         # only an explicit opt-out needs the old "switch transport" instruction.

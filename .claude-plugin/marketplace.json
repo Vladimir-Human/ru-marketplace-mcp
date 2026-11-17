@@ -2,12 +2,12 @@
   "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
   "name": "ru-marketplace-mcp",
   "owner": {"name": "Vladimir-Human", "url": "https://github.com/Vladimir-Human"},
-  "description": "ru-marketplace-mcp для Claude Code: 12 маркетплейсов РФ и Китая и недвижимость Циан как MCP-серверы и 15 навыков без ключей API.",
+  "description": "ru-marketplace-mcp для Claude Code: 12 маркетплейсов РФ и Китая и недвижимость Циан как MCP-серверы и 14 навыков без ключей API.",
   "plugins": [
     {
       "name": "ru-marketplace-mcp",
       "source": "./",
-      "description": "Двенадцать площадок РФ и Китая (Wildberries, Ozon, Яндекс Маркет, Авито, Циан, AliExpress, Taobao, Детский мир, Мегамаркет, Lamoda, DNS, Ситилинк) как MCP-серверы и 15 навыков. Сравнение цен без ключей API.",
+      "description": "Двенадцать площадок РФ и Китая (Wildberries, Ozon, Яндекс Маркет, Авито, Циан, AliExpress, Taobao, Детский мир, Мегамаркет, Lamoda, DNS, Ситилинк) как MCP-серверы и 14 навыков. Сравнение цен без ключей API.",
       "version": "2.9.4",
       "license": "MIT",
       "keywords": ["mcp", "wildberries", "ozon", "yandex-market", "avito", "cian", "aliexpress", "taobao", "price-comparison", "russia"]
