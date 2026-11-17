@@ -8,7 +8,7 @@ SCOPE: Pure A/B/C plans, cost splits, source pauses/skip, child-hook refusal, se
 DEPENDS: live_matrix helpers (costs, items, ids, history); live_budget; e2e_stdio_check client;
          compare_recording (the compare recorder); mcp_core.sources,resources,transport.chrome_cdp; jsonschema; stdlib.
 LINKS: M-LIVE-AUDIT, M-COMPARE-RECORDING, R-LIVE-AUDIT.child, R-LIVE-AUDIT.plans, R-LIVE-AUDIT.capture,
-       R-LIVE-AUDIT.checks, R-LIVE-AUDIT.timing, R-LIVE-AUDIT.runner, R-COMPARE-BENCHMARK-REPLAY.
+       R-LIVE-AUDIT.checks, R-LIVE-AUDIT.timing, R-LIVE-AUDIT.runner, R-COMPARE-BENCHMARK-REPLAY, R-LIVE-PAUSE.
 START_MODULE_MAP
   load_cases: Read audit additions while reusing matrix fixed-query validation.
   plan_run: Pure cost-aware run slice with unresolved compare-winner slots.
@@ -860,16 +860,30 @@ async def _tool_call(
     return evidence
 
 
-def _pause_from(row: dict[str, Any], paused: dict[str, float]) -> None:
+def _site_answers(row: dict[str, Any]) -> list[tuple[Any, Any]]:
+    """(source, result) pairs a site answered in this row; none when our own budget said no."""
     if row.get("budget_refused"):
-        return  # our own budget said no; the site did not refuse anything
+        return []
     value = row.get("result")
     candidates = [(row["source"], value)]
     if isinstance(value, dict):
         candidates.extend(
             (node.get("source"), node) for node in value.get("source_outcomes", []) if isinstance(node, dict)
         )
-    for source, result in candidates:
+    return candidates
+
+
+def _note_site_pauses(row: dict[str, Any], budget: live_budget.Budget, cases: dict[str, Any]) -> None:
+    """R-LIVE-PAUSE: keep a site's own pause in the shared ledger, so later runs honour it too."""
+    for source, result in _site_answers(row):
+        pause = live_budget.retry_after(result)
+        if pause is not None and isinstance(source, str):
+            group = _group(cases, source) if source in cases.get("fixed_queries", {}) else source
+            budget.note_pause(group, pause[1], pause[0])
+
+
+def _pause_from(row: dict[str, Any], paused: dict[str, float]) -> None:
+    for source, result in _site_answers(row):
         code = _error(result)
         if code in {"challenge_required", "rate_limited", "permission_denied", "transport_down"} and isinstance(
             source, str
@@ -1055,6 +1069,7 @@ async def execute_plan(
             row["requests_by_source"] = dict(Counter(entry.get("group") for entry in budget.ledger.load()[before:]))
             _observe_costs(call, row, cases, measured)
             _pause_from(row, paused)
+            _note_site_pauses(row, budget, cases)
             if captures_before is not None and capture_dir is not None and record_dir is not None:
                 _record_comparison(call, capture_dir, captures_before, row, record_dir, record_prefix)
             if row.get("result") is not None:

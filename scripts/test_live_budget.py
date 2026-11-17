@@ -5,6 +5,9 @@ marketplace, loopback excluded, both caps raise before sending, the Ozon
 subprocess hand-off is counted, a renamed hook point fails loudly, two
 installs share one ledger file, two processes share one ledger file, and the
 pages a connector opens in the browser are counted too.
+
+R-LIVE-PAUSE: a marketplace's own pause (retry_after_s) refuses requests there
+until it ends, across reset and runs.
 """
 
 from __future__ import annotations
@@ -602,3 +605,99 @@ def test_a_refused_run_opens_no_raw_popup(tmp_path: Path, clock: FakeClock, monk
     with pytest.raises(live_budget.BudgetExhausted):
         asyncio.run(run())
     assert opened == []
+
+
+# START_BLOCK_PAUSE_TESTS
+
+
+def _seed_pause(ledger_path: Path, group: str, until: float, *, code: str = "rate_limited") -> None:
+    """The pause file next to the ledger, as an earlier run of live_check.py left it."""
+    path = ledger_path.with_name(f"{ledger_path.stem}-pauses{ledger_path.suffix}")
+    pause = {
+        "until": until,
+        "until_utc": "2026-11-17 16:51:36",
+        "since_utc": "2026-11-17 16:31:36",
+        "code": code,
+        "retry_after_s": 1200.0,
+    }
+    path.write_text(json.dumps({"pauses": {group: pause}}), encoding="utf-8")
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+def test_a_marketplace_pause_refuses_requests_there_until_it_ends(
+    tmp_path: Path, clock: FakeClock, fake_http: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A rerun 17 minutes after a 1200 s retry_after went out anyway (2026-11-17); the budget now says no."""
+    budget = _budget(tmp_path, clock)
+    _seed_pause(budget.ledger.path, "megamarket", clock.now + 1200)
+    live_budget.install(budget)
+    client = httpx.Client()
+
+    with pytest.raises(live_budget.BudgetExhausted, match=r"no request before 2026-11-17 16:51:36 UTC") as refused:
+        client.send(httpx.Request("GET", "https://megamarket.ru/catalog/?q=1"))
+    assert type(refused.value).__name__ == "PauseActive"
+    client.send(httpx.Request("GET", "https://www.ozon.ru/one"))
+    assert fake_http == ["https://www.ozon.ru/one"]
+    assert budget.paused == ["megamarket"]
+    assert budget.refused == []
+    assert "[refused] megamarket httpx https://megamarket.ru/" in capsys.readouterr().err
+
+    clock.now += 1200
+    client.send(httpx.Request("GET", "https://megamarket.ru/catalog/?q=2"))
+    assert fake_http[-1] == "https://megamarket.ru/catalog/?q=2"
+    assert [entry["group"] for entry in budget.ledger.load()] == ["ozon", "megamarket"]
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+def test_a_noted_pause_outlives_reset_and_binds_the_next_run(
+    tmp_path: Path, clock: FakeClock, fake_http: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    import live_check
+
+    ledger_path = tmp_path / ".live-budget.json"
+    first = _budget(tmp_path, clock, ledger_path=ledger_path)
+    live_budget.install(first)
+    httpx.Client().send(httpx.Request("GET", "https://www.lamoda.ru/catalogsearch/result/?q=1"))
+    first.note_pause("lamoda", 1200.0, "transport_down")
+    first.note_pause("lamoda", 30.0, "rate_limited")  # a shorter pause never cuts a longer one
+    first.note_pause("ozon", float("inf"), "rate_limited")  # no end is no pause the budget can keep
+
+    assert live_check._reset(first) == 0
+    out = capsys.readouterr().out
+    assert "paused by the marketplace: lamoda answered transport_down; no request before" in out
+    assert "ozon" not in out
+    live_budget.uninstall()
+
+    second = _budget(tmp_path, clock, ledger_path=ledger_path)
+    live_budget.install(second)
+    clock.now += 1199
+    with pytest.raises(live_budget.PauseActive, match=r"lamoda answered transport_down with retry_after_s 1200\.0"):
+        httpx.Client().send(httpx.Request("GET", "https://www.lamoda.ru/c/1"))
+    clock.now += 1
+    httpx.Client().send(httpx.Request("GET", "https://www.lamoda.ru/c/2"))
+    assert fake_http == ["https://www.lamoda.ru/catalogsearch/result/?q=1", "https://www.lamoda.ru/c/2"]
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+@pytest.mark.parametrize(
+    "payload,expected",
+    [
+        ({"error": "rate_limited", "status_code": 429, "retry_after_s": 1200}, ("rate_limited", 1200.0)),
+        ({"error": "transport_down", "retry_after_s": 30.5}, ("transport_down", 30.5)),
+        ({"retry_after_s": 5}, ("error", 5.0)),
+        ({"error": "rate_limited", "retry_after_s": 0}, None),
+        ({"error": "rate_limited", "retry_after_s": -1}, None),
+        ({"error": "rate_limited", "retry_after_s": float("inf")}, None),
+        ({"error": "rate_limited", "retry_after_s": float("nan")}, None),
+        ({"error": "rate_limited", "retry_after_s": True}, None),
+        ({"error": "rate_limited", "retry_after_s": "1200"}, None),
+        ({"error": "rate_limited"}, None),
+        ([{"retry_after_s": 5}], None),
+        (None, None),
+    ],
+)
+def test_retry_after_reads_only_a_positive_finite_pause(payload: Any, expected: Any) -> None:
+    assert live_budget.retry_after(payload) == expected
+
+
+# END_BLOCK_PAUSE_TESTS
