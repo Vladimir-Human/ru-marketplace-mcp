@@ -46,6 +46,52 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested">
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_driver_rejects_missing_price_target" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_html" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_json" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_oracle_rejects_lost_output" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_accepts_real_fallback_amounts" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_matches_nested_item_representations" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_broken_output" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_decoy_made_amount" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_neighbours_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_truncated_amount" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_wrong_price_field" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_uses_any_known_id_field" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_price_mutations" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_raw_amounts_grouped_and_decimal_tokens" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_truncation_coverage" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_unexpected_errors_and_preparser_decode_skips" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_removed_current_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+  </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_already_waiting_on_the_lock_does_not_retry" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
