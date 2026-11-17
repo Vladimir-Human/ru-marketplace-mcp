@@ -309,6 +309,9 @@ def coerce_price(value: Any) -> float | None:
 # Adding a marker anywhere means adding it here.
 DECOY_MARKERS: tuple[str, ...] = (
     "мес",
+    "долями",
+    "сплит",
+    "частями",
     "рассрочк",
     "бонус",
     "балл",

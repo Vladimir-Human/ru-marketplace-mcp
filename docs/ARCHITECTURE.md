@@ -1,7 +1,6 @@
 # Architecture
 
-Fourteen source servers (twelve marketplaces, price comparison, and the
-optional MPStats analytics connector) plus a unified `marketplace-mcp`, all over one shared
+Thirteen source servers (twelve marketplaces and price comparison) plus a unified `marketplace-mcp`, all over one shared
 runtime. This document covers how they fit together and why the structure is what it
 is.
 
@@ -24,7 +23,6 @@ ru-marketplace-mcp/
 │   ├── aliexpress-connector/   AliExpress           → aliexpress-mcp
 │   ├── cian-connector/         Cian real estate     → cian-mcp
 │   ├── compare-connector/      cross-marketplace    → compare-mcp
-│   ├── mpstats-connector/      MPStats analytics (paid, optional) → mpstats-mcp
 │   └── marketplace-connector/  unified mount + CLI  → marketplace-mcp
 ├── skills/                  agent-facing usage docs, one per connector
 ├── scripts/                 CDP launchers, stdout guard
@@ -89,9 +87,7 @@ budget instead of surfacing the block.
 
 **Tier 2, `chrome_cdp`:** the fetch runs inside a Chrome the operator started and
 logged into. This is the answer for sources that reject datacenter fingerprints
-outright, and it is why those sources need no stored credentials. (The optional
-MPStats connector is the one exception: it takes a paid account token via
-`MPSTATS_MP_AUTH`.) Threat model and
+outright, and it is why those sources need no stored credentials. Threat model and
 setup: [CDP_SETUP.md](CDP_SETUP.md).
 
 The CDP dial target is configurable: `CHROME_CDP_HOST` (default `127.0.0.1`) and
@@ -245,7 +241,7 @@ Live tests are marked (`-m "not live and not cdp"`) and excluded from CI,
 which has neither a Russian-friendly IP nor a logged-in browser. Including them
 would produce noise instead of signal.
 
-Coverage is branch-measured over the sixteen packages' source and enforced at
+Coverage is branch-measured over the fifteen packages' source and enforced at
 an 80 % floor (raised from 70 % in October 2026, with the total at 83 %). `scripts/check_coverage_floor.py` measures the offline suite and
 compares it against that floor, so a quiet regression surfaces where the change was made
 rather than only in a distant CI run.

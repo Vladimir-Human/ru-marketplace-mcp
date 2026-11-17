@@ -16,9 +16,7 @@ AliExpress, Taobao, Megamarket, Lamoda, DNS and Citilink, then compare product p
 in one call. Cian adds real-estate search and listing cards separately.
 
 Read-only. No credentials, no API keys, no account required — the marketplaces with
-hard anti-bot are read through your own Chrome. One optional exception: MPStats
-takes a paid account token (`MPSTATS_MP_AUTH`) if you want its analytics; without
-it every other server is unaffected.
+hard anti-bot are read through your own Chrome.
 
 <p align="center">
   <img src="docs/assets/demo-compare.svg" width="760"
@@ -36,7 +34,7 @@ Installs from PyPI and wires the detected client (`--dry-run` shows the plan and
 [First successful query](docs/QUICKSTART.md) walks through installation, choosing
 a server, targeted health checks, and verifying an offer before recommending it.
 
-**2.7.0 verification:** on 30 October, from one address, Wildberries fell back to its rendered search page after the API refused (HTTP 403) and returned 40 results, all priced. The other sources' code is unchanged since v2.6.0; they were checked in the [v2.6.0 run](docs/releases/RELEASE_NOTES_v2.6.0.md) the same day (12 of 13 sources; MPStats has no token). [v2.7.0 details](docs/releases/RELEASE_NOTES_v2.7.0.md).
+**2.7.0 verification:** on 30 October, from one address, Wildberries fell back to its rendered search page after the API refused (HTTP 403) and returned 40 results, all priced. The other sources' code is unchanged since v2.6.0; they were checked in the [v2.6.0 run](docs/releases/RELEASE_NOTES_v2.6.0.md) the same day (12 of 13 sources; MPStats had no token). [v2.7.0 details](docs/releases/RELEASE_NOTES_v2.7.0.md).
 
 ## What you get
 
@@ -55,7 +53,6 @@ a server, targeted health checks, and verifying an offer before recommending it.
 | **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
 | **Cian**          | 2     | your Chrome (WAF by IP)                                                      | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
 | **Compare**       | 4     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
-| **MPStats**       | 2     | paid MPStats account, `mp_auth` cookie (optional)                             | 30-day sales/stock graphs per Ozon/WB SKU, warehouse split (FBS/FBO)                               |
 
 Anonymous, no browser: Wildberries, Yandex Market and Detsky Mir. Lamoda cards
 try HTTP GraphQL first and need your Chrome (CDP) only for the fallback tier.
@@ -68,20 +65,13 @@ back-to-back calls degrades them (DNS and Taobao both dropped that way in testin
 so the connectors hold a gap between calls themselves. Run `marketplace-mcp doctor`
 from your own session for the current state.
 
-MPStats stands apart as the only **paid** source: without `MPSTATS_MP_AUTH` the
-unified `marketplace-mcp` does not mount its tools at all — they would only
-answer `auth_missing` — so it is optional; the other thirteen servers never
-notice. The standalone `mpstats-mcp` still boots and answers `auth_missing`.
-MPStats now runs its own MCP server, `https://mcp.mpstats.io/mcp?token=<your MPStats token>`:
-connect that one first. The `mpstats_*` tools here are deprecated and go in v2.11.0.
+MPStats analytics now come from the official MPStats MCP server, `https://mcp.mpstats.io/mcp?token=<your MPStats token>`; ru-marketplace-mcp 2.10.x is the last version with the `mpstats_*` tools.
 
-39 tools across 14 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
+37 tools across 13 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
 unified `marketplace-mcp` that mounts them all under one client entry. It adds two
 tools of its own — `marketplace_sources` (which connectors mounted, and which dropped
 out and why) and `marketplace_health` (is Chrome up, which hosts are cooling down,
-which page unblocks a source) — so it exposes 41 tools with an MPStats token and 39
-without one: the 37 mounted sources plus those two when the two `mpstats_*` tools are
-left out. stdio is the default;
+which page unblocks a source) — so it exposes 39 tools: the 37 mounted tools plus those two. stdio is the default;
 HTTP transport is opt-in for remote deployment — see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -144,8 +134,6 @@ afterwards; `--dry-run` shows the result without writing, and `--per-source` wri
 one entry per source instead (it cannot be combined with `--profile`). Each server is
 also a console script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`,
 `cian-mcp`, `compare-mcp`) launched through `uv run --directory /path/to/repo <script>`.
-The optional `mpstats-mcp` runs the same way with `MPSTATS_MP_AUTH` in the entry's
-`env` (paid MPStats account; without it the tools return `auth_missing`).
 `marketplace-mcp install [claude|claude-code|cursor|dsh]` prints the selected profile's
 `marketplace` entry with your checkout's real path filled in — no placeholder to
 hand-edit — or the console-script path on PATH when installed as a wheel; an unknown
@@ -186,7 +174,7 @@ dsh plugin --profile web add ru-marketplace-mcp-dsh
 dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 ```
 
-That gives you 15 skills immediately and **no** MCP tools: all three MCP rows stay
+That gives you 14 skills immediately and **no** MCP tools: all three MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
 A mounted server is paid on every request — ≈1.8k tokens for the
@@ -458,34 +446,9 @@ priced currencies are sorted and joined with `/`; no native prices gives
 Converting here would bake in an exchange rate that goes stale silently, so the
 caller converts if they want to.
 
-### MPStats — `mpstats_*`
-
-Sales and stock analytics per Ozon or Wildberries SKU via the MPStats browser
-plugin. Unlike every other connector, this one is **optional and needs a paid
-MPStats account**: auth is a single `mp_auth` cookie (JWT from a logged-in plugin
-session at mpstats.io), set via the `MPSTATS_MP_AUTH` env var. Without it the
-standalone `mpstats-mcp` boots normally and answers `auth_missing`, while the
-unified `marketplace-mcp` does not mount the two tools, so no request pays for
-schemas that could only fail.
-
-| Tool                                     | What it does                                                                            |
-| ---------------------------------------- | --------------------------------------------------------------------------------------- |
-| `mpstats_item(skus, place, oz_fbs=True)` | 30-day analytics for up to 100 SKUs: orders, price, stock, per-day graphs, seller/brand |
-| `mpstats_warehouses(skus, place)`        | Warehouse split: FBS (seller's warehouse) vs FBO (marketplace warehouse), `last_update` |
-
-`place` is `ozon` or `wildberries`. Graphs are length 30, oldest first: the last
-non-zero cell is the current price or stock. The two differ on purpose when the
-whole graph is zero: price becomes `None` (a false `0` would win any "cheapest"
-comparison), while stock becomes `0`, because "none in stock" is a real reading
-rather than an absence of data. An empty graph yields `None` for both. A zero
-cell means "no data for that day", not "the value was zero", so sum the graph for
-a window total. A missing token or a transport failure reports
-as `inconclusive`, not `drift` — no chasing a schema drift that never happened.
-The token is a secret on a paid, quota-billed account: never log or commit it.
-
 ## Agent skills
 
-Every connector ships its own skill under `skills/` — fifteen of them — one per source plus a shared
+Every connector ships its own skill under `skills/` — fourteen of them — one per source plus a shared
 `marketplace` overview. A skill is not a restatement of this README: it tells the agent when to
 reach for that source at all, what the source does not have, and which of its
 answers should not be trusted without a second look.
@@ -505,7 +468,6 @@ answers should not be trusted without a second look.
 | `skills/aliexpress-connector` | `aliexpress-mcp`  |
 | `skills/cian-connector`       | `cian-mcp`        |
 | `skills/compare-prices`       | `compare-mcp`     |
-| `skills/mpstats-connector`    | `mpstats-mcp`     |
 | `skills/marketplace`          | `marketplace-mcp` |
 
 `mcp-core` is the shared runtime rather than a server, so it has no skill.
@@ -540,12 +502,11 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                |
 | `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                           |
-| `MPSTATS_`           | `MP_AUTH` (the only required one — without it the tools return `auth_missing`), `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY` |
 | `MCP_`               | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT`                                                         |
 
 `*_CACHE_TTL=0` disables caching. `*_PROXY` overrides the standard
-`HTTPS_PROXY`/`ALL_PROXY` — seven connectors carry one: `WB_`, `YANDEX_`, `DETMIR_`,
-`OZON_`, `AVITO_`, `LAMODA_` and `MPSTATS_`. Taobao has none by design and
+`HTTPS_PROXY`/`ALL_PROXY` — six connectors carry one: `WB_`, `YANDEX_`, `DETMIR_`,
+`OZON_`, `AVITO_` and `LAMODA_`. Taobao has none by design and
 Megamarket, DNS and Citilink none either:
 their traffic goes through your own Chrome, whose egress is that browser's
 configuration. Only successful reads are cached: remembering a failure would stretch
@@ -560,24 +521,18 @@ variable is what opens the tier-2 sources — Ozon, Avito, Taobao, Megamarket,
 Lamoda, DNS, Citilink, AliExpress and Cian — from a container without host networking.
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-**One secret, and it is optional.** Every server except MPStats needs nothing:
-nothing to configure, nothing to leak. MPStats alone has `MPSTATS_MP_AUTH`, the JWT
-of a paid account — it belongs only in the client entry's env, never in code or
-commits.
-
 **Only the sources you use: `MARKETPLACE_SOURCES`.** The unified server mounts every
 source, and their tool schemas are sent to the client on every request. Set
 `MARKETPLACE_SOURCES` in the `marketplace-mcp` entry's env to a comma-separated list
 to mount only those, e.g. `wildberries,ozon,yandex_market,avito,aliexpress,dns,compare`.
 Names are canonical (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`, `avito`,
-`taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`,
-`mpstats`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. An unknown
+`taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. An unknown
 name is rejected at startup with the supported-source list, so a typo cannot
 silently produce a partial server. Unset or blank mounts everything, as before.
 Deselected sources show up in
 `marketplace_sources` under `skipped`, marked as deselected rather than failed to
 import. By default, `compare_prices` queries only selected goods sources with
-text search: Detsky Mir has no text search, and Cian and MPStats do not take part
+text search: Detsky Mir has no text search, and Cian does not take part
 in goods comparison. Explicit `sources` can narrow this subset, not re-enable a
 disabled source: that request returns `bad_request`, as does inspecting its card.
 
@@ -637,8 +592,7 @@ contain instructions, it is input, not policy.
 Marketplace terms of service generally disallow unofficial parsing. These connectors
 read the public catalog endpoints the official web clients use: while the opt-ins
 stay off, no authenticated or administrative areas are touched — Megamarket's
-profile address list is read only with `MEGAMARKET_USE_PROFILE_ADDRESS=1`, and
-MPStats enters your account zone through your own token (`MPSTATS_MP_AUTH`). The
+profile address list is read only with `MEGAMARKET_USE_PROFILE_ADDRESS=1`. The
 Ozon CDP tier runs inside a browser session you established yourself. Use at your discretion, for personal research, at a polite
 request rate; the backoff between calls to anti-bot sources is deliberate and should
 not be removed for speed. Tool output is not meant for redistribution or bulk
@@ -658,7 +612,6 @@ credit too: the full contributor and PR index is in
 
 ## Thanks
 
-- [@Xpos587](https://github.com/Xpos587) — MPStats connector, [PR #5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5).
 - [@avxone](https://github.com/avxone) — Avito selfcheck fix, [PR #37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37).
 - [@Khalmatov](https://github.com/Khalmatov) — Ozon review provenance, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
 - [@fosteev](https://github.com/fosteev) — macOS CDP stealth and the Cian connector, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).

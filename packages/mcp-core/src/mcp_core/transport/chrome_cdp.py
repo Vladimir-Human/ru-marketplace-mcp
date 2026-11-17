@@ -34,8 +34,8 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # START_MODULE_CONTRACT
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy, snapshots and opt-in Ozon OS identity.
-# DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant.
+# DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget,raw_targets; stdlib.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-RAW-TARGETS; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -105,6 +105,7 @@ from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
 from mcp_core.redact import redact_error_text
 from mcp_core.transport.cdp_budget import HostRefusingError, Slot, navigation_budget
+from mcp_core.transport.raw_targets import close_target
 
 # websockets ships with the cdp extra; stay importable without it (the raw-CDP
 # fallback raises a clear error instead).
@@ -337,7 +338,7 @@ def _running_as_root() -> bool:
 _last_spawn: Any = None
 
 
-def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
+def _start_chrome_with_cdp(*, stealth: bool = STEALTH, extra_flags: tuple[str, ...] = ()) -> tuple[bool, str]:
     """Spawn Chrome with remote debugging enabled. Returns ``(ok, detail)``.
 
     ``stealth`` controls the Windows off-screen arguments; the connector
@@ -345,7 +346,8 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
     ``False`` so the manual launch is on-screen. Idempotent by contract:
     callers check ``_cdp_port_open()`` first. Chrome enforces
     ``--user-data-dir`` exclusivity, so a lost startup race simply means the
-    second process exits on its own.
+    second process exits on its own. ``extra_flags`` is a test-only hook for
+    isolated local simulators; runtime callers leave it empty.
     """
     global _last_spawn
     _last_spawn = None
@@ -379,6 +381,7 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
 
     # Anchor to about:blank so Chrome survives the connector closing its last
     # tab — otherwise every call pays the full spawn + CDP-bind wait again.
+    args.extend(extra_flags)
     args.append("about:blank")
 
     try:
@@ -1718,9 +1721,9 @@ async def _raw_cdp_page(
                 yield page
         finally:
             try:
+                # Chrome may answer the first close with success and keep the tab (R-CDP-SIM-S4).
                 await asyncio.wait_for(
-                    browser._send("Target.closeTarget", {"targetId": target_id}, timeout=_RAW_CONNECT_TIMEOUT_S),
-                    timeout=_TAB_OP_TIMEOUT_S,
+                    close_target(browser._send, target_id, timeout_s=_RAW_CONNECT_TIMEOUT_S), timeout=_TAB_OP_TIMEOUT_S
                 )
             except Exception:
                 pass

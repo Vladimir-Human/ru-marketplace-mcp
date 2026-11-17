@@ -7,7 +7,7 @@ SCOPE: Sequential guarded calls, catalogue states, same-id RUB deltas, whitelist
        first-three audit ids, measured-cost planning and previous-release stdout diff; no publishing.
 DEPENDS: live_check._call_tool,_quiet_diagnostics; live_budget; mcp_core errors,sources,resilience,version;
          stdlib asyncio,datetime,json,re,subprocess,time,pathlib,urllib.parse.
-LINKS: M-LIVE-MATRIX, R-LIVE-MATRIX, R-LIVE-MATRIX.whitelist, R-LIVE-MATRIX.guard,
+LINKS: M-LIVE-MATRIX, R-LIVE-MATRIX, R-LIVE-MATRIX.whitelist, R-LIVE-MATRIX.guard, R-LIVE-PAUSE,
        R-LIVE-MATRIX.delta, R-LIVE-MATRIX.probes.
 START_MODULE_MAP
   load_cases           read the data-driven fixed-query/tool/response-field registry
@@ -58,13 +58,15 @@ ERROR_STATES = {
     "not_found": "inconclusive",
 }
 STATES = frozenset({"healthy", "drift", "needs_human", "refused", "inconclusive"})
+# Probes that sent nothing: over the plan's budget, or the marketplace's own pause still runs.
+SKIPPED = frozenset({"budget_skipped", "retry_after_skipped"})
 
 
 def load_cases() -> dict[str, Any]:
     data = json.loads(AUDIT_CASES_PATH.read_text(encoding="utf-8"))
     from mcp_core.sources import SOURCES
 
-    expected = {spec.name for spec in SOURCES if spec.kind == "marketplace" and spec.name != "mpstats"}
+    expected = {spec.name for spec in SOURCES if spec.kind == "marketplace"}
     cases = data.get("fixed_queries") if isinstance(data, dict) else None
     if not isinstance(cases, dict) or set(cases) != expected:
         raise ValueError("invalid fixed-query registry")
@@ -184,7 +186,7 @@ def _history() -> list[dict[str, Any]]:
 def _expected_cost(history: list[dict[str, Any]], source: str, kind: str) -> int:
     for row in reversed(history):
         probe = row.get(kind)
-        if row.get("source") != source or not isinstance(probe, dict) or probe.get("error_code") == "budget_skipped":
+        if row.get("source") != source or not isinstance(probe, dict) or probe.get("error_code") in SKIPPED:
             continue
         requests = probe.get("requests")
         if type(requests) is int and requests >= 0:
@@ -274,6 +276,12 @@ async def _probe(
         probe["items"] = 0
     if total_blocked or source_blocked:
         return probe, None, total_blocked
+    pause = budget.pause(group)
+    if pause is not None:
+        # R-LIVE-PAUSE: the site asked for a pause; asking again early is a breach, not a probe.
+        probe["error_code"] = "retry_after_skipped"
+        print(f"{source}: paused by the marketplace until {pause.get('until_utc')} UTC; {kind} probe skipped")
+        return probe, None, False
     started = time.monotonic()
     result: Any = None
     code: str | None = None
@@ -283,6 +291,8 @@ async def _probe(
         try:
             result = await _call_tool(case["module"], case[kind]["tool"], kwargs)
             code = _error_code(result)
+        except live_budget.PauseActive:
+            code = "retry_after_skipped"
         except live_budget.BudgetExhausted:
             code = "budget_skipped"
         except TimeoutError:
@@ -380,7 +390,7 @@ async def run(argv: list[str], budget: live_budget.Budget) -> int:
     total_refused = False
     for source, case in cases.items():
         listing, result, blocked = await _probe(source, case, "listing", case["listing"]["kwargs"], budget, history)
-        attempted |= listing["error_code"] != "budget_skipped"
+        attempted |= listing["error_code"] not in SKIPPED
         total_refused |= blocked
         items = _items(result, case, "listing")
         saved = [_id(item, case["item_id_field"]) for item in items[:3]]

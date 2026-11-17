@@ -22,7 +22,6 @@ members = [
     "marketplace-connector",
     "mcp-core",
     "megamarket-connector",
-    "mpstats-connector",
     "ozon-connector",
     "ru-marketplace-mcp",
     "taobao-connector",
@@ -44,7 +43,7 @@ wheels = [
 
 [[package]]
 name = "aliexpress-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/aliexpress-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -173,7 +172,7 @@ wheels = [
 
 [[package]]
 name = "avito-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/avito-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -359,7 +358,7 @@ wheels = [
 
 [[package]]
 name = "cian-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/cian-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -380,7 +379,7 @@ requires-dist = [
 
 [[package]]
 name = "citilink-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/citilink-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -419,7 +418,7 @@ wheels = [
 
 [[package]]
 name = "compare-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/compare-connector" }
 dependencies = [
     { name = "detmir-connector" },
@@ -728,7 +727,7 @@ wheels = [
 
 [[package]]
 name = "detmir-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/detmir-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -758,7 +757,7 @@ wheels = [
 
 [[package]]
 name = "dns-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/dns-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1238,7 +1237,7 @@ wheels = [
 
 [[package]]
 name = "lamoda-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/lamoda-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1374,7 +1373,7 @@ wheels = [
 
 [[package]]
 name = "marketplace-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/marketplace-connector" }
 dependencies = [
     { name = "aliexpress-connector" },
@@ -1388,7 +1387,6 @@ dependencies = [
     { name = "lamoda-connector" },
     { name = "mcp-core" },
     { name = "megamarket-connector" },
-    { name = "mpstats-connector" },
     { name = "ozon-connector" },
     { name = "pydantic" },
     { name = "taobao-connector" },
@@ -1409,7 +1407,6 @@ requires-dist = [
     { name = "lamoda-connector", editable = "packages/lamoda-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "megamarket-connector", editable = "packages/megamarket-connector" },
-    { name = "mpstats-connector", editable = "packages/mpstats-connector" },
     { name = "ozon-connector", editable = "packages/ozon-connector" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "taobao-connector", editable = "packages/taobao-connector" },
@@ -1444,7 +1441,7 @@ wheels = [
 
 [[package]]
 name = "mcp-core"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/mcp-core" }
 dependencies = [
     { name = "fastmcp" },
@@ -1500,7 +1497,7 @@ wheels = [
 
 [[package]]
 name = "megamarket-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/megamarket-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -1515,27 +1512,6 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=4.1.4,<5" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.47" },
-    { name = "pydantic", specifier = ">=2.12" },
-    { name = "pydantic-settings", specifier = ">=2.2" },
-]
-
-[[package]]
-name = "mpstats-connector"
-version = "2.9.4"
-source = { editable = "packages/mpstats-connector" }
-dependencies = [
-    { name = "fastmcp" },
-    { name = "httpx" },
-    { name = "mcp-core" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastmcp", specifier = ">=4.1.4,<5" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pydantic-settings", specifier = ">=2.2" },
 ]
@@ -1638,7 +1614,7 @@ wheels = [
 
 [[package]]
 name = "ozon-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/ozon-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -2236,7 +2212,7 @@ wheels = [
 
 [[package]]
 name = "ru-marketplace-mcp"
-version = "2.9.4"
+version = "2.10.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aliexpress-connector" },
@@ -2250,7 +2226,6 @@ dependencies = [
     { name = "marketplace-connector" },
     { name = "mcp-core" },
     { name = "megamarket-connector" },
-    { name = "mpstats-connector" },
     { name = "ozon-connector" },
     { name = "taobao-connector" },
     { name = "wb-connector" },
@@ -2283,7 +2258,6 @@ requires-dist = [
     { name = "marketplace-connector", editable = "packages/marketplace-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "megamarket-connector", editable = "packages/megamarket-connector" },
-    { name = "mpstats-connector", editable = "packages/mpstats-connector" },
     { name = "ozon-connector", editable = "packages/ozon-connector" },
     { name = "taobao-connector", editable = "packages/taobao-connector" },
     { name = "wb-connector", editable = "packages/wb-connector" },
@@ -2365,7 +2339,7 @@ wheels = [
 
 [[package]]
 name = "taobao-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/taobao-connector" }
 dependencies = [
     { name = "fastmcp" },
@@ -2511,7 +2485,7 @@ wheels = [
 
 [[package]]
 name = "wb-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/wb-connector" }
 dependencies = [
     { name = "curl-cffi" },
@@ -2669,7 +2643,7 @@ wheels = [
 
 [[package]]
 name = "yandex-connector"
-version = "2.9.4"
+version = "2.10.0"
 source = { editable = "packages/yandex-connector" }
 dependencies = [
     { name = "fastmcp" },

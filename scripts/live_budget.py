@@ -20,17 +20,24 @@ request that comes too soon after the previous one to the same marketplace
 sleeps out the rest of the gap first. Every counted request prints one line to
 stderr: ``[req n/40] ozon 3/8 httpx https://...``.
 
+A marketplace that refused with its own pause (``retry_after_s``) gets no
+request until that pause has passed, across runs and processes: the pause is
+kept next to the ledger (``.live-budget-pauses.json``), which ``reset`` does
+not archive, and a request before its end raises ``PauseActive``.
+
 START_MODULE_CONTRACT
 PURPOSE: Enforce the owner's live-run request budget across every transport a connector uses.
 SCOPE: Env limits, grouped ledger (memory/file, atomic, cross-process lock), reservation/gap, transport hooks, install/uninstall.
-DEPENDS: stdlib asyncio,contextlib,datetime,ipaddress,json,os,re,sys,tempfile,threading,time,urllib.parse; httpx, curl_cffi, Playwright, mcp_core.transport.chrome_cdp, ozon_connector.server at install time.
-LINKS: M-LIVE-BUDGET, R-LIVE-BUDGET, R-TRANSPORT.
+DEPENDS: stdlib asyncio,contextlib,datetime,ipaddress,json,math,os,re,sys,tempfile,threading,time,urllib.parse; httpx, curl_cffi, Playwright, mcp_core.transport.chrome_cdp, ozon_connector.server at install time.
+LINKS: M-LIVE-BUDGET, R-LIVE-BUDGET, R-LIVE-PAUSE, R-TRANSPORT.
 START_MODULE_MAP
   BudgetExhausted      raised before a request over the total or per-source cap
+  PauseActive          raised before a request to a marketplace whose own pause has not passed
   REFUSED_PREFIX       start of the stderr line a refused request prints
   Ledger               in-memory or JSON-file request ledger
-  Budget               limits, reservation, gap waits and stderr lines
+  Budget               limits, reservation, gap waits, marketplace pauses and stderr lines
   source_group         marketplace group for a host
+  retry_after          the (code, seconds) pause a tool error asks for
   is_loopback          local CDP hosts that are not counted
   _window_open_url     the URL a window.open() evaluation would load
   _ledger_lock         the cross-process lock around the ledger file
@@ -47,6 +54,7 @@ import contextlib
 import datetime as dt
 import ipaddress
 import json
+import math
 import os
 import re
 import sys
@@ -83,7 +91,6 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "citilink": ("citilink.ru",),
     "aliexpress": ("aliexpress.ru", "aliexpress.com"),
     "cian": ("cian.ru",),
-    "mpstats": ("mpstats.io",),
 }
 
 _MISSING = object()
@@ -94,6 +101,10 @@ REFUSED_PREFIX = "[refused] "
 
 class BudgetExhausted(RuntimeError):
     """The next request would exceed the total or per-marketplace cap."""
+
+
+class PauseActive(BudgetExhausted):
+    """The marketplace asked for a pause (its retry_after_s) that has not passed yet."""
 
 
 def is_loopback(host: str | None) -> bool:
@@ -132,12 +143,54 @@ def _env_number(name: str, default: int | float, cast: Callable[[str], int | flo
     return value
 
 
+def retry_after(payload: Any) -> tuple[str, float] | None:
+    """A tool error's own pause as (error code, seconds), or None when it asks for none."""
+    if not isinstance(payload, dict):
+        return None
+    seconds = payload.get("retry_after_s")
+    if isinstance(seconds, bool) or not isinstance(seconds, int | float):
+        return None
+    if not math.isfinite(seconds) or seconds <= 0:
+        return None
+    code = payload.get("error")
+    return (code if isinstance(code, str) and code else "error"), float(seconds)
+
+
+def _utc(timestamp: float) -> str:
+    return dt.datetime.fromtimestamp(timestamp, dt.UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
 class Ledger:
     """Request entries shared by every budget install in one live run."""
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path
         self._entries: list[dict[str, Any]] = []
+        self._pauses: dict[str, dict[str, Any]] = {}
+
+    @property
+    def pause_path(self) -> Path | None:
+        """Where marketplace pauses live: next to the ledger, outside what ``reset`` archives."""
+        return None if self.path is None else self.path.with_name(f"{self.path.stem}-pauses{self.path.suffix}")
+
+    def load_pauses(self) -> dict[str, dict[str, Any]]:
+        path = self.pause_path
+        if path is None:
+            return dict(self._pauses)
+        if not path.exists():
+            return {}
+        data = json.loads(path.read_text(encoding="utf-8"))
+        pauses = data.get("pauses") if isinstance(data, dict) else None
+        if not isinstance(pauses, dict):
+            raise ValueError(f"{path} is not a live-budget pause file: no pauses object")
+        return pauses
+
+    def save_pauses(self, pauses: dict[str, dict[str, Any]]) -> None:
+        path = self.pause_path
+        if path is None:
+            self._pauses = dict(pauses)
+            return
+        _write_atomically(path, {"pauses": pauses})
 
     def load(self) -> list[dict[str, Any]]:
         if self.path is None:
@@ -155,16 +208,20 @@ class Ledger:
         if self.path is None:
             self._entries = list(entries)
             return
-        handle, temporary = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent)
-        try:
-            with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
-                json.dump({"entries": entries}, stream, ensure_ascii=False, indent=1)
-                stream.write("\n")
-            os.replace(temporary, self.path)
-        except BaseException:
-            with contextlib.suppress(OSError):
-                os.unlink(temporary)
-            raise
+        _write_atomically(self.path, {"entries": entries})
+
+
+def _write_atomically(path: Path, payload: dict[str, Any]) -> None:
+    handle, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
+            json.dump(payload, stream, ensure_ascii=False, indent=1)
+            stream.write("\n")
+        os.replace(temporary, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+        raise
 
 
 def _lock_is_stale(lock_path: Path) -> bool:
@@ -197,7 +254,9 @@ def _ledger_lock(path: Path | None) -> Iterator[None]:
     while True:
         try:
             handle = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as busy:
+        except (FileExistsError, PermissionError) as busy:
+            # Windows answers PermissionError, not FileExistsError, while another
+            # process is deleting the lock file (CI, 2026-11-17): busy, try again.
             if _lock_is_stale(lock_path):
                 with contextlib.suppress(OSError):
                     os.unlink(lock_path)
@@ -205,7 +264,8 @@ def _ledger_lock(path: Path | None) -> Iterator[None]:
             if time.monotonic() >= deadline:
                 raise BudgetExhausted(
                     f"live budget ledger is locked by another run: {lock_path} "
-                    f"(waited {int(LOCK_TIMEOUT_S)} s; the lock is removed after {int(LOCK_STALE_S)} s)"
+                    f"(waited {int(LOCK_TIMEOUT_S)} s; the lock is removed after {int(LOCK_STALE_S)} s; "
+                    f"last error: {type(busy).__name__})"
                 ) from busy
             time.sleep(LOCK_RETRY_S)
             continue
@@ -242,6 +302,34 @@ class Budget:
         self._sleep_async = sleep_async
         self._lock = threading.Lock()
         self.refused: list[str] = []
+        self.paused: list[str] = []
+
+    def pause(self, group: str) -> dict[str, Any] | None:
+        """The marketplace's own pause that has not passed yet, if any."""
+        with self._lock, _ledger_lock(self.ledger.path):
+            pause = self.ledger.load_pauses().get(group)
+        if isinstance(pause, dict) and float(pause.get("until", 0.0)) > self._clock():
+            return pause
+        return None
+
+    def note_pause(self, group: str, retry_after_s: float, code: str) -> None:
+        """Remember a marketplace's own pause, so no request goes there before it ends."""
+        if not math.isfinite(retry_after_s) or retry_after_s <= 0:
+            return
+        with self._lock, _ledger_lock(self.ledger.path):
+            pauses = self.ledger.load_pauses()
+            now = self._clock()
+            until = now + retry_after_s
+            if float(pauses.get(group, {}).get("until", 0.0)) >= until:
+                return
+            pauses[group] = {
+                "until": until,
+                "until_utc": _utc(until),
+                "since_utc": _utc(now),
+                "code": code,
+                "retry_after_s": retry_after_s,
+            }
+            self.ledger.save_pauses(pauses)
 
     @classmethod
     def from_env(cls, ledger_path: Path | None = None) -> Budget:
@@ -258,7 +346,7 @@ class Budget:
         """Book one request and return how long the caller must wait first.
 
         Raises ``BudgetExhausted`` before booking when the request is over a
-        cap. The booking time already includes a concurrent caller's gap, so
+        cap, and ``PauseActive`` while the marketplace's own pause runs. The booking time already includes a concurrent caller's gap, so
         two coroutines cannot both fire at the previous request's timestamp.
         The whole read-check-append-save runs under the ledger lock, so a
         second process cannot lose this booking by saving over it.
@@ -268,12 +356,20 @@ class Budget:
             return 0.0
         group = source_group(host or "")
         refusal = ""
+        paused = False
         now = at = 0.0
         number = count = 0
         with self._lock, _ledger_lock(self.ledger.path):
             entries = self.ledger.load()
             mine = [entry for entry in entries if entry.get("group") == group]
-            if len(entries) >= self.total:
+            pause = self.ledger.load_pauses().get(group)
+            if isinstance(pause, dict) and float(pause.get("until", 0.0)) > self._clock():
+                paused = True
+                refusal = (
+                    f"{group} answered {pause.get('code')} with retry_after_s {pause.get('retry_after_s')} "
+                    f"at {pause.get('since_utc')} UTC: no request before {pause.get('until_utc')} UTC"
+                )
+            elif len(entries) >= self.total:
                 refusal = f"live budget exhausted: {len(entries)}/{self.total} total (a new run starts after `python scripts/live_check.py reset`)"
             elif len(mine) >= self.per_source:
                 refusal = f"live budget exhausted for {group}: {len(mine)}/{self.per_source} requests (a new run starts after `python scripts/live_check.py reset`)"
@@ -284,7 +380,7 @@ class Budget:
                 entries.append(
                     {
                         "t": at,
-                        "utc": dt.datetime.fromtimestamp(at, dt.UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                        "utc": _utc(at),
                         "group": group,
                         "kind": kind,
                         "url": url[:160],
@@ -297,10 +393,10 @@ class Budget:
             # A connector maps the refusal to its own transport error, so a
             # selfcheck row reads transport_down; this line and the ledger
             # summary are where the operator sees that the budget said no.
-            self.refused.append(group)
+            (self.paused if paused else self.refused).append(group)
             print(f"{REFUSED_PREFIX}{group} {kind} {url[:160]}: {refusal}", file=sys.stderr)
             sys.stderr.flush()
-            raise BudgetExhausted(refusal)
+            raise (PauseActive if paused else BudgetExhausted)(refusal)
         print(f"[req {number}/{self.total}] {group} {count}/{self.per_source} {kind} {url[:160]}", file=sys.stderr)
         sys.stderr.flush()
         return at - now

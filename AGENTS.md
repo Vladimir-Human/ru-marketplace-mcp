@@ -61,7 +61,7 @@ These rules win over older guidance in other files; report a conflict instead of
 
 ## Live runs
 
-- Only on the owner's machine with the owner's Chrome. There is no limit on runs a day: the budget below and each source's own answer protect the sites and the owner's browser. After `rate_limited` or a refusal page, call that source again only after its `retry_after_s`.
+- Only on the owner's machine with the owner's Chrome. There is no limit on runs a day: the budget below and each source's own answer protect the sites and the owner's browser. After `rate_limited` or a refusal page, call that source again only after its `retry_after_s`; `live_check.py` keeps that pause across commands and refuses an earlier request.
 - Always through `scripts/live_check.py`. Its preflight checks writable temp space, the Playwright driver and a bare CDP connect, and on Windows moves TEMP into the repo or switches to system Node by itself; no manual workarounds.
 - `live_check.py preflight` runs those setup checks alone (no request). `live_check.py matrix [--only a,b] [--skip c]` measures each source once (a fixed-query listing and its first card) and appends whitelisted rows to the gitignored `.live-history.jsonl`; it runs on demand only, never on a schedule.
 - `scripts/live_budget.py` counts outgoing marketplace requests, not tool calls: 40 per run, 8 per source, at least 3 s between requests to one source. Screenshot navigations are booked in the same ledger.
@@ -77,8 +77,7 @@ These rules win over older guidance in other files; report a conflict instead of
 3. `refused`, `needs_human` or `inconclusive` now → one rerun after the source's `retry_after_s` or after the owner has passed the check. Still not healthy and the release changes that source → the same call on the previous tag: old passes and new fails blocks; both fail → release and name the source under known limits.
 4. `scripts/bump_version.py` and the version gate pass; the version is not on PyPI yet.
 5. Every release-note claim is backed by a public-tool call on that source.
-6. At least 24 h since the previous tag unless it fixes that tag's regression; at most one tag a day.
 
-- The release commit is made when 1-5 pass; the tag goes on it when 1-6 pass. If a later release commit exists by then, only the latest is tagged and the earlier number is skipped.
+- The release commit is made and tagged when 1-5 pass.
 - A release that removes or renames a public tool or changes a default waits for the owner's yes.
 - Release notes list user-visible changes only, never checks, tests, CI or reviews.
