@@ -895,9 +895,9 @@ async def avito_seller(
     """Read an Avito seller's rendered profile page over paced, allowlisted CDP.
 
     Accept an avito.ru /brands/<id> or /user/<id>/profile URL/path (query and
-    fragment stripped), a bare hash/id, or brands/<id> / user/<id>. Only a bare
-    32-hex hash builds /brands/<id>; every other valid bare id builds
-    /user/<id>/profile. seller_id from avito_card always opens that same seller.
+    fragment stripped), a bare hash/id, or avito_card's seller_id (brands/<id>,
+    user/<id>). Only a bare 32-hex hash builds /brands/<id>; any other bare id
+    builds /user/<id>/profile.
     Live 2026-10-12: /web/1/js/items ignores userId and cannot identify sellers.
 
     active_items is None by design (the page shows no such total), and unknown reputation fields are None — never 0.
