@@ -19,8 +19,27 @@ Offline by construction: computed from the mounted FastMCP objects.
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
+import pytest
+from fastmcp import Client, FastMCP
 from marketplace_connector import server
+
+from .conformance.test_output_size import build_full_server
+
+# START_MODULE_CONTRACT
+# PURPOSE: Preserve guide pointers and guard R-INTERFACE-GUARDS.descriptions.
+# SCOPE: Full registry-mounted tools/list, non-empty input descriptions and 1600-character tool descriptions; offline only.
+# DEPENDS: FastMCP; pytest; marketplace server; conformance full-profile assembly.
+# LINKS: M-INTERFACE-GUARDS; M-SOURCES; R-INTERFACE-GUARDS.descriptions.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# _guide_pointer: The existing per-tool guide wording.
+# assert_description_guards: Check every listed parameter and the full tool description length.
+# test_*: Existing guide checks, full-profile description guards, and planted failures.
+# END_MODULE_MAP
+
+# START_BLOCK_GUIDE_CHECKS
 
 # The wording is fixed by mcp_core.resources.guide_pointer; this file spells it
 # out so the test fails if the wording and the registration ever disagree.
@@ -56,3 +75,72 @@ def test_reference_prose_left_the_descriptions_for_the_guides() -> None:
         if "## Return Format" in (tool.description or "") or "## Error Format" in (tool.description or "")
     )
     assert not leaked, f"reference sections are back in the paid channel: {leaked}"
+
+
+# END_BLOCK_GUIDE_CHECKS
+# START_BLOCK_DESCRIPTION_GUARDS
+DESCRIPTION_CAP = 1_600
+
+
+def assert_description_guards(tools: list[Any]) -> None:
+    """Check the actual tools/list schema, not function signatures or a snapshot."""
+    assert tools, "no tools mounted in the full profile"
+    failures = []
+    for tool in tools:
+        description = tool.description or ""
+        if len(description) > DESCRIPTION_CAP:
+            failures.append(
+                f"{tool.name}: description has {len(description)} characters, exceeds {DESCRIPTION_CAP}; move reference text to its guide"
+            )
+        for name, prop in tool.input_schema.get("properties", {}).items():
+            text = prop.get("description")
+            if not isinstance(text, str) or not text.strip():
+                failures.append(f"{tool.name}.{name}: undocumented parameter (non-empty description required)")
+    assert not failures, "interface description guards failed:\n" + "\n".join(failures)
+
+
+@pytest.mark.req("R-INTERFACE-GUARDS.descriptions")
+async def test_every_full_profile_parameter_is_documented_and_descriptions_are_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = build_full_server(monkeypatch)
+    async with Client(app) as client:
+        assert_description_guards(await client.list_tools())
+
+
+@pytest.mark.req("R-INTERFACE-GUARDS.descriptions")
+async def test_description_guard_rejects_a_planted_undocumented_parameter(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = build_full_server(monkeypatch)
+    # A copy-on-mount overlay leaves the real full server and its tools unchanged.
+    copied = FastMCP("interface-guards-copy")
+    copied.mount(app)
+
+    @copied.tool
+    def planted_undocumented(value: str) -> str:
+        """Throwaway negative control; its input intentionally has no description."""
+        return value
+
+    async with Client(copied) as client:
+        tools = await client.list_tools()
+    assert any(tool.name == "yandex_search" for tool in tools), "the copy must retain real mounted tools"
+    with pytest.raises(AssertionError, match=r"planted_undocumented\.value: undocumented parameter"):
+        assert_description_guards(tools)
+
+
+@pytest.mark.req("R-INTERFACE-GUARDS.descriptions")
+async def test_description_guard_rejects_a_planted_long_tool_description(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = build_full_server(monkeypatch)
+    copied = FastMCP("interface-guards-long-description-copy")
+    copied.mount(app)
+
+    @copied.tool(description="x" * (DESCRIPTION_CAP + 1))
+    def planted_long_description() -> str:
+        return "offline"
+
+    async with Client(copied) as client:
+        tools = await client.list_tools()
+    with pytest.raises(AssertionError, match="planted_long_description: description has 1601 characters"):
+        assert_description_guards(tools)
+
+
+# END_BLOCK_DESCRIPTION_GUARDS
