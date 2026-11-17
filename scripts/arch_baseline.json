@@ -3,7 +3,7 @@
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
     "packages/ozon-connector/src/ozon_connector/server.py": 1787,
-    "packages/wb-connector/src/wb_connector/server.py": 2740
+    "packages/wb-connector/src/wb_connector/server.py": 2387
   },
   "functions": {
     "packages/aliexpress-connector/src/aliexpress_connector/server.py::_aliexpress_selfcheck_impl": 174,
