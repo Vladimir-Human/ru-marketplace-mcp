@@ -51,7 +51,7 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
-  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE,G-CAPTURE-MUTATION-STUFFED-TITLES">
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE">
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
@@ -69,7 +69,6 @@
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_ambiguous_title_oracle_rejects_a_planted_comparable_winner" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_compare_regular_price_and_winner_ignore_cheaper_conditional_price" requirements="R-CAPTURE-MUTATION.conditional-price" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_permutation_oracle_rejects_planted_order_or_winner" requirements="R-CAPTURE-MUTATION.permutation" />
-    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_ambiguous_title_minimal_violation" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_keyword_stuffed_and_accessory_titles_never_win" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_permutations_keep_winners_and_offer_order" requirements="R-CAPTURE-MUTATION.permutation" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_instructions_keep_prices_ids_identity_and_winners" requirements="R-CAPTURE-MUTATION.seller-text" />
@@ -468,6 +467,12 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
   </requirement>
+  <requirement id="R-COMPARE-MODEL-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_query_that_lists_models_itself_keeps_such_titles_comparable" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_title_naming_several_models_of_one_family_names_no_one_product" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_compare_prices_skips_a_model_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_one_model_a_spec_list_or_a_size_is_no_model_list" requirements="R-COMPARE-MODEL-LIST" />
+  </requirement>
   <requirement id="R-COMPARE-MODEL-TOKENS" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
@@ -485,6 +490,11 @@
   <requirement id="R-COMPARE-RELEVANCE-BOUNDARIES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE,G-COMPARE-RELEVANCE-GATES">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
     <test file="packages/compare-connector/tests/test_relevance_markers.py" name="test_compare_mcp_relevance_markers" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-RELEVANCE-BOUNDARIES: no false drops; real unrequested markers still drop." />
+  </requirement>
+  <requirement id="R-COMPARE-SIZE-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_a_title_listing_several_sizes_names_no_one_variant" requirements="R-COMPARE-SIZE-LIST" />
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_compare_prices_skips_a_size_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-SIZE-LIST" />
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_one_size_a_ram_storage_pair_or_one_size_in_two_units_is_no_list" requirements="R-COMPARE-SIZE-LIST" />
   </requirement>
   <requirement id="R-COMPARE-SOURCE-ALIASES" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_source_aliases.py" name="test_an_alias_and_its_canonical_name_query_the_source_once" requirements="R-COMPARE-SOURCE-ALIASES" />
@@ -798,6 +808,15 @@
     <test file="scripts/test_live_matrix.py" name="test_unmeasured_calls_cost_one_and_exact_36_boundary_is_allowed" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
     <test file="scripts/test_live_matrix.py" name="test_whole_run_refused_by_ledger_exits_three_without_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
     <test file="scripts/test_live_matrix.py" name="test_yandex_delta_requires_same_product_and_known_same_offer_sku" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
+  </requirement>
+  <requirement id="R-LIVE-PAUSE" kind="requirement" state="tested">
+    <test file="scripts/test_live_audit.py" name="test_a_site_pause_seen_in_the_audit_is_kept_for_later_runs" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_a_marketplace_pause_refuses_requests_there_until_it_ends" requirements="R-LIVE-PAUSE" title="A rerun 17 minutes after a 1200 s retry_after went out anyway (2026-11-17); the budget now says no." />
+    <test file="scripts/test_live_budget.py" name="test_a_noted_pause_outlives_reset_and_binds_the_next_run" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_retry_after_reads_only_a_positive_finite_pause" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_check.py" name="test_a_tool_error_with_retry_after_pauses_the_marketplaces_the_call_used" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_matrix.py" name="test_a_marketplace_still_paused_is_skipped_without_a_call" requirements="R-LIVE-PAUSE" title="The 2026-11-17 rerun went to Megamarket 17 minutes into its 1200 s pause; the matrix now skips it." />
+    <test file="scripts/test_live_matrix.py" name="test_a_skipped_probe_never_becomes_the_measured_cost" requirements="R-LIVE-PAUSE" />
   </requirement>
   <requirement id="R-LIVE-PREFLIGHT" kind="requirement" state="tested">
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_after_both_fixes_stops_before_budget" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: nothing left to try → both commands printed, ledger untouched." />
