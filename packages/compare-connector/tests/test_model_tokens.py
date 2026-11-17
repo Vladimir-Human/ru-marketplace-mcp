@@ -38,6 +38,19 @@ from compare_connector.identity import model_mismatch
         ("xiaomi redmi note 14 256gb", "Смартфон Xiaomi Redmi Note 14 Pro 4G NFC, 8/256 GB", "14 pro"),
         ("iphone 16 pro", "Смартфон Apple iPhone 16 Pro Max, 256 ГБ", "pro max"),
         ("dyson v15 detect", "Аккумулятор для пылесоса dyson V15 detect absolute", "for dyson"),
+        # Constructed by MiniMax as attacks on the first version, checked by Claude (2026-11-17).
+        ("iphone 16", "Крепление автомобильное, совместимо с iPhone 16", "for iphone"),
+        ("samsung ssd 990 pro 1tb", "Корпус для SSD M.2 2280 под Samsung 990 PRO", "for samsung"),
+        ("телевизор samsung qe55q60b", "Кронштейн настенный для плоских телевизоров Samsung QE55Q60B", "for samsung"),
+        ("dyson v12 detect", "Щётка насадка для пылесоса вертикального Dyson V12 Detect", "for dyson"),
+        (
+            "кофемашина delonghi ec685",
+            "Мерный стакан с крышкой для профессиональной кофемашины Delonghi EC685",
+            "for delonghi",
+        ),
+        ("iphone 16", "Аналог iPhone 16, дисплей и корпус в сборе", "copy"),
+        ("lego technic 42151", "Конструктор LEGO Technic 42151, аналог, 1400 деталей", "copy"),
+        ("nintendo switch", "Nintendo Switch OLED, 64 ГБ, джойстик", "switch oled"),
     ],
 )
 def test_a_title_that_is_not_the_queried_model_says_why(query: str, title: str, reason: str) -> None:
@@ -64,10 +77,24 @@ def test_a_title_that_is_not_the_queried_model_says_why(query: str, title: str, 
         ("iphone 16 pro", "Смартфон Apple iPhone 16 Pro, 256 ГБ"),  # the suffix the query names
         ("iphone 16", "Apple/苹果 iPhone 16手机国行正品"),  # a number glued to CJK text is still a whole token
         ("iphone 16", "Смартфон Apple iPhone 16, 128 ГБ, для работы и игр"),  # "для" before no model word
+        ("smartphone samsung galaxy a54", "Samsung Galaxy A54 8/128GB, AMOLED 120 Гц"),  # an English category word
+        ("laptop lenovo legion pro 5 512gb", "Lenovo Legion Pro 5 16, RTX 4060, 512GB"),
+        ("iphone 16 pro max original", "iPhone 16 Pro Max 256GB"),  # a sales word
+        ("iphone 16 pro max 256gb", "iPhone 16 Pro Max 256GB для Китая, CN version"),  # a market, not a model
     ],
 )
 def test_a_title_that_names_the_queried_model_passes(query: str, title: str) -> None:
     assert model_mismatch(query, title) is None
+
+
+@pytest.mark.req("R-COMPARE-MODEL-TOKENS")
+def test_the_offer_brand_field_names_the_brand_a_title_leaves_out() -> None:
+    """Wildberries keeps the brand out of the product name (recorded: "Смартфон iPhone 14 128 ГБ", brand Apple)."""
+    title = "Смартфон iPhone 16 128 ГБ, черный"
+
+    assert model_mismatch("apple iphone 16 128gb", title) == "missing apple"
+    assert model_mismatch("apple iphone 16 128gb", title, brand="Apple") is None
+    assert model_mismatch("apple iphone 16 128gb", "Чехол для iPhone 16", brand="Apple") == "for iphone"
 
 
 def _stub_citilink(monkeypatch: pytest.MonkeyPatch, rows: list[tuple[str, str, int]]) -> None:

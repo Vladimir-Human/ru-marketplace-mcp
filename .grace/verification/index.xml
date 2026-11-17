@@ -367,6 +367,7 @@
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_compare_prices_skips_another_model_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-TOKENS" />
+    <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_the_offer_brand_field_names_the_brand_a_title_leaves_out" requirements="R-COMPARE-MODEL-TOKENS" title="Wildberries keeps the brand out of the product name (recorded: &quot;Смартфон iPhone 14 128 ГБ&quot;, brand Apple)." />
   </requirement>
   <requirement id="R-COMPARE-PRICE-CONTEXT" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_price_context.py" name="test_avito_fixture_location_reaches_outcome" requirements="R-COMPARE-PRICE-CONTEXT" />

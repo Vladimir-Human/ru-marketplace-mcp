@@ -335,9 +335,10 @@ Unknown prices and Taobao CNY amounts never become zero-ruble offers.
 offers keeps excluded/unpriced offers at the end; in_stock_only requires
 confirmed stock for ranking but does not discard unconfirmed offers.
 cheapest is the raw lowest eligible price; cheapest_comparable additionally
-excludes accessories, other conditions, explicit size mismatches and titles
-that miss a Latin model word or number of the query or add Pro, Max and the
-like after it. Neither proves exact manufacturer identity. price_spread_rub needs two ranked prices.
+excludes accessories, goods made for the device, copies, other conditions,
+explicit size mismatches and titles that miss a Latin model word or number of
+the query or add Pro, Max and the like after it. Neither proves exact
+manufacturer identity. price_spread_rub needs two ranked prices.
 complete=false and source_outcomes/warnings mean a partial comparison, not
 proof of the cheapest price across sources that failed or returned degraded data.
 Offers without image URLs: wildberries, avito, taobao, lamoda, citilink.

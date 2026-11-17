@@ -576,7 +576,7 @@ def build_response(
     for offer in priced:
         if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
             continue
-        if model_mismatch(query, offer.title):
+        if model_mismatch(query, offer.title, offer.brand):
             continue
         title_sizes = extract_size_tokens(offer.title)
         if sizes_conflict(query_sizes, title_sizes):

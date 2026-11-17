@@ -206,12 +206,26 @@ _LATIN_TOKEN = re.compile(rf"(?<![{_WORD_EDGE}])[0-9a-z]+(?:-[0-9a-z]+)*(?![{_WO
 _RUNS = re.compile(r"[a-z]+|[0-9]+")
 # One spelling per product line: titles write "PS5", "PS 5" and "PlayStation 5".
 _ALIASES = ((re.compile(rf"(?<![{_WORD_EDGE}])(?:playstation|ps)[\s-]?5(?![{_WORD_EDGE}])"), "ps5"),)
-# Words that name the kind of goods, not the model: the DNS title of the 990 PRO says
-# "NVMe накопитель", not "SSD".
-_GENERIC_WORDS = frozenset({"ssd", "hdd", "nvme"})
-# A suffix right after a model word names a different model ("iPhone 16 Pro", "PS5 Pro").
-_MODEL_SUFFIXES = frozenset({"pro", "max", "plus", "ultra", "mini", "lite", "fe", "edge"})
-_FOR_WORD = re.compile(rf"(?<![{_WORD_EDGE}])(?:для|for)\s+(\S+)(?:\s+(\S+))?")
+# Words that name the kind of goods or a sales claim, not the model: the DNS title of
+# the 990 PRO says "NVMe накопитель", not "SSD"; Russian titles name the category in
+# Russian when a query names it in English.
+_GENERIC_WORDS = frozenset(
+    {
+        "ssd", "hdd", "nvme",
+        "smartphone", "phone", "laptop", "notebook", "tablet", "console", "headphones", "earbuds",
+        "vacuum", "cleaner", "monitor", "tv", "sneakers", "shoes", "tires", "tyres", "diapers",
+        "original", "new", "global",
+    }
+)  # fmt: skip
+# A suffix right after a model word names a different model ("iPhone 16 Pro", "PS5 Pro", "Switch OLED").
+_MODEL_SUFFIXES = frozenset({"pro", "max", "plus", "ultra", "mini", "lite", "fe", "edge", "oled"})
+# "для", "под", "for", "совместим с", "compatible with" before a model word mark goods made for the device.
+_FOR_WORD = re.compile(
+    rf"(?<![{_WORD_EDGE}])(?:для|под|for|совместим[а-я]*\s+с|compatible\s+with)\s+(?=(?P<window>[^,;|(]*))"
+)
+_FOR_WINDOW_WORDS = 3
+# A title that calls itself a copy is not the original the query names.
+_COPY_WORDS = re.compile(rf"(?<![{_WORD_EDGE}])(?:аналог|копия|реплика|replica)(?![{_WORD_EDGE}])")
 _NEXT_WORD = re.compile(r"[\s-]*([0-9a-z]+)")
 
 
@@ -240,32 +254,37 @@ def _is_code(token: str) -> bool:
 
 # START_CONTRACT: model_mismatch
 # PURPOSE: Say why a search title is not the model the query names, or None when nothing contradicts it.
-# INPUTS: query and title, free text; titles are untrusted marketplace data.
+# INPUTS: query and title, free text; brand, the offer's own brand field (Wildberries keeps it out of the
+#         title); titles and brands are untrusted marketplace data.
 # OUTPUTS: None for a query with no Latin model token (the rule abstains) or a title that names them all;
-#          otherwise a short reason: "missing <token>", "for <token>" (an accessory for the device) or
-#          "<token> <suffix>" (another model, e.g. "16 pro").
-# RULES: every token must appear as a whole word, except that pure-letter words (brand, series) may be
-#        absent when a code token (_is_code) is present; "для"/"for" followed within two words by a non-number
-#        token marks an accessory unless the query says "для"/"for" too; a _MODEL_SUFFIXES word right after a
-#        token is another model unless the query names it.
+#          otherwise a short reason: "missing <token>", "for <token>" (goods made for the device), "copy"
+#          or "<token> <suffix>" (another model, e.g. "16 pro").
+# RULES: every token must appear as a whole word in the title or the brand, except that pure-letter words
+#        (brand, series) may be absent when a code token (_is_code) is present; "для", "под", "for",
+#        "совместим с" or "compatible with" followed within three words (not past a comma) by a non-number
+#        token marks goods for the device, and аналог/копия/реплика a copy, unless the query says so too;
+#        a _MODEL_SUFFIXES word right after a token is another model unless the query names it.
 # SIDE_EFFECTS: None.
-def model_mismatch(query: str, title: str) -> str | None:
+def model_mismatch(query: str, title: str, brand: str = "") -> str | None:
     tokens = _model_tokens(query)
     if not tokens:
         return None
     text, asked = _fold(title), _fold(query)
     patterns = {token: _token_pattern(token) for token in tokens}
-    found = [token for token in tokens if patterns[token].search(text)]
+    named = f"{text} {_fold(brand)}"
+    found = [token for token in tokens if patterns[token].search(named)]
     has_code = any(_is_code(token) for token in found)
     for token in tokens:
         if token not in found and not (has_code and token.isalpha()):
             return f"missing {token}"
     if not _FOR_WORD.search(asked):
         for match in _FOR_WORD.finditer(text):
-            window = " ".join(word for word in match.groups() if word)
+            window = " ".join(match.group("window").split()[:_FOR_WINDOW_WORDS])
             for token in found:
                 if not token.isdigit() and patterns[token].search(window):
                     return f"for {token}"
+    if _COPY_WORDS.search(text) and not _COPY_WORDS.search(asked):
+        return "copy"
     asked_words = set(_LATIN_TOKEN.findall(asked))
     for token in found:
         for match in patterns[token].finditer(text):
