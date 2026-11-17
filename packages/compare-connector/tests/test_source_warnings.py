@@ -59,7 +59,12 @@ async def test_an_unhealthy_native_answer_with_an_offer_keeps_its_rank_and_warni
     async def search(**kwargs):
         return native
 
-    monkeypatch.setattr(server, "SOURCES", {source: SimpleNamespace(**{tool: search})})
+    async def ozon_card(**kwargs):
+        # The card agrees with the tile, so the Ozon offer ranks and adds no note of its own.
+        return models.OzonCardResponse(price=100.0)
+
+    tools = {tool: search, "ozon_card": ozon_card} if source == "ozon" else {tool: search}
+    monkeypatch.setattr(server, "SOURCES", {source: SimpleNamespace(**tools)})
     result = await server.compare_prices("test", sources=[source])
     assert result.complete is True
     assert result.sources_ok == [source]

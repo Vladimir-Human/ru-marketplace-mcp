@@ -284,10 +284,12 @@
   <requirement id="R-COMPARE-BENCHMARK-REPLAY" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_avito_region_reaches_the_replayed_outcome" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_image_replays_as_the_same_offer_image" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Synthetic typed search answers exercise the real adapters before and after recording." />
-    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_ozon_card_price_tile_replays_as_conditional_only" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price." />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_ozon_search_and_card_read_replay_as_the_live_answer" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="The Ozon plan records the card read after the search: the replay ranks what live ranked." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_timeout_replays_with_the_timeout_error_code" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recording_without_the_ozon_card_read_fails_the_replay" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="A recording made before compare read Ozon cards does not cover today's adapter." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_committed_payloads_contain_only_what_the_recorder_can_produce" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Re-cut every typed payload: the corpus must not invent response/item fields." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_replay_refuses_an_unknown_or_missing_recording_schema" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="scripts/test_compare_recording.py" name="test_a_card_read_joins_the_search_it_followed_and_a_lone_card_read_is_dropped" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Ozon's card read is recorded under the answered search; a verify call's card read is no comparison." />
     <test file="scripts/test_compare_recording.py" name="test_a_compare_timeout_records_the_outcomes_timeout_not_a_cancelled_capture" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_an_avito_city_url_is_scrubbed_before_the_recording_is_written" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_control_flow_exceptions_write_no_capture_and_still_raise" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
@@ -296,6 +298,7 @@
     <test file="scripts/test_compare_recording.py" name="test_warning_only_regions_are_numbered_in_order_of_appearance" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_warnings_are_redacted_and_regions_use_the_payload_placeholder" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_live_audit.py" name="test_a_failing_source_is_recorded_as_its_error_and_still_raises" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="An errored source is stored as its error, and the error still reaches the caller." />
+    <test file="scripts/test_live_audit.py" name="test_a_lone_card_read_writes_no_recording" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A compare call that only re-read an Ozon card (no search) is no comparison to record." />
     <test file="scripts/test_live_audit.py" name="test_a_record_dir_inside_the_repository_must_be_the_ignored_one" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A recording is private material: inside the repository only .live-recordings/ (gitignored) takes it." />
     <test file="scripts/test_live_audit.py" name="test_recording_is_a_phase_c_option_only" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The recorder belongs to the compare phase; the other phases refuse it." />
     <test file="scripts/test_live_audit.py" name="test_the_audit_writes_one_recording_per_compare_call" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The compare call the audit measured is the comparison that gets recorded." />
@@ -324,6 +327,13 @@
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_regular_price_ranks_and_wallet_amount_is_warned" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: the everyday price ranks and the lower Wallet amount is named." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_subscription_amount_is_named_without_ranking_it" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code keeps Plus unranked but emits no warning naming its 900 RUB." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_card_without_an_everyday_price_ranks_nothing" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_plain_ozon_tile_is_conditional_and_the_cheapest_ranks_by_its_cards_everyday_price" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_refused_card_leaves_every_ozon_tile_unranked_and_says_why" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_slow_card_never_costs_the_search_results" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_no_card_read_starts_when_the_source_timeout_is_nearly_spent" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_one_card_ranks_one_tile_even_when_its_sku_repeats" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_the_card_read_goes_to_the_cheapest_tile_that_could_be_the_product" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_only_a_card_price_tile_is_marked_as_a_card_price" requirements="R-COMPARE-CONDITIONAL-PRICE.adapters" title="R-COMPARE-CONDITIONAL-PRICE.adapters: the card price is named, other styles are not." />
   </requirement>
   <requirement id="R-COMPARE-FOREIGN-DETAIL" kind="requirement" state="tested">
@@ -580,6 +590,7 @@
     <test file="scripts/test_live_audit.py" name="test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_source" requirements="R-LIVE-AUDIT.runner" title="A call our own budget cut short is skipped: budget, pauses nothing, and costs one request more next time." />
     <test file="scripts/test_live_audit.py" name="test_a_tool_error_without_a_refusal_line_keeps_its_own_code" requirements="R-LIVE-AUDIT.runner" title="Only the budget's own line relabels an error: a refusal printed before the call does not count." />
     <test file="scripts/test_live_audit.py" name="test_all_run_plans_fit_and_never_repeat" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_arguments_from_one_answer_come_from_one_node" requirements="R-LIVE-AUDIT.plans" title="Shard and query of wb_category_products come from the same wb_categories node (audit cycle 1)." />
     <test file="scripts/test_live_audit.py" name="test_capture_dimensions_scale_and_finally_close" requirements="R-LIVE-AUDIT.capture" />
     <test file="scripts/test_live_audit.py" name="test_card_args_use_native_types_and_paths" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_compare_drops_paused_sources_before_budget" requirements="R-LIVE-AUDIT.runner" />
