@@ -2,9 +2,9 @@
 
 START_MODULE_CONTRACT
 PURPOSE: Serve unchanged committed connector fixtures by host/path with scripted statuses and stalls.
-SCOPE: Four existing search fixtures, response sequences, Refresh/redirect headers and cancellable hangs.
+SCOPE: Committed search/refusal fixtures, response sequences, Refresh/redirect headers and cancellable signal gates/hangs.
 DEPENDS: cryptography (a throwaway certificate); stdlib http.server,ssl,tempfile,threading,collections,dataclasses,datetime,pathlib,urllib.parse.
-LINKS: M-CDP-SIM, R-CDP-SIM-INFRA.fixtures, R-CDP-SIM-S1, R-CDP-SIM-S2, R-CDP-SIM-S4, R-CDP-SIM-S9.
+LINKS: M-CDP-SIM, R-CDP-SIM-INFRA.fixtures, R-CDP-SIM-S1, R-CDP-SIM-S2, R-CDP-SIM-S3, R-CDP-SIM-S4, R-CDP-SIM-S5, R-CDP-SIM-S6, R-CDP-SIM-S7, R-CDP-SIM-S9.
 END_MODULE_CONTRACT
 START_MODULE_MAP
   Reply: Describe a fixture response, including a status, headers or an intentional stall.
@@ -34,6 +34,7 @@ FIXTURES = {
     "dns_search": ("packages/dns-connector/tests/fixtures/search_grid.html", "text/html"),
     "citilink_search": ("packages/citilink-connector/tests/fixtures/search_grid.html", "text/html"),
     "avito_search": ("packages/avito-connector/tests/fixtures/js_items_live.json", "application/json"),
+    "refusal": ("packages/lamoda-connector/tests/fixtures/refusal_page_live.html", "text/html"),
 }
 
 
@@ -48,6 +49,8 @@ class Reply:
     headers: tuple[tuple[str, str], ...] = ()
     hang: bool = False
     stall_body: bool = False
+    wait_for: threading.Event | None = None
+    arrived: threading.Event | None = None
 
 
 @dataclass(frozen=True)
@@ -193,6 +196,16 @@ class FixtureServer:
                     bool(reply and (reply.hang or reply.stall_body)),
                 )
             )
+        if reply and reply.arrived:
+            reply.arrived.set()
+        if reply and reply.wait_for:
+            # A real Refresh navigation waits here until the test signals that
+            # the fixture origin has cleared the challenge. Reset also cancels
+            # this gate, so a failed/cancelled test cannot strand a server thread.
+            while not reply.wait_for.wait(0.05):
+                if release.is_set():
+                    handler.close_connection = True
+                    return
         if reply and reply.hang:
             release.wait()
             return
