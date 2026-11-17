@@ -1052,3 +1052,32 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
         ("Target.closeTarget", {"targetId": "T1"}),
         ("Target.getTargets", {}),
     ]
+
+
+@pytest.mark.req("R-CDP-SIM-S4")
+def test_raw_page_close_confirms_and_retries_when_chrome_keeps_the_tab():
+    """R-CDP-SIM-S4: _RawCdpPage.close() re-checks Target.getTargets and closes again if Chrome kept the tab."""
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"success": True}},
+            {"id": 2, "result": {"targetInfos": [{"targetId": "T1", "type": "page"}]}},
+            {"id": 3, "result": {"success": True}},
+            {"id": 4, "result": {"targetInfos": [{"targetId": "other", "type": "page"}]}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    asyncio.run(page.close())
+
+    assert [(m["method"], m.get("params")) for m in ws.sent] == [
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+    ]
+
+    browser_channel = chrome_cdp._RawCdpPage(_FakeWs([]), "")
+    asyncio.run(browser_channel.close())
+    assert browser_channel._ws.sent == []
