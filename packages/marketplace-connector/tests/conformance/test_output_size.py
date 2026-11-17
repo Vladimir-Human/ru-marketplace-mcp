@@ -356,6 +356,9 @@ def install_sample(sample: Sample, monkeypatch: pytest.MonkeyPatch) -> dict[str,
         monkeypatch.setattr(module, "_min_gap", 0.0)
     if sample.source == "wildberries":
         monkeypatch.setattr(module._settings, "transport", "api")
+        # A page-1 fingerprint left by an earlier test would make the replayed
+        # first page at page=20 read as WB wrapping past the end (no_results).
+        monkeypatch.setattr(module, "_page1_fingerprints", TTLCache(ttl_s=300, max_entries=16))
     text = fixture_path(sample.source, sample.fixture).read_text(encoding="utf-8")
     payload: Any = json.loads(text) if sample.fixture.endswith(".json") else text
     args = dict(sample.args)
