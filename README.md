@@ -1,5 +1,7 @@
 # ru-marketplace-mcp
 
+<!-- mcp-name: io.github.Vladimir-Human/ru-marketplace-mcp -->
+
 **Русский** · [English](README.en.md)
 
 [![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)

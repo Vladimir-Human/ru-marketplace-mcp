@@ -89,16 +89,45 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       # The binary runs with packages: write and id-token: write, so it is
-      # checked against the v1.8.1 digest (GitHub's asset digest and the
-      # release's registry_1.8.1_checksums.txt agree) before it is unpacked.
+      # checked against the v1.8.9 digest (GitHub's asset digest and the
+      # release's registry_1.8.9_checksums.txt agree) before it is unpacked.
       - name: Install mcp-publisher
         env:
-          PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+          PUBLISHER_SHA256: 4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8
         run: |
-          curl -fsSLo mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz"
+          curl -fsSLo mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.9/mcp-publisher_linux_amd64.tar.gz"
           echo "${PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
           tar xzf mcp-publisher.tar.gz mcp-publisher
           ./mcp-publisher --help
+
+      - name: Wait for PyPI release metadata before publishing PyPI registry entry
+        if: vars.PYPI_PUBLISH == 'true'
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["EXPECTED_VERSION"]
+          url = f"https://pypi.org/pypi/ru-marketplace-mcp/{version}/json"
+          deadline = time.monotonic() + 240.0
+          while True:
+              try:
+                  with urllib.request.urlopen(url, timeout=10) as resp:
+                      data = json.loads(resp.read().decode("utf-8"))
+                  if data.get("info", {}).get("version") == version:
+                      print(f"PyPI ru-marketplace-mcp=={version} is live")
+                      break
+              except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+                  pass
+              if time.monotonic() >= deadline:
+                  raise SystemExit(f"Timed out waiting for {url} before MCP Registry publish")
+              time.sleep(5)
+          PY
 
       - name: Authenticate to MCP Registry
         run: ./mcp-publisher login github-oidc

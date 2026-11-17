@@ -25,7 +25,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 TAG_WORKFLOWS = ("release.yml", "mcp-registry-publish.yml", "pypi-publish.yml", "npm-publish.yml")
-PUBLISHER_SHA256 = "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
+PUBLISHER_SHA256 = "4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8"
 
 
 def _read(name: str) -> str:
@@ -64,10 +64,12 @@ def test_the_registry_publisher_is_verified_before_it_is_unpacked() -> None:
     step = text.split("- name: Install mcp-publisher", 1)[1].split("- name:", 1)[0]
 
     assert f"PUBLISHER_SHA256: {PUBLISHER_SHA256}" in step
-    assert "/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" in step
+    assert "/download/v1.8.9/mcp-publisher_linux_amd64.tar.gz" in step
     assert "| tar" not in step, "a piped download is unpacked before anything can check it"
     check = step.index("sha256sum -c -")
     assert check < step.index("tar xzf mcp-publisher.tar.gz mcp-publisher") < step.index("./mcp-publisher --help")
+    pypi_wait = text.index("https://pypi.org/pypi/ru-marketplace-mcp/")
+    assert pypi_wait < text.index("./mcp-publisher publish")
 
 
 @pytest.mark.req("R-CI-TAG-WORKFLOWS")

@@ -141,6 +141,15 @@
   },
   "packages": [
     {
+      "registryType": "pypi",
+      "identifier": "ru-marketplace-mcp",
+      "version": "2.10.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      }
+    },
+    {
       "registryType": "oci",
       "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0",
       "runtimeHint": "docker",

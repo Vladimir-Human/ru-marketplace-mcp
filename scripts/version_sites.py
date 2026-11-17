@@ -48,6 +48,9 @@ SERVER_VERSION = re.compile(r'^SERVER_VERSION[ \t]*=[ \t]*"([^"]+)"', re.MULTILI
 IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"'`)]*)")
 # The OCI identifier is a JSON string; the version runs to its closing quote.
 OCI_IDENTIFIER = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)(?=\")")
+PYPI_REGISTRY_VERSION = re.compile(
+    r'"registryType"\s*:\s*"pypi"\s*,\s*"identifier"\s*:\s*"ru-marketplace-mcp"\s*,\s*"version"\s*:\s*"([^"]+)"'
+)
 # A top-level JSON key. The indentation is captured so a nested "version"
 # (for example in a dependency object) is not mistaken for the manifest's own.
 JSON_TOP_LEVEL_VERSION = re.compile(r'^(?P<indent>[ \t]*)"version"[ \t]*:[ \t]*"([^"]+)"', re.MULTILINE)
@@ -190,6 +193,14 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             value_group=2,
             top_level_indent=True,
             description="the MCP registry manifest version",
+        ),
+        Site(
+            "MCP registry PyPI version",
+            PYPI_REGISTRY_VERSION,
+            (server_manifest,) if server_manifest.exists() else (),
+            required=False,
+            value_group=1,
+            description="the MCP registry PyPI package version",
         ),
         Site(
             "OCI image tag",
