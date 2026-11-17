@@ -45,26 +45,6 @@ FACT_FIELDS = (
     "currency",
     "identity",
 )
-# Red run: all 50 seeds of these exact recordings still selected a title stuffed with other models.
-# The memory family passes since R-COMPARE-SIZE-LIST (a title listing several sizes is no candidate).
-# The c1 recordings joined with A7 (#310); every one of them fails both families the same way.
-EXCLUSIONS = {
-    (name, attack, seed)
-    for name in (
-        "kettle-partial.json",
-        "kettle-wb-yandex.json",
-        "c1-dyson-v15-detect.json",
-        "c1-headphones-sony-wh1000xm5.json",
-        "c1-iphone16-128gb.json",
-        "c1-lego-42151.json",
-        "c1-pampers-premium-care-4.json",
-        "c1-ps5-slim.json",
-        "c1-redmi-note14-256gb.json",
-        "c1-ssd-samsung-990pro-1tb.json",
-    )
-    for attack in ("models",)
-    for seed in range(50)
-}
 
 
 def _recording(path: Path) -> dict:
@@ -177,13 +157,7 @@ def _never_comparable(result) -> None:
 
 
 def _bulk_title_cases():
-    return [
-        (path, attack, seed)
-        for path in PATHS
-        for attack in TITLE_ATTACKS
-        for seed in range(PYTHON_SEEDS)
-        if (path.name, attack, seed) not in EXCLUSIONS
-    ]
+    return [(path, attack, seed) for path in PATHS for attack in TITLE_ATTACKS for seed in range(PYTHON_SEEDS)]
 
 
 # END_BLOCK_RECORDING_MUTATIONS
@@ -263,22 +237,6 @@ async def test_compare_regular_price_and_winner_ignore_cheaper_conditional_price
 
 
 # END_BLOCK_REPLAY_GATES
-# START_BLOCK_MINIMAL_VIOLATIONS
-
-
-@pytest.mark.req("R-CAPTURE-MUTATION.ambiguous-title")
-@pytest.mark.parametrize("name,attack,seed", sorted(case for case in EXCLUSIONS if case[2] == 0))
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="A title stuffed with other models still becomes cheapest_comparable (known gap)",
-)
-async def test_recording_ambiguous_title_minimal_violation(name: str, attack: str, seed: int) -> None:
-    result = await replay.replay(_seller_mutation(_recording(RECORDINGS / name), seed, attack))
-    _never_comparable(result)
-
-
-# END_BLOCK_MINIMAL_VIOLATIONS
 # START_BLOCK_NEGATIVE_CONTROLS
 
 
