@@ -493,6 +493,10 @@
     <test file="packages/avito-connector/tests/test_item_photos.py" name="test_sync_photo_get_disables_redirects_and_rechecks_host" requirements="R-INPUT-TRUST" />
   </requirement>
   <requirement id="R-INTERFACE-GUARDS" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_answer_size.py" name="test_a_big_answer_keeps_whole_offers_from_the_top_within_the_limit" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/compare-connector/tests/test_answer_size.py" name="test_an_answer_within_the_limit_is_unchanged" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/compare-connector/tests/test_answer_size.py" name="test_the_code_uses_the_requirement_limit" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/compare-connector/tests/test_answer_size.py" name="test_the_tool_answer_on_the_wire_stays_within_the_limit" requirements="R-INTERFACE-GUARDS.output-size" />
     <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_every_listed_tool_has_a_measured_budget_or_declared_gap" requirements="R-INTERFACE-GUARDS.output-size" />
     <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_fixture_output_stays_within_its_measured_budget" requirements="R-INTERFACE-GUARDS.output-size" />
     <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_output_guard_rejects_a_planted_oversize_tool_answer" requirements="R-INTERFACE-GUARDS.output-size" />

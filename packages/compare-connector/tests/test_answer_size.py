@@ -68,7 +68,7 @@ def _build(per_source: int) -> CompareResponse:
 
 
 @pytest.mark.req("R-INTERFACE-GUARDS.output-size")
-a_big_answer_keeps_whole_offers_from_the_top_within_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_big_answer_keeps_whole_offers_from_the_top_within_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     with monkeypatch.context() as patch:
         patch.setattr(decide, "_fit_answer", lambda response: response, raising=False)
         uncut = _build(20)
@@ -99,12 +99,12 @@ def _build(per_source: int) -> CompareResponse:
 
 
 @pytest.mark.req("R-INTERFACE-GUARDS.output-size")
-the_code_uses_the_requirement_limit() -> None:
+def test_the_code_uses_the_requirement_limit() -> None:
     assert decide.ANSWER_CHAR_LIMIT == ANSWER_CHAR_LIMIT
 
 
 @pytest.mark.req("R-INTERFACE-GUARDS.output-size")
-an_answer_within_the_limit_is_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_answer_within_the_limit_is_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
     with monkeypatch.context() as patch:
         patch.setattr(decide, "_fit_answer", lambda response: response, raising=False)
         uncut = _build(3)
@@ -114,7 +114,7 @@ def _build(per_source: int) -> CompareResponse:
 
 
 @pytest.mark.req("R-INTERFACE-GUARDS.output-size")
-the_tool_answer_on_the_wire_stays_within_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_the_tool_answer_on_the_wire_stays_within_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     async def gather_one(name: str, query: str, limit: int) -> tuple[SourceOutcome, list[MarketOffer]]:
         # The sole fake: the gather. Ranking, the cut and the MCP serialization are real.
         return SourceOutcome(source=name, status="ok"), _offers(name, limit)
