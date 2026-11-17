@@ -18,6 +18,7 @@ START_MODULE_MAP
   compare_trigger: Eight-call cycle timing threshold, with explicit incomplete status.
   _record_comparison: One recording per compare call, from the sources the child captured.
   execute_plan: One call at a time, guard every resolved source, checkpoint private JSON and ids.
+  _child_refused: Whether the child's budget refused a request during a call (its [refused] stderr line).
   select_options/run/summary: CLI validation, live runner and request-free T3 skeleton.
 END_MODULE_MAP
 END_MODULE_CONTRACT
@@ -838,6 +839,8 @@ async def _tool_call(
 
 
 def _pause_from(row: dict[str, Any], paused: dict[str, float]) -> None:
+    if row.get("budget_refused"):
+        return  # our own budget said no; the site did not refuse anything
     value = row.get("result")
     candidates = [(row["source"], value)]
     if isinstance(value, dict):
@@ -861,16 +864,32 @@ def _pause_from(row: dict[str, Any], paused: dict[str, float]) -> None:
 def _observe_costs(
     call: dict[str, Any], row: dict[str, Any], cases: dict[str, Any], measured: dict[tuple[str, str], int]
 ) -> None:
-    if row["state"] == "skipped":
+    if row["state"] == "skipped" and not row.get("budget_refused"):
         return
+    # A call the budget cut short needed at least one request more than it booked.
+    spent = row["requests"] + (1 if row.get("budget_refused") else 0)
     source = call["source"]
     if source == "compare":
         for name in call["args"]["sources"]:
             measured[(name, "listing")] = row["requests_by_source"].get(_group(cases, name), 0)
     elif source in cases["fixed_queries"]:
-        measured[(source, call["tool"])] = row["requests"]
+        measured[(source, call["tool"])] = spent
         kind = "card" if call["kind"] == "verify" else call["kind"]
-        measured[(source, kind)] = row["requests"]
+        measured[(source, kind)] = spent
+
+
+def _log_size(log: Path) -> int:
+    return log.stat().st_size if log.is_file() else 0
+
+
+def _child_refused(log: Path, start: int) -> bool:
+    """Whether the child's budget printed a refusal line after byte ``start`` of its stderr log."""
+    if not log.is_file():
+        return False
+    with log.open("rb") as handle:
+        handle.seek(start)
+        text = handle.read().decode("utf-8", "replace")
+    return any(line.startswith(live_budget.REFUSED_PREFIX) for line in text.splitlines())
 
 
 def _capture_names(capture_dir: Path) -> set[str]:
@@ -979,6 +998,7 @@ async def execute_plan(
                     row["window_hidden"] = await _window_hidden()
                 call = {**call, "window_hidden": row["window_hidden"]}
             before = len(budget.ledger.load())
+            log_start = _log_size(directory / "child.log")
             started = time.monotonic()
             with _quiet_diagnostics():
                 try:
@@ -997,6 +1017,13 @@ async def execute_plan(
                         error_code="capture_failed" if call["kind"] == "capture" else "unknown_error",
                         state="inconclusive",
                     )
+            if row.get("error_code") not in (None, "budget_skipped") and _child_refused(
+                directory / "child.log", log_start
+            ):
+                # The child's budget said no mid-call; the connector reported it as its own error.
+                row.update(
+                    tool_error_code=row["error_code"], error_code="budget_skipped", state="skipped", budget_refused=True
+                )
             row.update(
                 requests=len(budget.ledger.load()) - before,
                 latency_s=row.pop("tool_latency_s", round(time.monotonic() - started, 6)),

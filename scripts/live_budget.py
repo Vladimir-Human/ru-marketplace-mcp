@@ -27,6 +27,7 @@ DEPENDS: stdlib asyncio,contextlib,datetime,ipaddress,json,os,re,sys,tempfile,th
 LINKS: M-LIVE-BUDGET, R-LIVE-BUDGET, R-TRANSPORT.
 START_MODULE_MAP
   BudgetExhausted      raised before a request over the total or per-source cap
+  REFUSED_PREFIX       start of the stderr line a refused request prints
   Ledger               in-memory or JSON-file request ledger
   Budget               limits, reservation, gap waits and stderr lines
   source_group         marketplace group for a host
@@ -86,6 +87,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
 }
 
 _MISSING = object()
+# The audit reads this line from the child's stderr log: a connector reports
+# the refusal as its own transport error, so the line is the only sign of it.
+REFUSED_PREFIX = "[refused] "
 
 
 class BudgetExhausted(RuntimeError):
@@ -294,7 +298,7 @@ class Budget:
             # selfcheck row reads transport_down; this line and the ledger
             # summary are where the operator sees that the budget said no.
             self.refused.append(group)
-            print(f"[refused] {group} {kind} {url[:160]}: {refusal}", file=sys.stderr)
+            print(f"{REFUSED_PREFIX}{group} {kind} {url[:160]}: {refusal}", file=sys.stderr)
             sys.stderr.flush()
             raise BudgetExhausted(refusal)
         print(f"[req {number}/{self.total}] {group} {count}/{self.per_source} {kind} {url[:160]}", file=sys.stderr)
