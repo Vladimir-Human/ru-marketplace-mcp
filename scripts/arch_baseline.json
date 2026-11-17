@@ -1,6 +1,5 @@
 {
   "files": {
-    "packages/avito-connector/src/avito_connector/server.py": 1696,
     "packages/marketplace-connector/src/marketplace_connector/cli.py": 2000,
     "packages/mcp-core/src/mcp_core/transport/chrome_cdp.py": 2270,
     "packages/ozon-connector/src/ozon_connector/server.py": 1787,
