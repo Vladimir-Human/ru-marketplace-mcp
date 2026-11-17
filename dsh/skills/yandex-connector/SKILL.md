@@ -45,6 +45,13 @@ struck-through reference — `price_old_rub` on search rows,
 `price_before_discount_rub` plus `discount_percent` on cards. It is context for
 the discount, never a price to quote.
 
+**Prices are what an anonymous visitor sees.** The tools read Yandex without
+signing in, in the region Yandex assigns to the request. A signed-in browser or
+another delivery region can show another price and another buy-box offer for the
+same card (measured 2026-11-17: one card URL, seconds apart, 67 449 ₽ anonymously
+and 69 895 ₽ in a browser session). When the operator's own page shows another
+number, say so; do not replace the tool's price with theirs.
+
 ## Workflow patterns
 
 **Price check:**

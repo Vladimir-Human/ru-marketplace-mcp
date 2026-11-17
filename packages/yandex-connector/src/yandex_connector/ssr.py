@@ -477,14 +477,21 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
         # but unreadable entry stops the chain: the base price of a discounted
         # row is the struck-through figure, so falling through would quote
         # another role's number as the everyday price.
-        price_rub, everyday_refused = _first_price(with_discount_raw, base_raw)
-        price_old = (
-            base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
-        )
-        # With a withDiscount entry the base price is the struck-through
-        # reference; its refusal is reported, not dropped. Without one the
-        # base price is the everyday price and _first_price reports it.
-        old_refused = _refused(base_raw, base_price) if with_discount_raw is not None else None
+        # A discount badge marks the base price as the struck figure, so a badged
+        # row without its withDiscount entry has no known everyday price (#303).
+        discounted = with_discount_raw is not None or _has_discount_badge(payload)
+        everyday_missing = with_discount_raw is None and discounted
+        if everyday_missing:
+            price_rub, everyday_refused, price_old = None, None, base_price
+        else:
+            price_rub, everyday_refused = _first_price(with_discount_raw, base_raw)
+            price_old = (
+                base_price if (base_price is not None and price_rub is not None and base_price > price_rub) else None
+            )
+        # On a discounted row the base price is the struck-through reference;
+        # its refusal is reported, not dropped. Otherwise the base price is the
+        # everyday price and _first_price reports it.
+        old_refused = _refused(base_raw, base_price) if discounted else None
         plus_raw = _additional_price(payload, "yaBank")
         price_with_plus = _to_money(plus_raw)
 
@@ -520,6 +527,8 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
             row["price_with_plus_text"] = plus_refused
         if old_refused:
             row["price_old_text"] = old_refused
+        if everyday_missing:
+            row["discount_price_missing"] = True
         items.append(row)
     return items
 
@@ -555,6 +564,16 @@ def _cart_price_value(cart_button: Any) -> Any:
     if not isinstance(price, dict):
         return None
     return price.get("valueFmt")
+
+
+def _has_discount_badge(payload: Any) -> bool:
+    """Whether a zone row carries Yandex's discount badge («Скидка N%»).
+
+    Live 2026-11-17: all 19 badged rows on two search pages also carried a
+    ``withDiscount`` entry below the base price (R-YANDEX-DISCOUNT-BADGE).
+    """
+    badges = _as_list(payload.get("featureBadges")) if isinstance(payload, dict) else []
+    return any(isinstance(b, dict) and str(b.get("badgeType") or "").endswith("DiscountTokenType") for b in badges)
 
 
 def _additional_price(baobab: Any, price_type: str) -> Any:

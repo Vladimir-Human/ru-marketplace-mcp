@@ -10,7 +10,7 @@
 # CASES: Fixture-to-parser table; embedded noframes/ld+json/data-zone-data amounts are mutated.
 # _parse: Invoke the same pure parser as the shape reference.
 # test_capture_equivalent/test_capture_no_invented_price: Shared PYTHON_SEEDS per fixture and mutation.
-# test_removed_discount_price_role_violation: Strict xfails for exact m2 old-to-everyday promotions.
+# test_removed_discount_price_keeps_the_old_price_in_its_role: The m2 seeds that once promoted the base price.
 # END_MODULE_MAP
 
 from pathlib import Path
@@ -41,10 +41,10 @@ PRICE_PATHS = (
 )
 PRICE_FIELDS = ("price_rub", "price_with_plus", "price_old_rub", "price_before_discount_rub")
 ID_FIELDS = ("product_id", "sku_id")
-# Each exact (search_telefon_zone.html, m2, seed) is test_removed_discount_price_role_violation.
-# ssr.parse_zone_items treats a removed withDiscount priceValue as absent and falls back to the base/old price.
+# The m2 seeds that removed a discounted row's withDiscount priceValue: ssr.parse_zone_items used to
+# fall back to the base (struck) price as the everyday price (fixed 2026-11-17, issue #303).
 DISCOUNT_PRICE_SEEDS = (1, 3, 9, 11, 20, 37, 40, 44)
-EXCLUSIONS = tuple(("search_telefon_zone.html", "m2", seed) for seed in DISCOUNT_PRICE_SEEDS)
+EXCLUSIONS: tuple[tuple[str, str, int], ...] = ()
 
 
 def _parse(name: str, raw: str) -> dict:
@@ -98,11 +98,9 @@ def test_capture_no_invented_price(name: str, mutation: str) -> None:
 # START_BLOCK_MINIMAL_VIOLATIONS
 
 
-@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price")
-@pytest.mark.xfail(strict=True, reason="P2-1 violation: removed everyday discount amount promotes the base/old price")
+@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price", "R-YANDEX-DISCOUNT-BADGE")
 @pytest.mark.parametrize("seed", DISCOUNT_PRICE_SEEDS)
-def test_removed_discount_price_role_violation(seed: int) -> None:
-    # Exactly (search_telefon_zone.html, m2, seed) is excluded above for each case; m3 has no exclusions.
+def test_removed_discount_price_keeps_the_old_price_in_its_role(seed: int) -> None:
     name = "search_telefon_zone.html"
     raw = (FIXTURES / name).read_text(encoding="utf-8")
     mutated = mutation_case(

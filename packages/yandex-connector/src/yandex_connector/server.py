@@ -84,6 +84,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # _fetch_parsed: Fetch, parse and keep unusable pages out of the response cache.
 # _guard_parse_status: Distinguish captcha, empty product shell and parser drift.
 # _guard_values_drift: Reject implausible parsed field values.
+# _discount_missing_warnings: Name rows whose discount badge came without the discounted price.
 # _refused_price_warnings: Report money the parser refused, in the shared vocabulary.
 # _to_product: Adapt SSR fields to the public product model.
 # yandex_search: Return SSR/zone/fallback offers with explicit price and SKU identity.
@@ -325,6 +326,20 @@ def _guard_values_drift(parsed: dict[str, Any], label: str) -> None:
         )
 
 
+def _discount_missing_warnings(offers: list[dict[str, Any]]) -> list[str]:
+    """Name the rows whose discount badge came without the discounted price (R-YANDEX-DISCOUNT-BADGE).
+
+    Their everyday price is unknown, not the struck base price, so price_rub is null.
+    """
+    missing = sum(1 for offer in offers if offer.get("discount_price_missing"))
+    if not missing:
+        return []
+    return [
+        f"discount_price_missing: {missing}/{len(offers)} items show a discount badge without the "
+        "discounted price; price_rub is null (the struck base price stays in price_old_rub)"
+    ]
+
+
 def _refused_price_warnings(offers: list[dict[str, Any]]) -> list[str]:
     """Report the money the SSR parser refused, in the shared warning vocabulary.
 
@@ -471,6 +486,7 @@ async def yandex_search(
     # Money the parser refused: the price is null, and the reason is named
     # instead of the null travelling alone.
     warnings.extend(_refused_price_warnings(raw_items))
+    warnings.extend(_discount_missing_warnings(raw_items))
 
     # Drift guard: a page where every product lost both its price and its title
     # is the SSR shape quietly moving under the parser, not a catalog full of
