@@ -828,7 +828,10 @@ async def test_ozon_adapter_reads_the_real_model_fields(monkeypatch):
     assert len(offers) == 1
     got = offers[0]
     assert got.product_id == "123456"
-    assert got.price_rub == 1999.0
+    # R-COMPARE-CONDITIONAL-PRICE.ozon-card: the tile price is the Ozon Card amount; this fake
+    # serves no card, so the offer keeps it as price_native and does not rank.
+    assert got.price_native == 1999.0
+    assert got.price_rub is None
     assert got.rating == 4.8
     assert got.rating_count == 24086, "review count was always None before"
     assert got.in_stock is True, "stock was ignored entirely before"

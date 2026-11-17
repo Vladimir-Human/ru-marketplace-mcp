@@ -16,7 +16,7 @@ DEPENDS: compare_connector.server, compare_connector.models_output; the connecto
 LINKS: M-COMPARE, M-COMPARE-RECORDING, R-COMPARE-BENCHMARK-REPLAY.
 START_MODULE_MAP
   RecordingStub: The recorded answers, indexed by source and query.
-  RecordingSource: One marketplace's search tool, answered from the recordings.
+  RecordingSource: One marketplace's search tool (and the card read after it), answered from the recordings.
   rebuild: The connector's own typed response, rebuilt from the recorded fields and region.
   _check_schema: Refuse unknown or missing recording format versions.
   replay: One recorded comparison, run through today's adapters and build_response.
@@ -129,11 +129,14 @@ class RecordingSource:
     def __init__(self, source: str, stub: RecordingStub) -> None:
         self.source = source
         self.stub = stub
+        self.query = ""
         plan = RECORDING.SOURCE_PLANS[source]
         setattr(self, plan.tool, self._search)
+        if plan.card_tool:
+            setattr(self, plan.card_tool, self._card)
 
     async def _search(self, **kwargs: Any) -> Any:
-        query = str(kwargs.get("query", ""))
+        query = self.query = str(kwargs.get("query", ""))
         entry = self.stub.answer(self.source, query)
         if "error" in entry:
             # The same wire envelope the connector raised - "error" is the code
@@ -147,6 +150,25 @@ class RecordingSource:
                 )
             )
         return rebuild(self.source, entry["response"])
+
+    async def _card(self, *args: Any, **kwargs: Any) -> Any:
+        """The card read the adapter made after this search, from the same recording.
+
+        A recording without that card (one made before compare read cards) does
+        not cover today's adapter, so the replay fails instead of answering less.
+        """
+        card = str(kwargs.get("sku_or_path", args[0] if args else ""))
+        answer = (self.stub.answer(self.source, self.query).get("cards") or {}).get(card)
+        if answer is None:
+            self.stub.unrecorded.append((self.source, f"{self.query} (card {card})"))
+            raise UnrecordedRequest(f"no recording covers the {self.source!r} card {card!r}")
+        if "error" in answer:
+            error = answer["error"]
+            raise ToolError(
+                json.dumps({"error": error.get("code"), "message": error.get("message")}, ensure_ascii=False)
+            )
+        plan = RECORDING.SOURCE_PLANS[self.source]
+        return _model(plan.card_model).model_validate(answer["response"])
 
 
 # END_BLOCK_RECORDING_STUB
