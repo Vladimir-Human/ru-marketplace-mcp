@@ -95,7 +95,7 @@
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
-    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_keeps_the_old_price_in_its_role" requirements="R-CAPTURE-MUTATION.no-invented-price" />
   </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
@@ -1140,10 +1140,21 @@
     <test file="scripts/test_ops_gates.py" name="test_wire_gate_passes_under_the_ceiling" requirements="R-WIRE-MEASUREMENT" />
     <test file="scripts/test_ops_gates.py" name="test_wire_snapshot_counts_initialize_instructions" requirements="R-WIRE-MEASUREMENT" title="Instructions are paid once per session, so they are measured, not assumed free." />
   </requirement>
+  <requirement id="R-YANDEX-ANONYMOUS-PRICES" kind="requirement" state="tested">
+    <test file="packages/yandex-connector/tests/test_anonymous_prices.py" name="test_both_everyday_price_fields_say_they_are_the_anonymous_price" requirements="R-YANDEX-ANONYMOUS-PRICES" />
+    <test file="packages/yandex-connector/tests/test_anonymous_prices.py" name="test_the_served_guides_and_the_skills_carry_it" requirements="R-YANDEX-ANONYMOUS-PRICES" />
+  </requirement>
   <requirement id="R-YANDEX-CACHE-CONTENT" kind="requirement" state="tested">
     <test file="packages/yandex-connector/tests/test_server.py" name="test_a_challenge_page_is_never_cached" requirements="R-YANDEX-CACHE-CONTENT" title="R03 (owner study 2026-11-02): only verified content is cached." />
     <test file="packages/yandex-connector/tests/test_server.py" name="test_value_drift_is_evicted_before_the_next_public_search" requirements="R-YANDEX-CACHE-CONTENT" title="R-YANDEX-CACHE-CONTENT: rejected values cannot poison the query's TTL." />
     <test file="packages/yandex-connector/tests/test_server.py" name="test_verified_search_content_keeps_public_cache_hits" requirements="R-YANDEX-CACHE-CONTENT" title="R-YANDEX-CACHE-CONTENT/R-YANDEX-HONEST-EMPTY: both honest answers cache." />
+  </requirement>
+  <requirement id="R-YANDEX-DISCOUNT-BADGE" kind="requirement" state="tested">
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_keeps_the_old_price_in_its_role" requirements="R-YANDEX-DISCOUNT-BADGE" />
+    <test file="packages/yandex-connector/tests/test_zone_discount_badge.py" name="test_a_badged_row_without_its_discount_entry_has_no_everyday_price" requirements="R-YANDEX-DISCOUNT-BADGE" />
+    <test file="packages/yandex-connector/tests/test_zone_discount_badge.py" name="test_a_row_without_badge_or_entry_keeps_its_base_price_as_the_everyday_price" requirements="R-YANDEX-DISCOUNT-BADGE" />
+    <test file="packages/yandex-connector/tests/test_zone_discount_badge.py" name="test_the_capture_rows_are_discounted_with_badge_and_entry" requirements="R-YANDEX-DISCOUNT-BADGE" />
+    <test file="packages/yandex-connector/tests/test_zone_discount_badge.py" name="test_yandex_search_names_the_rows_whose_discounted_price_is_missing" requirements="R-YANDEX-DISCOUNT-BADGE" />
   </requirement>
   <requirement id="R-YANDEX-HONEST-EMPTY" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_yandex_paths.py" name="test_an_explicit_empty_result_is_a_healthy_source" requirements="R-YANDEX-HONEST-EMPTY" title="R04: the page's own &quot;nothing found&quot; banner is an honest answer." />

@@ -25,6 +25,13 @@ from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBa
 from mcp_core.sources import MARKETPLACE_PRICE_WORDING
 from pydantic import BaseModel, Field
 
+# R-YANDEX-ANONYMOUS-PRICES: measured 2026-11-17, one card URL seconds apart: JSON-LD 67 449 anonymously,
+# 69 895 in a browser session. The tools read Yandex without signing in.
+ANONYMOUS_PRICE_NOTE = (
+    "As an anonymous visitor sees it in the region Yandex assigns to the request; a signed-in browser "
+    "or another delivery region can show another price or offer."
+)
+
 
 # START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
@@ -70,7 +77,7 @@ class YandexProduct(BaseModel):
         description=(
             "Everyday price in roubles — what a buyer without a subscription pays (the price the SERP "
             "snippet's cart button charges). None when absent, never 0. The struck-through base price "
-            "lives in price_old_rub, never here."
+            "lives in price_old_rub, never here. " + ANONYMOUS_PRICE_NOTE
         ),
     )
     price_with_plus: float | None = Field(
@@ -133,7 +140,9 @@ class YandexCardResponse(BaseModel):
     seller: str = Field(default="", description="Seller of the default offer.")
     description: str = Field(default="", description="Product description.")
     image: str = Field(default="", description="Primary product image URL.")
-    price_rub: float | None = Field(default=None, description="Everyday price in roubles, with no payment condition.")
+    price_rub: float | None = Field(
+        default=None, description="Everyday price in roubles, with no payment condition. " + ANONYMOUS_PRICE_NOTE
+    )
     price_with_plus: float | None = Field(
         default=None, description="Conditional price: paying with Yandex Pay («Пэй»; earlier Yandex Plus)."
     )
