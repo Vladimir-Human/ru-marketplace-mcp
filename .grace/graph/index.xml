@@ -206,6 +206,16 @@
     <note>R-EMPTY-NOT-SUCCESS: WB DOM search past page 1 without the empty-result notice, a WB API no_results whose legacy fallback died, a megamarket page whose every price alias vanished, and an unhealthy zero-offer source inside compare_prices all stop being reported as clean successes.</note>
     <note>R-COERCE-AMBIGUOUS: DECOY_MARKERS is the one non-price marker list — declared in M-RESILIENCE, consumed by coerce_price's display-string guard there and by the decoy regex M-DOM generates — and the price path refuses a magnitude suffix ('12万', '1.2K') the way coerce_int does; the DOM extractor's marker set therefore changes only in resilience.py.</note>
     <note>Connector initialize instructions: the sentence naming guide:// resources is appended after each server's own prose, separated by a space; nine servers shipped it glued to the previous sentence until the 2026-11-01 review follow-up. The text is measured by scripts/mcp_wire.py as instructions_tokens, so the lead regenerates the wire baseline.</note>
+    <module id="M-CDP-SIM" requirements="R-CDP-SIM-INFRA,R-CDP-SIM-S1,R-CDP-SIM-S2,R-CDP-SIM-S4,R-CDP-SIM-S9" file="packages/mcp-core/tests/sim/__init__.py" purpose="Test-only loopback HTTPS fixture origin and fresh-profile, free-port Chrome; real Playwright/raw-CDP S1/S2/S4/S9 with public MCP search calls, fail-before-spawn isolation and exact spawned-tree cleanup" depends="M-CHROME-CDP,M-CDP-BUDGET,M-PROCESS,M-CACHE,M-PACING,M-SOURCES; registered Ozon,DNS,Citilink,Avito modules in tests only; pytest,FastMCP; stdlib">
+      <file path="packages/mcp-core/tests/sim/fixture_server.py" note="A throwaway self-signed certificate made at start (no committed key), fixed committed fixture inventory, host/path response sequences, Refresh/redirect headers, cancellable header/body stalls and an in-memory request ledger; no upstream fetch or forwarding." />
+      <file path="packages/mcp-core/tests/sim/chrome.py" note="Actual launch argument guard before Popen, raw-CDP Browser.getBrowserCommandLine identity check and exact-PID production tree reaper." />
+      <file path="packages/mcp-core/tests/sim/conftest.py" note="Session-owned temporary profile, existing process settings, disabled unsafe autostart, real per-test budgets/cache/pacer/locks and forced native Ozon identity; anonymous-tier refusal stubs and explicit raw-path selection." />
+      <file path="packages/mcp-core/tests/sim/test_scenarios.py" note="S1 four native searches, S2 DNS 401 self-reload, S4 stalled Citilink 429 within 12 s, S9 navigation hang timeout; both transports, real tab/permit cleanup assertions." />
+      <file path="packages/mcp-core/tests/sim/test_safety.py" note="Loopback HTTPS bytes/routes, scripted sequences, mutated isolation switches refused before spawn, empty-default hook and marker/CI configuration checks." />
+      <file path="packages/mcp-core/src/mcp_core/transport/chrome_cdp.py" note="Only the keyword-only empty-default extra_flags launch hook is added; runtime callers do not pass it." />
+      <file path="pyproject.toml" note="cdp_sim marker only; simulator tests also carry cdp to preserve the existing default offline exclusion." />
+      <file path=".github/workflows/ci.yml" note="One appended non-required ubuntu/windows/macos simulator job only; no promotion or 20-run evidence yet." />
+    </module>
   </modules>
   <paths>
     <path id="P-SOURCE">packages/&lt;package&gt;/src/&lt;module&gt;: server.py, models_output.py, settings.py and connector-specific parsing helpers</path>
@@ -328,6 +338,11 @@
       <steps>Under the DOM lock, pace, open, check readiness and extract. Only the specific Playwright navigation-destroyed-context error permits one complete reopened attempt. Record last navigation in finally on each attempt, propagate refusals/challenges/timeouts and cache only a validated successful payload.</steps>
       <read>WB DOM settings; readiness probes; owned navigation result; Playwright error type and navigation-race message.</read>
       <write>Existing last-navigation timestamp and successful payload cache; one diagnostic log event on the bounded retry.</write>
+    </flow>
+    <flow id="DF-CDP-SIM" modules="M-CDP-SIM,M-CHROME-CDP,M-CDP-BUDGET,M-PROCESS,M-SOURCES" source="packages/mcp-core/tests/sim/">
+      <steps>Guard a fresh-profile, free-port headless launch with wildcard loopback mapping before Popen; confirm the actual browser command line over CDP. A native MCP search or open_page drives a real owned tab through committed HTTPS fixture responses (200, 401 Refresh, stalled 429 or no headers). Tests select Playwright/raw separately, inspect typed answers and the local request ledger, assert target/permit cleanup, reap the exact spawned Chrome tree and delete the temporary profile.</steps>
+      <read>Fixed committed connector search fixtures; registered source module/tool names; existing browser settings scoped to the test process; actual CDP command line, targets and navigation events.</read>
+      <write>Temporary simulator profile/driver artifacts and in-memory HTTPS request records only; no real marketplace request, operator browser/profile access, fixture capture, production setting or runtime evidence file.</write>
     </flow>
   </flows>
 </graph>

@@ -337,7 +337,7 @@ def _running_as_root() -> bool:
 _last_spawn: Any = None
 
 
-def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
+def _start_chrome_with_cdp(*, stealth: bool = STEALTH, extra_flags: tuple[str, ...] = ()) -> tuple[bool, str]:
     """Spawn Chrome with remote debugging enabled. Returns ``(ok, detail)``.
 
     ``stealth`` controls the Windows off-screen arguments; the connector
@@ -345,7 +345,8 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
     ``False`` so the manual launch is on-screen. Idempotent by contract:
     callers check ``_cdp_port_open()`` first. Chrome enforces
     ``--user-data-dir`` exclusivity, so a lost startup race simply means the
-    second process exits on its own.
+    second process exits on its own. ``extra_flags`` is a test-only hook for
+    isolated local simulators; runtime callers leave it empty.
     """
     global _last_spawn
     _last_spawn = None
@@ -379,6 +380,7 @@ def _start_chrome_with_cdp(*, stealth: bool = STEALTH) -> tuple[bool, str]:
 
     # Anchor to about:blank so Chrome survives the connector closing its last
     # tab — otherwise every call pays the full spawn + CDP-bind wait again.
+    args.extend(extra_flags)
     args.append("about:blank")
 
     try:

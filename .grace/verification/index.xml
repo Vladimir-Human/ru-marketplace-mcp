@@ -145,6 +145,8 @@
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_429_returns_rate_limited_with_retry_delay" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_tools_opt_in_without_changing_settle_delay" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_public_citilink_never_waits_for_missing_domcontentloaded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed,R-CDP-NAV-TIMEOUT.qrator-429" title="Real connector/kit/open_page; only browser I/O is replaced." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s2_401_self_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="S2: DNS's 401 main document self-reloads to 200; the waiting public call succeeds." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-NAV-TIMEOUT.qrator-429" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_goto_and_status_waits_out_an_antibot_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: a self-clearing main-frame check returns the real page." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_429_is_not_rechecked" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: refuse a 429 without waiting for a navigation." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: the new document lands before the final host check." />
@@ -159,6 +161,26 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_without_load_events_yields_owned_page" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_is_bounded_and_never_yielded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_timeout_says_the_page_was_still_parsing" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+  </requirement>
+  <requirement id="R-CDP-SIM-INFRA" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_extra_flags_default" requirements="R-CDP-SIM-INFRA.flags" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_fixture_routes" requirements="R-CDP-SIM-INFRA.fixtures" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_marker_and_ci_configuration" requirements="R-CDP-SIM-INFRA.ci" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_missing_launch_guard" requirements="R-CDP-SIM-INFRA.flags,R-CDP-SIM-INFRA.isolation" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_reply_sequence" requirements="R-CDP-SIM-INFRA.fixtures" />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s1_search" requirements="R-CDP-SIM-INFRA.isolation" title="S1: Native MCP search succeeds through the real browser and committed source fixture." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S1" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s1_search" requirements="R-CDP-SIM-S1" title="S1: Native MCP search succeeds through the real browser and committed source fixture." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S2" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s2_401_self_reload" requirements="R-CDP-SIM-S2" title="S2: DNS's 401 main document self-reloads to 200; the waiting public call succeeds." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S4" kind="requirement" state="tested" gaps="G-CDP-SIM-RAW-STALLED-429-TAB">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-SIM-S4" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S9" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s9_hang_timeout" requirements="R-CDP-SIM-S9" title="S9: A real never-responding HTTPS origin hits the navigation budget, not the outer watchdog." />
   </requirement>
   <requirement id="R-CHALLENGE-ACTION" kind="requirement" state="tested" gaps="G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_challenge_is_json_with_the_challenge_contract" requirements="R-CHALLENGE-ACTION" title="The x5sec verdict must reach the agent through the public card tool as the" />
