@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-17T15:09:00.637881+00:00",
+  "checked_on_utc": "2026-11-17T17:02:35.727029+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -15,7 +15,7 @@
       ],
       "exit": 0,
       "name": "Ruff (lint)",
-      "seconds": 0.25,
+      "seconds": 0.266,
       "summary": "All checks passed!"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "exit": 0,
       "name": "Ruff (format check)",
-      "seconds": 0.188,
+      "seconds": 0.281,
       "summary": "597 files already formatted"
     },
     {
@@ -40,7 +40,7 @@
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 8.297,
+      "seconds": 0.953,
       "summary": "Success: no issues found in 127 source files"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 8.219,
+      "seconds": 8.172,
       "summary": "Success: no issues found in 127 source files"
     },
     {
@@ -87,8 +87,8 @@
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 2.562,
-      "summary": "{\"ts\":\"2026-11-17T08:50:39\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 3.14,
+      "summary": "{\"ts\":\"2026-11-17T10:43:40\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
@@ -97,7 +97,7 @@
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 0.453,
+      "seconds": 1.407,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
@@ -107,7 +107,7 @@
       ],
       "exit": 0,
       "name": "uv.lock revision is not downgraded",
-      "seconds": 0.094,
+      "seconds": 0.093,
       "summary": "uv.lock revision 5 is at or above the floor 5"
     },
     {
@@ -124,7 +124,7 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 9.859,
+      "seconds": 11.891,
       "summary": "dns           2 tools  ~   391 tok."
     },
     {
@@ -134,7 +134,7 @@
       ],
       "exit": 0,
       "name": "One version, everywhere",
-      "seconds": 0.157,
+      "seconds": 0.219,
       "summary": "version 2.9.4 agreed in 93 places (17 pyproject.toml, 16 __init__.py, 15 SERVER_VERSION, 19 image tag, 3 deployment release pin, 15 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5 "
     },
     {
@@ -146,7 +146,7 @@
       "exit": 0,
       "name": "Generated GRACE verification index is current",
       "seconds": 0.578,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=130 gap=10 untraced=0 mappings=1134 unmarked_tests=1934"
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=131 gap=10 untraced=0 mappings=1141 unmarked_tests=1934"
     },
     {
       "cmd": [
@@ -155,7 +155,7 @@
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.797,
+      "seconds": 0.859,
       "summary": ""
     },
     {
@@ -172,8 +172,8 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 1029.343,
-      "summary": "6214 passed, 2 skipped, 5 deselected, 27 xfailed in 1026.36s (0:17:06)"
+      "seconds": 1052.407,
+      "summary": "6214 passed, 2 skipped, 5 deselected, 27 xfailed in 1048.96s (0:17:28)"
     },
     {
       "cmd": [
@@ -188,16 +188,16 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 58.969,
-      "summary": "675 passed in 57.65s"
+      "seconds": 67.234,
+      "summary": "695 passed in 65.73s (0:01:05)"
     }
   ],
   "index": {
     "gap": 10,
-    "tested": 130,
+    "tested": 131,
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "fa5d6a1e454525e401284d8037c1020007a6a31caa5ff7d4d064b1c8b778fe22",
+  "tree_digest": "beb64ae85e2a0911c4656935548029682ec899e6fde4b0ea08471e8af9139139",
   "version": "2.9.4"
 }
