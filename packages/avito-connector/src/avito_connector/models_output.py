@@ -53,7 +53,10 @@ class AvitoSearchItemOut(BaseModel):
     seller_name: str | None = Field(
         default=None, description="Company or /brands/ shop display name; None for private or unknown sellers."
     )
-    seller_id: str | None = Field(default=None, description="Seller/user id when present.")
+    seller_id: str | None = Field(
+        default=None,
+        description="Seller id avito_seller opens as this seller: a bare id, or brands/<id> / user/<id> when needed.",
+    )
     is_company: bool | None = Field(default=None, description="Whether the seller is a company profile.")
     posted_at: str | None = Field(default=None, description="Publication time as reported by Avito.")
     images: int = Field(default=0, description="Number of images attached to the listing.")
@@ -91,7 +94,10 @@ class AvitoSellerOut(BaseModel):
     name: str | None = Field(
         default=None, description="Company or /brands/ shop display name; None for private or unknown sellers."
     )
-    seller_id: str | None = Field(default=None, description="Seller/user id when present.")
+    seller_id: str | None = Field(
+        default=None,
+        description="Seller id avito_seller opens as this seller: a bare id, or brands/<id> / user/<id> when needed.",
+    )
     is_company: bool | None = Field(default=None, description="Whether this is a company profile.")
     rating_score: float | None = Field(default=None, description="Seller rating score.")
     rating_count: int | None = Field(default=None, description="Seller review count.")

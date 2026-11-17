@@ -134,6 +134,7 @@ from avito_connector.parse import (
     parse_item_page,
     parse_item_seller,
     parse_seller_profile,
+    seller_handle,
 )
 from avito_connector.settings import get_settings
 from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_required_families
@@ -209,7 +210,7 @@ mcp = FastMCP(
         "Cards and seller profiles always read rendered pages in that Chrome. "
         "Start with avito_search; avito_card takes an item id or URL and returns "
         "the seller block when present. avito_seller takes an Avito /brands/<id> "
-        "or /user/<id>/profile URL or bare id (32-hex -> brands, otherwise user). "
+        "or /user/<id>/profile URL, a bare id or avito_card's seller_id. "
         "active_items is unavailable (None): /web/1/js/items ignores userId. "
         "Every tool's full field list and error codes are MCP resources (`guide://<source>/<tool>`); all error codes together are `marketplace://errors`."
     ),
@@ -839,10 +840,8 @@ async def avito_card(
             raise_tool_error(exc)
         details = _state.card_details(body, item_id, item.get("description"))
         seller_data = parse_item_seller(body, company_hint=details["is_company"])
-        # The profile link ends in the id avito_seller accepts (/brands/<hash>,
-        # /user/<hash>/profile), so the card hands it on rather than leaving it empty.
-        profile_match = re.search(r"/(?:brands|user)/([0-9A-Za-z_-]+)", seller_data.get("profile_url") or "")
-        seller_data["seller_id"] = profile_match.group(1) if profile_match else None
+        # The card hands on the id avito_seller opens as this same profile (R-AVITO-SELLER-ROUNDTRIP).
+        seller_data["seller_id"] = seller_handle(seller_data.get("profile_url"))
         item["seller"] = (
             AvitoSellerOut(**seller_data) if any(value is not None for value in seller_data.values()) else None
         )
@@ -896,8 +895,9 @@ async def avito_seller(
     """Read an Avito seller's rendered profile page over paced, allowlisted CDP.
 
     Accept an avito.ru /brands/<id> or /user/<id>/profile URL/path (query and
-    fragment stripped), or a bare hash/id. Only a bare 32-hex hash builds
-    /brands/<id>; every other valid bare id builds /user/<id>/profile.
+    fragment stripped), a bare hash/id, or brands/<id> / user/<id>. Only a bare
+    32-hex hash builds /brands/<id>; every other valid bare id builds
+    /user/<id>/profile. seller_id from avito_card always opens that same seller.
     Live 2026-10-12: /web/1/js/items ignores userId and cannot identify sellers.
 
     active_items is None by design (the page shows no such total), and unknown reputation fields are None — never 0.
@@ -910,8 +910,7 @@ async def avito_seller(
             url = _seller_profile_url(seller_id_or_url)
         except BadRequestError as exc:
             raise_tool_error(exc)
-        path = urllib.parse.urlsplit(url).path.strip("/").split("/")
-        seller_id = path[1]
+        seller_id = seller_handle(url)
         status, body, tier = await _fetch_item_page(url, ctx)
         _check_rendered_page(status, body, tier, "seller")
         try:
