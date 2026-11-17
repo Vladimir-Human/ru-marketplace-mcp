@@ -760,6 +760,13 @@
     <test file="scripts/test_bump_version.py" name="test_an_existing_core_package_must_declare_its_release_date" requirements="R-OLD-BUILD-INFO" />
     <test file="scripts/test_bump_version.py" name="test_release_date_is_a_separate_declared_site_bumped_to_today" requirements="R-OLD-BUILD-INFO" />
   </requirement>
+  <requirement id="R-OUTPUT-PAGE-URLS" kind="requirement" state="tested">
+    <test file="packages/detmir-connector/tests/test_page_links.py" name="test_a_product_link_on_another_host_is_dropped_and_a_missing_one_is_built" requirements="R-OUTPUT-PAGE-URLS.detmir" />
+    <test file="packages/detmir-connector/tests/test_page_links.py" name="test_a_sister_shop_category_link_is_dropped" requirements="R-OUTPUT-PAGE-URLS.detmir" />
+    <test file="packages/mcp-core/tests/test_kit.py" name="test_page_link_keeps_only_full_links_on_the_page_hosts" requirements="R-OUTPUT-PAGE-URLS" title="One rule for every page link a tool returns (R-OUTPUT-PAGE-URLS)." />
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_a_category_page_is_a_full_link_on_wildberries" requirements="R-OUTPUT-PAGE-URLS.wb" />
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_every_card_item_carries_its_product_page" requirements="R-OUTPUT-PAGE-URLS.wb" />
+  </requirement>
   <requirement id="R-OUTPUT-SCHEMA-WRAPPING" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_every_compacted_tool_preserves_its_sdk_output_contract" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: no local or mounted caller loses SDK wrapping." />
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_wrapped_outputs_survive_compaction_through_mcp" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: compaction preserves SDK serialization and decoding." />
@@ -993,6 +1000,14 @@
     <test file="packages/compare-connector/tests/test_warning_budget.py" name="test_a_cut_warning_list_names_the_number_it_suppressed" requirements="R-WARNING-BUDGET" title="R18: the delivery stays bounded and says how much it dropped." />
     <test file="packages/mcp-core/tests/test_count_and_warning_budget.py" name="test_a_cut_warning_list_names_the_number_it_suppressed" requirements="R-WARNING-BUDGET" title="The delivery stays bounded and says how much it dropped." />
     <test file="packages/wb-connector/tests/test_warning_budget.py" name="test_a_cut_warning_list_names_the_number_it_suppressed" requirements="R-WARNING-BUDGET" title="R18: thirteen diagnostics stay bounded and say that four were dropped." />
+  </requirement>
+  <requirement id="R-WB-BASKET-ROUTE" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_an_nm_id_above_the_route_map_uses_the_configured_fallback" requirements="R-WB-BASKET-ROUTE" />
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_the_basket_host_follows_wbs_route_map" requirements="R-WB-BASKET-ROUTE" />
+  </requirement>
+  <requirement id="R-WB-CATEGORY-SELECTOR" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_a_selector_stays_bounded_and_numeric" requirements="R-WB-CATEGORY-SELECTOR" />
+    <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_a_selector_wbs_own_menu_emits_reaches_the_catalog" requirements="R-WB-CATEGORY-SELECTOR" />
   </requirement>
   <requirement id="R-WB-DOM-FALLBACK" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_cli.py" name="test_doctor_reads_the_wb_dom_fallback_setting" requirements="R-WB-DOM-FALLBACK" />

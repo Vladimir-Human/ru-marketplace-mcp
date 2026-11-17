@@ -11,7 +11,7 @@ ToolError. Validation/transport/parse failures raise ``ToolError`` via
 # PURPOSE: Define WB public output models without private-person identity.
 # SCOPE: Product data, marketplace merchant identity and shared metadata.
 # DEPENDS: Pydantic; mcp_core.models.
-# LINKS: M-WB; R-NO-PERSONAL-DATA.
+# LINKS: M-WB; R-NO-PERSONAL-DATA; R-OUTPUT-PAGE-URLS.wb (WbCardItem.url).
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # Output models: Typed public responses; private names removed or nullable by parser rule.
@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Any
 
 from mcp_core.models import MetaOutBase, SelfCheckEntryBase, SelfCheckResponseBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # START_BLOCK_OUTPUT_MODELS
@@ -63,6 +63,10 @@ class WbCardItem(BaseModel):
     )
     price_rub: float | None = Field(default=None, description="Current price in rubles.")
     price_original_rub: float | None = Field(default=None, description="Strikethrough original price in rubles.")
+    url: str = Field(
+        default="",
+        description="Product page https://www.wildberries.ru/catalog/<nm_id>/detail.aspx; empty when nm_id is unknown.",
+    )
     # Fields below are filled only by WB_TRANSPORT=dom (rendered pages); the API path leaves them empty.
     wallet_price_rub: float | None = Field(
         default=None, description="Price when paying via WB Wallet (dom transport). Not a card price."
@@ -97,6 +101,14 @@ class WbCardItem(BaseModel):
         "Separate cards with their own nm_id: never this card's price or seller. Empty on the API path.",
     )
     transport: str = Field(default="api", description="How this item was read: 'api' or 'dom'.")
+
+    @model_validator(mode="after")
+    def _page_url(self) -> WbCardItem:
+        # One place for every path (API card/search/category and DOM): the page link
+        # follows from nm_id, the same form wb_search's DOM transport opens.
+        if not self.url and isinstance(self.nm_id, int) and self.nm_id > 0:
+            self.url = f"https://www.wildberries.ru/catalog/{self.nm_id}/detail.aspx"
+        return self
 
 
 class WbCardResponse(BaseModel):
@@ -253,7 +265,9 @@ class WbCategoryNode(BaseModel):
 
     id: int | None = Field(default=None, description="WB category id.")
     name: str = Field(default="", description="Category display name.")
-    url: str = Field(default="", description="Site-relative category URL.")
+    url: str = Field(
+        default="", description="Category page as a full https://www.wildberries.ru link; empty when WB gives none."
+    )
     shard: str = Field(default="", description="WB catalog shard (needed to query this category's feed).")
     query: str = Field(default="", description="WB catalog query string (cat=/subject= selector).")
     depth: int = Field(default=0, description="Depth in the tree: 0 for a top-level section.")

@@ -18,7 +18,15 @@ from types import SimpleNamespace
 
 import pytest
 from mcp_core.errors import ErrorCode, ToolError
-from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, polite_wait, render_json, sync_curl_get
+from mcp_core.kit import (
+    blocked_error,
+    host_checked_id,
+    on_bot_check_page,
+    page_link,
+    polite_wait,
+    render_json,
+    sync_curl_get,
+)
 from mcp_core.pacing import Pacer
 
 _PRODUCT_ID_RE = re.compile(r"/product/([A-Za-z0-9_-]+)")
@@ -438,3 +446,26 @@ async def test_render_json_refusals_are_json_errors(monkeypatch):
 )
 def test_on_bot_check_page_reads_only_the_path(url, expected):
     assert on_bot_check_page(url) is expected
+
+
+@pytest.mark.req("R-OUTPUT-PAGE-URLS")
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("/catalog/obuv", "https://www.example.ru/catalog/obuv"),
+        ("https://www.example.ru/p/1/", "https://www.example.ru/p/1/"),
+        ("https://example.ru/p/1/", "https://example.ru/p/1/"),
+        ("https://sister.example/p/1/", ""),
+        ("http://www.example.ru/p/1/", ""),
+        ("//sister.example/p/1/", ""),
+        ("catalog/obuv", ""),
+        (r"/catalog\evil", ""),
+        ("  /catalog/obuv  ", "https://www.example.ru/catalog/obuv"),
+        ("", ""),
+        (None, ""),
+        (42, ""),
+    ],
+)
+def test_page_link_keeps_only_full_links_on_the_page_hosts(raw: object, expected: str) -> None:
+    """One rule for every page link a tool returns (R-OUTPUT-PAGE-URLS)."""
+    assert page_link(raw, "https://www.example.ru/", ("www.example.ru", "example.ru")) == expected
