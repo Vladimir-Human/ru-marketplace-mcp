@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-17T05:27:39.967011+00:00",
+  "checked_on_utc": "2026-11-17T06:11:38.540221+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -15,7 +15,7 @@
       ],
       "exit": 0,
       "name": "Ruff (lint)",
-      "seconds": 1.078,
+      "seconds": 0.266,
       "summary": "All checks passed!"
     },
     {
@@ -29,8 +29,8 @@
       ],
       "exit": 0,
       "name": "Ruff (format check)",
-      "seconds": 0.234,
-      "summary": "562 files already formatted"
+      "seconds": 0.187,
+      "summary": "564 files already formatted"
     },
     {
       "cmd": [
@@ -40,7 +40,7 @@
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 11.469,
+      "seconds": 9.234,
       "summary": "Success: no issues found in 127 source files"
     },
     {
@@ -53,7 +53,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform)",
-      "seconds": 0.953,
+      "seconds": 1.172,
       "summary": "Success: no issues found in 127 source files"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 8.25,
+      "seconds": 9.203,
       "summary": "Success: no issues found in 127 source files"
     },
     {
@@ -87,8 +87,8 @@
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 3.891,
-      "summary": "{\"ts\":\"2026-11-16T23:14:01\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 2.922,
+      "summary": "{\"ts\":\"2026-11-16T23:56:28\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
@@ -97,7 +97,7 @@
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 1.359,
+      "seconds": 0.469,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
@@ -107,7 +107,7 @@
       ],
       "exit": 0,
       "name": "uv.lock revision is not downgraded",
-      "seconds": 0.11,
+      "seconds": 0.109,
       "summary": "uv.lock revision 5 is at or above the floor 5"
     },
     {
@@ -124,7 +124,7 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 9.984,
+      "seconds": 10.797,
       "summary": "dns           2 tools  ~   391 tok."
     },
     {
@@ -134,7 +134,7 @@
       ],
       "exit": 0,
       "name": "One version, everywhere",
-      "seconds": 0.187,
+      "seconds": 0.172,
       "summary": "version 2.9.4 agreed in 93 places (17 pyproject.toml, 16 __init__.py, 15 SERVER_VERSION, 19 image tag, 3 deployment release pin, 15 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5 "
     },
     {
@@ -145,8 +145,8 @@
       ],
       "exit": 0,
       "name": "Generated GRACE verification index is current",
-      "seconds": 0.532,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=120 gap=10 untraced=0 mappings=1005 unmarked_tests=1934"
+      "seconds": 0.578,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=121 gap=10 untraced=0 mappings=1008 unmarked_tests=1934"
     },
     {
       "cmd": [
@@ -155,7 +155,7 @@
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.703,
+      "seconds": 0.828,
       "summary": ""
     },
     {
@@ -172,8 +172,8 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 745.39,
-      "summary": "4651 passed, 2 skipped, 5 deselected, 10 xfailed in 741.75s (0:12:21)"
+      "seconds": 825.297,
+      "summary": "4662 passed, 2 skipped, 5 deselected, 10 xfailed in 821.95s (0:13:41)"
     },
     {
       "cmd": [
@@ -188,16 +188,16 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 59.25,
-      "summary": "673 passed in 58.01s"
+      "seconds": 70.86,
+      "summary": "673 passed in 68.94s (0:01:08)"
     }
   ],
   "index": {
     "gap": 10,
-    "tested": 120,
+    "tested": 121,
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "8b8374ff8c5c420a26170196d8016de956362cfcd6186779c7e44f774470f9e0",
+  "tree_digest": "c38a285d175ac6897c1ccc7841231ebc0fca6e7b3385c7e3b6f33458b1493286",
   "version": "2.9.4"
 }

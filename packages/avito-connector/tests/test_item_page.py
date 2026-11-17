@@ -247,7 +247,8 @@ async def test_card_captured_dom_page_matches_exact_ground_truth(monkeypatch):
     assert result.seller.rating_count == 116
     assert result.seller.is_company is True
     assert result.seller.profile_url == "https://www.avito.ru/brands/i224915198"
-    assert result.seller.seller_id == "i224915198"
+    # The bare "i224915198" would open /user/i224915198/profile, not this brand (R-AVITO-SELLER-ROUNDTRIP).
+    assert result.seller.seller_id == "brands/i224915198"
 
 
 async def test_selfcheck_first_dom_result_is_healthy(monkeypatch):

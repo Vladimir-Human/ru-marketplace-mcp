@@ -7,7 +7,7 @@ Moved verbatim out of server.py (move-only); server.py re-imports every name, so
 # PURPOSE: Pure parsing for the Avito tools (no network): item pages, seller blocks/profiles, search envelopes.
 # SCOPE: HTML/JSON-LD item cards with identity-checked DOM fallback, seller reputation and profile links, search items and errors.
 # DEPENDS: stdlib HTMLParser,json,re,urllib,datetime; mcp_core resilience/errors/redact/kit/sources; item_state; privacy.
-# LINKS: M-AVITO; R-NO-PERSONAL-DATA; R-NAV-HOSTS.invariant; packages/avito-connector/tests.
+# LINKS: M-AVITO; R-AVITO-SELLER-ROUNDTRIP; R-NO-PERSONAL-DATA; R-NAV-HOSTS.invariant; packages/avito-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _ItemPageHTML: Collect JSON-LD scripts and non-script page text.
@@ -18,7 +18,8 @@ Moved verbatim out of server.py (move-only); server.py re-imports every name, so
 # _SellerPageHTML: Collect seller markers, title, rating metadata and profile links.
 # parse_item_seller: Read nullable seller reputation, explicit company label and canonical profile link.
 # parse_seller_profile: Read profile title/score/reviews; reject 404 and empty profiles.
-# _seller_profile_url: Validate Avito-only profile URLs or expand bare seller ids.
+# _seller_profile_url: Validate Avito-only profile URLs or expand bare or kind-prefixed seller ids.
+# seller_handle: The seller id avito_seller opens as the same profile (bare, or brands/<id> / user/<id>).
 # _raise_for_search_error: Classify HTTP200 JSON challenge/rate/upstream errors from envelope metadata only.
 # _parse_search_items: Require a known items list (including []); normalize listings, dates, places and nullable prices;
 #                      a sale discount gives the price paid plus old_price_rub/discount_percent (item_state).
@@ -333,6 +334,9 @@ def _seller_profile_url(raw: str) -> str:
         ):
             raise BadRequestError("pass an http(s) avito.ru seller profile URL without credentials")
     elif not raw.startswith("/"):
+        kind = re.fullmatch(r"(brands|user)/([0-9A-Za-z_-]+)", raw)
+        if kind:  # the kind-prefixed handle seller_handle gives when a bare id would open the other kind
+            return f"{SITE_BASE}/brands/{kind[2]}" if kind[1] == "brands" else f"{SITE_BASE}/user/{kind[2]}/profile"
         if not re.fullmatch(r"[0-9A-Za-z_-]+", raw):
             raise BadRequestError("pass a seller id or an Avito /brands/<id> or /user/<id>/profile URL")
         path = f"/brands/{raw}" if re.fullmatch(r"[0-9a-fA-F]{32}", raw) else f"/user/{raw}/profile"
@@ -340,6 +344,22 @@ def _seller_profile_url(raw: str) -> str:
     if not re.fullmatch(r"/(?:brands/[0-9A-Za-z_-]+|user/[0-9A-Za-z_-]+/profile)/?", parts.path):
         raise BadRequestError("expected an Avito /brands/<id> or /user/<id>/profile URL")
     return urllib.parse.urlunsplit((parts.scheme or "https", parts.netloc or "www.avito.ru", parts.path, "", ""))
+
+
+def seller_handle(profile_url: str | None) -> str | None:
+    """The seller id avito_seller opens as the same profile (R-AVITO-SELLER-ROUNDTRIP).
+
+    The bare id when its bare form routes to the same kind of page (a 32-hex hash to
+    /brands/, anything else to /user/), else the kind-prefixed form: a brand slug such as
+    "tot_samy_sashaa" (live 2026-11-17) is "brands/tot_samy_sashaa", because the bare slug
+    would open /user/tot_samy_sashaa/profile, a 404.
+    """
+    match = re.search(r"/(brands|user)/([0-9A-Za-z_-]+)", profile_url or "")
+    if not match:
+        return None
+    kind, ident = match[1], match[2]
+    bare_kind = "brands" if re.fullmatch(r"[0-9a-fA-F]{32}", ident) else "user"
+    return ident if bare_kind == kind else f"{kind}/{ident}"
 
 
 def _score_after_name(document: _SellerPageHTML, name_node: dict[str, Any] | None) -> str | None:
