@@ -27,6 +27,8 @@ from collections.abc import Iterable
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "body_snippet:str",
     "items[].brand:null",
+    "items[].old_price_marked:bool",
+    "items[].old_price_text:str",
     "items[].price_texts.attached[]:str",
     "items[].price_texts.other[]:str",
     "items[].sku:str",

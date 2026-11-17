@@ -218,10 +218,18 @@ _SEARCH_EXTRACT_TEMPLATE = """
         // the strikethrough — a 3.5e16-rouble "old price". Same framing
         // doctrine as the Citilink PriceBlock scope.
         const priceRoot = card.querySelector('[class*="price-wrap"]') || card;
+        // A price block with Lamoda's own current-price markup marks its struck price
+        // too: read it only from that element, never from another amount (#304).
+        const oldPriceEl = priceRoot.querySelector('[class*="__price-old"], [class*="d-card__old-price"]');
+        const oldPriceMarked = !!priceRoot.querySelector(
+            '[class*="__price-new"], [class*="__price-single"], [class*="d-card__current-price"]'
+        );
         out.push({
             sku: m[1],
             title: title,
             brand: null,
+            old_price_text: cleanText(oldPriceEl),
+            old_price_marked: oldPriceMarked,
             price_texts: priceTextsIn(priceRoot),
             url: href
         });

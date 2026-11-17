@@ -4,13 +4,14 @@
 # PURPOSE: Preserve equivalent extraction and prohibit invented current/old prices or sku identities.
 # SCOPE: Model/live grids and captured refusal page; real jsdom, no browser/fake transport.
 # DEPENDS: pytest; stdlib pathlib; lamoda_connector.server; mcp_core.dom/domtest; capture_mutation.
-# LINKS: M-CAPTURE-MUTATION; R-CAPTURE-MUTATION.equivalent; R-CAPTURE-MUTATION.no-invented-price.
+# LINKS: M-CAPTURE-MUTATION; R-CAPTURE-MUTATION.equivalent; R-CAPTURE-MUTATION.no-invented-price; R-OLD-PRICE-BY-MARKER.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # CASES: All committed inputs existing search-extractor tests use.
 # _parse: Retain real extractor output and interpret price text with the source's shared pure mapper.
 # test_capture_equivalent/test_capture_no_invented_price: Shared JSDOM_SEEDS per fixture and mutation.
-# test_missing_highest_old_price_role_violation: Strict xfails for exact m2/m4 lower-old-price promotions.
+# ROLE_CASES/EXCLUSIONS: Former m2/m4 role failures now run without exclusions.
+# test_missing_highest_old_price_stays_unknown: Missing/refused marked old prices never promote a lower role.
 # END_MODULE_MAP
 
 from pathlib import Path
@@ -32,9 +33,10 @@ PRICE_NODES = (
 )
 PRICE_FIELDS = ("price_rub", "old_price_rub")
 ID_FIELDS = ("sku",)
-# Each exact (search_grid_live.html, mutation, 2) is test_missing_highest_old_price_role_violation.
-# The captured 12 999/8 999/6 569 pair loses 12 999; mcp_core.dom.prices_from_tile then emits 8 999 as old price.
-EXCLUSIONS = (("search_grid_live.html", "m2", 2), ("search_grid_live.html", "m4", 2))
+# The captured 12 999/8 999/6 569 pair loses or refuses its marked 12 999 price:
+# prices_from_tile used to promote 8 999 into that role (fixed 2026-11-17).
+ROLE_CASES = (("search_grid_live.html", "m2", 2), ("search_grid_live.html", "m4", 2))
+EXCLUSIONS: tuple[tuple[str, str, int], ...] = ()
 
 
 def _parse(name: str, raw: str, path: Path) -> dict:
@@ -99,13 +101,9 @@ def test_capture_no_invented_price(name: str, mutation: str, tmp_path: Path) -> 
 # START_BLOCK_MINIMAL_VIOLATIONS
 
 
-@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price")
-@pytest.mark.xfail(
-    strict=True, reason="P2-1 violation: missing/refused highest old price promotes a lower old-price role"
-)
-@pytest.mark.parametrize("name,mutation,seed", EXCLUSIONS)
-def test_missing_highest_old_price_role_violation(name: str, mutation: str, seed: int, tmp_path: Path) -> None:
-    # Exactly (search_grid_live.html, mutation, 2) is excluded above for each case.
+@pytest.mark.req("R-CAPTURE-MUTATION.no-invented-price", "R-OLD-PRICE-BY-MARKER")
+@pytest.mark.parametrize("name,mutation,seed", ROLE_CASES)
+def test_missing_highest_old_price_stays_unknown(name: str, mutation: str, seed: int, tmp_path: Path) -> None:
     raw = (FIXTURES / name).read_text(encoding="utf-8")
     mutated = mutation_case(
         raw, mutation, seed, kind="html", price_paths=(), price_nodes=PRICE_NODES, markers=DECOY_MARKERS

@@ -25,6 +25,9 @@ LIVE_FIXTURE = Path(__file__).parent / "fixtures" / "search_grid_live.html"
 SEARCH_GOLDEN = [
     "body_snippet:str",
     "items[].brand:null",
+    "items[].old_price_marked:bool",
+    "items[].old_price_text:null",
+    "items[].old_price_text:str",
     "items[].price_texts.attached[]:str",
     "items[].price_texts.other:empty_array",
     "items[].price_texts.other[]:str",
