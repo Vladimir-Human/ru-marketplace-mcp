@@ -492,6 +492,14 @@
     <test file="packages/avito-connector/tests/test_item_photos.py" name="test_photo_urls_skip_videos_foreign_hosts_and_duplicates" requirements="R-INPUT-TRUST" />
     <test file="packages/avito-connector/tests/test_item_photos.py" name="test_sync_photo_get_disables_redirects_and_rechecks_host" requirements="R-INPUT-TRUST" />
   </requirement>
+  <requirement id="R-INTERFACE-GUARDS" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_every_listed_tool_has_a_measured_budget_or_declared_gap" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_fixture_output_stays_within_its_measured_budget" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/marketplace-connector/tests/conformance/test_output_size.py" name="test_output_guard_rejects_a_planted_oversize_tool_answer" requirements="R-INTERFACE-GUARDS.output-size" />
+    <test file="packages/marketplace-connector/tests/test_tool_docstring_sections.py" name="test_description_guard_rejects_a_planted_long_tool_description" requirements="R-INTERFACE-GUARDS.descriptions" />
+    <test file="packages/marketplace-connector/tests/test_tool_docstring_sections.py" name="test_description_guard_rejects_a_planted_undocumented_parameter" requirements="R-INTERFACE-GUARDS.descriptions" />
+    <test file="packages/marketplace-connector/tests/test_tool_docstring_sections.py" name="test_every_full_profile_parameter_is_documented_and_descriptions_are_bounded" requirements="R-INTERFACE-GUARDS.descriptions" />
+  </requirement>
   <requirement id="R-ITEM-HONESTY" kind="requirement" state="tested">
     <test file="packages/avito-connector/tests/test_offer_invariants.py" name="test_search_flags_a_page_whose_every_price_died" requirements="R-ITEM-HONESTY" title="Titles intact, every price gone: the price selector drifted, not the market." />
     <test file="packages/avito-connector/tests/test_offer_invariants.py" name="test_search_flags_items_that_lost_their_titles_and_prices" requirements="R-ITEM-HONESTY" title="Both tiles keep their title/price keys but as nulls, so the page still" />
