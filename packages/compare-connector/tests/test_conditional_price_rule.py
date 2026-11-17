@@ -109,9 +109,7 @@ def test_the_helper_refuses_to_rank_a_conditional_price_alone():
     decision = decide_conditional_price("yandex_market", "1", None, 900.0, "subscription")
 
     assert decision.rank_price_rub is None
-    assert decision.note == (
-        "conditional_price: yandex_market/1: 900 RUB requires Yandex Plus subscription; not ranked"
-    )
+    assert decision.note == ("conditional_price: yandex_market/1: 900 RUB requires paying with Yandex Pay; not ranked")
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.rule")
@@ -187,7 +185,7 @@ async def test_yandex_ranks_by_the_everyday_price_and_names_the_plus_amount(monk
     assert offer.price_kind == "regular"
     assert offer.price_with_subscription_rub == 900.0
     assert result.cheapest is not None and result.cheapest.price_rub == 940.0
-    assert "info:conditional_price_available: yandex_market/1: 900 RUB with subscription" in result.warnings
+    assert "info:conditional_price_available: yandex_market/1: 900 RUB with Yandex Pay" in result.warnings
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.adapters")

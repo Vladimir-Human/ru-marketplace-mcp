@@ -21,9 +21,9 @@ carries ``data-zone-data`` payloads with both prices, title, sku and rating —
 ``zone`` reads those and is a first-class path (no brand, one screen deep).
 ``ld+json`` is the last resort: schema.org markup with the Plus price only.
 
-**Two prices, always.** Yandex leads with a subscriber price ("с Плюсом") that
-runs 25-30% below the everyday price. Both are reported separately, because
-quoting only the subscriber price misstates what most buyers pay. A third
+**Two prices, always.** Yandex leads with a conditional price ("с Пэй", paying
+with Yandex Pay; earlier "с Плюсом") below the everyday price. Both are reported
+separately, because quoting only the conditional price misstates what most buyers pay. A third
 figure rides along on discounted rows: the struck-through base price
 (``price_old_rub``). The SERP state stores exactly that figure in
 ``offer.price.value`` and ``baobabPayload.price``, so the everyday price is
@@ -401,8 +401,8 @@ async def yandex_search(
 
     Each result reports `price_rub` (what anyone pays — the price the SERP
     snippet's cart button charges, cross-verified against product cards) and
-    `price_with_plus` (requires a Yandex Plus subscription, typically 25-30%
-    lower). Prefer `price_rub` when quoting a price to a person;
+    `price_with_plus` (a conditional price: paying with Yandex Pay, earlier
+    Yandex Plus). Prefer `price_rub` when quoting a price to a person;
     `price_old_rub` is the struck-through reference price and must never be
     quoted as the price.
 
@@ -563,7 +563,7 @@ async def yandex_card(
     Reviews are capped at the ~13 Yandex renders server-side; the remainder load
     through an API this connector deliberately does not touch.
 
-    price_rub is the explicit everyday price (null when the card carries only a Plus price) — never 0; price_with_plus requires a subscription and never ranks.
+    price_rub is the explicit everyday price (null when the card carries only a conditional price) — never 0; price_with_plus requires paying with Yandex Pay (earlier Yandex Plus) and never ranks.
 
     Full field list and error codes: `guide://yandex/yandex_card`.
     """
@@ -628,8 +628,8 @@ async def yandex_card(
             # unknown, and saying so is the point: a comparison must not certify
             # the Plus amount as the price anyone pays.
             warnings.append(
-                "no_everyday_price: this card carries only a Yandex Plus price — the everyday "
-                "price is unknown (price_rub is null, not the subscriber amount)"
+                "no_everyday_price: this card carries only Yandex's conditional (Pay/Plus) price — the "
+                "everyday price is unknown (price_rub is null, not the conditional amount)"
             )
         else:
             warnings.append("no_price: no usable price on the page (item may be unavailable)")

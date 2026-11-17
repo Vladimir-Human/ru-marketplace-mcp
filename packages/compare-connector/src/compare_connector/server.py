@@ -14,10 +14,10 @@ emits sporadic 502s. One source failing must never sink the comparison, so every
 source is queried in parallel and its outcome reported per-source. A caller can
 always see which marketplaces answered and which did not.
 
-**Subscription prices are never silently compared against everyday prices.**
-Yandex Market leads with a Plus-subscriber price 25-30% below the everyday one.
+**Conditional prices are never silently compared against everyday prices.**
+Yandex Market leads with a Yandex Pay (earlier Plus) price below the everyday one.
 Ranking that against a Wildberries price would fabricate a bargain. Comparison
-uses everyday prices; subscriber prices ride along in a separate field.
+uses everyday prices; conditional prices ride along in a separate field.
 
 **Sources are optional at import time.** Ozon pulls in curl_cffi and Playwright,
 which many users do not want. Each connector is imported defensively, and the
@@ -335,7 +335,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``yandex_search`` results.
 
     ``price_rub`` is the everyday price and the only one that ranks; ``price_with_plus``
-    needs a paid subscription, so it rides along in a separate field, never ranked.
+    needs paying with Yandex Pay (earlier Plus), so it rides along in a separate field, never ranked.
     """
     server = SOURCES["yandex_market"]
     response = await server.yandex_search(query=query, page=1, limit=limit)
@@ -750,9 +750,9 @@ async def compare_prices(
 
     Two things to read carefully in the output:
 
-    - `cheapest` is chosen on everyday prices. Yandex Market's subscriber price
+    - `cheapest` is chosen on everyday prices. Yandex Market's conditional price
       appears as `price_with_subscription_rub` and is deliberately excluded from
-      ranking, since it requires a paid Yandex Plus subscription.
+      ranking: it needs paying with Yandex Pay (earlier Yandex Plus).
     - `source_outcomes` shows which marketplaces answered. A blocked or timed-out
       source means the comparison is partial, not that the product is absent
       there — `complete` tells you which case you are in.
@@ -1059,7 +1059,7 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
             if "detsky_mir" in installed
             else ("deselected by MARKETPLACE_SOURCES" if "detsky_mir" in deselected else "not installed"),
             "ozon": ("requires curl_cffi and, when Cloudflare challenges, a logged-in Chrome on the CDP port"),
-            "yandex_market": "reports both an everyday price and a Plus-subscriber price",
+            "yandex_market": "reports both an everyday price and a conditional Yandex Pay (earlier Plus) price",
             "taobao": "reports yuan prices and is never ranked against rubles",
             "megamarket": "reachable only through the operator's Chrome (ServicePipe)",
             "lamoda": "search through the operator's Chrome; cards via anonymous GraphQL",
