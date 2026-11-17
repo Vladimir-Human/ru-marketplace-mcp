@@ -126,8 +126,9 @@ class OzonSearchItemOut(BaseModel):
         default=None,
         description=(
             "'card' when the tile's priceV2.priceStyle.styleType is CARD_PRICE — that price is the "
-            "Ozon-card price, not an everyday price. None when the style is not CARD_PRICE: the other "
-            "tile styles (SALE_PRICE, CUSTOM) are not decided here and stay unreported."
+            "Ozon-card price, not an everyday price. None for the other styles, though a tile without "
+            "that badge was also measured showing the Ozon-card price (2026-11-17): the everyday price "
+            "is ozon_card's price."
         ),
     )
     rating: float | None = Field(
