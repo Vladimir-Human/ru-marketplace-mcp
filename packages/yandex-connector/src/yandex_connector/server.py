@@ -19,7 +19,7 @@ widget-state collections (richest: brand, seller, stock). Since 2026-09-12 the
 anonymous search page ships no collections; its first screen of snippets still
 carries ``data-zone-data`` payloads with both prices, title, sku and rating —
 ``zone`` reads those and is a first-class path (no brand, one screen deep).
-``ld+json`` is the last resort: schema.org markup with the Plus price only.
+``ld+json`` is the last resort: schema.org markup with the conditional (Pay/Plus) price only.
 
 **Two prices, always.** Yandex leads with a conditional price ("с Пэй", paying
 with Yandex Pay; earlier "с Плюсом") below the everyday price. Both are reported

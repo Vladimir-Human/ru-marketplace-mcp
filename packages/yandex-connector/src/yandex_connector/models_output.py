@@ -41,7 +41,7 @@ class MetaOut(MetaOutBase):
         default="",
         description=(
             "How data was extracted: 'ssr' (widget state), 'zone' (first-screen snippet payloads, no brand) "
-            "or 'ld+json' (degraded fallback, Plus price only)."
+            "or 'ld+json' (degraded fallback, conditional Pay/Plus price only)."
         ),
     )
 
