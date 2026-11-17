@@ -723,6 +723,91 @@ async def test_runner_ledger_delta_refresh_ids_and_whitelist(
     assert rows[0]["requests"] == 0
 
 
+class RefusedMidCallSession(FakeSession):
+    """MCP edge only: the child books what is left of Ozon's budget, prints the budget's
+    refusal line to its stderr log (child.log, as open_session wires it) and answers with
+    the transport error a connector makes of a refused request."""
+
+    def __init__(self, budget: live_budget.Budget, log: Path) -> None:
+        super().__init__(budget)
+        self.log = log
+
+    async def call_tool(self, tool: str, arguments: dict[str, Any]) -> Any:
+        self.calls.append((tool, arguments))
+        while len([e for e in self.budget.ledger.load() if e.get("group") == "ozon"]) < self.budget.per_source:
+            self.budget.reserve("httpx", "https://www.ozon.ru/")
+        with self.log.open("a", encoding="utf-8") as handle:
+            handle.write(
+                f"{live_budget.REFUSED_PREFIX}ozon in-page fetch https://www.ozon.ru/api/: "
+                "live budget exhausted for ozon: 8/8 requests\n"
+            )
+        error = {"error": "transport_down", "message": "Tier-2 (CDP) unreachable, start Chrome", "retryable": True}
+        return SimpleNamespace(
+            structured_content=None, content=[SimpleNamespace(text=json.dumps(error))], is_error=True
+        )
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+async def test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_source(
+    audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A call our own budget cut short is skipped: budget, pauses nothing, and costs one request more next time."""
+    cases, ids = inputs(audit)
+    monkeypatch.setattr(audit, "REPO_ROOT", tmp_path)
+    budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / "ledger.json"))
+    call = next(c for n in (1, 2) for c in audit.plan_run(cases, ids, {}, "A", n) if c["tool"] == "ozon_search")
+    for _ in range(7 - call["costs"]["ozon"]):
+        budget.reserve("fake", "https://www.ozon.ru/")
+    booked = len(budget.ledger.load())
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "child.log").write_text("[11/16/26 19:02:40] earlier child output\n", encoding="utf-8")
+    session = RefusedMidCallSession(budget, run / "child.log")
+
+    rows = await audit.execute_plan([call], session, budget, cases, run, "A")
+
+    assert len(session.calls) == 1
+    assert rows[0]["error_code"] == "budget_skipped"
+    assert rows[0]["state"] == "skipped"
+    assert rows[0]["tool_error_code"] == "transport_down"
+    assert rows[0]["requests"] == 8 - booked
+    measured: dict[tuple[str, str], int] = {}
+    audit._observe_costs(call, rows[0], cases, measured)
+    assert measured[("ozon", "ozon_search")] == 8 - booked + 1
+
+    # The next run of the cycle does not treat Ozon as down.
+    budget.ledger.save([])
+    again = await audit.execute_plan(
+        [{**call, "key": "A:again"}], FakeSession(budget), budget, cases, tmp_path / "next", "A", previous=rows
+    )
+    assert again[0]["state"] == "healthy"
+
+
+@pytest.mark.req("R-LIVE-AUDIT.runner")
+async def test_a_tool_error_without_a_refusal_line_keeps_its_own_code(audit: Any, tmp_path: Path) -> None:
+    """Only the budget's own line relabels an error: a refusal printed before the call does not count."""
+    cases, ids = inputs(audit)
+    budget = live_budget.Budget(40, 8, 3, live_budget.Ledger(tmp_path / "ledger.json"))
+    call = next(c for n in (1, 2) for c in audit.plan_run(cases, ids, {}, "A", n) if c["tool"] == "ozon_search")
+    run = tmp_path / "run"
+    run.mkdir()
+    log = run / "child.log"
+    log.write_text(f"{live_budget.REFUSED_PREFIX}ozon earlier refusal from another call\n", encoding="utf-8")
+
+    class DownSession(FakeSession):
+        async def call_tool(self, tool: str, arguments: dict[str, Any]) -> Any:
+            self.calls.append((tool, arguments))
+            error = {"error": "transport_down", "message": "Tier-2 (CDP) unreachable, start Chrome", "retryable": True}
+            return SimpleNamespace(
+                structured_content=None, content=[SimpleNamespace(text=json.dumps(error))], is_error=True
+            )
+
+    rows = await audit.execute_plan([call], DownSession(budget), budget, cases, run, "A")
+
+    assert rows[0]["error_code"] == "transport_down"
+    assert "tool_error_code" not in rows[0]
+
+
 @pytest.mark.req("R-LIVE-AUDIT.runner")
 def test_summary_dispatch_makes_no_preflight_or_install(
     audit: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Any
