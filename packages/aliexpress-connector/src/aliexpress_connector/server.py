@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-ALIEXPRESS-LONG-TITLE; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -244,18 +244,22 @@ _SEARCH_EXTRACT_TEMPLATE = """
         const tile = tileRootFor(a, /\\/item\\/(\\d{9,})\\.html/);
         if (!tile || !tile.textContent) continue;
         const priceInfo = priceTextsIn(tile);
-        // The product name is the longest non-numeric leaf text. A leaf is
-        // "numeric" when digits dominate it — >= 2 digits AND over 40% of the
-        // chars — which drops "2 334 купили" and delivery lines while keeping
-        // model-bearing titles like "iPhone 15 Pro" and "Galaxy S24".
+        // The product name is the longest leaf text that is not a tile line.
+        // R-ALIEXPRESS-LONG-TITLE: names run past 140 characters (audit cycle 2,
+        // 2026-11-17: 146-163), and a 140 cap made "до 10 дней, бесплатно" or
+        // "20 купили" the title; 400 still keeps a page-sized text out. Sales
+        // counts, delivery lines and the "Рекомендуем" badge are never a name;
+        // a leaf whose digits dominate (>= 2 digits AND over 40% of the chars)
+        // is a price, while model-bearing names like "iPhone 15 Pro" stay.
         let title = null, best = 5;
         for (const el of tile.querySelectorAll('*')) {
             if (el.children.length) continue;
             const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
-            if (!t || t.length > 140) continue;
+            if (!t || t.length > 400) continue;
             if (DECOY_RE.test(t)) continue;
+            if (/купили$/i.test(t) || /^до\\s+\\d+\\s+дн/i.test(t) || /^(бесплатно|рекомендуем)$/i.test(t)) continue;
             const digits = ((t.match(/\\d/g) || []).length);
-            if (digits >= 2 && !/купили$/i.test(t) && digits / t.length > 0.4) continue;
+            if (digits >= 2 && digits / t.length > 0.4) continue;
             if (t.length > best) { best = t.length; title = t; }
         }
         const sku = (href.match(/sku_id=(\\d+)/) || [])[1] || null;

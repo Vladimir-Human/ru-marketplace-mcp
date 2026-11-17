@@ -359,6 +359,14 @@ def _hint_browser_wall(mode: str, source: str) -> str:
     )
 
 
+def _hint_browser_page(mode: str, source: str) -> str:
+    """A browser source whose page did not load while Chrome answered: let the human look."""
+    return (
+        f"Run `{cli_command(mode, 'unblock', source)}`: it opens the page in the scraping Chrome so you see what the "
+        "site shows (a check to pass, an error page), and it re-checks."
+    )
+
+
 def _hint_drift(mode: str, source: str, *, probeable: bool) -> str:
     """How to diagnose a parser drift, in the way this install can."""
     if mode == INSTALL_CHECKOUT:
@@ -1248,11 +1256,6 @@ def next_step(
 
     if status == "drift_detected" or "drift" in states:
         return _hint_drift(mode, source, probeable=source in DIAGNOSE_DRIFT_SOURCES)
-    if "budget_refused" in reasons:
-        return (
-            "The live budget refused this check; this says nothing about the source. "
-            "Start a new bounded run with `python scripts/live_check.py reset`."
-        )
     if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
         # With the fallback on, the tools already read WB through the DOM path;
         # only an explicit opt-out needs the old "switch transport" instruction.
@@ -1268,6 +1271,17 @@ def next_step(
         return _hint_cdp_down(mode)
     if uses_browser and reasons & WALL_REASONS:
         return _hint_browser_wall(mode, source)
+    # First-run probe, 2026-11-17 (fresh profile): Lamoda and Citilink pages did not load while Chrome answered, and
+    # the step was a bare doc link. Opening the page shows the human what the site shows, and unblock re-checks.
+    if uses_browser and cdp_reachable is True and "transport_down" in reasons and source in UNBLOCK_PAGES:
+        return _hint_browser_page(mode, source)
+    # A budget refusal says nothing about the site, so any real evidence above names the step first (the probe's
+    # Ozon card answered 403 while its reviews check was refused, and the 403 was hidden behind this note).
+    if "budget_refused" in reasons:
+        return (
+            "The live budget refused this check; this says nothing about the source. "
+            "Start a new bounded run with `python scripts/live_check.py reset`."
+        )
     return _hint_antibot(mode)
 
 

@@ -23,13 +23,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose DNS-Shop product search and cards from rendered pages.
 # SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-DNS; M-KIT; M-COMPARE; M-MARKETPLACE; R-SELFCHECK-GATES-PRICE; packages/dns-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: M-DNS; M-KIT; M-COMPARE; M-MARKETPLACE; R-SELFCHECK-GATES-PRICE; R-DNS-FIRST-VISIT-PRICES; packages/dns-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
 # _extract_product_id: Validate bare handles or dns-shop.ru product URLs before navigation (shared host check).
 # _search_item_from_tile: Adapt DOM price/availability fields into public models.
 # _cdp_render: Delegate paced browser navigation and extractor execution to mcp_core.kit.render_json.
+# _render_search: Render a search page; once more when no tile carries a price (R-DNS-FIRST-VISIT-PRICES).
 # _is_qrator_wall: Detect positive document-title or Qrator-markup evidence.
 # dns_search: Reject walls before mapping/cache; flag unrecognized empty grids; warn when a required key vanishes.
 # dns_card: Read product-only title/price/stock; reject walls before mapping/cache.
@@ -379,6 +380,20 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
     )
 
 
+async def _render_search(url: str, ctx: Context | None) -> dict[str, Any]:
+    """R-DNS-FIRST-VISIT-PRICES: render a search page, and once more when its tiles carry no price at all.
+
+    First-run probe, 2026-11-17: a new scraping profile's first DNS search rendered tiles without a single price,
+    and doctor reported parser drift; the next navigation priced them. One more navigation, only in that case.
+    """
+    payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    priced = any(isinstance(item, dict) and str(item.get("price_text") or "").strip() for item in items)
+    if items and not priced and not _is_qrator_wall(payload):
+        payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+    return payload
+
+
 def _is_qrator_wall(data: dict[str, Any]) -> bool:
     """Require positive wall evidence; a missing title can be parser drift."""
     title_field = "page_title" if "page_title" in data else "title"
@@ -410,7 +425,7 @@ async def dns_search(
             payload, tier = cached, "cache"
         else:
             try:
-                payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+                payload = await _render_search(url, ctx)
             except NavBlocked as exc:
                 raise_tool_error(
                     TransportDownError(
@@ -593,7 +608,7 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
     url = f"{SEARCH_URL}?q={urllib.parse.quote('ноутбук')}"
     try:
         async with asyncio.timeout(90):
-            payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+            payload = await _render_search(url, ctx)
     except TimeoutError:
         checks["search"] = R.selfcheck_entry(
             "inconclusive", baseline=baseline, reason="timeout", notes=["render exceeded 90s"]
