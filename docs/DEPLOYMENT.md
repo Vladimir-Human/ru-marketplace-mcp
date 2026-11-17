@@ -89,8 +89,8 @@ the version to match the release you downloaded.
 
 ```console
 python -m venv .venv
-.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.9.4-py3-none-any.whl
-.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.9.4" "aliexpress-connector==2.9.4"
+.venv/bin/python -m pip install --no-deps wheelhouse/mcp_core-2.10.0-py3-none-any.whl
+.venv/bin/python -m pip install --find-links wheelhouse "compare-connector[all]==2.10.0" "aliexpress-connector==2.10.0"
 .venv/bin/compare-mcp
 ```
 
@@ -103,8 +103,8 @@ On Windows, use `.venv\Scripts\python.exe` and
 prefixes above accordingly).
 The wheelhouse must contain the same release version for every downloaded
 workspace package; do not mix versions. In a source checkout, the corrected
-metadata includes `aliexpress-connector` in `compare-connector[all]`; Cian and
-MPStats are unified-server sources, not comparison sources, and are intentionally
+metadata includes `aliexpress-connector` in `compare-connector[all]`; Cian is a
+unified-server source, not a comparison source, and is intentionally
 not part of that extra.
 
 ## PyPI (maintainer)
@@ -232,7 +232,7 @@ the runtime stays on Python 3.12 until that is changed on purpose.
 ### Build
 
 ```bash
-docker build -t ru-marketplace-mcp:2.9.4 .
+docker build -t ru-marketplace-mcp:2.10.0 .
 ```
 
 The install uses `uv sync --all-packages --frozen`: `--all-packages` installs
@@ -255,7 +255,7 @@ container, and publish the port to the host's loopback:
 
 ```bash
 docker run --rm -p 127.0.0.1:8000:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.9.4
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.10.0
 # -> http://127.0.0.1:8000/mcp on the host
 ```
 
@@ -263,7 +263,7 @@ Run a different marketplace by overriding the command:
 
 ```bash
 docker run --rm -p 127.0.0.1:8001:8000 \
-  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.9.4 yandex-mcp
+  -e MCP_HTTP_AUTH_TOKEN -e MCP_HTTP_TENANT_ID ru-marketplace-mcp:2.10.0 yandex-mcp
 ```
 
 `-p 127.0.0.1:8000:8000` keeps access local in addition to the MCP auth checks.
@@ -281,7 +281,7 @@ missing or empty values before starting containers. This stack serves one
 tenant; separate tenants need separate stacks and Chrome profiles.
 
 ```bash
-docker compose up -d          # wb:8000 yandex:8001 detmir:8002 ozon:8003 compare:8004 … mpstats:8012
+docker compose up -d          # wb:8000 yandex:8001 detmir:8002 ozon:8003 compare:8004 …
 docker compose logs -f wb
 docker compose down
 ```
@@ -289,14 +289,6 @@ docker compose down
 Use the same `Authorization` and `X-MCP-Tenant` headers shown above for each
 service. `docker compose config --quiet` validates configuration without
 printing the expanded secret values.
-
-The `mpstats` service is the optional paid source: it starts without
-`MPSTATS_MP_AUTH`, but its tools answer `auth_missing` until you set the token
-in its `environment:` block. Note the same extends to `marketplace-mcp doctor`:
-without the token the mpstats selfcheck reports `inconclusive`, so doctor exits
-`2` even when everything else is healthy — the same semantics the CDP sources
-have without a Chrome. Run `marketplace-mcp doctor wb ozon ...` (named sources)
-to skip it, exactly as you would skip a CDP source you do not use.
 
 ## Honest limitations
 

@@ -48,7 +48,14 @@ from dataclasses import dataclass
 from mcp_core.logging import log_event
 from mcp_core.sources import BY_NAME
 
-from compare_connector.identity import extract_size_tokens, format_size_tokens, model_mismatch, sizes_conflict
+from compare_connector.identity import (
+    extract_size_tokens,
+    format_size_tokens,
+    lists_models,
+    lists_sizes,
+    model_mismatch,
+    sizes_conflict,
+)
 from compare_connector.models_output import CompareResponse, MarketOffer, SourceOutcome
 
 
@@ -577,11 +584,10 @@ def build_response(
     failed_sources = [outcome.source for outcome in outcomes if outcome.status != "ok"]
 
     cheapest = priced[0] if priced else None
-    # A size the query states and the title contradicts is explicit text, not a
-    # heuristic, so it keeps the offer out of the like-for-like candidate rather
-    # than merely warning about it; so does a title missing a model word or number
-    # the query names (R-COMPARE-MODEL-TOKENS). The offer keeps its rank and may
-    # remain plain cheapest; only cheapest_comparable skips it.
+    # Explicit text keeps an offer out of the like-for-like candidate rather than merely warning about it: a size the
+    # query states and the title contradicts, a title missing a model word or number the query names
+    # (R-COMPARE-MODEL-TOKENS), a title listing several sizes or, unless the query does, several models
+    # (R-COMPARE-SIZE-LIST, R-COMPARE-MODEL-LIST). The offer keeps its rank and may remain plain cheapest.
     query_sizes = extract_size_tokens(query)
     comparable: list[MarketOffer] = []
     size_excluded: list[frozenset[str]] = []
@@ -589,6 +595,8 @@ def build_response(
         if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
             continue
         if model_mismatch(query, offer.title, offer.brand) or _condition_unstated(offer.source, query):
+            continue
+        if lists_sizes(offer.title) or (lists_models(offer.title) and not lists_models(query)):
             continue
         title_sizes = extract_size_tokens(offer.title)
         if sizes_conflict(query_sizes, title_sizes):

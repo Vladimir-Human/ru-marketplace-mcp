@@ -28,7 +28,6 @@ import pytest
 from fastmcp.exceptions import ToolError
 from mcp_core.cache import TTLCache
 from mcp_core.sources import BY_NAME, SOURCES
-from pydantic import SecretStr
 
 # START_BLOCK_CASES
 ROOT = Path(__file__).resolve().parents[4]
@@ -241,15 +240,6 @@ CASES = (
         ("title",),
         "Phone",
     ),
-    Case(
-        "mpstats",
-        "mpstats_item",
-        "_post_json_budgeted",
-        {"skus": [5107857210], "place": "ozon"},
-        "parser_drift",
-        ("items", 0, "sku"),
-        5107857210,
-    ),
 )
 
 # No caching connector is exempt: credentials, Chrome and multi-tier reads can
@@ -350,12 +340,6 @@ def responses(case: Case) -> tuple[Any, Any]:
         return (200, json.dumps(bad)), (200, json.dumps(good))
     if case.source == "megamarket":
         return (200, '{"goods":{}}'), (200, '{"goods":{"title":"Phone","price":1999}}')
-    if case.source == "mpstats":
-        return (200, '{"code":200,"items":null}', None), (
-            200,
-            '{"code":200,"items":{"5107857210":{"Sku":5107857210,"pricesGraph":[1999]}}}',
-            None,
-        )
     raise AssertionError(case.source)
 
 
@@ -378,9 +362,6 @@ async def test_rejected_response_is_not_cached(case: Case, monkeypatch: pytest.M
     monkeypatch.setattr(module, "_cache", TTLCache(ttl_s=300, max_entries=module._cache._max))
     if hasattr(module, "_min_gap"):
         monkeypatch.setattr(module, "_min_gap", 0.0)
-    if case.source == "mpstats":
-        # Not a credential: an inert test setting; the fake POST is the only I/O.
-        monkeypatch.setattr(module._settings, "mp_auth", SecretStr("offline-test-placeholder"))
     bad, good = responses(case)
     calls: list[Any] = []
 

@@ -9,6 +9,117 @@
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-11-17
+
+### Added
+- Каждая ошибка инструмента теперь несёт поле `tool` (какой инструмент вызывали) и `next_step` — одну фразу о следующем шаге: какой вызов повторить и через сколько секунд, какой инструмент поможет найти товар, какую настройку должен задать пользователь. Для `rate_limited`, `timeout` и `transport_down` поле `retry_after_s` есть всегда. Коды ошибок и `retryable` не изменились (#271).
+- Every tool error now carries `tool` (the tool that was called) and `next_step`, one sentence on what to do next: which call to repeat and after how many seconds, which tool finds the item, which setting the user must set. `rate_limited`, `timeout` and `transport_down` always carry `retry_after_s`. Error codes and `retryable` are unchanged (#271).
+
+- В предложениях `compare_prices` появилось поле `image_url`: ссылка на фото товара, если её уже содержит ответ поиска (Яндекс Маркет, Ozon, Мегамаркет, DNS, AliExpress). Лишних запросов нет; у остальных магазинов поле пустое. Тот же `image_url` появился у товаров в ответах `ozon_search`, `megamarket_search`, `dns_search` и `aliexpress_search` (#279).
+- `compare_prices` offers gain `image_url`: the product photo link when the search answer already holds it (Yandex Market, Ozon, Megamarket, DNS, AliExpress). No extra request; for the other sources the field is empty. The same `image_url` is added to the items of `ozon_search`, `megamarket_search`, `dns_search` and `aliexpress_search` (#279).
+
+- В `source_outcomes` ответа `compare_prices` у каждого магазина появились `observed_at` (время в UTC, когда сравнение получило ответ магазина) и `region` (регион, который называет сам ответ поиска; сейчас только Авито: id локации, по которой шёл поиск). Ранжирование от региона не меняется (#282).
+- `compare_prices` source outcomes gain `observed_at` (UTC time when the comparison received the source's answer) and `region` (the region the search answer itself names; today only Avito: the location id the search ran against). The ranking does not change with the region (#282).
+
+### Changed
+- Инструменты больше не отправляют клиенту сообщения журнала MCP (`notifications/message`): протокол объявил этот канал устаревшим (SEP-2577). Те же записи сервер пишет в свой stderr. FastMCP обновлён до 4.2.0 (#269).
+- Tools no longer send MCP log messages (`notifications/message`) to the client: the protocol deprecated that channel (SEP-2577). The server writes the same records to its stderr. FastMCP is updated to 4.2.0 (#269).
+
+- Имя продавца на Авито (`seller_name` в `avito_search`, `seller.name` в `avito_card` и `avito_seller`) приходит только для компании или магазина Авито (`/brands/`); у частного или неизвестного продавца оно `null`. Имя публикатора на Циане (`agent.name`, `agency_name`) приходит только для агентства или застройщика. Названия компаний и магазинов, ссылки на профили и рейтинги остаются (#274).
+- The Avito seller name (`seller_name` in `avito_search`, `seller.name` in `avito_card` and `avito_seller`) is returned only for a company or an Avito shop (`/brands/`); a private or unknown seller's name is `null`. The Cian publisher name (`agent.name`, `agency_name`) is returned only for an agency or a developer. Company and shop names, profile links and ratings stay (#274).
+
+- `compare_prices`: если рядом с обычной ценой есть более низкая цена по условию (Кошелёк WB, Яндекс Плюс), сравнение по-прежнему ранжирует по обычной цене, а более низкую сумму называет информационной пометкой `info:conditional_price_available` вместо предупреждения. Цена только по условию по-прежнему не участвует в ранжировании и даёт предупреждение `conditional_price`. Информационные пометки `info:` от самих магазинов теперь приходят как пометки, а не как предупреждения `source_warning:` (#275).
+- `compare_prices`: when a lower conditional price (WB Wallet, Yandex Plus) sits next to the everyday price, the comparison still ranks by the everyday price and names the lower amount in an `info:conditional_price_available` note instead of a warning. A conditional price alone still does not rank and keeps the `conditional_price` warning. A source's own `info:` notes now arrive as notes, not as `source_warning:` warnings (#275).
+
+- Ссылка в аргументе инструмента (карточка по ссылке, `compare_verify_offer`) принимается только с адреса самого магазина. Ссылки с чужих адресов, на локальные адреса, с логином перед чужим хостом или со схемой `file:` получают `bad_request` до любого запроса. У Мегамаркета, Ламоды и Циана такой проверки не было. Мобильные и региональные ссылки на домене самого магазина (например, `m.aliexpress.ru`) принимаются, как и раньше (#276).
+- A link in a tool argument (a card by URL, `compare_verify_offer`) is accepted only on the store's own hosts. A link to another host, a local address, a login before a foreign host or a `file:` URL gets `bad_request` before any request; Megamarket, Lamoda and Cian had no such check. Mobile and regional links on the store's own domain (for example `m.aliexpress.ru`) are accepted as before (#276).
+- Браузер сборщика не открывает чужой адрес из аргумента: такая ссылка отвергается до загрузки страницы. Если сайт магазина перенаправляет на чужой адрес, вызов отвечает ошибкой и ничего с той страницы не возвращает (#276).
+- The scraping Chrome never opens a foreign host from an argument: such a link is refused before any page loads. When a store's site redirects to a foreign host, the call answers with an error and returns nothing from that page (#276).
+
+- Сравнение цен: справка `guide://compare/compare_prices` теперь просит агента перед тем, как назвать цену победителя или сказать «дешевле всего», вызвать `compare_verify_offer` для этой строки и не считать заголовок из поиска доказательством той же модели, не прочитав `identity_verification` (#309).
+- Price comparison: the `guide://compare/compare_prices` guide now asks the agent to call `compare_verify_offer` on the winning row before quoting its price or calling it the cheapest, and not to take a search title as proof of the same model without reading `identity_verification` (#309).
+
+### Deprecated
+- У MPStats теперь есть свой MCP-сервер, `https://mcp.mpstats.io/mcp?token=<ваш токен MPStats>`: подключайте сначала его. Инструменты `mpstats_item` и `mpstats_warehouses` здесь устарели и уйдут в v2.11.0; до тех пор каждый их ответ несёт пометку `info:deprecated_use_official_mpstats_mcp` (#277).
+- MPStats now runs its own MCP server, `https://mcp.mpstats.io/mcp?token=<your MPStats token>`: connect that one first. The `mpstats_item` and `mpstats_warehouses` tools here are deprecated and go in v2.11.0; until then every result carries an `info:deprecated_use_official_mpstats_mcp` note (#277).
+
+### Removed
+- Из ответов убраны имена покупателей: поле `user` в отзывах и вопросах `wb_reviews` и `wb_questions`, поле `author` в отзывах `ozon_reviews` и в отзывах карточки `yandex_card`. Для сравнения товаров они не нужны, а передавать чужие персональные данные дальше закон без отдельного основания не разрешает (#274).
+- Shopper names are gone from the results: `user` in `wb_reviews` and `wb_questions` items, `author` in `ozon_reviews` items and in `yandex_card` review items. Comparing goods does not need them, and passing other people's personal data on needs its own legal basis (#274).
+
+### Fixed
+- Циан: если API поиска требует капчу (ответ с кодом `captchaRequired`), поиск и карточка отвечают `challenge_required` с командой `marketplace-mcp unblock cian`, а не `transport_down` с описанием блокировки WAF. После того как человек пройдёт проверку, следующий вызов не замедляется (#266).
+- Cian: when the search API demands a captcha (an answer with code `captchaRequired`), search and card answer `challenge_required` with `marketplace-mcp unblock cian` instead of `transport_down` describing a WAF block. Once a human passes the check, the next call is not slowed down (#266).
+
+- `compare_prices`: предупреждение `conditional_price: …` о цене только по условию (например, только с Кошельком WB) снова приходит в `warnings` с этим префиксом, как описано в документации, а не внутри `source_warning:…` (#286).
+- `compare_prices`: the `conditional_price: …` warning for a price that exists only under a condition (for example WB Wallet only) again arrives in `warnings` with that prefix, as documented, not inside `source_warning:…` (#286).
+
+- Ошибки инструментов: `next_step` у `bad_request` называет только параметр, который сообщение называет целиком (или единственный, у которого названы две части имени); раньше общее слово вроде «source» указывало на чужой параметр. Блок, который должен снять человек (`transport_down` с `status_code` 403), больше не получает выдуманную паузу в 1,5-2,5 с: `next_step` говорит сначала снять блок и называет только паузу, которую дал сам магазин (#287).
+- Tool errors: a `bad_request` `next_step` names only a parameter the message names in full (or the one parameter with two of its name parts named); before, a shared word such as "source" pointed at the wrong parameter. A block a person must clear (`transport_down` with `status_code` 403) no longer gets an invented 1.5-2.5 s wait: `next_step` says to clear the block first and quotes only a delay the source supplied (#287).
+
+- Восстановлены ссылки Циан без схемы, ссылки на поддомены Мегамаркета и Lamoda и переходы на www.aliexpress.ru; ссылки и переходы браузера больше не допускают хосты, предназначенные только для загрузки API и изображений (#288).
+- Restored schemeless Cian links, Megamarket and Lamoda subdomain links, and www.aliexpress.ru redirects; user links and browser navigation no longer admit fetch-only API and image hosts (#288).
+
+- `compare_prices` больше не ставит цену по Ozon Карте с плитки поиска Ozon в рейтинг как обычную цену: у такой плитки `price_rub` пустой, сумма в `price_native`, `price_kind` "card" и одно предупреждение `conditional_price:`. У элементов `ozon_search` появилось поле `price_kind` ("card" для такой плитки, иначе пусто) (#290).
+- `compare_prices` no longer ranks an Ozon search tile's Ozon Card price as the everyday price: such a tile has an empty `price_rub`, the amount in `price_native`, `price_kind` "card" and one `conditional_price:` warning. `ozon_search` items gain `price_kind` ("card" for such a tile, otherwise empty) (#290).
+
+- `compare_prices` больше не отдаёт ответ без ограничения размера: при 20 предложениях из 10 магазинов он доходил примерно до 143 000 символов. Ответ длиннее 40 000 символов теперь теряет целые предложения с конца списка (сначала без цены, потом самые дорогие); `total_offers` хранит полное число, `cheapest` и `cheapest_comparable` не меняются, а заметка `info:offers_omitted` говорит, сколько предложений не вошло и как их получить (#292).
+- `compare_prices` no longer returns an answer of unbounded size: 20 offers from 10 marketplaces reached about 143,000 characters. An answer over 40,000 characters now leaves whole offers out from the end of the list (unpriced first, then the dearest); `total_offers` keeps the full count, `cheapest` and `cheapest_comparable` are unchanged, and an `info:offers_omitted` note says how many offers were left out and how to get them (#292).
+
+- `wb_card` и другие инструменты Wildberries снова читают новые карточки: таблица корзин обрывалась на vol 4997 и ошибалась в корзинах 26-27, поэтому каждая карточка новее уходила на запасной хост и отвечала `not_found`. Теперь таблица повторяет карту маршрутов WB из 65 корзин (#296).
+- `wb_categories` отдаёт в `url` полную ссылку `https://www.wildberries.ru/...` вместо голого пути, а у карточки `wb_card` появилось поле `url` со ссылкой на товар (#296).
+- `wb_category_products` принимает все ключи фильтра, которые выдаёт меню WB (`cat`, `subject`, `kind`, `brand`, `xsubject`, `vflags`), только с цифрами и разделителями (#296).
+- Ссылки на категории и товары Детского мира ведут только на его собственный сайт: путь на сайте или https-ссылка на его хостах, иначе ссылка пустая (#296).
+- `wb_card` and the other Wildberries tools read new cards again: the basket table ended at vol 4997 and had wrong bounds for baskets 26-27, so every newer card went to the fallback host and answered `not_found`. The table now follows WB's 65-basket route map (#296).
+- `wb_categories` returns a full `https://www.wildberries.ru/...` link in `url` instead of a bare path, and a `wb_card` item has a new `url` field with the product link (#296).
+- `wb_category_products` accepts every filter key WB's own menu hands out (`cat`, `subject`, `kind`, `brand`, `xsubject`, `vflags`), with digits and separators only (#296).
+- Detsky Mir category and product links lead only to its own site: a site path or an https link on its hosts, otherwise the link is empty (#296).
+
+- Условную цену Яндекс Маркета (`price_with_plus`, в `compare_prices` — `price_with_subscription_rub`) описания полей и инструментов, справка, навыки и заметки `compare_prices` теперь называют ценой при оплате через Яндекс Пэй («с Пэй» на странице; раньше это была цена с Плюсом). Они больше не обещают, что нужна подписка Плюс и что цена обычно на 25–30 % ниже. Имена полей и значение `price_kind` не меняются (#300).
+- Yandex Market's conditional price (`price_with_plus`; `price_with_subscription_rub` in `compare_prices`) is now named in field and tool descriptions, guides, skills and `compare_prices` notes as the price for paying with Yandex Pay (the page's «Пэй» price; earlier the Yandex Plus price). They no longer claim a Plus subscription is required or that the price is typically 25–30% lower. Field names and the `price_kind` value are unchanged (#300).
+
+- `seller_id` из `avito_card` снова открывает того же продавца в `avito_seller`. Раньше голый id магазина вроде `tot_samy_sashaa` превращался в адрес `/user/<id>/profile`, которого на Авито нет. Теперь карточка отдаёт `brands/<id>` или `user/<id>`, когда голый id открыл бы профиль другого вида, и `avito_seller` принимает такие значения (#301).
+- A `seller_id` from `avito_card` opens the same seller in `avito_seller` again. A bare shop id such as `tot_samy_sashaa` used to become a `/user/<id>/profile` address that does not exist on Avito. The card now hands on `brands/<id>` or `user/<id>` when a bare id would open the other kind of profile, and `avito_seller` accepts those values (#301).
+
+- `compare_prices` больше не ранжирует Ozon по цене с плитки поиска: на плитке стоит цена по Ozon Карте, даже без её значка. Теперь каждая плитка Ozon приходит как условная (`price_rub` пуст, сумма в `price_native`, `price_kind` = `card`), а самое дешёвое подходящее предложение ранжируется по обычной цене из его карточки; цена по карте названа в заметке. Если карточку прочитать не удалось, ни одна плитка Ozon не ранжируется, и предупреждение `ozon_card_unread` называет причину. Описание `price_kind` в `ozon_search` говорит то же. Сравнение с Ozon теперь делает на один запрос карточки больше (#302).
+- `compare_prices` no longer ranks Ozon by the search-tile price: a tile quotes the Ozon Card price even without the card badge. Every Ozon tile now arrives as conditional (`price_rub` null, the amount in `price_native`, `price_kind` `card`), and the cheapest plausible offer is ranked by the everyday price from its card, with the card price named in a note. When the card cannot be read, no Ozon tile is ranked and an `ozon_card_unread` warning names the reason. `ozon_search`'s `price_kind` description says the same. A comparison that includes Ozon now makes one more card request (#302).
+
+- Ozon: если на плитке поиска нет текущей цены, `ozon_search` больше не выдаёт зачёркнутую старую цену за цену товара: `price` остаётся пустым, старая цена — в `price_original` (#305).
+- Wildberries: если в ответе WB нет базовой (до скидки) цены, `price_original_rub` теперь пуст, а не равен текущей цене, так что отсутствие данных не выглядит как «скидки нет» (#305).
+- Ozon: when a search tile has no current price, `ozon_search` no longer reports the struck original price as the price: `price` stays null and the original stays in `price_original` (#305).
+- Wildberries: when WB's answer has no basic (pre-discount) price, `price_original_rub` is now null instead of a copy of the current price, so missing data no longer reads as "no discount" (#305).
+
+- Яндекс Маркет: если у строки поиска со значком «Скидка N%» пропала цена со скидкой, `yandex_search` больше не выдаёт зачёркнутую базовую цену за обычную: `price_rub` пуст, базовая цена остаётся в `price_old_rub`, а предупреждение `discount_price_missing` называет число таких строк (#306).
+- Яндекс Маркет: описания `price_rub`, справка и навык теперь говорят, что цена — та, что видит анонимный посетитель в регионе, который Яндекс определил для запроса; в браузере со входом или с другим регионом доставки цена и предложение могут быть другими (#306).
+- Yandex Market: when a search row with the «Скидка N%» badge lost its discounted price, `yandex_search` no longer reports the struck base price as the everyday price: `price_rub` is null, the base price stays in `price_old_rub`, and a `discount_price_missing` warning names how many rows (#306).
+- Yandex Market: the `price_rub` descriptions, the guides and the skill now say the price is what an anonymous visitor sees in the region Yandex assigns to the request; a signed-in browser or another delivery region can show another price and offer (#306).
+
+- Lamoda: если в плитке поиска пропала или не читается первоначальная зачёркнутая цена, `lamoda_search` больше не подставляет на её место промежуточную зачёркнутую цену: `old_price_rub` пуст. Зачёркнутая цена берётся только из её собственного элемента на странице (#307).
+- Lamoda: when a search tile's original struck price is missing or unreadable, `lamoda_search` no longer puts the intermediate struck price in its place: `old_price_rub` is null. The struck price is read only from its own element on the page (#307).
+
+- Циан: если Циан отправил вкладку поиска на свою проверку «вы не робот», `cian_search` больше не шлёт запрос с этой страницы и не зависает до таймаута с ошибкой сети: он сразу отвечает `challenge_required` и подсказывает `marketplace-mcp unblock cian`. Самопроверка (`doctor`, `unblock`) тоже называет это проверкой, которую проходит человек (#308).
+- Циан: `CIAN_TIMEOUT` больше 30 секунд теперь действительно соблюдается; раньше внутренний предел обрывал чтение через 30 секунд (#308).
+- Cian: when Cian sends the search tab to its "are you a robot" check, `cian_search` no longer sends its request from that page and hangs until a network timeout: it answers `challenge_required` at once with the `marketplace-mcp unblock cian` step. The selfcheck (`doctor`, `unblock`) also names it a check a human passes (#308).
+- Cian: a `CIAN_TIMEOUT` above 30 seconds is now honoured; an inner limit used to cut the read at 30 seconds (#308).
+
+- Сравнение цен: `cheapest_comparable` больше не называет другой товар. Предложение не попадает в кандидаты, если в его названии (или в поле бренда) нет латинского слова или номера модели из запроса, если это товар «для»/«под»/«совместим с» этой моделью, копия («аналог», «реплика») или другая модель (Pro, Max, Plus, Ultra, Mini, Lite, FE, Edge, OLED сразу после модели). Само предложение остаётся в `offers` и может остаться `cheapest` (#310).
+- Сравнение цен: 1 ТБ теперь совпадает и с «1024 ГБ», и с «1000 ГБ», как продают SSD; раньше настоящий Samsung 990 PRO 1TB с названием «1000 ГБ» отбрасывался (#310).
+- Price comparison: `cheapest_comparable` no longer names another product. An offer is no candidate when its title (or brand field) lacks a Latin model word or number from the query, when it is goods "для"/"под"/"compatible with" that model, a copy ("аналог", "реплика") or another model (Pro, Max, Plus, Ultra, Mini, Lite, FE, Edge, OLED right after the model). The offer stays in `offers` and may stay `cheapest` (#310).
+- Price comparison: 1 TB now matches both "1024 ГБ" and "1000 ГБ", as SSDs are sold; a genuine Samsung 990 PRO 1TB titled "1000 ГБ" used to be dropped (#310).
+
+- Сравнение цен: строка Авито больше не становится `cheapest_comparable`, если в запросе не просят б/у. В выдаче Авито не видно, новый товар или б/у, это видно только в карточке; живой прогон показал б/у iPhone 16 как «сопоставимую» цену для запроса «iphone 16 128gb». Строка остаётся в списке и может остаться просто самой дешёвой (#311).
+- Price comparison: an Avito row is no longer `cheapest_comparable` unless the query asks for a used item. Avito search rows never say new or used, only the card does; a live run showed a used iPhone 16 as the like-for-like price for "iphone 16 128gb". The row stays in the list and may remain plain cheapest (#311).
+
+- Цены: сумма рядом со словами «Долями», «Сплит» или «частями» больше не может быть прочитана как цена товара: это платёж по частям, а не цена (#312).
+- Prices: an amount next to «Долями», «Сплит» or «частями» can no longer be read as the product price: it is a split payment, not the price (#312).
+
+- Сравнение цен: предложение, в названии которого перечислено несколько объёмов («128GB/256GB/512GB»), больше не становится `cheapest_comparable`: его цена относится к одному из вариантов, а к какому, не сказано. Пара «оперативная память / накопитель» («8/256GB») списком не считается. Строка остаётся в списке и может остаться просто самой дешёвой (#316).
+- Price comparison: an offer whose title lists several sizes ("128GB/256GB/512GB") is no longer `cheapest_comparable`: its price belongs to one variant it does not name. A RAM and storage pair ("8/256GB") is not a list. The row stays in the list and may remain plain cheapest (#316).
+
+### Security
+- Образы Docker собираются с dnspython 2.9.2 и opentelemetry-api 1.45.2: в прежних версиях были уязвимости, через которые специально составленный ввод отнимал память и процессор (GHSA-vvf4-9x63-8xvv, GHSA-mf5v-w3w3-f6cg) (#280).
+- Docker images build with dnspython 2.9.2 and opentelemetry-api 1.45.2: the earlier versions let crafted input eat memory and CPU (GHSA-vvf4-9x63-8xvv, GHSA-mf5v-w3w3-f6cg) (#280).
+
 ## [2.9.4] - 2026-11-16
 
 ### Added

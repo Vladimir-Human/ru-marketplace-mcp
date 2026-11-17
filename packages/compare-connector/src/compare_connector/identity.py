@@ -157,6 +157,95 @@ def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     return not (asked_gb & {reading for token in stated for reading in _size_readings(token)})
 
 
+# START_BLOCK_SIZE_LIST
+# A title listing several capacities ("128GB/256GB/512GB", "64 / 128 / 256 ГБ") sells
+# several variants under one price that belongs to a variant it does not name
+# (R-COMPARE-SIZE-LIST). A RAM + storage pair ("8/256GB", "16 ГБ / 512 ГБ") is one
+# variant: two sizes, the larger at least four times the smaller.
+_SIZE_RUN = re.compile(r"(?<!\w)(?<!\d[.,])(\d{1,4})((?:\s*/\s*\d{1,4})+)\s*(gb|гб|tb|тб)(?!\w)", re.IGNORECASE)
+_LIST_GAP = re.compile(r"\s*(?:[/|,]|или|or)\s*", re.IGNORECASE)
+_RAM_RATIO = 4
+
+
+def _size_lists(text: str) -> list[list[str]]:
+    """Runs of two or more sizes joined only by a slash, bar, comma or "или"/"or"."""
+    lists = []
+    for match in _SIZE_RUN.finditer(text):
+        unit = _SIZE_UNITS[match[3].lower()]
+        lists.append([f"{int(number)}{unit}" for number in (match[1], *re.findall(r"\d{1,4}", match[2]))])
+    run: list[str] = []
+    end = None
+    for match in _SIZE_TOKEN.finditer(text):
+        token = f"{int(match[1])}{_SIZE_UNITS[match[2].lower()]}"
+        if end is not None and _LIST_GAP.fullmatch(text[end : match.start()]):
+            run.append(token)
+        else:
+            lists.append(run)
+            run = [token]
+        end = match.end()
+    lists.append(run)
+    return [sizes for sizes in lists if len(sizes) > 1]
+
+
+def lists_sizes(title: Any) -> bool:
+    """Whether a title lists several capacities, so its price names no one variant.
+
+    Sizes compare in gigabytes ("1TB / 1000GB" is one size). Two sizes are a RAM +
+    storage pair, not a list, when the larger is at least four times the smaller.
+    """
+    for sizes in _size_lists(_text(title)):
+        distinct: list[set[int]] = []
+        for token in sizes:
+            readings = _size_readings(token)
+            if not any(readings & seen for seen in distinct):
+                distinct.append(readings)
+        if len(distinct) > 2:
+            return True
+        if len(distinct) == 2:
+            small, large = sorted(min(readings) for readings in distinct)
+            if large < _RAM_RATIO * small:
+                return True
+    return False
+
+
+# END_BLOCK_SIZE_LIST
+
+
+# START_BLOCK_MODEL_LIST
+# A title naming several models of one family ("Dyson V11/V15", "iPhone 15 / iPhone 16",
+# "Galaxy S24 / S25") sells or fits several products under one price (R-COMPARE-MODEL-LIST).
+# A family is the same word before two different numbers, or the same one-to-four-letter
+# prefix glued to two different numbers. IP ratings and USB, DDR and Wi-Fi versions are
+# specs, not models; a number followed by a unit is a size, which the size-list rule judges.
+_MODEL_GAP = r"\s*(?:/|\||,|\bили\b|\bor\b)\s*"
+_SAME_WORD_MODELS = re.compile(
+    r"(?<![\w-])([a-zа-яё]{2,})\s*(\d{1,4}[a-zа-яё]{0,2})\b" + _MODEL_GAP + r"\1\s*(\d{1,4}[a-zа-яё]{0,2})\b",
+    re.IGNORECASE,
+)
+_SAME_PREFIX_MODELS = re.compile(r"(?<![\w-])([a-z]{1,4})(\d{1,5})\b" + _MODEL_GAP + r"\1(\d{1,5})\b", re.IGNORECASE)
+_SPEC_PREFIXES = frozenset({"ip", "usb", "ddr", "lpddr", "wifi"})
+_UNIT_AFTER = re.compile(
+    r"\s*(?:gb|гб|tb|тб|mb|мб|мм|mm|см|cm|кг|kg|г|g|л|l|мл|ml|w|вт|mah|мач|гц|hz|шт|%)(?!\w)", re.IGNORECASE
+)
+
+
+def lists_models(title: Any) -> bool:
+    """Whether a title names several models of one family, so its price names no one product."""
+    text = _text(title)
+    for pattern in (_SAME_WORD_MODELS, _SAME_PREFIX_MODELS):
+        for match in pattern.finditer(text):
+            family, first, second = match[1], match[2], match[3]
+            if family.lower() in _SPEC_PREFIXES or first.lower() == second.lower():
+                continue
+            if _UNIT_AFTER.match(text, match.end()):
+                continue
+            return True
+    return False
+
+
+# END_BLOCK_MODEL_LIST
+
+
 def format_size_tokens(sizes: Iterable[str]) -> str:
     """Canonical sizes in capacity order, e.g. ``"64GB/256GB/1TB"``."""
     return "/".join(sorted(sizes, key=lambda token: (_size_in_gb(token), token)))

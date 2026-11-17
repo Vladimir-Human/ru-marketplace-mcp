@@ -7,7 +7,7 @@ START_MODULE_CONTRACT
 PURPOSE: Verify offline dispatch and fail-before-budget live preflight through main.
 SCOPE: Temp repair/failure, driver repair/failure, CDP refusal, doctor budget and usage exits.
 DEPENDS: live_check, live_budget; scripts/conftest.py Playwright edges; pytest; stdlib.
-LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-DOCTOR-EXIT-CODES.
+LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-PAUSE, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
   _clean_installation  restore budget hooks around each test
   fake_doctor          offline doctor dispatch edge
@@ -204,6 +204,46 @@ def test_preflight_alone_reports_its_result_and_installs_no_budget(
     assert live_check.main(["preflight"]) == code
     assert "marketplace-mcp browser start" in capsys.readouterr().out
     assert not (tmp_path / ".live-budget.json").exists()
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+@pytest.mark.parametrize("outcome", ["returned-error", "raised-error", "no-pause"])
+def test_a_tool_error_with_retry_after_pauses_the_marketplaces_the_call_used(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    import asyncio
+    import json
+
+    budget = live_budget.Budget(40, 8, 0.001, live_budget.Ledger(tmp_path / ".live-budget.json"))
+    monkeypatch.setattr(live_budget, "_installation", live_budget._Installation(budget, []))
+    budget.reserve("chrome-load", "https://www.ozon.ru/")  # an earlier call's request, not this one's
+    payload = {"error": "rate_limited", "status_code": 429, "retry_after_s": 1200.0, "retryable": True}
+
+    async def search(query: str) -> Any:
+        budget.reserve("chrome-load", "https://megamarket.ru/catalog/?q=" + query)
+        if outcome == "raised-error":
+            raise RuntimeError(json.dumps(payload))
+        return payload if outcome == "returned-error" else {"items": []}
+
+    module = ModuleType("fake_paused_tools")
+    module.search = search  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "fake_paused_tools", module)
+    call = live_check._call_tool("fake_paused_tools", "search", {"query": "x"})
+    if outcome == "raised-error":
+        with pytest.raises(RuntimeError):
+            asyncio.run(call)
+    else:
+        asyncio.run(call)
+
+    assert budget.pause("ozon") is None
+    pause = budget.pause("megamarket")
+    if outcome == "no-pause":
+        assert pause is None
+        return
+    assert pause is not None
+    assert (pause["code"], pause["retry_after_s"]) == ("rate_limited", 1200.0)
+    with pytest.raises(live_budget.PauseActive):
+        budget.reserve("chrome-load", "https://megamarket.ru/catalog/?q=again")
 
 
 # END_BLOCK_DISPATCH_TESTS
