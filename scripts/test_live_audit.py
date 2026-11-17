@@ -783,6 +783,30 @@ async def test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_sou
     assert again[0]["state"] == "healthy"
 
 
+@pytest.mark.req("R-LIVE-AUDIT.plans")
+def test_arguments_from_one_answer_come_from_one_node(audit: Any) -> None:
+    """Shard and query of wb_category_products come from the same wb_categories node (audit cycle 1)."""
+    cases, ids = inputs(audit)
+    call = next(
+        c for n in (1, 2) for c in audit.plan_run(cases, ids, {}, "A", n) if c["tool"] == "wb_category_products"
+    )
+    menu = {
+        "items": [
+            {"name": "Экспресс", "shard": "", "query": "subject=3;6565"},
+            {"name": "Ресейл", "shard": "c2c", "query": "vflags=8388608"},
+            {"name": "Обувь", "shard": "blackhole", "query": "cat=629"},
+        ]
+    }
+
+    resolved = audit._resolved(call, cases, ids, {"wb_categories": menu}, {}, {})
+
+    assert resolved is not None
+    assert resolved["args"] == {"shard": "c2c", "query": "vflags=8388608"}
+    assert (
+        audit._resolved(call, cases, ids, {"wb_categories": {"items": [{"shard": "", "query": "x"}]}}, {}, {}) is None
+    )
+
+
 @pytest.mark.req("R-LIVE-AUDIT.runner")
 async def test_a_tool_error_without_a_refusal_line_keeps_its_own_code(audit: Any, tmp_path: Path) -> None:
     """Only the budget's own line relabels an error: a refusal printed before the call does not count."""
