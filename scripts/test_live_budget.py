@@ -491,6 +491,57 @@ def test_an_abandoned_lock_file_does_not_stop_the_run(
 
 
 @pytest.mark.req("R-LIVE-BUDGET")
+def test_a_lock_file_another_process_is_deleting_is_waited_out(
+    tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CI, windows-latest py3.13, 2026-11-17: while another process deletes the lock file,
+    Windows answers the exclusive create with PermissionError, not FileExistsError.
+    That is a busy lock to wait out, not a crash of the run."""
+    ledger = tmp_path / "live-budget.json"
+    real_open = os.open
+    lock_opens: list[str] = []
+
+    def deleting_elsewhere(path, flags, *args):
+        if str(path).endswith(".lock"):
+            lock_opens.append(str(path))
+            if len(lock_opens) == 1:
+                raise PermissionError(13, "Permission denied", str(path))
+        return real_open(path, flags, *args)
+
+    monkeypatch.setattr(live_budget.os, "open", deleting_elsewhere)
+    monkeypatch.setattr(live_budget, "LOCK_RETRY_S", 0)
+    budget = _budget(tmp_path, clock, ledger_path=ledger)
+
+    budget.reserve("httpx", "https://www.ozon.ru/one")
+
+    assert len(budget.ledger.load()) == 1
+    assert len(lock_opens) == 2
+
+
+@pytest.mark.req("R-LIVE-BUDGET")
+def test_a_lock_file_that_cannot_be_created_stops_the_run_after_the_wait(
+    tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A PermissionError that never clears is bounded by the same wait and named in the refusal."""
+    ledger = tmp_path / "live-budget.json"
+    real_open = os.open
+
+    def never(path, flags, *args):
+        if str(path).endswith(".lock"):
+            raise PermissionError(13, "Permission denied", str(path))
+        return real_open(path, flags, *args)
+
+    monkeypatch.setattr(live_budget.os, "open", never)
+    monkeypatch.setattr(live_budget, "LOCK_TIMEOUT_S", 0.2)
+    budget = _budget(tmp_path, clock, ledger_path=ledger)
+
+    with pytest.raises(live_budget.BudgetExhausted, match="PermissionError"):
+        budget.reserve("httpx", "https://www.ozon.ru/one")
+
+    assert not ledger.exists()
+
+
+@pytest.mark.req("R-LIVE-BUDGET")
 def test_a_raw_cdp_popup_is_booked_before_it_opens(
     tmp_path: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
