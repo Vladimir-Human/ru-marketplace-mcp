@@ -1,0 +1,153 @@
+{
+  "_about": "A7 benchmark labels for the cycle-1 recordings (2026-11-17). cheapest_comparable: walk the offers in ascending price to the first true match (brand, model and suffix, memory or size, pack, new condition; the device itself, not an accessory or a part); that offer and its same-price matching ties are the acceptable set. cheapest: the lowest-priced offer and its ties. Proposed by MiniMax M3.1 Flash, decided by Claude offer by offer. Ozon is absent: these recordings predate compare reading an Ozon card for its cheapest tile (#302).",
+  "queries": {
+    "c1-dyson-v15-detect": {
+      "query": "dyson v15 detect",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005009474874519"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "1898662902"
+        ]
+      ],
+      "comparable_price_rub": 22990.0,
+      "set_incomplete": false
+    },
+    "c1-headphones-sony-wh1000xm5": {
+      "query": "наушники sony wh-1000xm5",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005013471708294"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "741076063"
+        ],
+        [
+          "wildberries",
+          "741076064"
+        ],
+        [
+          "wildberries",
+          "863846104"
+        ]
+      ],
+      "comparable_price_rub": 18705.0,
+      "set_incomplete": false
+    },
+    "c1-iphone16-128gb": {
+      "query": "iphone 16 128gb",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005009110731940"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "aliexpress",
+          "1005008110020734"
+        ]
+      ],
+      "comparable_price_rub": 64990.0,
+      "set_incomplete": false
+    },
+    "c1-lego-42151": {
+      "query": "lego 42151",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005013099309665"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "5772952330"
+        ],
+        [
+          "yandex_market",
+          "6133624675"
+        ]
+      ],
+      "comparable_price_rub": 4388.0,
+      "set_incomplete": false
+    },
+    "c1-pampers-premium-care-4": {
+      "query": "подгузники pampers premium care 4",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005012395323954"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "4858334607"
+        ]
+      ],
+      "comparable_price_rub": 1359.0,
+      "set_incomplete": false
+    },
+    "c1-ps5-slim": {
+      "query": "playstation 5 slim",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005008859906251"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "810569989"
+        ]
+      ],
+      "comparable_price_rub": 63542.0,
+      "set_incomplete": false
+    },
+    "c1-redmi-note14-256gb": {
+      "query": "xiaomi redmi note 14 256gb",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005005901239211"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "4322061510"
+        ]
+      ],
+      "comparable_price_rub": 28176.0,
+      "set_incomplete": false
+    },
+    "c1-ssd-samsung-990pro-1tb": {
+      "query": "ssd samsung 990 pro 1tb",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005013619990141"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "dns",
+          "26135ef669a0ed20"
+        ]
+      ],
+      "comparable_price_rub": 25499.0,
+      "set_incomplete": false
+    }
+  }
+}

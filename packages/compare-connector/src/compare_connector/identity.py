@@ -115,9 +115,9 @@ def _variants(values: dict[str, str]) -> dict[str, str]:
 # "1TB", "1 ТБ". Only a number attached to a gigabyte/terabyte unit counts: a
 # bare "128" is a model number far more often than a capacity, and a fractional
 # "1.5 ТБ" is not a size this extractor can state without guessing. Tokens keep
-# the unit the title used; only the comparison converts, with 1 TB = 1024 GB as
-# phone and laptop storage is sold, so "1 ТБ" and "1024 ГБ" agree while
-# "1000 ГБ" still does not.
+# the unit the title used; only the comparison converts. A terabyte reads as
+# 1024 GB (phones, laptops) or 1000 GB (SSDs: DNS titles the Samsung 990 PRO 1TB
+# "1000 ГБ", A7 benchmark 2026-11-17), so "1 ТБ" agrees with both.
 _SIZE_TOKEN = re.compile(r"(?<!\w)(?<!\d[.,])([0-9]{1,4})\s*(gb|гб|tb|тб)(?!\w)", re.IGNORECASE)
 _SIZE_UNITS = {"gb": "GB", "гб": "GB", "tb": "TB", "тб": "TB"}
 
@@ -136,6 +136,12 @@ def _size_in_gb(token: str) -> int:
     return int(token[:-2]) * (1024 if token.endswith("TB") else 1)
 
 
+def _size_readings(token: str) -> set[int]:
+    """Gigabyte readings of one size: a terabyte is sold as 1024 GB (phones) or 1000 GB (SSDs)."""
+    number = int(token[:-2])
+    return {number * 1024, number * 1000} if token.endswith("TB") else {number}
+
+
 def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     """Whether sizes named in a title contradict the sizes a query asks for.
 
@@ -143,11 +149,12 @@ def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     on both sides can disagree. A query that states no size, a title that names
     none, and a title naming one of the asked sizes are all unknown, never a
     contradiction — the same reason a missing variant attribute abstains.
-    Sizes are compared in gigabytes, so ``"1TB"`` and ``"1024GB"`` agree.
+    Sizes are compared in gigabytes, so ``"1TB"`` agrees with ``"1024GB"`` and ``"1000GB"``.
     """
     if not (asked and stated):
         return False
-    return not ({_size_in_gb(token) for token in asked} & {_size_in_gb(token) for token in stated})
+    asked_gb = {reading for token in asked for reading in _size_readings(token)}
+    return not (asked_gb & {reading for token in stated for reading in _size_readings(token)})
 
 
 def format_size_tokens(sizes: Iterable[str]) -> str:
@@ -185,3 +192,88 @@ def match_product_identity(expected: ProductIdentity, observed: ProductIdentity)
     if not any((exp_gtin, got_gtin, exp_mpn, got_mpn, em, om)):
         return IdentityMatch(reasons=["insufficient_evidence"])
     return IdentityMatch(reasons=["insufficient_matching_evidence"])
+
+
+# START_BLOCK_MODEL_TOKENS
+# R-COMPARE-MODEL-TOKENS. The Latin words and numbers a query names (brand, series,
+# model number) are the one identity evidence every search title carries. On the A7
+# benchmark (cycle 1, 2026-11-17) cheapest_comparable without them named another
+# product on 8 of 8 queries: a Dyson battery, Sony W919 earbuds, an iPhone 14, LEGO
+# gears. Cyrillic words stay out (they name the category, "наушники", and are spelt
+# many ways), as do sizes (sizes_conflict owns them) and the generic words below.
+_WORD_EDGE = "0-9a-zа-яё"
+_LATIN_TOKEN = re.compile(rf"(?<![{_WORD_EDGE}])[0-9a-z]+(?:-[0-9a-z]+)*(?![{_WORD_EDGE}])")
+_RUNS = re.compile(r"[a-z]+|[0-9]+")
+# One spelling per product line: titles write "PS5", "PS 5" and "PlayStation 5".
+_ALIASES = ((re.compile(rf"(?<![{_WORD_EDGE}])(?:playstation|ps)[\s-]?5(?![{_WORD_EDGE}])"), "ps5"),)
+# Words that name the kind of goods, not the model: the DNS title of the 990 PRO says
+# "NVMe накопитель", not "SSD".
+_GENERIC_WORDS = frozenset({"ssd", "hdd", "nvme"})
+# A suffix right after a model word names a different model ("iPhone 16 Pro", "PS5 Pro").
+_MODEL_SUFFIXES = frozenset({"pro", "max", "plus", "ultra", "mini", "lite", "fe", "edge"})
+_FOR_WORD = re.compile(rf"(?<![{_WORD_EDGE}])(?:для|for)\s+(\S+)(?:\s+(\S+))?")
+_NEXT_WORD = re.compile(r"[\s-]*([0-9a-z]+)")
+
+
+def _fold(text: str) -> str:
+    folded = unicodedata.normalize("NFKC", text).casefold()
+    for pattern, spelling in _ALIASES:
+        folded = pattern.sub(spelling, folded)
+    return folded
+
+
+def _model_tokens(query: str) -> list[str]:
+    tokens = _LATIN_TOKEN.findall(_SIZE_TOKEN.sub(" ", _fold(query)))
+    return [token for token in dict.fromkeys(tokens) if token not in _GENERIC_WORDS]
+
+
+def _token_pattern(token: str) -> re.Pattern[str]:
+    """A token as a whole word whose letter and digit runs may be split by a space or hyphen (WH-1000XM5)."""
+    return re.compile(rf"(?<![{_WORD_EDGE}])" + r"[\s-]?".join(_RUNS.findall(token)) + rf"(?![{_WORD_EDGE}])")
+
+
+def _is_code(token: str) -> bool:
+    """A manufacturer code strong enough to stand without the brand: 42151, WH-1000XM5."""
+    plain = token.replace("-", "")
+    return (plain.isdigit() and len(plain) >= 4) or (not plain.isdigit() and not plain.isalpha() and len(plain) >= 5)
+
+
+# START_CONTRACT: model_mismatch
+# PURPOSE: Say why a search title is not the model the query names, or None when nothing contradicts it.
+# INPUTS: query and title, free text; titles are untrusted marketplace data.
+# OUTPUTS: None for a query with no Latin model token (the rule abstains) or a title that names them all;
+#          otherwise a short reason: "missing <token>", "for <token>" (an accessory for the device) or
+#          "<token> <suffix>" (another model, e.g. "16 pro").
+# RULES: every token must appear as a whole word, except that pure-letter words (brand, series) may be
+#        absent when a code token (_is_code) is present; "для"/"for" followed within two words by a non-number
+#        token marks an accessory unless the query says "для"/"for" too; a _MODEL_SUFFIXES word right after a
+#        token is another model unless the query names it.
+# SIDE_EFFECTS: None.
+def model_mismatch(query: str, title: str) -> str | None:
+    tokens = _model_tokens(query)
+    if not tokens:
+        return None
+    text, asked = _fold(title), _fold(query)
+    patterns = {token: _token_pattern(token) for token in tokens}
+    found = [token for token in tokens if patterns[token].search(text)]
+    has_code = any(_is_code(token) for token in found)
+    for token in tokens:
+        if token not in found and not (has_code and token.isalpha()):
+            return f"missing {token}"
+    if not _FOR_WORD.search(asked):
+        for match in _FOR_WORD.finditer(text):
+            window = " ".join(word for word in match.groups() if word)
+            for token in found:
+                if not token.isdigit() and patterns[token].search(window):
+                    return f"for {token}"
+    asked_words = set(_LATIN_TOKEN.findall(asked))
+    for token in found:
+        for match in patterns[token].finditer(text):
+            suffix = _NEXT_WORD.match(text, match.end())
+            if suffix and suffix.group(1) in _MODEL_SUFFIXES and suffix.group(1) not in asked_words:
+                return f"{token} {suffix.group(1)}"
+    return None
+
+
+# END_CONTRACT: model_mismatch
+# END_BLOCK_MODEL_TOKENS

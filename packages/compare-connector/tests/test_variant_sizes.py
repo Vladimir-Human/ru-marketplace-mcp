@@ -13,7 +13,7 @@
 # test_several_size_mismatches_cost_one_warning: One warning per call, not one per offer.
 # test_ram_and_storage_pair_is_not_excluded_by_its_ram_size: "8/128GB" against a 128GB query is comparable.
 # test_query_without_a_size_excludes_nothing: No stated size means nothing to contradict.
-# test_terabyte_query_accepts_a_title_in_gigabytes: "1 ТБ" and "1024 ГБ" are one size; "1000 ГБ" is not.
+# test_terabyte_query_accepts_a_title_in_gigabytes: "1 ТБ", "1000 ГБ" and "1024 ГБ" are one size; "960 ГБ" is not.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -154,22 +154,21 @@ async def test_query_without_a_size_excludes_nothing(monkeypatch):
 
 @pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")
 async def test_terabyte_query_accepts_a_title_in_gigabytes(monkeypatch):
-    """R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB, so the units must not split one size.
+    """R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB (phones) or 1000 GB (SSDs), so units must not split one size.
 
-    Old code compares "1TB" with "1024GB" as text, excludes the cheaper title
-    and warns about it, so both assertions fail there; the 1000 GB row keeps
-    the comparison from turning into "any size close to a terabyte".
+    DNS titles the Samsung 990 PRO 1TB "1000 ГБ" (A7 benchmark, 2026-11-17); the
+    960 GB row keeps the comparison from turning into "any size close to a terabyte".
     """
     _stub_citilink(
         monkeypatch,
-        [("1", "ACME X100 1000 ГБ", 19000), ("2", "ACME X100 1024 ГБ", 20000), ("3", "ACME X100 1TB", 25000)],
+        [("1", "ACME X100 960 ГБ", 18000), ("2", "ACME X100 1000 ГБ", 19000), ("3", "ACME X100 1024 ГБ", 20000)],
     )
 
     result = await server.compare_prices("ACME X100 1 ТБ", sources=["citilink"])
 
-    assert result.cheapest_comparable.title == "ACME X100 1024 ГБ"
+    assert result.cheapest_comparable.title == "ACME X100 1000 ГБ"
     assert [w for w in result.warnings if w.startswith("identity_mismatch:")] == [
-        "identity_mismatch: 1 offer states 1000GB, query asks 1TB; not comparable"
+        "identity_mismatch: 1 offer states 960GB, query asks 1TB; not comparable"
     ]
 
 
