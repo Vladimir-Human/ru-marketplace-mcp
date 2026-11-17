@@ -60,6 +60,24 @@ async def test_an_avito_city_url_is_scrubbed_before_the_recording_is_written(tmp
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
+def test_a_card_read_joins_the_search_it_followed_and_a_lone_card_read_is_dropped() -> None:
+    """Ozon's card read is recorded under the answered search; a verify call's card read is no comparison."""
+    search = {"source": "ozon", "query": "kettle", "response": {"items": [], "meta": {"healthy": True, "warnings": []}}}
+    card = {"source": "ozon", "query": "", "card": "42", "response": {"price": 990.0, "card_price": 900.0}}
+    refused = {"source": "ozon", "query": "", "card": "43", "error": {"code": "rate_limited", "message": "slow"}}
+    lone = {"source": "wildberries", "query": "", "card": "7", "response": {"price": 1.0}}
+
+    document = recording.assemble_recording("kettle", "2026-11-16T10:00:00Z", [card, search, refused, lone])
+
+    assert document["sources"]["ozon"]["cards"] == {
+        "42": {"response": {"price": 990.0, "card_price": 900.0}},
+        "43": {"error": {"code": "rate_limited", "message": "slow"}},
+    }
+    assert "wildberries" not in document["sources"]
+    assert recording.assemble_recording("", "2026-11-16T10:00:00Z", [card])["sources"] == {}
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.record")
 def test_warnings_are_redacted_and_regions_use_the_payload_placeholder() -> None:
     response = AvitoSearchResponse(
         items=[AvitoSearchItemOut(item_id=ITEM_ID, title="Synthetic kettle", seller_name="ООО Synthetic Shop")],

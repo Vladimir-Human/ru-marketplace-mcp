@@ -138,9 +138,8 @@ async def test_a_recorded_image_replays_as_the_same_offer_image(source: str, mon
     assert result.offers[0].image_url == live.offers[0].image_url
 
 
-@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
-async def test_a_recorded_ozon_card_price_tile_replays_as_conditional_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price."""
+def _ozon_module(card_price: float | None) -> object:
+    """A stand-in Ozon module: one tile (the Ozon Card amount) and, optionally, its card."""
     from types import SimpleNamespace
 
     plan = replay.RECORDING.SOURCE_PLANS["ozon"]
@@ -150,20 +149,50 @@ async def test_a_recorded_ozon_card_price_tile_replays_as_conditional_only(monke
     async def search(**kwargs):
         return response
 
-    monkeypatch.setattr(replay.server, "SOURCES", {"ozon": SimpleNamespace(**{plan.tool: search})})
+    async def card(sku_or_path: str):
+        return replay._model(plan.card_model)(price=34990.0, card_price=card_price)
+
+    return SimpleNamespace(**{plan.tool: search, plan.card_tool: card})
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recorded_ozon_search_and_card_read_replay_as_the_live_answer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Ozon plan records the card read after the search: the replay ranks what live ranked."""
+    module = _ozon_module(32296.0)
+    replay.RECORDING.capture_sources(tmp_path, {"ozon": module})
+    monkeypatch.setattr(replay.server, "SOURCES", {"ozon": module})
     live = await replay.server.compare_prices("kettle", sources=["ozon"])
-    document = replay.RECORDING.build_recording(
-        "kettle", "2026-11-16T10:00:00Z", {"ozon": {"response": replay.RECORDING.cut_response("ozon", response)}}
-    )
+    captures = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(tmp_path.glob("*.json"))]
+    document = replay.RECORDING.assemble_recording("kettle", "2026-11-16T10:00:00Z", captures)
+
+    assert document["sources"]["ozon"]["cards"] == {
+        "2796072502": {"response": {"price": 34990.0, "card_price": 32296.0}}
+    }
     result = await replay.replay(document)
 
-    assert live.offers[0].price_kind == "card" and live.offers[0].price_rub is None
+    assert (live.offers[0].price_rub, live.offers[0].price_kind) == (34990.0, None)
     assert (result.offers[0].price_kind, result.offers[0].price_rub, result.offers[0].price_native) == (
         live.offers[0].price_kind,
         live.offers[0].price_rub,
         live.offers[0].price_native,
     )
-    assert result.cheapest is None
+    assert result.warnings == live.warnings
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")
+async def test_a_recording_without_the_ozon_card_read_fails_the_replay() -> None:
+    """A recording made before compare read Ozon cards does not cover today's adapter."""
+    plan = replay.RECORDING.SOURCE_PLANS["ozon"]
+    item = replay._model(plan.item_model)(sku=2796072502, title="Synthetic kettle", price=32296.0, price_kind="card")
+    response = replay._model(plan.response_model)(items=[item], meta={"healthy": True, "warnings": []})
+    document = replay.RECORDING.build_recording(
+        "kettle", "2026-11-16T10:00:00Z", {"ozon": {"response": replay.RECORDING.cut_response("ozon", response)}}
+    )
+
+    with pytest.raises(replay.UnrecordedRequest, match="card 2796072502"):
+        await replay.replay(document)
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-REPLAY.replay")

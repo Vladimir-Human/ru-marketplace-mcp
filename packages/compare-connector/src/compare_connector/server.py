@@ -41,6 +41,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
 # _require_selected: Reject explicit search/card sources disabled by the operator.
 # adapt.py: OfferBatch and the number/stock/card-id helpers the adapters share (moved out of this file).
+# _read_ozon_card/_search_ozon: Ozon tiles are conditional; one card read ranks the cheapest by its everyday price.
 # _run_source: Bound each source query; report native price counts and structured partial failures.
 # _call_card_tool: Dispatch validated source-native card arguments.
 # compare_prices: Validate the query, gather the sources and hand the results to the decision module.
@@ -105,6 +106,7 @@ from compare_connector.decide import (  # noqa: F401
     _size_mismatch_warning,
     build_response,
     decide_conditional_price,
+    pick_card_candidate,
 )
 from compare_connector.identity import (
     ProductIdentity,
@@ -275,6 +277,30 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     return batch
 
 
+# Seconds kept back from the source's ceiling for the card read of the cheapest
+# Ozon tile, and the least time worth starting that read with: a slow card must
+# not cost the search results already in hand (R-COMPARE-CONDITIONAL-PRICE.ozon-card).
+OZON_CARD_MARGIN_S = 3.0
+OZON_CARD_MIN_S = 5.0
+
+
+async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, str]:
+    """The everyday and the card price on one Ozon card, or why they were not read."""
+    if seconds < OZON_CARD_MIN_S:
+        return None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
+    try:
+        card = await asyncio.wait_for(server.ozon_card(sku_or_path=sku), timeout=seconds)
+    except TimeoutError:
+        return None, None, f"no answer within {seconds:.0f}s"
+    except Exception as exc:
+        error = _source_error(exc)
+        return None, None, str(error.get("error_code") or error.get("status") or "error")
+    everyday = _as_price(getattr(card, "price", None))
+    if everyday is None:
+        return None, None, "the card shows no everyday price"
+    return everyday, _as_price(getattr(card, "card_price", None)), ""
+
+
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
@@ -282,28 +308,47 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     it guessed wrong: it read fields ``OzonSearchItemOut`` does not declare, and
     every one silently resolved to ``None``. Reading typed attributes makes that a type failure.
 
-    R-COMPARE-CONDITIONAL-PRICE: a CARD_PRICE tile quotes the Ozon Card price, so
-    it is conditional-only: no everyday price, no ranking, the amount in price_native,
-    named once by the shared helper. Other tile styles keep today's behaviour.
+    R-COMPARE-CONDITIONAL-PRICE.ozon-card: an Ozon search tile quotes the Ozon
+    Card price whatever its style (a CARD_PRICE badge, and a plain tile measured
+    at the card's card_price in audit cycle 1, 2026-11-17), so every tile is
+    conditional-only. The card of the cheapest tile worth it is read for its
+    everyday price, within what is left of the source's timeout, and that offer
+    ranks by it; when the read fails, every tile stays unranked and says why.
     """
+    started = time.monotonic()
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
     batch = OfferBatch([], response)
-    for item in (getattr(response, "items", None) or [])[:limit]:
-        price, card = _as_price(item.price), getattr(item, "price_kind", None) == "card"
-        sku = str(item.sku or "")
-        decision = decide_conditional_price("ozon", sku, None if card else price, price if card else None, "card")
+    tiles = [
+        (item, str(item.sku or ""), _as_price(item.price)) for item in (getattr(response, "items", None) or [])[:limit]
+    ]
+    sku = pick_card_candidate(
+        query, ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles)
+    )
+    everyday, card_price, problem = None, None, ""
+    if sku is not None:
+        seconds = SOURCE_TIMEOUT_S - (time.monotonic() - started) - OZON_CARD_MARGIN_S
+        everyday, card_price, problem = await _read_ozon_card(server, sku, seconds)
+    for item, tile_sku, price in tiles:
+        # One card ranks one tile, even when Ozon lists the same sku twice.
+        ranked = everyday is not None and tile_sku == sku and not any(o.product_id == sku for o in batch)
+        if ranked:
+            decision = decide_conditional_price(
+                "ozon", tile_sku, everyday, price if card_price is None else card_price, "card"
+            )
+        else:
+            decision = decide_conditional_price("ozon", tile_sku, None, price, "card")
         batch.append(
             MarketOffer(
                 source="ozon",
-                product_id=sku,
+                product_id=tile_sku,
                 title=item.title or "",
                 # Search rows carry neither brand nor seller; left empty, not invented.
                 brand="",
                 seller="",
                 price_rub=decision.rank_price_rub,
-                price_native=price,
-                price_kind="card" if card else None,
+                price_native=everyday if ranked else price,
+                price_kind=None if ranked or price is None else "card",
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),
@@ -313,6 +358,10 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
         )
         if decision.note:
             batch.warnings.append(decision.note)
+    if problem:
+        batch.warnings.append(
+            f"ozon_card_unread: ozon/{sku}: {problem}; Ozon tiles quote the Ozon Card price, so none is ranked"
+        )
     return batch
 
 

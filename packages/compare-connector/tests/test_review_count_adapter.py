@@ -74,11 +74,16 @@ async def test_numeric_search_fields_reach_compare_unchanged(monkeypatch, rating
     result = await compare.compare_prices("ноутбук", sources=["ozon"])
 
     offer = result.offers[0]
-    assert offer.price_rub == (17324.0 if priced else None)
+    # R-COMPARE-CONDITIONAL-PRICE.ozon-card: a tile's number is the Ozon Card amount, so it
+    # reaches the comparison unchanged as price_native and ranks only beside a card's
+    # everyday price (this fake transport serves no card).
+    assert offer.price_rub is None
+    assert offer.price_native == (17324.0 if priced else None)
     assert offer.rating == float(rating_text)
     assert offer.rating_count == 2518
     if priced:
-        assert result.cheapest.price_rub == 17324.0
+        assert result.cheapest is None
+        assert any(w.startswith("conditional_price: ozon/") and ": 17324 RUB " in w for w in result.warnings)
     else:
         assert result.cheapest is None  # the original price is never a substitute offer
         assert any("price_unparseable" in w for w in result.warnings)

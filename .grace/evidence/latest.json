@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-17T03:57:45.415792+00:00",
+  "checked_on_utc": "2026-11-17T04:21:40.043169+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -29,8 +29,8 @@
       ],
       "exit": 0,
       "name": "Ruff (format check)",
-      "seconds": 0.234,
-      "summary": "539 files already formatted"
+      "seconds": 0.172,
+      "summary": "540 files already formatted"
     },
     {
       "cmd": [
@@ -40,7 +40,7 @@
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 1.344,
+      "seconds": 0.875,
       "summary": "Success: no issues found in 125 source files"
     },
     {
@@ -53,7 +53,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform)",
-      "seconds": 1.0,
+      "seconds": 0.891,
       "summary": "Success: no issues found in 125 source files"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 8.812,
+      "seconds": 7.859,
       "summary": "Success: no issues found in 125 source files"
     },
     {
@@ -87,8 +87,8 @@
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 3.422,
-      "summary": "{\"ts\":\"2026-11-16T21:51:39\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 2.437,
+      "summary": "{\"ts\":\"2026-11-16T22:15:49\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
@@ -97,7 +97,7 @@
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 0.609,
+      "seconds": 0.422,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
@@ -107,7 +107,7 @@
       ],
       "exit": 0,
       "name": "uv.lock revision is not downgraded",
-      "seconds": 0.094,
+      "seconds": 0.11,
       "summary": "uv.lock revision 5 is at or above the floor 5"
     },
     {
@@ -124,7 +124,7 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 12.531,
+      "seconds": 8.828,
       "summary": "dns           2 tools  ~   391 tok."
     },
     {
@@ -134,7 +134,7 @@
       ],
       "exit": 0,
       "name": "One version, everywhere",
-      "seconds": 0.188,
+      "seconds": 0.156,
       "summary": "version 2.9.4 agreed in 93 places (17 pyproject.toml, 16 __init__.py, 15 SERVER_VERSION, 19 image tag, 3 deployment release pin, 15 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5 "
     },
     {
@@ -145,8 +145,8 @@
       ],
       "exit": 0,
       "name": "Generated GRACE verification index is current",
-      "seconds": 0.562,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=114 gap=10 untraced=0 mappings=928 unmarked_tests=1934"
+      "seconds": 0.516,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=114 gap=10 untraced=0 mappings=946 unmarked_tests=1934"
     },
     {
       "cmd": [
@@ -155,7 +155,7 @@
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.719,
+      "seconds": 0.718,
       "summary": ""
     },
     {
@@ -172,8 +172,8 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 287.0,
-      "summary": "4257 passed, 2 skipped, 5 deselected in 283.65s (0:04:43)"
+      "seconds": 280.422,
+      "summary": "4265 passed, 2 skipped, 5 deselected in 277.77s (0:04:37)"
     },
     {
       "cmd": [
@@ -188,8 +188,8 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 63.453,
-      "summary": "670 passed in 62.04s (0:01:02)"
+      "seconds": 58.406,
+      "summary": "673 passed in 57.06s"
     }
   ],
   "index": {
@@ -198,6 +198,6 @@
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "b3d552f9dd37e98062aa0a093bcb5ef229e01a1671baf6a2cad2edd1fbe13710",
+  "tree_digest": "ba91ed43cc796ed74ba7876571bc6ef5bd5d15b5069b1b9641f0ab38ae8d2172",
   "version": "2.9.4"
 }

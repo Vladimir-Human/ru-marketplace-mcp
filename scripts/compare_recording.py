@@ -20,12 +20,13 @@ START_MODULE_MAP
   SOURCE_PLANS: The fields each compare adapter reads, per source.
   _recorded_url: Remove Avito city paths and location queries without losing item/image identity.
   cut_response: One source's typed search response cut down to those fields, with URLs and text scrubbed.
+  cut_card: The card fields an adapter reads after its search (Ozon's everyday and card price).
   scrub_regions: Replace regions with R1, R2, ... and their diagnostic mentions with the same placeholders.
   build_recording: One recording document: the query, the capture time, the sources.
   assemble_recording: One recording document from the captured sources and the compare outcomes.
   write_recording: Write one recording file.
   error_entry: The recorded form of a source's error.
-  capture_sources: Wrap the search tools so the adapters' calls are captured.
+  capture_sources: Wrap the search tools (and an adapter's card tool) so the adapters' calls are captured.
   serve: Run a stdio server with the capture hook installed.
 END_MODULE_MAP
 END_MODULE_CONTRACT
@@ -69,7 +70,10 @@ class SourcePlan:
     item of the search response - nothing else is stored. ``extra_fields`` keep
     supplemental adapter reads (Yandex's image) in the same field plan.
     ``region_fields`` name the response
-    attributes that say which region the answer is for.
+    attributes that say which region the answer is for. ``card_tool`` is a card
+    tool the adapter calls after its search (Ozon's cheapest tile) and
+    ``card_fields`` the card attributes it reads; those answers are recorded
+    under the source's ``cards``, keyed by the id the adapter asked for.
     """
 
     source: str
@@ -79,6 +83,9 @@ class SourcePlan:
     item_model: str
     extra_fields: tuple[str, ...] = ()
     region_fields: tuple[str, ...] = ()
+    card_tool: str = ""
+    card_fields: tuple[str, ...] = ()
+    card_model: str = ""
 
 
 # START_BLOCK_FIELD_PLAN
@@ -131,6 +138,9 @@ SOURCE_PLANS: dict[str, SourcePlan] = {
         item_fields=("sku", "title", "price", "price_kind", "rating", "rating_count", "stock", "url", "image_url"),
         response_model="ozon_connector.models_output:OzonSearchResponse",
         item_model="ozon_connector.models_output:OzonSearchItemOut",
+        card_tool="ozon_card",
+        card_fields=("price", "card_price"),
+        card_model="ozon_connector.models_output:OzonCardResponse",
     ),
     "avito": SourcePlan(
         source="avito",
@@ -291,6 +301,11 @@ def cut_response(source: str, response: Any) -> dict[str, Any]:
     }
 
 
+def cut_card(source: str, response: Any) -> dict[str, Any]:
+    """The card attributes the adapter reads after its search, and nothing else."""
+    return {name: _scalar(getattr(response, name, None)) for name in SOURCE_PLANS[source].card_fields}
+
+
 def scrub_regions(document: dict[str, Any]) -> dict[str, Any]:
     """Every region value becomes R1, R2, ... in order of appearance.
 
@@ -399,9 +414,17 @@ def assemble_recording(
     sources: dict[str, dict[str, Any]] = {}
     for capture in captures:
         name = capture.get("source")
-        if not isinstance(name, str) or not name:
+        if not isinstance(name, str) or not name or "card" in capture:
             continue
         sources[name] = {"error": capture["error"]} if "error" in capture else {"response": capture["response"]}
+    # A card read belongs to the search it followed; one with no answered search
+    # (a compare_verify_offer call) is not part of a comparison and is dropped.
+    for capture in captures:
+        name, card = capture.get("source"), capture.get("card")
+        if not isinstance(card, str) or "response" not in sources.get(name if isinstance(name, str) else "", {}):
+            continue
+        answer = {"error": capture["error"]} if "error" in capture else {"response": capture["response"]}
+        sources[name].setdefault("cards", {})[card] = answer
     for outcome in outcomes or []:
         name = outcome.get("source")
         if not isinstance(name, str) or name in sources:
@@ -495,6 +518,23 @@ def _capturing(source: str, tool: Any, directory: Path) -> Any:
     return wrapper
 
 
+def _capturing_card(source: str, tool: Any, directory: Path) -> Any:
+    """Capture a card read an adapter makes after its search, keyed by the id it asked for."""
+
+    @functools.wraps(tool)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        card = str(kwargs.get("sku_or_path", args[0] if args else ""))
+        try:
+            response = await tool(*args, **kwargs)
+        except Exception as exc:
+            _write_capture(directory, source, "", {"card": card, "error": error_entry(exc)})
+            raise
+        _write_capture(directory, source, "", {"card": card, "response": cut_card(source, response)})
+        return response
+
+    return wrapper
+
+
 def capture_sources(directory: Path, modules: dict[str, Any] | None = None) -> None:
     """Wrap every comparable connector's search tool so the adapters' calls are captured.
 
@@ -507,12 +547,13 @@ def capture_sources(directory: Path, modules: dict[str, Any] | None = None) -> N
         plan = SOURCE_PLANS.get(source)
         if plan is None:
             continue
-        tool = getattr(module, plan.tool, None)
-        if tool is None or getattr(tool, "__compare_recording__", False):
-            continue
-        wrapper = _capturing(source, tool, directory)
-        wrapper.__compare_recording__ = True  # type: ignore[attr-defined]
-        setattr(module, plan.tool, wrapper)
+        for name, wrap in ((plan.tool, _capturing), (plan.card_tool, _capturing_card)):
+            tool = getattr(module, name, None) if name else None
+            if tool is None or getattr(tool, "__compare_recording__", False):
+                continue
+            wrapper = wrap(source, tool, directory)
+            wrapper.__compare_recording__ = True  # type: ignore[attr-defined]
+            setattr(module, name, wrapper)
 
 
 # END_BLOCK_CAPTURE_HOOK

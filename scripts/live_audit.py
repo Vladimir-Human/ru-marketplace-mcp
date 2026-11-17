@@ -944,7 +944,8 @@ def _record_comparison(
         except (OSError, ValueError):
             continue
         path.unlink(missing_ok=True)
-    if not captures:
+    # A card read alone (compare_verify_offer re-reading an Ozon card) is no comparison.
+    if not [capture for capture in captures if "card" not in capture]:
         return None
     result = row.get("result")
     outcomes = result.get("source_outcomes") if isinstance(result, dict) else []
