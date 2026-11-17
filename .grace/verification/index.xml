@@ -51,22 +51,47 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
-  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested">
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE,G-CAPTURE-MUTATION-STUFFED-TITLES">
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/avito-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/cian-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_ambiguous_title_oracle_rejects_a_planted_comparable_winner" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_compare_regular_price_and_winner_ignore_cheaper_conditional_price" requirements="R-CAPTURE-MUTATION.conditional-price" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_permutation_oracle_rejects_planted_order_or_winner" requirements="R-CAPTURE-MUTATION.permutation" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_ambiguous_title_minimal_violation" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_keyword_stuffed_and_accessory_titles_never_win" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_permutations_keep_winners_and_offer_order" requirements="R-CAPTURE-MUTATION.permutation" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_instructions_keep_prices_ids_identity_and_winners" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_oracle_rejects_planted_identity_facts" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_seller_oracle_rejects_offers_left_out_silently_or_a_changed_kept_offer" requirements="R-CAPTURE-MUTATION.seller-text" />
     <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/detmir-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/dns-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/dns-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_captured_public_outputs_have_https_own_host_urls_or_null" requirements="R-CAPTURE-MUTATION.output-urls" />
+    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_profile_offer_urls_use_each_nested_offer_source_not_a_union" requirements="R-CAPTURE-MUTATION.output-urls" />
+    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_recorded_compare_outputs_have_https_own_host_urls_or_null" requirements="R-CAPTURE-MUTATION.output-urls" />
+    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_url_field_inventory_includes_every_registered_source_and_output" requirements="R-CAPTURE-MUTATION.output-urls" />
+    <test file="packages/marketplace-connector/tests/conformance/test_capture_mutation_urls.py" name="test_url_oracle_rejects_planted_bad_urls_in_every_discovered_field" requirements="R-CAPTURE-MUTATION.output-urls" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_driver_rejects_missing_price_target" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_html" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_json" requirements="R-CAPTURE-MUTATION.equivalent" />
@@ -83,19 +108,42 @@
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_raw_amounts_grouped_and_decimal_tokens" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_truncation_coverage" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_unexpected_errors_and_preparser_decode_skips" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_cny_displays_keep_the_captured_currency" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_display_uses_the_price_not_a_quantity_in_the_node" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_prices_skip_zero_amount_fields_in_priced_captures" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_conditional_display_is_cheaper_in_native_rubles_not_kopecks" requirements="R-CAPTURE-MUTATION.conditional-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_dom_adjacent_mutations_have_targets_even_for_minimal_xfail_cases" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_dom_seller_mutation_targets_cover_the_committed_capture_fields" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_fact_oracle_rejects_missing_changed_or_reordered_facts" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_gate_rejects_a_planted_parser_that_uses_the_attack_price" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_html_price_sibling_never_rewrites_the_regular_node" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_html_seller_text_keeps_attributes_specs_and_price_nodes" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_new_mutations_are_deterministic_and_keep_captured_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_preserving_gate_rejects_a_vacuous_seller_mutation" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_seller_gate_tracks_every_emitted_id_not_just_the_product_id" requirements="R-CAPTURE-MUTATION.seller-text" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_m5_m6.py" name="test_split_payment_candidates_never_replace_captured_regular_price" requirements="R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/mcp-core/tests/test_resources.py" name="test_registered_metadata_is_static_offline_after_hostile_marketplace_output" requirements="R-CAPTURE-MUTATION.static-metadata" />
+    <test file="packages/mcp-core/tests/test_resources.py" name="test_static_metadata_oracle_rejects_planted_marketplace_text" requirements="R-CAPTURE-MUTATION.static-metadata" />
     <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/megamarket-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_removed_current_price_keeps_the_original_in_its_role" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_keeps_ozon_regular_price" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_keeps_the_old_price_in_its_role" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation_m5_m6.py" name="test_capture_m5_m6_task_facts" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.seller-text,R-CAPTURE-MUTATION.split-payment" />
   </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
