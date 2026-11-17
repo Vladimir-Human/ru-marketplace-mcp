@@ -1122,6 +1122,11 @@
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_native_preferred_discount_is_refused_without_reference_fallback" requirements="R-YANDEX-MONEY-PARSING" title="R-YANDEX-MONEY-PARSING/R-YANDEX-PRICE-ROLE (owner, 2026-11-03)." />
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_search_refuses_an_ambiguous_price_and_names_it" requirements="R-YANDEX-MONEY-PARSING" title="R01: '1 999 2 999' is two numbers glued by the grouping space." />
   </requirement>
+  <requirement id="R-YANDEX-PAY-WORDING" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_compare_names_the_yandex_amount_as_the_yandex_pay_price" requirements="R-YANDEX-PAY-WORDING" />
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_guides_and_skills_claim_no_subscription_or_typical_discount" requirements="R-YANDEX-PAY-WORDING" />
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_the_conditional_yandex_price_fields_name_yandex_pay" requirements="R-YANDEX-PAY-WORDING" />
+  </requirement>
   <requirement id="R-YANDEX-PRICE-ROLE" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_yandex_paths.py" name="test_verify_offer_refuses_to_certify_a_plus_only_card" requirements="R-YANDEX-PRICE-ROLE" title="R02: a card with only the subscriber price certifies nothing." />
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_card_never_borrows_the_plus_price_as_the_everyday_price" requirements="R-YANDEX-PRICE-ROLE" title="R02: a card with only the subscriber price has no everyday price." />

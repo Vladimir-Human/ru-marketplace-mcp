@@ -597,7 +597,7 @@ async def test_price_and_partial_notes_match_wire(monkeypatch, tool_name, mode):
         assert "it can stay true" in guide and "not pagination completeness" in guide
         assert "pages_fetched" in guide and "requested_item_id" in guide
     elif mode in ("plus", "regular"):
-        assert answer["price_with_plus"] == 900 and "subscriber (Plus) price" in guide
+        assert answer["price_with_plus"] == 900 and "conditional (Pay/Plus) price" in guide
         assert answer["price_rub"] == (1500 if mode == "regular" else None)
         _, verified = await _round_trip(
             _module("compare_verify_offer"),

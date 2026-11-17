@@ -260,9 +260,9 @@ probe still use HTTP. Details in
 | `yandex_search(query, page, limit)`        | Search with both prices, ratings, sellers   |
 | `yandex_card(product_id, include_reviews)` | Full detail plus star breakdown and reviews |
 
-**Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` needs a
-paid Yandex Plus subscription and runs 25–30% lower. Yandex leads with the subscriber
-price, so quoting it uncritically misstates the real cost.
+**Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` is the
+conditional price for paying with Yandex Pay (the page's «Пэй» price; earlier Yandex Plus).
+Yandex leads with it, so quoting it uncritically misstates the real cost.
 
 **A search row is the SERP's offer, not the card's default offer.** One `product_id`
 covers a product family, and search may show one member while the card for the same id

@@ -152,7 +152,11 @@ async def test_subscription_amount_is_named_without_ranking_it(monkeypatch, regu
 
     result = await server.compare_prices("Kettle", sources=["yandex_market", "citilink"])
 
-    named = [w for w in result.warnings if "yandex_market/1" in w and "900 RUB" in w and "Yandex Plus" in w]
+    named = [
+        w
+        for w in result.warnings
+        if "yandex_market/1" in w and "900 RUB" in w and "requires paying with Yandex Pay" in w
+    ]
     # Plus-only: the warning is the agent's only sign the 900 is not ranked. Beside a
     # ranked everyday price the amount is already in price_with_subscription_rub.
     assert len(named) == (1 if regular_price is None else 0)
