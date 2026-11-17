@@ -286,6 +286,7 @@
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_refused_card_leaves_every_ozon_tile_unranked_and_says_why" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_slow_card_never_costs_the_search_results" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_no_card_read_starts_when_the_source_timeout_is_nearly_spent" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_one_card_ranks_one_tile_even_when_its_sku_repeats" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_the_card_read_goes_to_the_cheapest_tile_that_could_be_the_product" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_only_a_card_price_tile_is_marked_as_a_card_price" requirements="R-COMPARE-CONDITIONAL-PRICE.adapters" title="R-COMPARE-CONDITIONAL-PRICE.adapters: the card price is named, other styles are not." />
   </requirement>

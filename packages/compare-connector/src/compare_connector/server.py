@@ -330,7 +330,8 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
         seconds = SOURCE_TIMEOUT_S - (time.monotonic() - started) - OZON_CARD_MARGIN_S
         everyday, card_price, problem = await _read_ozon_card(server, sku, seconds)
     for item, tile_sku, price in tiles:
-        ranked = everyday is not None and tile_sku == sku
+        # One card ranks one tile, even when Ozon lists the same sku twice.
+        ranked = everyday is not None and tile_sku == sku and not any(o.product_id == sku for o in batch)
         if ranked:
             decision = decide_conditional_price(
                 "ozon", tile_sku, everyday, price if card_price is None else card_price, "card"

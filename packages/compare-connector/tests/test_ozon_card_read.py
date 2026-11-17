@@ -91,6 +91,23 @@ async def test_a_plain_ozon_tile_is_conditional_and_the_cheapest_ranks_by_its_ca
 
 
 @pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.ozon-card")
+async def test_one_card_ranks_one_tile_even_when_its_sku_repeats(monkeypatch):
+    async def ozon_search(**kwargs):
+        tile = OzonSearchItemOut(sku=AUDIT_SKU, title="Apple iPhone 16 128GB", price=64532.0)
+        return OzonSearchResponse(items=[tile, tile.model_copy()])
+
+    async def ozon_card(sku_or_path: str) -> OzonCardResponse:
+        return OzonCardResponse(price=68093.0, card_price=64532.0)
+
+    monkeypatch.setitem(server.SOURCES, "ozon", SimpleNamespace(ozon_search=ozon_search, ozon_card=ozon_card))
+
+    offers = await server._search_ozon("iphone 16 128gb", 5)
+
+    assert [offer.price_rub for offer in offers] == [68093.0, None]
+    assert [offer.price_kind for offer in offers] == [None, "card"]
+
+
+@pytest.mark.req("R-COMPARE-CONDITIONAL-PRICE", "R-COMPARE-CONDITIONAL-PRICE.ozon-card")
 async def test_a_refused_card_leaves_every_ozon_tile_unranked_and_says_why(monkeypatch):
     async def card(sku: str) -> OzonCardResponse:
         raise ToolError(json.dumps({"error": "rate_limited", "message": "slow down"}))
