@@ -214,7 +214,7 @@ BUDGETS: dict[str, Budget] = {
         "Card/v4 capture reused as in test_cache_validated; no captured category/full 100-item page.",
     ),
     "ozon_search": Budget(
-        2082,
+        2144,
         "search_composer_live.json",
         "3 captured rows; schema has no numeric page maximum (prose says 10); use page=10, no last/full-page capture.",
     ),
@@ -287,10 +287,10 @@ BUDGETS: dict[str, Budget] = {
         2362, "card_rent_live.json", "Sale/rent/daily captures only; no all-description/history-length bound."
     ),
     "compare_prices": Budget(
-        27662,
+        27818,
         "wildberries/search_v9_live.json + ozon/search_composer_live.json + yandex_market/search_washer.html + avito/js_items_live.json + taobao/search_grid_iphone15_live.html + megamarket/search_live.json + lamoda/search_grid_live.html + dns/search_grid.html + citilink/search_grid.html + aliexpress/search_grid.html",
         "per_source_limit=20, but short native fixtures cannot supply 20 offers each; only the largest-native-fixture combination is measured "
-        "(30 offers, mean 681 characters each, 7172 outside offers): 20 offers from each of 10 sources would be about 143,000 characters.",
+        "(30 offers, about 680 characters each, about 7,200 outside offers): 20 offers from each of 10 sources would be about 143,000 characters.",
     ),
     "compare_verify_offer": Budget(
         2341,
