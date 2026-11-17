@@ -27,12 +27,13 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # PURPOSE: Provide the shared connector assembly — pacing, refusal errors, capped reads and paced CDP extraction.
 # SCOPE: Mechanism only; per-source state stays in each connector, curl_cffi arrives as an argument and chrome_cdp imports lazily.
 # DEPENDS: mcp_core.pacing,errors; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
-# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs; R-OUTPUT-PAGE-URLS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
 # blocked_error: Build the refusal error, with the operator's rotation hint and a bounded detail.
 # url_on_hosts: Share exact/leading-dot source-host matching; explicit schemeless opt-in for input parsers only.
+# page_link: A page link for a tool answer: site-relative path made full, https on page hosts kept, else empty.
 # host_checked_id: Extract an id from a URL only when its host is ours; bare ids pass.
 # on_bot_check_page: Tell whether a page URL is the shared anti-bot check (/xpvnsulc/).
 # sync_curl_get: Tier-1 GET whose streamed body is capped and decoded.
@@ -54,6 +55,7 @@ from mcp_core.pacing import Pacer
 __all__ = [
     "blocked_error",
     "host_checked_id",
+    "page_link",
     "polite_wait",
     "render_json",
     "sync_curl_get",
@@ -131,6 +133,19 @@ def url_on_hosts(url: str, hosts: Collection[str], *, allow_schemeless: bool = F
         and "\\" not in parts.netloc
         and (host in allowed or any(item.startswith(".") and host.endswith(item) for item in allowed))
     )
+
+
+def page_link(raw: object, site: str, hosts: Collection[str]) -> str:
+    """A page link for a tool answer (R-OUTPUT-PAGE-URLS).
+
+    A site-relative path ("/catalog/...") becomes ``site`` + path; an https link on
+    ``hosts`` (the registry's page_hosts) is kept; anything else - another host, plain
+    http, a scheme-relative "//host" or a bare path - is dropped as empty.
+    """
+    path = raw.strip() if isinstance(raw, str) else ""
+    if path.startswith("/") and not path.startswith("//") and "\\" not in path:
+        return site.rstrip("/") + path
+    return path if path.startswith("https://") and url_on_hosts(path, hosts) else ""
 
 
 # END_BLOCK_HOST_POLICY

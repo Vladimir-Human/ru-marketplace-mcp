@@ -27,7 +27,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # PURPOSE: Expose Wildberries catalog, reviews, questions and seller reads.
 # SCOPE: Read-only MCP tools; paced HTTP/CDN access, optional DOM card/search with API-refusal fallback and transport-aware selfchecks.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core; models_output; settings; dom_transport; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; R-SELFCHECK-GATES-PRICE; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; R-SELFCHECK-GATES-PRICE; R-WB-CATEGORY-SELECTOR; M-WB; M-KIT; M-COMPARE; M-MARKETPLACE; R-WB-SELFCHECK-DOM; R-WB-DOM-FALLBACK; R-EMPTY-NOT-SUCCESS; R-CACHE-VALIDATED; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _safe_get_text: Apply bounded HTTP reads, refusal handling and transport fallback.
@@ -197,9 +197,9 @@ WB_UNLISTABLE_SHARD = "blackhole"
 # Upstream ordering values accepted by the catalog feed.
 WB_CATEGORY_SORTS = frozenset({"popular", "priceup", "pricedown", "newly", "rate", "benefit"})
 _WB_SHARD_RE = re.compile(r"^[a-z0-9_-]{2,60}$", re.IGNORECASE)
-# The selector is appended to the URL verbatim, so it is constrained to the two
-# real forms rather than trusted: this string reaches an outbound request.
-_WB_CATEGORY_QUERY_RE = re.compile(r"^(?:cat|subject|kind|brand|xsubject)=[0-9;,]{1,80}$", re.IGNORECASE)
+# Appended to an outbound URL verbatim, so limited to the forms WB's own menu emits
+# (live 2026-11-17: subject lists up to ~660 chars, vflags=N; R-WB-CATEGORY-SELECTOR).
+_WB_CATEGORY_QUERY_RE = re.compile(r"^(?:cat|subject|kind|brand|xsubject|vflags)=[0-9;,]{1,1000}$", re.IGNORECASE)
 # Static CDN mirrors serving seller registration records and the catalog menu.
 # Verified live Jul 2026: vol0/data/supplier-by-id/{id}.json and
 # vol0/data/main-menu-ru-ru-v3.json. Several mirrors exist; they are tried in
