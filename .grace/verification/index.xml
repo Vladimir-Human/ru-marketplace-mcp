@@ -397,6 +397,9 @@
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_several_size_mismatches_cost_one_warning" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: warnings cost tokens, so one per call, not per offer." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_terabyte_query_accepts_a_title_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB, so the units must not split one size." />
   </requirement>
+  <requirement id="R-COMPARE-VERIFY-BEFORE-QUOTE" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_verify_before_quote.py" name="test_the_served_guide_says_verify_the_winner_before_quoting_it" requirements="R-COMPARE-VERIFY-BEFORE-QUOTE" />
+  </requirement>
   <requirement id="R-CONNECTOR-KIT" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_kit.py" name="test_blocked_error_appends_the_rotation_hint_and_bounds_the_detail" requirements="R-CONNECTOR-KIT" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_host_checked_id_accepts_bare_ids_and_our_own_hosts" requirements="R-CONNECTOR-KIT" />
