@@ -46,6 +46,52 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested">
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/avito-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/cian-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/citilink-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/detmir-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/dns-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/lamoda-connector/tests/test_capture_mutation.py" name="test_missing_highest_old_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_driver_rejects_missing_price_target" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_html" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_json" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_equivalent_oracle_rejects_lost_output" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_accepts_real_fallback_amounts" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_matches_nested_item_representations" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_broken_output" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_decoy_made_amount" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_neighbours_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_truncated_amount" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_rejects_wrong_price_field" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_oracle_uses_any_known_id_field" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_price_mutations" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_raw_amounts_grouped_and_decimal_tokens" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_truncation_coverage" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/mcp-core/tests/test_capture_mutation_harness.py" name="test_unexpected_errors_and_preparser_decode_skips" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/megamarket-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_removed_current_price_keeps_the_original_in_its_role" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/taobao-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+    <test file="packages/yandex-connector/tests/test_capture_mutation.py" name="test_removed_discount_price_role_violation" requirements="R-CAPTURE-MUTATION.no-invented-price" />
+  </requirement>
   <requirement id="R-CDP-AUTOSTART-NEGATIVE-CACHE" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_after_the_window_tries_again" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_autostart_cache.py" name="test_a_caller_already_waiting_on_the_lock_does_not_retry" requirements="R-CDP-AUTOSTART-NEGATIVE-CACHE" />
@@ -238,10 +284,12 @@
   <requirement id="R-COMPARE-BENCHMARK-REPLAY" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_avito_region_reaches_the_replayed_outcome" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_image_replays_as_the_same_offer_image" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Synthetic typed search answers exercise the real adapters before and after recording." />
-    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_ozon_card_price_tile_replays_as_conditional_only" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="The Ozon plan keeps price_kind: without it a replayed card tile would rank as the everyday price." />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_ozon_search_and_card_read_replay_as_the_live_answer" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="The Ozon plan records the card read after the search: the replay ranks what live ranked." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recorded_timeout_replays_with_the_timeout_error_code" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_a_recording_without_the_ozon_card_read_fails_the_replay" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="A recording made before compare read Ozon cards does not cover today's adapter." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_committed_payloads_contain_only_what_the_recorder_can_produce" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" title="Re-cut every typed payload: the corpus must not invent response/item fields." />
     <test file="packages/compare-connector/tests/benchmark/test_replay.py" name="test_replay_refuses_an_unknown_or_missing_recording_schema" requirements="R-COMPARE-BENCHMARK-REPLAY.replay" />
+    <test file="scripts/test_compare_recording.py" name="test_a_card_read_joins_the_search_it_followed_and_a_lone_card_read_is_dropped" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Ozon's card read is recorded under the answered search; a verify call's card read is no comparison." />
     <test file="scripts/test_compare_recording.py" name="test_a_compare_timeout_records_the_outcomes_timeout_not_a_cancelled_capture" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_an_avito_city_url_is_scrubbed_before_the_recording_is_written" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_control_flow_exceptions_write_no_capture_and_still_raise" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
@@ -250,6 +298,7 @@
     <test file="scripts/test_compare_recording.py" name="test_warning_only_regions_are_numbered_in_order_of_appearance" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_compare_recording.py" name="test_warnings_are_redacted_and_regions_use_the_payload_placeholder" requirements="R-COMPARE-BENCHMARK-REPLAY.record" />
     <test file="scripts/test_live_audit.py" name="test_a_failing_source_is_recorded_as_its_error_and_still_raises" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="An errored source is stored as its error, and the error still reaches the caller." />
+    <test file="scripts/test_live_audit.py" name="test_a_lone_card_read_writes_no_recording" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A compare call that only re-read an Ozon card (no search) is no comparison to record." />
     <test file="scripts/test_live_audit.py" name="test_a_record_dir_inside_the_repository_must_be_the_ignored_one" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="A recording is private material: inside the repository only .live-recordings/ (gitignored) takes it." />
     <test file="scripts/test_live_audit.py" name="test_recording_is_a_phase_c_option_only" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The recorder belongs to the compare phase; the other phases refuse it." />
     <test file="scripts/test_live_audit.py" name="test_the_audit_writes_one_recording_per_compare_call" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The compare call the audit measured is the comparison that gets recorded." />
@@ -278,6 +327,13 @@
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_regular_price_ranks_and_wallet_amount_is_warned" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: the everyday price ranks and the lower Wallet amount is named." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_subscription_amount_is_named_without_ranking_it" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code keeps Plus unranked but emits no warning naming its 900 RUB." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_card_without_an_everyday_price_ranks_nothing" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_plain_ozon_tile_is_conditional_and_the_cheapest_ranks_by_its_cards_everyday_price" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_refused_card_leaves_every_ozon_tile_unranked_and_says_why" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_slow_card_never_costs_the_search_results" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_no_card_read_starts_when_the_source_timeout_is_nearly_spent" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_one_card_ranks_one_tile_even_when_its_sku_repeats" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
+    <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_the_card_read_goes_to_the_cheapest_tile_that_could_be_the_product" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_only_a_card_price_tile_is_marked_as_a_card_price" requirements="R-COMPARE-CONDITIONAL-PRICE.adapters" title="R-COMPARE-CONDITIONAL-PRICE.adapters: the card price is named, other styles are not." />
   </requirement>
   <requirement id="R-COMPARE-FOREIGN-DETAIL" kind="requirement" state="tested">
@@ -534,6 +590,7 @@
     <test file="scripts/test_live_audit.py" name="test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_source" requirements="R-LIVE-AUDIT.runner" title="A call our own budget cut short is skipped: budget, pauses nothing, and costs one request more next time." />
     <test file="scripts/test_live_audit.py" name="test_a_tool_error_without_a_refusal_line_keeps_its_own_code" requirements="R-LIVE-AUDIT.runner" title="Only the budget's own line relabels an error: a refusal printed before the call does not count." />
     <test file="scripts/test_live_audit.py" name="test_all_run_plans_fit_and_never_repeat" requirements="R-LIVE-AUDIT.plans" />
+    <test file="scripts/test_live_audit.py" name="test_arguments_from_one_answer_come_from_one_node" requirements="R-LIVE-AUDIT.plans" title="Shard and query of wb_category_products come from the same wb_categories node (audit cycle 1)." />
     <test file="scripts/test_live_audit.py" name="test_capture_dimensions_scale_and_finally_close" requirements="R-LIVE-AUDIT.capture" />
     <test file="scripts/test_live_audit.py" name="test_card_args_use_native_types_and_paths" requirements="R-LIVE-AUDIT.plans" />
     <test file="scripts/test_live_audit.py" name="test_compare_drops_paused_sources_before_budget" requirements="R-LIVE-AUDIT.runner" />
@@ -796,6 +853,8 @@
     <test file="packages/compare-connector/tests/test_review_count_adapter.py" name="test_numeric_search_fields_reach_compare_unchanged" requirements="R-OZON-SEARCH-NUMERIC.compare" title="R-OZON-SEARCH-NUMERIC: numeric/null prices, zero ratings and counts survive comparison." />
     <test file="packages/mcp-core/tests/test_count_and_warning_budget.py" name="test_a_count_the_text_names_keeps_its_value" requirements="R-OZON-SEARCH-NUMERIC.count" title="R-OZON-SEARCH-NUMERIC: labelled/grouped counts keep their exact value." />
     <test file="packages/mcp-core/tests/test_guide_contracts.py" name="test_each_guide_matches_public_tool_answer" requirements="R-OZON-SEARCH-NUMERIC.wire" title="R-GUIDE-CONTRACTS: no undocumented or phantom serialized fields." />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_an_original_price_entry_never_becomes_the_tile_price" requirements="R-OZON-SEARCH-NUMERIC.roles" />
+    <test file="packages/ozon-connector/tests/test_capture_mutation.py" name="test_removed_current_price_keeps_the_original_in_its_role" requirements="R-OZON-SEARCH-NUMERIC.roles" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_live_prices_are_numeric_rubles" requirements="R-OZON-SEARCH-NUMERIC.fields" title="R-OZON-SEARCH-NUMERIC: the captured prices leave the parser as RUB floats." />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_search_keeps_supported_review_count_texts" requirements="R-OZON-SEARCH-NUMERIC.count" title="R-OZON-SEARCH-NUMERIC: do not discard count forms the shared helper understands." />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_search_rejects_unparseable_values_without_losing_warnings" requirements="R-OZON-SEARCH-NUMERIC.nulls" title="R-OZON-SEARCH-NUMERIC: refused values are null, with the existing drift warnings." />
@@ -1029,6 +1088,9 @@
   <requirement id="R-WB-DOM-NAVIGATION-RETRY" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_reopens_once_after_navigation_destroys_evaluation" requirements="R-WB-DOM-NAVIGATION-RETRY" />
   </requirement>
+  <requirement id="R-WB-ORIGINAL-PRICE-ROLE" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-WB-ORIGINAL-PRICE-ROLE" />
+  </requirement>
   <requirement id="R-WB-SELFCHECK-DOM" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_selfcheck_dom.py" name="test_dom_selfcheck_uses_the_tools_parsers_and_avoids_api_hosts" requirements="R-WB-SELFCHECK-DOM" title="R-WB-SELFCHECK-DOM: captured named/priced products prove both DOM paths." />
   </requirement>
@@ -1079,6 +1141,11 @@
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_native_optional_or_valid_discount_still_quotes_real_prices" requirements="R-YANDEX-MONEY-PARSING" title="R-YANDEX-MONEY-PARSING: absent/blank optional values and valid money survive." />
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_native_preferred_discount_is_refused_without_reference_fallback" requirements="R-YANDEX-MONEY-PARSING" title="R-YANDEX-MONEY-PARSING/R-YANDEX-PRICE-ROLE (owner, 2026-11-03)." />
     <test file="packages/yandex-connector/tests/test_money_and_price_roles.py" name="test_search_refuses_an_ambiguous_price_and_names_it" requirements="R-YANDEX-MONEY-PARSING" title="R01: '1 999 2 999' is two numbers glued by the grouping space." />
+  </requirement>
+  <requirement id="R-YANDEX-PAY-WORDING" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_compare_names_the_yandex_amount_as_the_yandex_pay_price" requirements="R-YANDEX-PAY-WORDING" />
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_guides_and_skills_claim_no_subscription_or_typical_discount" requirements="R-YANDEX-PAY-WORDING" />
+    <test file="packages/compare-connector/tests/test_yandex_pay_wording.py" name="test_the_conditional_yandex_price_fields_name_yandex_pay" requirements="R-YANDEX-PAY-WORDING" />
   </requirement>
   <requirement id="R-YANDEX-PRICE-ROLE" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_yandex_paths.py" name="test_verify_offer_refuses_to_certify_a_plus_only_card" requirements="R-YANDEX-PRICE-ROLE" title="R02: a card with only the subscriber price certifies nothing." />

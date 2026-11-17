@@ -18,6 +18,7 @@ START_MODULE_MAP
   compare_trigger: Eight-call cycle timing threshold, with explicit incomplete status.
   _record_comparison: One recording per compare call, from the sources the child captured.
   execute_plan: One call at a time, guard every resolved source, checkpoint private JSON and ids.
+  _resolve_args: Arguments from one earlier answer come from one node of it.
   _child_refused: Whether the child's budget refused a request during a call (its [refused] stderr line).
   select_options/run/summary: CLI validation, live runner and request-free T3 skeleton.
 END_MODULE_MAP
@@ -640,6 +641,27 @@ def _resolve_value(value: Any, source: str, ids: dict[str, Any], context: dict[s
     return next((node[field] for node in _nodes(context.get(name)) if node.get(field) not in (None, "")), None)
 
 
+def _resolve_args(args: dict[str, Any], source: str, ids: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    """Resolve a call's arguments; every ``$name:field`` of one earlier answer comes from the same node.
+
+    Audit cycle 1: wb_category_products got the shard of one menu node and the query of
+    another, so the tool refused a pair WB's menu never offered.
+    """
+    out = {key: _resolve_value(value, source, ids, context) for key, value in args.items()}
+    linked: dict[str, dict[str, str]] = {}
+    for key, value in args.items():
+        if isinstance(value, str) and value.startswith("$") and ":" in value:
+            name, field = value[1:].split(":", 1)
+            linked.setdefault(name, {})[key] = field
+    for name, fields in linked.items():
+        node = next(
+            (n for n in _nodes(context.get(name)) if all(n.get(f) not in (None, "") for f in fields.values())), None
+        )
+        for key, field in fields.items():
+            out[key] = node[field] if node is not None else None
+    return out
+
+
 def _resolved(
     call: dict[str, Any],
     cases: dict[str, Any],
@@ -678,7 +700,7 @@ def _resolved(
         if resolved["args"] == {cases["fixed_queries"][source]["card"]["id_argument"]: "$id"}:
             return None
     else:
-        resolved["args"] = {key: _resolve_value(value, source, ids, context) for key, value in resolved["args"].items()}
+        resolved["args"] = _resolve_args(resolved["args"], source, ids, context)
         if any(value is None for value in resolved["args"].values()):
             return None
     if source != "compare":
@@ -922,7 +944,8 @@ def _record_comparison(
         except (OSError, ValueError):
             continue
         path.unlink(missing_ok=True)
-    if not captures:
+    # A card read alone (compare_verify_offer re-reading an Ozon card) is no comparison.
+    if not [capture for capture in captures if "card" not in capture]:
         return None
     result = row.get("result")
     outcomes = result.get("source_outcomes") if isinstance(result, dict) else []

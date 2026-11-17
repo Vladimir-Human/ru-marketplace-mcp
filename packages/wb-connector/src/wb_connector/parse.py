@@ -219,9 +219,9 @@ def _extract_price_rub(p: dict) -> tuple[float | None, float | None]:
             # `/100` math (audit wave-2 round-2 DRIFT). coerce_price already
             # rejects <=0/junk and returns None.
             product = _kopeck_to_rub(price.get("product") or price.get("total"))
-            basic = _kopeck_to_rub(price.get("basic")) or product
             if product:
-                return (product, basic or product)
+                # A missing or refused basic amount is unknown, not "no discount" (P2-1 m2/m4).
+                return (product, _kopeck_to_rub(price.get("basic")))
     sale = _kopeck_to_rub(p.get("salePriceU"))
     base = _kopeck_to_rub(p.get("priceU"))
     if sale or base:

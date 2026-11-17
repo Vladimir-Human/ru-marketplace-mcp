@@ -31,6 +31,7 @@ architecture gate's pure list.
 # ConditionalPriceDecision: What one offer's everyday and conditional prices say about its rank.
 # decide_conditional_price: The one rule for an everyday price beside a conditional one.
 # _conditional_price_note: Name the excluded amount, not the offer whose everyday price may still rank.
+# pick_card_candidate: The cheapest tile worth one card read (numeric id, an amount, not an accessory).
 # _mixed_regions_notes: Name the regions when answered sources priced in different ones.
 # _omitted_note: Name how many offers the size budget left out and how to get them.
 # _fit_answer: Leave whole offers out from the end until the answer fits ANSWER_CHAR_LIMIT characters.
@@ -360,7 +361,8 @@ def _conditional_price_note(source: str, product_id: str, price: float, kind: st
     elif kind == "card":
         condition = "Ozon card" if source == "ozon" else "card"
     elif kind == "subscription":
-        condition = "Yandex Plus subscription" if source == "yandex_market" else "paid subscription"
+        # Yandex's yaBank price: paying with Yandex Pay («Пэй»), earlier Yandex Plus (audit 2026-11-17).
+        condition = "paying with Yandex Pay" if source == "yandex_market" else "paid subscription"
     return (
         f"conditional_price: {source}/{product_id or '?'}: {price:g} {currency.upper()} "
         f"requires {condition}; not ranked"
@@ -414,14 +416,35 @@ def decide_conditional_price(
         return ConditionalPriceDecision(None, note)
     if conditional_price_rub >= everyday_price_rub:
         return ConditionalPriceDecision(everyday_price_rub, None)
+    label = "Yandex Pay" if (source, kind) == ("yandex_market", "subscription") else kind
     note = (
         f"info:conditional_price_available: {source}/{product_id or '?'}: "
-        f"{conditional_price_rub:g} {currency.upper()} with {kind}"
+        f"{conditional_price_rub:g} {currency.upper()} with {label}"
     )
     return ConditionalPriceDecision(everyday_price_rub, note)
 
 
 # END_CONTRACT: decide_conditional_price
+
+
+def pick_card_candidate(query: str, tiles: Iterable[tuple[str, str, float | None, bool | None]]) -> str | None:
+    """The product id of the cheapest tile worth one card read, or None.
+
+    R-COMPARE-CONDITIONAL-PRICE.ozon-card: ``tiles`` are (product id, title,
+    conditional amount, in stock). A tile without a numeric id or an amount
+    cannot be read or ranked; a tile marked out of stock, an unrequested accessory
+    or another condition would spend the one read on an offer the comparison
+    would not count as the product asked for.
+    """
+    best: tuple[float, str] | None = None
+    for product_id, title, amount, in_stock in tiles:
+        if amount is None or not product_id.isdigit() or in_stock is False:
+            continue
+        if _looks_like_an_accessory(title, query) or _looks_like_another_condition(title, query):
+            continue
+        if best is None or amount < best[0]:
+            best = (amount, product_id)
+    return best[1] if best else None
 
 
 # END_BLOCK_PRICE_POLICY

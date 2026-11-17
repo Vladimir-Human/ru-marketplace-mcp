@@ -1,9 +1,9 @@
 """Typed responses for the Yandex Market connector.
 
-Prices carry two fields on purpose. Yandex advertises a subscriber price
-prominently, and quoting only that would misstate what most people pay — so
-``price_rub`` (everyday) and ``price_with_plus`` (requires Yandex Plus) are always
-reported separately.
+Prices carry two fields on purpose. Yandex advertises a conditional price
+prominently (paying with Yandex Pay, «Пэй»; earlier Yandex Plus), and quoting only
+that would misstate what most people pay — so ``price_rub`` (everyday) and
+``price_with_plus`` (conditional) are always reported separately.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Describe Yandex outputs and qualify the shown discount without claiming verified price history.
@@ -41,7 +41,7 @@ class MetaOut(MetaOutBase):
         default="",
         description=(
             "How data was extracted: 'ssr' (widget state), 'zone' (first-screen snippet payloads, no brand) "
-            "or 'ld+json' (degraded fallback, Plus price only)."
+            "or 'ld+json' (degraded fallback, conditional Pay/Plus price only)."
         ),
     )
 
@@ -75,7 +75,10 @@ class YandexProduct(BaseModel):
     )
     price_with_plus: float | None = Field(
         default=None,
-        description="Discounted price requiring a Yandex Plus/Pay subscription. Typically 25-30% below price_rub.",
+        description=(
+            "Yandex's conditional price: paying with Yandex Pay (the page's «Пэй» price, key yaBank; "
+            "earlier the Yandex Plus price). Not the everyday price."
+        ),
     )
     price_old_rub: float | None = Field(
         default=None,
@@ -130,8 +133,10 @@ class YandexCardResponse(BaseModel):
     seller: str = Field(default="", description="Seller of the default offer.")
     description: str = Field(default="", description="Product description.")
     image: str = Field(default="", description="Primary product image URL.")
-    price_rub: float | None = Field(default=None, description="Everyday price in roubles, without a subscription.")
-    price_with_plus: float | None = Field(default=None, description="Price requiring a Yandex Plus/Pay subscription.")
+    price_rub: float | None = Field(default=None, description="Everyday price in roubles, with no payment condition.")
+    price_with_plus: float | None = Field(
+        default=None, description="Conditional price: paying with Yandex Pay («Пэй»; earlier Yandex Plus)."
+    )
     price_before_discount_rub: float | None = Field(default=None, description="Pre-discount reference price.")
     discount_percent: int | None = Field(
         default=None, description=f"Discount percentage as reported upstream — {MARKETPLACE_PRICE_WORDING}."

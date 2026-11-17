@@ -36,10 +36,10 @@ run `marketplace-mcp doctor` after install and whenever results look wrong.
 
 - `price_rub` — what anyone pays (on search rows: the price the SERP snippet's
   cart button charges, verified against product cards). **Quote this one.**
-- `price_with_plus` — requires a paid Yandex Plus subscription, typically 25-30%
-  lower.
+- `price_with_plus` — the conditional price for paying with Yandex Pay (the page's
+  «Пэй» price; earlier Yandex Plus).
 
-Yandex's own UI leads with the subscriber price, so it is easy to quote a number
+Yandex's own UI leads with the conditional price, so it is easy to quote a number
 the operator cannot actually get. Discounted rows also carry the
 struck-through reference — `price_old_rub` on search rows,
 `price_before_discount_rub` plus `discount_percent` on cards. It is context for
@@ -92,7 +92,7 @@ data, never as a free item.
 
 **Extraction is SSR-coupled.** The `meta.extraction` field says `ssr` normally and
 `ld+json` when the connector had to fall back to schema.org markup — in that mode
-seller and brand are missing and the price is the subscriber one. If you see
+seller and brand are missing and the price is the conditional one. If you see
 `parser_drift`, Yandex changed its front-end and the connector needs updating;
 the CLI's `marketplace-mcp doctor` confirms it.
 

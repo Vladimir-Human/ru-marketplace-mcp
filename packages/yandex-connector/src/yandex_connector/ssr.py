@@ -438,7 +438,7 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
       (it equalled the cart price and the card's ``prices.price`` row by row),
       so it is ``price_rub``; on undiscounted rows the entry is absent and the
       base ``price`` IS the everyday price.
-    * ``additionalPrices[yaBank]`` is the green Yandex Plus price — the figure
+    * ``additionalPrices[yaBank]`` is the green conditional (Pay, earlier Plus) price — the figure
       the SERP prints big and the only ₽ amount visible in the snippet DOM.
       It is ``price_with_plus`` and is never allowed into ``price_rub``.
     * ``price`` is the base/initial price; on discounted rows it is the
@@ -680,9 +680,9 @@ def parse_search(html: str) -> dict[str, Any]:
     """Parse a search results page into products plus result metadata.
 
     Two prices are reported per item and the distinction is not cosmetic:
-    ``price_rub`` is what anyone pays, while ``price_with_plus`` requires a
-    Yandex Plus subscription and runs 25–30% lower. Reporting only the latter
-    would quote a price most callers cannot get.
+    ``price_rub`` is what anyone pays, while ``price_with_plus`` is the
+    conditional price for paying with Yandex Pay (earlier Yandex Plus).
+    Reporting only the latter would quote a price most callers cannot get.
 
     ``price_rub`` comes from the snippet's cart price
     (``productPayload.cartButton.price``, mirrored by the baobab's

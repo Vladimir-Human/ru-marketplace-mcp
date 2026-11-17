@@ -14,10 +14,10 @@ emits sporadic 502s. One source failing must never sink the comparison, so every
 source is queried in parallel and its outcome reported per-source. A caller can
 always see which marketplaces answered and which did not.
 
-**Subscription prices are never silently compared against everyday prices.**
-Yandex Market leads with a Plus-subscriber price 25-30% below the everyday one.
+**Conditional prices are never silently compared against everyday prices.**
+Yandex Market leads with a Yandex Pay (earlier Plus) price below the everyday one.
 Ranking that against a Wildberries price would fabricate a bargain. Comparison
-uses everyday prices; subscriber prices ride along in a separate field.
+uses everyday prices; conditional prices ride along in a separate field.
 
 **Sources are optional at import time.** Ozon pulls in curl_cffi and Playwright,
 which many users do not want. Each connector is imported defensively, and the
@@ -40,7 +40,8 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
 # _require_selected: Reject explicit search/card sources disabled by the operator.
-# OfferBatch: Carry normalized offers plus source warnings and health evidence.
+# adapt.py: OfferBatch and the number/stock/card-id helpers the adapters share (moved out of this file).
+# _read_ozon_card/_search_ozon: Ozon tiles are conditional; one card read ranks the cheapest by its everyday price.
 # _run_source: Bound each source query; report native price counts and structured partial failures.
 # _call_card_tool: Dispatch validated source-native card arguments.
 # compare_prices: Validate the query, gather the sources and hand the results to the decision module.
@@ -57,11 +58,9 @@ import importlib
 import json
 import math
 import os
-import re
 import time
 from collections.abc import Iterable
 from typing import Annotated, Any
-from urllib.parse import urlsplit
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
@@ -84,6 +83,14 @@ from mcp_core.source_selection import canonical, selected
 from mcp_core.sources import BY_NAME, CARD_TOOL_NAMES, COMPARE_SOURCE_NAMES, COMPARE_SOURCES, FOREIGN_CURRENCY_SOURCES
 from pydantic import Field
 
+from compare_connector.adapt import (
+    OfferBatch,
+    _as_count,
+    _as_price,
+    _numeric_card_id,
+    _stock_from_label,
+    _wb_product_url,
+)
 from compare_connector.decide import (  # noqa: F401
     ResponseOptions,
     _dedupe,
@@ -99,6 +106,7 @@ from compare_connector.decide import (  # noqa: F401
     _size_mismatch_warning,
     build_response,
     decide_conditional_price,
+    pick_card_candidate,
 )
 from compare_connector.identity import (
     ProductIdentity,
@@ -119,11 +127,6 @@ SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
 # a slow source must not hold the whole comparison hostage.
 SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
-
-# How many native diagnostics one source may contribute to a comparison. The
-# list stays bounded, and a bounded list that had to be cut says how many
-# diagnostics it suppressed (mcp_core.bound_warnings).
-SOURCE_WARNING_LIMIT = 10
 
 mcp = FastMCP(
     name="compare-connector",
@@ -194,102 +197,6 @@ SEARCHABLE = (
 # END_BLOCK_SOURCE_SELECTION
 
 
-def _wb_product_url(nm_id: object) -> str:
-    return f"https://www.wildberries.ru/catalog/{nm_id}/detail.aspx" if nm_id else ""
-
-
-# Native search prices are numeric or None; shared coercion also accepts older
-# display strings, including localized decimal marks and grouping spaces.
-def _as_price(value: object) -> float | None:
-    """Coerce a marketplace price into a float, or ``None`` when there isn't one.
-
-    Delegates to the shared ``mcp_core.coerce_price`` — the single source of the
-    doctrine "never 0, never negative, never non-finite, never raises, never
-    fabricates". A private duplicate once lived here and silently drifted away
-    from that doctrine (cycles 24-25); the audit that followed ended here.
-
-    Live evidence for the delegation (Ozon rendered search + card pages captured
-    2026-08-07 through the operator's Chrome, raw HTML in
-    the captured pages kept outside the repository): all 144 distinct price-like strings on the pages
-    parse identically through ``coerce_price``, except range strings like
-    "1 000–2 000 ₽", which the old duplicate concatenated into a fabricated
-    price and the shared parser correctly rejects as ambiguous.
-    """
-    return R.coerce_price(value)
-
-
-def _as_count(value: object) -> int | None:
-    """Coerce a rating/review count, tolerating "24 086 отзывов"-style text.
-
-    Delegates to the shared ``mcp_core.coerce_count`` — the one place that
-    knows how a marketplace writes a counter. A private duplicate lived here
-    and glued every digit of the display text together, so "1.2K отзывов"
-    became the plausible-but-wrong 12 and the comparison stayed healthy
-    (R05). The shared helper splits the known review label off and then parses
-    the number strictly: a grouped count ("1 200", "24 086 отзывов") parses,
-    while a sign, a range, two numbers or a magnitude form ("1.2K") is None
-    rather than a manufactured count.
-    """
-    return R.coerce_count(value)
-
-
-def _stock_from_label(value: object) -> bool | None:
-    """Read Ozon's stock hint, e.g. "осталось 3 шт".
-
-    Only a positive statement counts as in stock. Absence of a label means Ozon
-    said nothing, which is ``None`` — not ``False``, because "unknown" and "out of
-    stock" are different answers to a shopper. A non-finite number is likewise
-    no statement at all: NaN would compare as not-in-stock and inf as in-stock,
-    two lies where the answer must stay unknown.
-    """
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value > 0 if math.isfinite(value) else None
-    if not isinstance(value, str) or not value.strip():
-        return None
-    label = " ".join(value.casefold().split()).rstrip(".! ")
-    if label in {"не осталось", "нет в наличии", "нет на складе", "товар закончился", "распродано"}:
-        return False
-    if label in {"в наличии", "есть в наличии", "много шт", "осталось много", "осталось много шт"}:
-        return True
-    # A count alone can describe a pack or sales, rather than available stock.
-    # Anchor the entire label so signs, ranges and unrelated digits cannot be
-    # concatenated into an invented positive quantity.
-    count = r"([0-9]+|[0-9]{1,3}(?: [0-9]{3})+)"
-    quantity = re.fullmatch(rf"осталось {count}(?: шт)?", label) or re.fullmatch(rf"{count} шт осталось", label)
-    if quantity:
-        return int(quantity.group(1).replace(" ", "")) > 0
-    return None
-
-
-class OfferBatch(list[MarketOffer]):
-    """Offers with native diagnostics; no shared state across concurrent sources.
-
-    ``native_healthy`` keeps the source's own verdict (None when the response
-    carried no meta) so the caller can tell an honest empty answer from one a
-    broken parser produced; ``warnings`` is the normalized diagnostic list;
-    ``region`` is the region the source's own answer names, empty when it names none.
-    """
-
-    def __init__(self, offers: Iterable[MarketOffer], response: object, *, region: str = "") -> None:
-        super().__init__(offers)
-        self.region = region
-        meta = getattr(response, "meta", None)
-        raw = meta.get("warnings", []) if isinstance(meta, dict) else getattr(meta, "warnings", [])
-        healthy = meta.get("healthy") if isinstance(meta, dict) else getattr(meta, "healthy", None)
-        self.native_healthy: bool | None = healthy if isinstance(healthy, bool) else None
-        # One shared bound for every caller: the list stays inside its budget,
-        # the entries stay redacted and one line long, and a list that had to
-        # be cut says so (R18). A diagnostic that explains an unhealthy
-        # answer is never dropped behind an `info:` note.
-        self.warnings: list[str] = []
-        if isinstance(raw, list):
-            self.warnings = R.bound_warnings(raw, limit=SOURCE_WARNING_LIMIT)
-        if healthy is False and not self.warnings:
-            self.warnings.append("source_unhealthy: native validation did not pass; no diagnostic supplied")
-
-
 async def _search_wildberries(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``wb_search`` results.
 
@@ -335,7 +242,7 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``yandex_search`` results.
 
     ``price_rub`` is the everyday price and the only one that ranks; ``price_with_plus``
-    needs a paid subscription, so it rides along in a separate field, never ranked.
+    needs paying with Yandex Pay (earlier Plus), so it rides along in a separate field, never ranked.
     """
     server = SOURCES["yandex_market"]
     response = await server.yandex_search(query=query, page=1, limit=limit)
@@ -370,6 +277,30 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
     return batch
 
 
+# Seconds kept back from the source's ceiling for the card read of the cheapest
+# Ozon tile, and the least time worth starting that read with: a slow card must
+# not cost the search results already in hand (R-COMPARE-CONDITIONAL-PRICE.ozon-card).
+OZON_CARD_MARGIN_S = 3.0
+OZON_CARD_MIN_S = 5.0
+
+
+async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, str]:
+    """The everyday and the card price on one Ozon card, or why they were not read."""
+    if seconds < OZON_CARD_MIN_S:
+        return None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
+    try:
+        card = await asyncio.wait_for(server.ozon_card(sku_or_path=sku), timeout=seconds)
+    except TimeoutError:
+        return None, None, f"no answer within {seconds:.0f}s"
+    except Exception as exc:
+        error = _source_error(exc)
+        return None, None, str(error.get("error_code") or error.get("status") or "error")
+    everyday = _as_price(getattr(card, "price", None))
+    if everyday is None:
+        return None, None, "the card shows no everyday price"
+    return everyday, _as_price(getattr(card, "card_price", None)), ""
+
+
 async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
@@ -377,28 +308,47 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
     it guessed wrong: it read fields ``OzonSearchItemOut`` does not declare, and
     every one silently resolved to ``None``. Reading typed attributes makes that a type failure.
 
-    R-COMPARE-CONDITIONAL-PRICE: a CARD_PRICE tile quotes the Ozon Card price, so
-    it is conditional-only: no everyday price, no ranking, the amount in price_native,
-    named once by the shared helper. Other tile styles keep today's behaviour.
+    R-COMPARE-CONDITIONAL-PRICE.ozon-card: an Ozon search tile quotes the Ozon
+    Card price whatever its style (a CARD_PRICE badge, and a plain tile measured
+    at the card's card_price in audit cycle 1, 2026-11-17), so every tile is
+    conditional-only. The card of the cheapest tile worth it is read for its
+    everyday price, within what is left of the source's timeout, and that offer
+    ranks by it; when the read fails, every tile stays unranked and says why.
     """
+    started = time.monotonic()
     server = SOURCES["ozon"]
     response = await server.ozon_search(query=query)
     batch = OfferBatch([], response)
-    for item in (getattr(response, "items", None) or [])[:limit]:
-        price, card = _as_price(item.price), getattr(item, "price_kind", None) == "card"
-        sku = str(item.sku or "")
-        decision = decide_conditional_price("ozon", sku, None if card else price, price if card else None, "card")
+    tiles = [
+        (item, str(item.sku or ""), _as_price(item.price)) for item in (getattr(response, "items", None) or [])[:limit]
+    ]
+    sku = pick_card_candidate(
+        query, ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles)
+    )
+    everyday, card_price, problem = None, None, ""
+    if sku is not None:
+        seconds = SOURCE_TIMEOUT_S - (time.monotonic() - started) - OZON_CARD_MARGIN_S
+        everyday, card_price, problem = await _read_ozon_card(server, sku, seconds)
+    for item, tile_sku, price in tiles:
+        # One card ranks one tile, even when Ozon lists the same sku twice.
+        ranked = everyday is not None and tile_sku == sku and not any(o.product_id == sku for o in batch)
+        if ranked:
+            decision = decide_conditional_price(
+                "ozon", tile_sku, everyday, price if card_price is None else card_price, "card"
+            )
+        else:
+            decision = decide_conditional_price("ozon", tile_sku, None, price, "card")
         batch.append(
             MarketOffer(
                 source="ozon",
-                product_id=sku,
+                product_id=tile_sku,
                 title=item.title or "",
                 # Search rows carry neither brand nor seller; left empty, not invented.
                 brand="",
                 seller="",
                 price_rub=decision.rank_price_rub,
-                price_native=price,
-                price_kind="card" if card else None,
+                price_native=everyday if ranked else price,
+                price_kind=None if ranked or price is None else "card",
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
                 in_stock=_stock_from_label(item.stock),
@@ -408,6 +358,10 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
         )
         if decision.note:
             batch.warnings.append(decision.note)
+    if problem:
+        batch.warnings.append(
+            f"ozon_card_unread: ozon/{sku}: {problem}; Ozon tiles quote the Ozon Card price, so none is ranked"
+        )
     return batch
 
 
@@ -750,9 +704,9 @@ async def compare_prices(
 
     Two things to read carefully in the output:
 
-    - `cheapest` is chosen on everyday prices. Yandex Market's subscriber price
+    - `cheapest` is chosen on everyday prices. Yandex Market's conditional price
       appears as `price_with_subscription_rub` and is deliberately excluded from
-      ranking, since it requires a paid Yandex Plus subscription.
+      ranking: it needs paying with Yandex Pay (earlier Yandex Plus).
     - `source_outcomes` shows which marketplaces answered. A blocked or timed-out
       source means the comparison is partial, not that the product is absent
       there — `complete` tells you which case you are in.
@@ -813,36 +767,6 @@ async def compare_prices(
             server_version=SERVER_VERSION,
         ),
     )
-
-
-def _numeric_card_id(source: str, value: str) -> int:
-    """Accept the source's numeric ID or canonical product path, never a stray digit."""
-    candidate = value.strip()
-    if re.fullmatch(r"[0-9]+", candidate):
-        number = int(candidate)
-        if number > 0:
-            return number
-    else:
-        path = {
-            "wildberries": r"/catalog/([0-9]+)/detail\.aspx/?",
-            "detsky_mir": r"/product/index/id/([0-9]+)/?",
-        }[source]
-        try:
-            parsed = urlsplit(candidate)
-            valid_origin = (
-                parsed.scheme in {"https", "http"}
-                and parsed.hostname in BY_NAME[source].page_hosts
-                and parsed.username is None
-                and parsed.password is None
-                and parsed.port is None
-            )
-        except ValueError:
-            valid_origin = False
-        if valid_origin:
-            match = re.fullmatch(path, parsed.path)
-            if match and int(match[1]) > 0:
-                return int(match[1])
-    raise_tool_error(BadRequestError(f"{source} verification needs a positive numeric id or a canonical product URL"))
 
 
 async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews: bool = False) -> tuple[Any, str]:
@@ -1059,7 +983,7 @@ async def compare_sources(ctx: Context | None = None) -> dict[str, Any]:
             if "detsky_mir" in installed
             else ("deselected by MARKETPLACE_SOURCES" if "detsky_mir" in deselected else "not installed"),
             "ozon": ("requires curl_cffi and, when Cloudflare challenges, a logged-in Chrome on the CDP port"),
-            "yandex_market": "reports both an everyday price and a Plus-subscriber price",
+            "yandex_market": "reports both an everyday price and a conditional Yandex Pay (earlier Plus) price",
             "taobao": "reports yuan prices and is never ranked against rubles",
             "megamarket": "reachable only through the operator's Chrome (ServicePipe)",
             "lamoda": "search through the operator's Chrome; cards via anonymous GraphQL",

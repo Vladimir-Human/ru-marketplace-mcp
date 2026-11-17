@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from compare_connector import server
 from ozon_connector import server as ozon
-from ozon_connector.models_output import OzonSearchResponse
+from ozon_connector.models_output import OzonCardResponse, OzonSearchResponse
 from wb_connector import server as wb
 from wb_connector.models_output import WbSearchResponse
 from yandex_connector import server as yandex
@@ -74,7 +74,10 @@ async def test_native_ozon_stock_labels_cannot_fabricate_available_winner(monkey
     async def search(query):
         return native
 
-    monkeypatch.setattr(server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=search)})
+    async def card(sku_or_path):
+        return OzonCardResponse(price=float(sku_or_path) * 1000)
+
+    monkeypatch.setattr(server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=search, ozon_card=card)})
     result = await server.compare_prices(query="Kettle", sources=["ozon"], per_source_limit=10, in_stock_only=True)
 
     assert {item.product_id: item.in_stock for item in result.offers} == {
@@ -86,9 +89,12 @@ async def test_native_ozon_stock_labels_cannot_fabricate_available_winner(monkey
         "6": None,
         "7": True,
     }
-    assert result.cheapest.product_id == "7"
-    assert result.cheapest_comparable.product_id == "7"
-    assert result.cheapest.price_rub == 7000
+    # R-COMPARE-CONDITIONAL-PRICE.ozon-card: one card read ranks one Ozon tile, the cheapest
+    # not marked out of stock (2). Its stock is unknown, so in_stock_only leaves no winner:
+    # no label made an unknown stock available.
+    assert [item.product_id for item in result.offers if item.price_rub is not None] == ["2"]
+    assert result.cheapest is None
+    assert result.cheapest_comparable is None
 
 
 @pytest.mark.parametrize("channel", ["textDS", "labelList"])
@@ -117,7 +123,10 @@ async def test_native_ozon_explicit_absence_survives_both_label_channels(monkeyp
     async def search(query):
         return native
 
-    monkeypatch.setattr(server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=search)})
+    async def card(sku_or_path):
+        return OzonCardResponse(price=float(sku_or_path) * 1000)
+
+    monkeypatch.setattr(server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=search, ozon_card=card)})
     result = await server.compare_prices(query="Kettle", sources=["ozon"], in_stock_only=True)
 
     assert {item.product_id: item.in_stock for item in result.offers} == {"1": False, "2": True}
