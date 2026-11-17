@@ -35,7 +35,7 @@ the browser launches normally, or headless when ``CHROME_HEADLESS=1``.
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy, snapshots and opt-in Ozon OS identity.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget,raw_targets; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-RAW-TARGETS; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-RAW-TARGETS; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant; R-CDP-SIM-S4.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -1124,8 +1124,12 @@ class _RawCdpPage:
         return status
 
     async def close(self) -> None:
+        if not self._target_id:
+            return
         try:
-            await self._send("Target.closeTarget", {"targetId": self._target_id}, timeout=10.0)
+            await asyncio.wait_for(
+                close_target(self._send, self._target_id, timeout_s=_RAW_CONNECT_TIMEOUT_S), timeout=_TAB_OP_TIMEOUT_S
+            )
         except Exception:
             pass
 
@@ -1864,10 +1868,9 @@ async def _raw_owned_popup(opener: PageLike, url: str, *, allowed_hosts: Collect
                     if remaining <= 0:
                         break
                     try:
-                        await browser._send(
-                            "Target.closeTarget",
-                            {"targetId": target_id},
-                            timeout=min(_POPUP_CLOSE_TARGET_TIMEOUT_S, remaining),
+                        timeout_s = min(_POPUP_CLOSE_TARGET_TIMEOUT_S, remaining)
+                        await asyncio.wait_for(
+                            close_target(browser._send, target_id, timeout_s=timeout_s), timeout=remaining
                         )
                     except Exception:
                         pass
