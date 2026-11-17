@@ -989,7 +989,9 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
     from io import BytesIO
     from types import SimpleNamespace
 
-    browser_ws = _FakeWs([{"id": 1, "result": {"targetId": "T1"}}, {"id": 2, "result": {}}])
+    browser_ws = _FakeWs(
+        [{"id": 1, "result": {"targetId": "T1"}}, {"id": 2, "result": {}}, {"id": 3, "result": {"targetInfos": []}}]
+    )
     page_ws = _FakeWs(
         [
             {"id": 1, "result": {}},
@@ -1045,5 +1047,8 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
     # The 200 reload is never read: the 429 is refused at its own load event.
     assert len(page_ws._responses) == 2
     assert [message["method"] for message in page_ws.sent].count("Page.navigate") == 1
-    assert browser_ws.sent[-1]["method"] == "Target.closeTarget"
-    assert browser_ws.sent[-1]["params"] == {"targetId": "T1"}
+    # One close of its own tab, then the check that Chrome dropped it (R-CDP-SIM-S4).
+    assert [(m["method"], m.get("params")) for m in browser_ws.sent[-2:]] == [
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+    ]
