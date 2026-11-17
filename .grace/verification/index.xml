@@ -475,6 +475,7 @@
   </requirement>
   <requirement id="R-COMPARE-VERIFY-OFFER-URL" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_offer_url_from_compare_dispatches_its_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Audit cycle 2, 2026-11-17: every Yandex verify through the offer's own URL was bad_request." />
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_ssr_and_slug_product_urls_dispatch_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Deep-compare C2: SSR search fixtures emit /product/&lt;id&gt;?hid=... and Market also serves /product--&lt;slug&gt;/&lt;id&gt;." />
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_verify_never_takes_digits_from_another_url" requirements="R-COMPARE-VERIFY-OFFER-URL" />
   </requirement>
   <requirement id="R-CONNECTOR-KIT" kind="requirement" state="tested">
