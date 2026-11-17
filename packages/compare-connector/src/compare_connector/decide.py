@@ -47,7 +47,13 @@ from dataclasses import dataclass
 
 from mcp_core.logging import log_event
 
-from compare_connector.identity import extract_size_tokens, format_size_tokens, model_mismatch, sizes_conflict
+from compare_connector.identity import (
+    extract_size_tokens,
+    format_size_tokens,
+    lists_sizes,
+    model_mismatch,
+    sizes_conflict,
+)
 from compare_connector.models_output import CompareResponse, MarketOffer, SourceOutcome
 
 
@@ -568,7 +574,8 @@ def build_response(
     # A size the query states and the title contradicts is explicit text, not a
     # heuristic, so it keeps the offer out of the like-for-like candidate rather
     # than merely warning about it; so does a title missing a model word or number
-    # the query names (R-COMPARE-MODEL-TOKENS). The offer keeps its rank and may
+    # the query names (R-COMPARE-MODEL-TOKENS) and a title listing several sizes
+    # (R-COMPARE-SIZE-LIST). The offer keeps its rank and may
     # remain plain cheapest; only cheapest_comparable skips it.
     query_sizes = extract_size_tokens(query)
     comparable: list[MarketOffer] = []
@@ -576,7 +583,7 @@ def build_response(
     for offer in priced:
         if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
             continue
-        if model_mismatch(query, offer.title, offer.brand):
+        if model_mismatch(query, offer.title, offer.brand) or lists_sizes(offer.title):
             continue
         title_sizes = extract_size_tokens(offer.title)
         if sizes_conflict(query_sizes, title_sizes):

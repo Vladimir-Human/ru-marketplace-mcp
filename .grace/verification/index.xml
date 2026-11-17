@@ -386,6 +386,11 @@
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
     <test file="packages/compare-connector/tests/test_relevance_markers.py" name="test_compare_mcp_relevance_markers" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-RELEVANCE-BOUNDARIES: no false drops; real unrequested markers still drop." />
   </requirement>
+  <requirement id="R-COMPARE-SIZE-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_a_title_listing_several_sizes_names_no_one_variant" requirements="R-COMPARE-SIZE-LIST" />
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_compare_prices_skips_a_size_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-SIZE-LIST" />
+    <test file="packages/compare-connector/tests/test_size_list.py" name="test_one_size_a_ram_storage_pair_or_one_size_in_two_units_is_no_list" requirements="R-COMPARE-SIZE-LIST" />
+  </requirement>
   <requirement id="R-COMPARE-SOURCE-ALIASES" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_source_aliases.py" name="test_an_alias_and_its_canonical_name_query_the_source_once" requirements="R-COMPARE-SOURCE-ALIASES" />
     <test file="packages/compare-connector/tests/test_source_aliases.py" name="test_an_unknown_name_is_still_refused" requirements="R-COMPARE-SOURCE-ALIASES" />
