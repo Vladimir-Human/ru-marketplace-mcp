@@ -1,0 +1,1236 @@
+{
+  "query": "iphone 16 128gb",
+  "captured_at": "2026-11-17T01:29:59.907880Z",
+  "sources": {
+    "aliexpress": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1005009110731940",
+            "title": "MOVESPEED флешка USB Type C 64/128/256/512 ГБ",
+            "price_rub": 1531.0,
+            "rating": 4.8,
+            "url": "https://aliexpress.ru/item/1005009110731940.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sd0d12def151143a7bfe2831e9d02c012O.png_480x480.png"
+          },
+          {
+            "item_id": "1005008110020734",
+            "title": "Смартфон Apple iPhone 16, 8/128ГБ",
+            "price_rub": 64990.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005008110020734.html",
+            "image_url": "https://st.aestatic.net/items-img/R/I/G/D/A36ebf701c6c147269a4b15756aa5cb98c.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005013300604469",
+            "title": "Смартфон Apple iPhone 16e, 8/128ГБ, global, Б/у",
+            "price_rub": 45739.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013300604469.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S69f3240853254efba91f0b53ceb49daff.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005011665761155",
+            "title": "Смартфон Apple iPhone 14 Pro, 6/128ГБ, 6/256ГБ, Б/у",
+            "price_rub": 49429.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005011665761155.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sd1060da031844568a5b9ceed82477ecbc.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008122043924",
+            "title": "Смартфон Apple iPhone 16 Pro, 8/128ГБ",
+            "price_rub": 94990.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008122043924.html",
+            "image_url": "https://st.aestatic.net/items-img/R/5/3/H/A6eccb1f0489b4bafb9eec4ff6577e559A.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005013290639702",
+            "title": "Смартфон Apple iPhone 16 Pro, 8/128ГБ, global, Б/у",
+            "price_rub": 72722.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013290639702.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S66753681692343bf8b230eb83798c108S.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012337745725",
+            "title": "Смартфон Apple iPhone 16, 8/128ГБ",
+            "price_rub": 104361.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005012337745725.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S16efff7601c34aa5aaf716df4f2b3220B.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005013289727075",
+            "title": "Смартфон Apple iPhone 16e, 8/128ГБ, global, Б/у",
+            "price_rub": 45329.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013289727075.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S69f3240853254efba91f0b53ceb49daff.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008715898564",
+            "title": "Смартфон Apple iPhone 13, 4/128ГБ, 4/256ГБ, 4ГБ/1ТБ, global, Б/у",
+            "price_rub": 32991.0,
+            "rating": 4.4,
+            "url": "https://aliexpress.ru/item/1005008715898564.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S444cfd3ea98a4b0ba75394662b9bbc7fS.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010254388850",
+            "title": "Смартфон Apple iPhone 13 Pro Max, 6/128ГБ, 6/256ГБ, Б/у",
+            "price_rub": 45091.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005010254388850.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S2a376b683e8645d4b0dcfb908dfa22258.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005007037439181",
+            "title": "Смартфон Apple iPhone 13 Pro Max, 6/128ГБ, 6/256ГБ, 6/512ГБ, global, Б/у",
+            "price_rub": 43110.0,
+            "rating": 4.2,
+            "url": "https://aliexpress.ru/item/1005007037439181.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S7f8ac47c00e04e2884c1d1c9784bb665V.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010219818249",
+            "title": "Смартфон Apple iPhone 12, 4/64ГБ, 4/128ГБ, Б/у",
+            "price_rub": 19599.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005010219818249.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S61b0a1d4c808416c9ba8173f46a633cfw.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005005771883387",
+            "title": "Смартфон Apple iPhone 13 Pro Max, 6/128ГБ, 6/256ГБ, 6/512ГБ, 6ГБ/1ТБ, global, Б/у",
+            "price_rub": 37109.0,
+            "rating": 4.5,
+            "url": "https://aliexpress.ru/item/1005005771883387.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S9a1bba05e11d424da30f7727947c43c7u.png_480x480.png"
+          },
+          {
+            "item_id": "1005005226835567",
+            "title": "Смартфон Apple iPhone 13 mini, 4/128ГБ, 4/256ГБ, 4/512ГБ, global, Б/у",
+            "price_rub": 26409.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005005226835567.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S8bc68b5d802c4a3faef134b0050ff5602.png_480x480.png"
+          },
+          {
+            "item_id": "1005008116466059",
+            "title": "Смартфон Apple iPhone 16 Plus, 8/128ГБ",
+            "price_rub": 69990.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008116466059.html",
+            "image_url": "https://st.aestatic.net/items-img/R/G/5/F/A007aaba25bed4deb9a16cb600f91c1eeA.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005008110311056",
+            "title": "Смартфон Apple iPhone 16, 8/256ГБ",
+            "price_rub": 76990.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005008110311056.html",
+            "image_url": "https://st.aestatic.net/items-img/R/0/I/N/A366e75e6675542f999e4affbbc9be6bfg.png_480x480.jpg"
+          },
+          {
+            "item_id": "1005013545671052",
+            "title": "Смартфон Apple iPhone 12, 4/64ГБ, 4/128ГБ, 4/256ГБ, global, Б/у",
+            "price_rub": 31619.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013545671052.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S685cf97842bc49ea9a43fea9b93902c6L.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005004192897953",
+            "title": "Смартфон Apple iPhone 12 Pro Max, 6/128ГБ, 6/256ГБ, 6/512ГБ, global, Б/у",
+            "price_rub": 32879.0,
+            "rating": 4.3,
+            "url": "https://aliexpress.ru/item/1005004192897953.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S602780bf69f546619029ad1997501ca8W.png_480x480.png"
+          },
+          {
+            "item_id": "1005010219825754",
+            "title": "Смартфон Apple iPhone 12 Pro Max, 6/128ГБ, 6/256ГБ, Б/у",
+            "price_rub": 36079.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005010219825754.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Se574ff292fd4455a974ae6901c1aad50a.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010042700633",
+            "title": "Рекомендуем",
+            "price_rub": 15909.0,
+            "rating": 4.4,
+            "url": "https://aliexpress.ru/item/1005010042700633.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S3b5b66d06e0d454384abc3cd46d5e716J.jpg_480x480.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care"
+          ]
+        },
+        "observed_at": "2026-11-17T01:29:56.203867Z"
+      }
+    },
+    "citilink": {
+      "error": {
+        "code": "rate_limited",
+        "message": "citilink rate-limited"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "7924fcf76f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ черный",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/7924fcf76f27d0a4/61-smartfon-apple-iphone-16-128-gb-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/cb2161f57f18e370987f73310a9b5228/14ce8c6a5fbaef30feb3cb6b7d742546c045c44eb9207be4acec68cade72a7cf.jpg"
+          },
+          {
+            "product_id": "7b28adaa6f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ белый",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/7b28adaa6f27d0a4/61-smartfon-apple-iphone-16-128-gb-belyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/430ec6e9e3704d809f430f4dc12a0132/a6c1bd275ec0bb03792b77ae91a4e77dc8b6c4b032cd61394337ccd028f98091.jpg"
+          },
+          {
+            "product_id": "7c92a9fe6f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ розовый",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/7c92a9fe6f27d0a4/61-smartfon-apple-iphone-16-128-gb-rozovyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/efda386522dab0e98d99d11dc8fd484b/548a64f7f89c24a7211af7a31f977369c51a00a874f74a6fbd1b97548a5adb85.jpg"
+          },
+          {
+            "product_id": "7df91ab26f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ голубой",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/7df91ab26f27d0a4/61-smartfon-apple-iphone-16-128-gb-goluboj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/2d79b2ca7bd76b6bb6e1e69784f54ecc/0dfebbfdb98e7d9d5a716fcc2ae849859267a29a5fca9078bb42c9ad5d6ee9fe.jpg"
+          },
+          {
+            "product_id": "7fa25e856f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ зеленый",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/7fa25e856f27d0a4/61-smartfon-apple-iphone-16-128-gb-zelenyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/bd1f9f1e2e0333f6f1423c02653af9fb/c23a471eea6575db2fb656e3cf3d97bce4659905aa8d104f36e85de13c43ec96.jpg"
+          },
+          {
+            "product_id": "f4fca8616f26d0a4",
+            "title": "6.3\" Смартфон Apple iPhone 16 Pro 128 ГБ черный",
+            "price_rub": 97999.0,
+            "url": "https://www.dns-shop.ru/product/f4fca8616f26d0a4/63-smartfon-apple-iphone-16-pro-128-gb-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/ed366840798b92ce7c0483f05d50d764/b29b8f777cf483f7916d2bfe10bb8241074f98e8f9a7ba4bf623d8efc23a98bf.jpg"
+          },
+          {
+            "product_id": "f4fcc0926f26d0a4",
+            "title": "6.3\" Смартфон Apple iPhone 16 Pro 128 ГБ белый",
+            "price_rub": 97999.0,
+            "url": "https://www.dns-shop.ru/product/f4fcc0926f26d0a4/63-smartfon-apple-iphone-16-pro-128-gb-belyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/6b20c280160c91c33604bcb8dd67883d/ebbeae95e9ab52cc2089a18b04a6ee629bc4693d05d6ce4ffdf963aa6a62d38b.jpg"
+          },
+          {
+            "product_id": "f65454066f26d0a4",
+            "title": "6.3\" Смартфон Apple iPhone 16 Pro 128 ГБ бежевый",
+            "price_rub": 97999.0,
+            "url": "https://www.dns-shop.ru/product/f65454066f26d0a4/63-smartfon-apple-iphone-16-pro-128-gb-bezevyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/9affc4566eb2b5b6e09f75d195a0b736/059b9bc849b982ab9d1543787672d85ed07a8e12fd8d98dbd343957b27852279.jpg"
+          },
+          {
+            "product_id": "f6546c376f26d0a4",
+            "title": "6.3\" Смартфон Apple iPhone 16 Pro 128 ГБ серый",
+            "price_rub": 97999.0,
+            "url": "https://www.dns-shop.ru/product/f6546c376f26d0a4/63-smartfon-apple-iphone-16-pro-128-gb-seryj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/7b3fe9a8c53b89afecbf1cf12ed78511/e9676e2a4cebbd0205b4cdcd95ab3e8bb010249c2e101345fa4b5c3599d91b74.jpg"
+          },
+          {
+            "product_id": "67c0f08c6f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ белый",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/67c0f08c6f27d0a4/61-smartfon-apple-iphone-16-128-gb-belyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/430ec6e9e3704d809f430f4dc12a0132/a6c1bd275ec0bb03792b77ae91a4e77dc8b6c4b032cd61394337ccd028f98091.jpg"
+          },
+          {
+            "product_id": "76633f866f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ зеленый",
+            "price_rub": 71799.0,
+            "url": "https://www.dns-shop.ru/product/76633f866f27d0a4/61-smartfon-apple-iphone-16-128-gb-zelenyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/bd1f9f1e2e0333f6f1423c02653af9fb/c23a471eea6575db2fb656e3cf3d97bce4659905aa8d104f36e85de13c43ec96.jpg"
+          },
+          {
+            "product_id": "65a759c66f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ черный",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/65a759c66f27d0a4/61-smartfon-apple-iphone-16-128-gb-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/cb2161f57f18e370987f73310a9b5228/14ce8c6a5fbaef30feb3cb6b7d742546c045c44eb9207be4acec68cade72a7cf.jpg"
+          },
+          {
+            "product_id": "750673986f27d0a4",
+            "title": "6.1\" Смартфон Apple iPhone 16 128 ГБ голубой",
+            "price_rub": 70299.0,
+            "url": "https://www.dns-shop.ru/product/750673986f27d0a4/61-smartfon-apple-iphone-16-128-gb-goluboj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/2d79b2ca7bd76b6bb6e1e69784f54ecc/0dfebbfdb98e7d9d5a716fcc2ae849859267a29a5fca9078bb42c9ad5d6ee9fe.jpg"
+          },
+          {
+            "product_id": "analog",
+            "title": "6.7\" Смартфон Apple iPhone 16 Plus 128 ГБ голубой",
+            "price_rub": 67799.0,
+            "url": "https://www.dns-shop.ru/product/analog/bb553d016f27d0a4/67-smartfon-apple-iphone-16-plus-128-gb-goluboj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/c07a60f6ef99a9e760035d3550e6afa4/e50b3b614f8be7a5753585a9018c4f65fe5815a9177553e39d59ab6dc09d68db.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:29:51.555247Z"
+      }
+    },
+    "taobao": {
+      "response": {
+        "items": [
+          {
+            "item_id": "956290395557",
+            "title": "Apple/苹果 iPhone 16手机国行正品信用分期双卡全网通先用后付",
+            "shop_name": "京顺数码",
+            "price_cny": 288.0,
+            "url": "https://item.taobao.com/item.htm?id=956290395557"
+          },
+          {
+            "item_id": "1042310414709",
+            "title": "Apple/苹果 iPhone 16国行正品原装双卡手机分期免息月付无需花呗",
+            "shop_name": "乐乐手机数码",
+            "price_cny": 195.0,
+            "url": "https://item.taobao.com/item.htm?id=1042310414709"
+          },
+          {
+            "item_id": "1043270157865",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品双卡手机分期免息月付无需花呗",
+            "shop_name": "乐乐手机数码",
+            "price_cny": 239.0,
+            "url": "https://item.taobao.com/item.htm?id=1043270157865"
+          },
+          {
+            "item_id": "1057399057840",
+            "title": "Apple/苹果iPhone 16苹果16苹果正品拍照视频直播打游戏备用机",
+            "shop_name": "卓芯动数码",
+            "price_cny": 1380.0,
+            "url": "https://item.taobao.com/item.htm?id=1057399057840"
+          },
+          {
+            "item_id": "956767890385",
+            "title": "Apple/苹果iPhone 16 Plus手机国行正品先用后付双卡信用分期免息",
+            "shop_name": "京顺数码",
+            "price_cny": 322.15,
+            "url": "https://item.taobao.com/item.htm?id=956767890385"
+          },
+          {
+            "item_id": "837402891001",
+            "title": "【16】 Apple/苹果 iPhone 16全网通5G手机",
+            "shop_name": "数码高地手机",
+            "price_cny": 2988.0,
+            "url": "https://item.taobao.com/item.htm?id=837402891001"
+          },
+          {
+            "item_id": "1096822381817",
+            "title": "Apple/苹果 iPhone 16 苹果16 5G手机游戏拍照学生党高性价比首选",
+            "shop_name": "欣动数码",
+            "price_cny": 2700.0,
+            "url": "https://item.taobao.com/item.htm?id=1096822381817"
+          },
+          {
+            "item_id": "1096807877278",
+            "title": "【iPhone16】Apple/苹果 iPhone 16 现货全网通5G苹果16手机",
+            "shop_name": "严迭优品",
+            "price_cny": 3136.0,
+            "url": "https://item.taobao.com/item.htm?id=1096807877278"
+          },
+          {
+            "item_id": "1093391609096",
+            "title": "Apple/苹果 iPhone16原装正品全网通5G苹果16手机拍照便宜灵动岛",
+            "shop_name": "文一数码供应优选",
+            "price_cny": 1732.0,
+            "url": "https://item.taobao.com/item.htm?id=1093391609096"
+          },
+          {
+            "item_id": "1092477938435",
+            "title": "Apple/苹果 iPhone 16 国行正品全网通5G手机直播游戏拍照性价比",
+            "shop_name": "欣动数码",
+            "price_cny": 1340.0,
+            "url": "https://item.taobao.com/item.htm?id=1092477938435"
+          },
+          {
+            "item_id": "1095716781977",
+            "title": "Apple/苹果iPhone16正品苹果16手机iPhone1415全网通5G直播拍照",
+            "shop_name": "瑞枫数码",
+            "price_cny": 1600.0,
+            "url": "https://item.taobao.com/item.htm?id=1095716781977"
+          },
+          {
+            "item_id": "1098948264424",
+            "title": "Apple/苹果 iPhone16正品苹果16/15系列手机全网通5G插卡即用速发",
+            "shop_name": "潮电街",
+            "price_cny": 1550.0,
+            "url": "https://item.taobao.com/item.htm?id=1098948264424"
+          },
+          {
+            "item_id": "1084152395337",
+            "title": "Apple/苹果 iPhone 16 苹果15/14/13国行5G双卡双待6.1英寸手机",
+            "shop_name": "apple数码商城",
+            "price_cny": 1283.14,
+            "url": "https://item.taobao.com/item.htm?id=1084152395337"
+          },
+          {
+            "item_id": "990252060069",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品双卡手机分期免息月付无需花呗",
+            "shop_name": "万户优享",
+            "price_cny": 250.0,
+            "url": "https://item.taobao.com/item.htm?id=990252060069"
+          },
+          {
+            "item_id": "1096798516456",
+            "title": "Apple/苹果iPhone16正品全网通5G双卡灵动岛6.1英寸A18芯片手机",
+            "shop_name": "靓机数码严选",
+            "price_cny": 2600.0,
+            "url": "https://item.taobao.com/item.htm?id=1096798516456"
+          },
+          {
+            "item_id": "1083580655784",
+            "title": "【16】Apple/苹果 iPhone 16 全网通双卡5G国行正品13 14顺丰现货",
+            "shop_name": "华强北数码城1",
+            "price_cny": 3193.0,
+            "url": "https://item.taobao.com/item.htm?id=1083580655784"
+          },
+          {
+            "item_id": "1097518419348",
+            "title": "Apple/苹果iPhone 16 全网通双卡苹果5G原彩拍照游戏手机",
+            "shop_name": "爱疯严选二手机",
+            "price_cny": 1686.0,
+            "url": "https://item.taobao.com/item.htm?id=1097518419348"
+          },
+          {
+            "item_id": "1078936852992",
+            "title": "Apple/苹果 iPhone 16国行正品手机分期月付信用免息以租代购",
+            "shop_name": "元见手机分期数码店",
+            "price_cny": 195.0,
+            "url": "https://item.taobao.com/item.htm?id=1078936852992"
+          },
+          {
+            "item_id": "1031101534368",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品手机分期月付 原装无拆修",
+            "shop_name": "立享租以租代购数码分期",
+            "price_cny": 396.0,
+            "url": "https://item.taobao.com/item.htm?id=1031101534368"
+          },
+          {
+            "item_id": "1088399779929",
+            "title": "Apple/苹果 iPhone16面容原彩苹果15/13全网通5G双卡手机现货速发",
+            "shop_name": "华信数码严选",
+            "price_cny": 1283.14,
+            "url": "https://item.taobao.com/item.htm?id=1088399779929"
+          },
+          {
+            "item_id": "1058326000223",
+            "title": "Apple/苹果iPhone 16苹果16苹果正品全网通5G拍照视频直播打游戏",
+            "shop_name": "龙创数码优品",
+            "price_cny": 1700.0,
+            "url": "https://item.taobao.com/item.htm?id=1058326000223"
+          },
+          {
+            "item_id": "1099039286498",
+            "title": "Apple/iPhone 16 Plus正品苹果手机15plus便宜特价大内存便宜手机",
+            "shop_name": "无忧手机",
+            "price_cny": 1938.0,
+            "url": "https://item.taobao.com/item.htm?id=1099039286498"
+          },
+          {
+            "item_id": "1078966652969",
+            "title": "Apple/苹果 iPhone 16手机国行月付免押双卡正品原装信用分期免息",
+            "shop_name": "欢喜租机 灵动易租",
+            "price_cny": 276.0,
+            "url": "https://item.taobao.com/item.htm?id=1078966652969"
+          },
+          {
+            "item_id": "1077871739005",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品双卡手机分期免息月付无需花呗",
+            "shop_name": "诚机数码",
+            "price_cny": 296.0,
+            "url": "https://item.taobao.com/item.htm?id=1077871739005"
+          },
+          {
+            "item_id": "1044433364813",
+            "title": "Apple/苹果 iPhone 16 Pro国行原装正品双卡5G苹果手机分期付免息",
+            "shop_name": "佳华数码3C信用分期",
+            "price_cny": 445.0,
+            "url": "https://item.taobao.com/item.htm?id=1044433364813"
+          },
+          {
+            "item_id": "859549220392",
+            "title": "【iPhone16】Apple/苹果 iPhone 16 新款全网通5G苹果16手机",
+            "shop_name": "酷酷鱼数码",
+            "price_cny": 2998.0,
+            "url": "https://item.taobao.com/item.htm?id=859549220392"
+          },
+          {
+            "item_id": "1079783781180",
+            "title": "Apple/苹果 iPhone 16国行正品原装双卡手机分期免息月付无需花呗",
+            "shop_name": "诚机数码",
+            "price_cny": 197.0,
+            "url": "https://item.taobao.com/item.htm?id=1079783781180"
+          },
+          {
+            "item_id": "965042979311",
+            "title": "Apple/苹果 iPhone 16国行正品6.1英寸苹果手机分期按月付免息",
+            "shop_name": "晓晓数码分期月付企业店",
+            "price_cny": 300.0,
+            "url": "https://item.taobao.com/item.htm?id=965042979311"
+          },
+          {
+            "item_id": "1090770183721",
+            "title": "Apple/苹果 iPhone 16苹果16正品拍照视频打游戏直播苹果16学生",
+            "shop_name": "锅锅数码优选",
+            "price_cny": 1379.0,
+            "url": "https://item.taobao.com/item.htm?id=1090770183721"
+          },
+          {
+            "item_id": "914560928672",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品手机信用分期月付以租代购",
+            "shop_name": "多多手机数码",
+            "price_cny": 239.0,
+            "url": "https://item.taobao.com/item.htm?id=914560928672"
+          },
+          {
+            "item_id": "1078930952743",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品双卡手机分期月付免息无需花呗",
+            "shop_name": "元见手机分期数码店",
+            "price_cny": 239.0,
+            "url": "https://item.taobao.com/item.htm?id=1078930952743"
+          },
+          {
+            "item_id": "1084862968891",
+            "title": "Apple/苹果 iPhone 16 Pro手机全网通5G双卡双待正品手机顺丰速发",
+            "shop_name": "iFans严选",
+            "price_cny": 3766.0,
+            "url": "https://item.taobao.com/item.htm?id=1084862968891"
+          },
+          {
+            "item_id": "1083907195466",
+            "title": "Apple/苹果 iPhone 16 国行正品 苹果15/14/13 全网通5G手机",
+            "shop_name": "Daydayup手机数码宝贝",
+            "price_cny": 1296.5,
+            "url": "https://item.taobao.com/item.htm?id=1083907195466"
+          },
+          {
+            "item_id": "1093060962909",
+            "title": "Apple/苹果 iPhone 16 国行双卡无锁15 14手机全网通面容识别顺丰",
+            "shop_name": "臻果数码精选仓",
+            "price_cny": 1589.0,
+            "url": "https://item.taobao.com/item.htm?id=1093060962909"
+          },
+          {
+            "item_id": "1074581467086",
+            "title": "Apple/苹果16plus iphone16plus苹果16双卡iphone16 15.15plus",
+            "shop_name": "里梨的小店",
+            "price_cny": 3199.0,
+            "url": "https://item.taobao.com/item.htm?id=1074581467086"
+          },
+          {
+            "item_id": "1096919726978",
+            "title": "Apple/苹果 iPhone 16 国行原装 5G双卡双待15超广角面容拍照苹果",
+            "shop_name": "千亿补贴二手数码",
+            "price_cny": 2540.0,
+            "url": "https://item.taobao.com/item.htm?id=1096919726978"
+          },
+          {
+            "item_id": "995617482909",
+            "title": "Apple/苹果 iPhone 16 Pro国行正品6.3英寸双卡5G全网通苹果手机",
+            "shop_name": "晓晓数码分期月付企业店",
+            "price_cny": 389.0,
+            "url": "https://item.taobao.com/item.htm?id=995617482909"
+          },
+          {
+            "item_id": "913288963246",
+            "title": "Apple/苹果 iPhone 16国行官网正品手机分期付款免息以租代购",
+            "shop_name": "多多手机数码",
+            "price_cny": 195.0,
+            "url": "https://item.taobao.com/item.htm?id=913288963246"
+          },
+          {
+            "item_id": "1082356364540",
+            "title": "Apple/苹果 iPhone 16 手机双卡 苹果17全网通国行正品5G 15手机",
+            "shop_name": "国行二手严选店",
+            "price_cny": 2094.0,
+            "url": "https://item.taobao.com/item.htm?id=1082356364540"
+          },
+          {
+            "item_id": "1017038881915",
+            "title": "Apple/苹果 iPhone16 国行5G正品苹果14/15学生拍照便宜苹果手机",
+            "shop_name": "你的数码小店",
+            "price_cny": 3106.9,
+            "url": "https://item.taobao.com/item.htm?id=1017038881915"
+          },
+          {
+            "item_id": "1058913540671",
+            "title": "【16】现货Apple/苹果 iPhone 16全网通5G手机",
+            "shop_name": "潮客手机",
+            "price_cny": 2988.0,
+            "url": "https://item.taobao.com/item.htm?id=1058913540671"
+          },
+          {
+            "item_id": "1025376293216",
+            "title": "【16】Apple/苹果 iPhone 16三网通双卡5G手机",
+            "shop_name": "胖爸手机数码",
+            "price_cny": 3008.0,
+            "url": "https://item.taobao.com/item.htm?id=1025376293216"
+          },
+          {
+            "item_id": "1078906488051",
+            "title": "Apple/苹果 iPhone 16 正品国行苹果15双卡5G苹果13全网通手机",
+            "shop_name": "椰子iPhone数码",
+            "price_cny": 1323.14,
+            "url": "https://item.taobao.com/item.htm?id=1078906488051"
+          },
+          {
+            "item_id": "1038358913156",
+            "title": "Apple/苹果 iPhone 16 苹果16新款全网通5G双卡手机灵动岛屏手机",
+            "shop_name": "心心正品手机",
+            "price_cny": 2788.0,
+            "url": "https://item.taobao.com/item.htm?id=1038358913156"
+          },
+          {
+            "item_id": "1081998524220",
+            "title": "Apple/苹果 iPhone 16 国行 14 双卡全网通5G手机 13可开发票分期",
+            "shop_name": "小甜甄选店",
+            "price_cny": 1306.0,
+            "url": "https://item.taobao.com/item.htm?id=1081998524220"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:29:50.567506Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 1415238452,
+            "name": "Смартфон iPhone 16 128 ГБ, черный, только активирован",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 56833.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 56833.0,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 580725150,
+            "name": "Смартфон iPhone 16 128Gb Black без RuStore и MAX",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 76922.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 76922.0,
+            "review_rating": 4.5,
+            "feedbacks": 26,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 937046689,
+            "name": "iPhone 16 128GB",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 68894.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.9,
+            "feedbacks": 7,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 580725161,
+            "name": "Смартфон iPhone 16 128 ГБ Teal, бирюзовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 76922.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 76922.0,
+            "review_rating": 5.0,
+            "feedbacks": 12,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2006349436,
+            "name": "Смартфон iPhone 14 128 ГБ, Черный",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 34615.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 580725145,
+            "name": "Смартфон iPhone 16 128Gb Pink без RuStore и без MAX",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 76923.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 76923.0,
+            "review_rating": 5.0,
+            "feedbacks": 24,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2089438264,
+            "name": "Смартфон iPhone 14 128 ГБ, белый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 33871.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1248939230,
+            "name": "iPhone 16 128 ГБ, синий, только активирован",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 56833.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 580725147,
+            "name": "Смартфон iPhone 16 128Gb White без RuStore и MAX",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 76922.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 76922.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 271734000,
+            "name": "Смартфон айфон 16 128 ГБ",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 90476.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 90476.0,
+            "review_rating": 4.8,
+            "feedbacks": 13,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 270962786,
+            "name": "Смартфон айфон 16 128 ГБ",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 89696.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 89696.0,
+            "review_rating": 4.8,
+            "feedbacks": 13,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 621078215,
+            "name": "Смартфон iPhone 16 128GB Витринный образец Global Version",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 65008.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 65008.0,
+            "review_rating": 4.8,
+            "feedbacks": 118,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1436689930,
+            "name": "Смартфон iPhone 16 128 ГБ, белый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 63690.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 63690.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 344576923,
+            "name": "Смартфон iPhone 16 128 GB Black",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 63006.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 63006.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1567301702,
+            "name": "iPhone 16 128GB",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 68894.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1949194703,
+            "name": "Смартфон iPhone 16 128 Gb White Sim+eSim",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 71000.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1054962894,
+            "name": "Смартфон iPhone 16 128GB Teal (Бирюзовый) nanoSIM + eSIM",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 80823.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1013043348,
+            "name": "Смартфон iPhone 16 128 Гб, Pink розовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 81184.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 81184.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 270962787,
+            "name": "Смартфон айфон 16 128 ГБ",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 85466.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 85466.0,
+            "review_rating": 4.8,
+            "feedbacks": 13,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1248939232,
+            "name": "iPhone 16 128 ГБ, белый, только активирован",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 56833.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.5,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 593322501,
+            "name": "Смартфон iPhone 16 128GB White (Белый) nanoSIM + eSIM",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 80835.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 80835.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 550213676,
+            "name": "iPhone 16 128GB Ultramarine",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 85142.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 548199316,
+            "name": "Смартфон iPhone 16 128 ГБ Черный восстановленный",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 66948.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1248939229,
+            "name": "iPhone 16 128 ГБ, черный, только активирован",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 56833.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1013043347,
+            "name": "Смартфон iPhone 16 128 Гб, Ultramarin Ультрамариновый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 79980.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 79980.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1949194704,
+            "name": "Смартфон iPhone 16 128 Gb Ultramarine Sim+eSim",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 71500.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1013043341,
+            "name": "Смартфон iPhone 16 128 Гб, Black черный",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 79464.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 79464.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1013043343,
+            "name": "Смартфон iPhone 16 128 Гб, Teal бирюзовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 79980.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 79980.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 325138654,
+            "name": "Смартфон iPhone 16 128GB Black (Черный) nanoSIM + eSIM",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 77691.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 77691.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 330091177,
+            "name": "Смартфон iPhone 16 128 Гб, Teal бирюзовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 83299.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 272137334,
+            "name": "Смартфон iPhone 16 5G 128 Гб розовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 81928.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 81928.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1066635392,
+            "name": "Смартфон iPhone 16 5G 128 Гб синий",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 84998.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 84998.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 262920311,
+            "name": "iPhone 16 128 Gb Teal sim+esim (Без RuStore)!!!",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 88187.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 88187.0,
+            "review_rating": 5.0,
+            "feedbacks": 11,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 278902223,
+            "name": "Смартфон iPhone 16 128 ГБ бирюзовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 100971.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1014071748,
+            "name": "Смартфон iPhone 16 128 Гб, White белый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 84042.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 84042.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 593322503,
+            "name": "Смартфон iPhone 16 128GB Teal (Бирюзовый) nanoSIM + eSIM",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 81515.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1949194701,
+            "name": "Смартфон iPhone 16 128 Gb Black Sim+eSim",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 70500.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1949194705,
+            "name": "Смартфон iPhone 16 128 Gb Pink Sim+eSim",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 73500.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1014071750,
+            "name": "Смартфон iPhone 16 128 Гб, Pink розовый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 87783.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 87783.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1013043346,
+            "name": "Смартфон iPhone 16 128 Гб, White белый",
+            "brand": "Apple",
+            "supplier": "",
+            "price_rub": 79292.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 79292.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T01:29:59.830266Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "103572173063",
+            "sku_id": "103295176730",
+            "title": "Смартфон Apple iPhone 16 128 ГБ, Dual: nano SIM + eSIM, Белый (без RuStore)",
+            "brand": "",
+            "seller": "ТехноЛогично",
+            "price_rub": 73265.0,
+            "price_with_plus": 71800.0,
+            "rating": 4.9,
+            "rating_count": 8170,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/smartfon-apple-iphone-16-128-gb-dual-nano-sim--esim-belyy/103572173063",
+            "image": "https://avatars.mds.yandex.net/get-mpic/15405113/img_id3364762743022922856.jpeg/orig"
+          },
+          {
+            "product_id": "103530694148",
+            "sku_id": "103312967855",
+            "title": "Смартфон Apple iPhone 16 128 Gb Dual: nano-sim, black (черный)",
+            "brand": "",
+            "seller": "Original Gadget",
+            "price_rub": 74311.0,
+            "price_with_plus": 72825.0,
+            "rating": 4.9,
+            "rating_count": 319,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/smartfon-apple-iphone-16-128-gb-dual-nano-sim-black/103530694148",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20267406/2a0000019d588064ac3c2286447ec96b6f0f/orig"
+          },
+          {
+            "product_id": "4775394349",
+            "sku_id": "103295176729",
+            "title": "Смартфон iPhone 16 128GB Black Sim+E-Sim",
+            "brand": "",
+            "seller": "ОАЭшка",
+            "price_rub": 69497.0,
+            "price_with_plus": 68107.0,
+            "rating": 4.8,
+            "rating_count": 24,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/smartfon-iphone-16-128gb-black-sime-sim/4775394349",
+            "image": "https://avatars.mds.yandex.net/get-mpic/6647093/2a0000019aa0800bbfd5b17ebf923e7aa302/orig"
+          },
+          {
+            "product_id": "5302780524",
+            "sku_id": "103295176729",
+            "title": "Смартфон Apple iPhone 16 - 128 ГБ - Black - SIM+eSIM, FACETIME, Индия/Япония, новый, не-активирован, чёрный",
+            "brand": "",
+            "seller": "ДУБАЙСКИЙ ЭКСПРЕСС",
+            "price_rub": 68060.0,
+            "price_with_plus": 66699.0,
+            "rating": 5.0,
+            "rating_count": 4,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/smartfon-apple-iphone-16---128-gb---black---simesim-facetime-indiyayaponiya-novyy-ne-aktivirovan-chernyy/5302780524",
+            "image": "https://avatars.mds.yandex.net/get-mpic/4372348/2a0000019e73c0ab96109400855bddb7cff4/orig"
+          },
+          {
+            "product_id": "4775394347",
+            "sku_id": "103295176730",
+            "title": "Смартфон iPhone 16 128GB White Sim+E-Sim",
+            "brand": "",
+            "seller": "ОАЭшка",
+            "price_rub": 70738.0,
+            "price_with_plus": 69323.0,
+            "rating": 4.8,
+            "rating_count": 24,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/smartfon-iphone-16-128gb-white-sime-sim/4775394347",
+            "image": "https://avatars.mds.yandex.net/get-mpic/12516504/2a0000019aa0800dddf58d9b38a1352e9e1a/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:29:41.044383Z"
+      }
+    }
+  },
+  "schema": 1
+}

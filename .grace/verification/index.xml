@@ -319,6 +319,15 @@
     <test file="scripts/test_scrub_fixtures.py" name="test_fixture_provenance_may_keep_its_avito_capture_url" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="The city-free URL rule applies to recordings, not a fixture's provenance." />
     <test file="scripts/test_scrub_fixtures.py" name="test_the_gate_rejects_an_avito_city_url_and_accepts_its_city_free_form" requirements="R-COMPARE-BENCHMARK-REPLAY.record" title="Plant only synthetic recording data; the gate must report no unmasked city." />
   </requirement>
+  <requirement id="R-COMPARE-BENCHMARK-SCORE" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_constructed_trap_never_wins_cheapest_comparable" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_planted_wrong_label_makes_the_case_fail" requirements="R-COMPARE-BENCHMARK-SCORE" title="Negative control: the same replay judged against a label set it does not hit is confident_wrong." />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_recorded_query_picks_labelled_winners" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_recording_still_replays_through_the_recording_stub" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_retitles_exactly_its_offer" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_every_live_recording_has_labels_and_two_traps" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_the_judge_names_each_outcome" requirements="R-COMPARE-BENCHMARK-SCORE" />
+  </requirement>
   <requirement id="R-COMPARE-BUNDLE-NOUN-PHRASES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-BUNDLE-NOUN-PHRASES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
   </requirement>
@@ -359,6 +368,12 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
   </requirement>
+  <requirement id="R-COMPARE-MODEL-TOKENS" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />
+    <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
+    <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_compare_prices_skips_another_model_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-TOKENS" />
+    <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_the_offer_brand_field_names_the_brand_a_title_leaves_out" requirements="R-COMPARE-MODEL-TOKENS" title="Wildberries keeps the brand out of the product name (recorded: &quot;Смартфон iPhone 14 128 ГБ&quot;, brand Apple)." />
+  </requirement>
   <requirement id="R-COMPARE-PRICE-CONTEXT" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_price_context.py" name="test_avito_fixture_location_reaches_outcome" requirements="R-COMPARE-PRICE-CONTEXT" />
     <test file="packages/compare-connector/tests/test_price_context.py" name="test_context_fields_are_additive" requirements="R-COMPARE-PRICE-CONTEXT" />
@@ -388,14 +403,14 @@
   </requirement>
   <requirement id="R-COMPARE-VARIANT-IDENTITY" kind="requirement" state="tested" gaps="G-COMPARE-VARIANT-EXECUTION">
     <test file="packages/compare-connector/tests/test_identity.py" name="test_sizes_are_listed_in_capacity_order_across_units" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: the warning lists sizes by capacity, keeping each title's unit." />
-    <test file="packages/compare-connector/tests/test_identity.py" name="test_sizes_compare_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB = 1024 GB, as storage is sold; no rounding to 1000." />
+    <test file="packages/compare-connector/tests/test_identity.py" name="test_sizes_compare_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB reads as 1024 GB or 1000 GB, as storage is sold; nothing in between." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_offer_without_a_size_in_the_title_stays_comparable" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: unknown is not a contradiction." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_query_asking_128gb_never_crowns_the_64gb_variant" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: old code makes the 64GB offer cheapest_comparable." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_query_without_a_size_excludes_nothing" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: a query that states no size has nothing to contradict." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_ram_and_storage_pair_is_not_excluded_by_its_ram_size" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: &quot;8/128GB&quot; names RAM and storage; only the asked size decides." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_ru_and_latin_units_are_one_size" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: &quot;128 ГБ&quot; states the size &quot;128GB&quot;, not a different one." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_several_size_mismatches_cost_one_warning" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: warnings cost tokens, so one per call, not per offer." />
-    <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_terabyte_query_accepts_a_title_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB, so the units must not split one size." />
+    <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_terabyte_query_accepts_a_title_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB is sold as 1024 GB (phones) or 1000 GB (SSDs), so units must not split one size." />
   </requirement>
   <requirement id="R-COMPARE-VERIFY-BEFORE-QUOTE" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_verify_before_quote.py" name="test_the_served_guide_says_verify_the_winner_before_quoting_it" requirements="R-COMPARE-VERIFY-BEFORE-QUOTE" />

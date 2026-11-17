@@ -1,0 +1,1134 @@
+{
+  "query": "playstation 5 slim",
+  "captured_at": "2026-11-17T01:32:49.321733Z",
+  "sources": {
+    "aliexpress": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1005013613873681",
+            "title": "Латунная полоса H62 2-10 мм",
+            "price_rub": 1144.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013613873681.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sb7a42cfa611447698dbecc21521ec97dF.png_480x480.png"
+          },
+          {
+            "item_id": "1005012118763973",
+            "title": "STARTRC GAMES Станция охлаждения для PS5 Slim/Pro",
+            "price_rub": 2119.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005012118763973.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sb310c322963047b4871a0bd39db7c5277.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005011856053204",
+            "title": "Подставка для PS5 Pro/PS5 Slim",
+            "price_rub": 719.0,
+            "rating": 4.6,
+            "url": "https://aliexpress.ru/item/1005011856053204.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S2b5461b366d64fb8866c8365e21e2d29k.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008859906251",
+            "title": "Тонкая портативная консоль для видеоигр Ps 5 825 г SSD, используемая оригинальная Ps5 для Playstation",
+            "price_rub": 607.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008859906251.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S0c020c6d8d544f66adc22c50dedbfbe2f.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005013560986721",
+            "title": "Подставка для PS5 с вентилятором и RGB подсветкой",
+            "price_rub": 831.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013560986721.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S0b1d3796f0cb4d86ba95a51967834dd8N.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005005576864290",
+            "title": "Замена джойстиков для PlayStation 5 DualSense BIKLY",
+            "price_rub": 422.0,
+            "rating": 4.8,
+            "url": "https://aliexpress.ru/item/1005005576864290.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S85e0dbdc1a5b4b8496f811b348b0b815I.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012953712490",
+            "title": "Безрычажный аркадный джойстик для файтингов Razer",
+            "price_rub": 5629.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005012953712490.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S8539b4ea4591483199b84b843362c026P.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008321949897",
+            "title": "Кабели триггеров для контроллера PS5 Dualsense",
+            "price_rub": 125.0,
+            "rating": 4.9,
+            "url": "https://aliexpress.ru/item/1005008321949897.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S6e53e44cf20f4e64808e49cb2bf56391M.jpg_480x480.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "1 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care"
+          ]
+        },
+        "observed_at": "2026-11-17T01:32:48.421487Z"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "2fa72ff1a4e7d582",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/2fa72ff1a4e7d582/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/40f161ff8a64ac3356996fcde5480410/84cf1a12a3a79953cebfba38182df1a14449d71d52da68cbcfdffc594cfd6bf8.jpg"
+          },
+          {
+            "product_id": "3d1b360e98ebd582",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/3d1b360e98ebd582/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/40f161ff8a64ac3356996fcde5480410/84cf1a12a3a79953cebfba38182df1a14449d71d52da68cbcfdffc594cfd6bf8.jpg"
+          },
+          {
+            "product_id": "9ed07b6c9cecd582",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/9ed07b6c9cecd582/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/cafff83540756177033f4135e2a5e979/f4a133ab759997bf8e3e9604da4d1f33c2067e451d1a3a4b5e6ce3b998bc538a.jpg"
+          },
+          {
+            "product_id": "24b43fd00d24d582",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/24b43fd00d24d582/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/094af6c75c3b563c39f797c73ed78e91/b71cc10b1c8d7dcc61a8dbacffbb07ae25bbb58b931a97d24d27ff21d2d0ab4a.jpg"
+          },
+          {
+            "product_id": "2392e6377ef5d582",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/2392e6377ef5d582/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/2dd61e3ad84ba3c364690a6239e4f85a/e3d23b4d44a39b449278e90c4cf193f4d82bf7cfd0aa30ef6dc7379440776d4b.jpg"
+          },
+          {
+            "product_id": "e0f72e40025ed9cb",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/e0f72e40025ed9cb/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/7683948a7e22af1e3558c864d35a3c69/f784393a6b7f9717510ebe9a93c5db5ab6cc25cbadbd9973c83e0b9cf4f51692.jpg"
+          },
+          {
+            "product_id": "e50224dda59cd9cb",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/e50224dda59cd9cb/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/40f161ff8a64ac3356996fcde5480410/84cf1a12a3a79953cebfba38182df1a14449d71d52da68cbcfdffc594cfd6bf8.jpg"
+          },
+          {
+            "product_id": "9ddc800f81c0ed20",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/9ddc800f81c0ed20/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/d8348dcd510810f5a2f6ac04db9b0e18/cfb0ea5fc6b43e1e55467ef80f8464ff034d86c8d5f6824a8fd7b6db19511dfe.jpg"
+          },
+          {
+            "product_id": "3ba24928cbf2d9cb",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/3ba24928cbf2d9cb/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/620720dd3928cb671a4f695996d4dd34/c19923d883dc9ab9d41bb11f9f56257248c0b458f229ce1689944fd26a3cafd8.jpg"
+          },
+          {
+            "product_id": "618a13039ce0d9cb",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/618a13039ce0d9cb/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/c8905ad02d1abf48d54602b30985e22f/d31ead1b2531e1eb132cbc505c729f42ee31989506521af1e5c7a321087e41d9.jpg"
+          },
+          {
+            "product_id": "f5aea27381c3ed20",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/f5aea27381c3ed20/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/1b5515af8adc030f955cd6ce43d6c17d/6337c46d499a5a6d696fef42228533208d35c43a8401cc2b5acc8eadc930963f.jpg"
+          },
+          {
+            "product_id": "4f01989412e4d582",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/4f01989412e4d582/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/6768de557e55c872d34717500b49440e/00757c342c3533e3e8a14c2b4696cf5448736b76ca3540945227d695b35711b9.jpg"
+          },
+          {
+            "product_id": "ddafa4545a2cd9cb",
+            "title": "Игровая консоль PlayStation 5 Slim",
+            "price_rub": 77999.0,
+            "url": "https://www.dns-shop.ru/product/ddafa4545a2cd9cb/igrovaa-konsol-playstation-5-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/4cae4725e1a8b44e2a1f17a780869366/e9ec2c5a07e066dbb05dd20b1f70ac70a25d88bc0c4a4bf594f2f02b733b6cee.jpg"
+          },
+          {
+            "product_id": "analog",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition",
+            "price_rub": 69999.0,
+            "url": "https://www.dns-shop.ru/product/analog/aba9afbc9838d9cb/igrovaa-konsol-playstation-5-slim-digital-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/504b5b9a03398b1be7769986fd46eb30/3181112a2f31850665cd19608016d598c377761deb71a817e39eb6b806eac0f6.jpg"
+          },
+          {
+            "product_id": "e3c30d9bffdbd582",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition 30th Anniversary Limited Edition",
+            "price_rub": 83299.0,
+            "url": "https://www.dns-shop.ru/product/e3c30d9bffdbd582/igrovaa-konsol-playstation-5-slim-digital-edition-30th-anniversary-limited-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/5bf2fd430e809fb28d4a880d74b90fab/de648a145b3aebae58e8c591914761e0d607ffa801af6541e56cdfe835d9f508.jpg"
+          },
+          {
+            "product_id": "0af9e722f00ed582",
+            "title": "Игровая консоль PlayStation 5 Slim Digital Edition 30th Anniversary Limited Edition",
+            "price_rub": 83299.0,
+            "url": "https://www.dns-shop.ru/product/0af9e722f00ed582/igrovaa-konsol-playstation-5-slim-digital-edition-30th-anniversary-limited-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/5bf2fd430e809fb28d4a880d74b90fab/de648a145b3aebae58e8c591914761e0d607ffa801af6541e56cdfe835d9f508.jpg"
+          },
+          {
+            "product_id": "d8f716e97ac1ed20",
+            "title": "Игровая консоль PlayStation 4 Slim",
+            "price_rub": 29399.0,
+            "url": "https://www.dns-shop.ru/product/d8f716e97ac1ed20/igrovaa-konsol-playstation-4-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/e32f7a838080d9373ad70493cb87eb97/23ef531b89e6e0608e5ad56c97bf6fef5ef5f497ee9f4c6276e995ef2d00c494.jpg"
+          },
+          {
+            "product_id": "e3c7fec27e453330",
+            "title": "Игровая консоль PlayStation 4 Slim",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/e3c7fec27e453330/igrovaa-konsol-playstation-4-slim/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/67fdfd1604873299e431c92050bae420/29c0491b32aff8e7109be174f201246899c7a3af02a524b249f0e2c8fd74cefe.jpg"
+          },
+          {
+            "product_id": "9285b8ed7c3a3332",
+            "title": "Игровая приставка PlayStation 4 Slim Gray 1 Tb «Days of Play» Limited edition",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/9285b8ed7c3a3332/igrovaa-pristavka-playstation-4-slim-gray-1-tb-days-of-play-limited-edition/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/a232f2faa6c55099b9dc989e38e863f1/dbbd8e6993eb434f5f833f637648964a8778684cf76774c4bb50ae624424f3ac.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:32:42.586277Z"
+      }
+    },
+    "taobao": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1068821245490",
+            "title": "索尼SONY PS5 Slim轻薄版国行正品光驱版数字版家用游戏主机",
+            "shop_name": "潮流纪元",
+            "price_cny": 5999.0,
+            "url": "https://item.taobao.com/item.htm?id=1068821245490"
+          },
+          {
+            "item_id": "1013043134341",
+            "title": "正品SONY索尼PS5 Slim光驱版数字版游戏主机PS5家用游戏机",
+            "shop_name": "小豌豆数码",
+            "price_cny": 3199.0,
+            "url": "https://item.taobao.com/item.htm?id=1013043134341"
+          },
+          {
+            "item_id": "1087939055969",
+            "title": "【国行】索尼PS5 PlayStation5 slim家用光驱数字版游戏机主机",
+            "shop_name": "时见电子商务",
+            "price_cny": 5999.0,
+            "url": "https://item.taobao.com/item.htm?id=1087939055969"
+          },
+          {
+            "item_id": "742084498036",
+            "title": "索尼PS5二手游戏机主机PlayStation5国行Slim港版pro日版光驱数字",
+            "shop_name": "五哥电玩",
+            "price_cny": 3008.0,
+            "url": "https://item.taobao.com/item.htm?id=742084498036"
+          },
+          {
+            "item_id": "1028124705631",
+            "title": "索尼PS5二手国行主机 PlayStation5游戏机 新款slim pro 港版日版",
+            "shop_name": "方方方子衿",
+            "price_cny": 3058.0,
+            "url": "https://item.taobao.com/item.htm?id=1028124705631"
+          },
+          {
+            "item_id": "1087948011518",
+            "title": "PS5 slim 30周年限定版套装 30周年纪念 slim数字版主机 国行现货",
+            "shop_name": "天津弈游电玩 模型",
+            "price_cny": 4680.0,
+            "url": "https://item.taobao.com/item.htm?id=1087948011518"
+          },
+          {
+            "item_id": "1095456140213",
+            "title": "SONY索尼PS5 SLIM轻薄款游戏机光驱数字版新世代超高清主机",
+            "shop_name": "趣客数码",
+            "price_cny": 4399.0,
+            "url": "https://item.taobao.com/item.htm?id=1095456140213"
+          },
+          {
+            "item_id": "998613269782",
+            "title": "PlayStation索尼PS5新款PRO二手游戏主机SLIM国行光驱港版日版",
+            "shop_name": "超玩家1号",
+            "price_cny": 2948.0,
+            "url": "https://item.taobao.com/item.htm?id=998613269782"
+          },
+          {
+            "item_id": "1056103062909",
+            "title": "PlayStation索尼PS5新款pro二手游戏主机slim国行光驱港版日版",
+            "shop_name": "拾光潮玩数码",
+            "price_cny": 3358.0,
+            "url": "https://item.taobao.com/item.htm?id=1056103062909"
+          },
+          {
+            "item_id": "1087695532071",
+            "title": "正品索尼PS5游戏机 PS5slim光驱版数字版国行港版家用游戏主机质",
+            "shop_name": "小泽ps5直播",
+            "price_cny": 1888.0,
+            "url": "https://item.taobao.com/item.htm?id=1087695532071"
+          },
+          {
+            "item_id": "1053904841112",
+            "title": "正品索尼PS5国行主机 PlayStation5游戏机新款PS5slim家用游戏机",
+            "shop_name": "土豆电玩经营店",
+            "price_cny": 3099.0,
+            "url": "https://item.taobao.com/item.htm?id=1053904841112"
+          },
+          {
+            "item_id": "1095630637406",
+            "title": "【BY】SONY索尼PS5 Slim游戏机光驱数字版PlayStation5轻薄款主机",
+            "shop_name": "玖百惠商贸",
+            "price_cny": 4199.0,
+            "url": "https://item.taobao.com/item.htm?id=1095630637406"
+          },
+          {
+            "item_id": "737875591665",
+            "title": "PlayStation索尼PS5新款pro二手游戏主机slim国行光驱港版日版",
+            "shop_name": "广州星空游戏",
+            "price_cny": 3038.0,
+            "url": "https://item.taobao.com/item.htm?id=737875591665"
+          },
+          {
+            "item_id": "1091208240791",
+            "title": "【优品自营】索尼（SONY）PS5游戏机轻薄款PlayStation5全新原装高清8K蓝光slim港版日版国行光驱数字新款",
+            "shop_name": "天猫优品官方旗舰店",
+            "price_cny": 4223.04,
+            "url": "https://detail.tmall.com/item.htm?id=1091208240791"
+          },
+          {
+            "item_id": "728798786761",
+            "title": "PlayStation索尼PS5新款pro二手游戏主机slim国行光驱港版日版",
+            "shop_name": "魔力熊电玩",
+            "price_cny": 3558.0,
+            "url": "https://item.taobao.com/item.htm?id=728798786761"
+          },
+          {
+            "item_id": "1079804761904",
+            "title": "索尼（SONY）PS5 slim轻薄版playstation5国行游戏机影之刃零",
+            "shop_name": "天猫数码家电自营旗舰店",
+            "price_cny": 4223.04,
+            "url": "https://detail.tmall.com/item.htm?id=1079804761904"
+          },
+          {
+            "item_id": "641677707629",
+            "title": "索尼PS5主机港版国际版正版SLIM游戏机9新装满游戏任选游戏免费玩",
+            "shop_name": "西岗区誉浩日用品电子商务行企业店",
+            "price_cny": 4799.0,
+            "url": "https://item.taobao.com/item.htm?id=641677707629"
+          },
+          {
+            "item_id": "1065145079538",
+            "title": "【自营】索尼sony PS5 PlayStation5(slim轻薄版)日版锁区版数字家用游戏机4k增强主机高清蓝光3a大作新款202",
+            "shop_name": "天猫数码家电自营旗舰店",
+            "price_cny": 2687.04,
+            "url": "https://detail.tmall.com/item.htm?id=1065145079538"
+          },
+          {
+            "item_id": "1066685788780",
+            "title": "索尼PS5PRO 游戏主机新款slim轻薄款 ps5家用游戏主机港日国行",
+            "shop_name": "潮玩空间盒子",
+            "price_cny": 3638.0,
+            "url": "https://item.taobao.com/item.htm?id=1066685788780"
+          },
+          {
+            "item_id": "1080213179015",
+            "title": "Sony 索尼 PS5slim PS5pro家用游戏主机 PlayStation5 PS5主机",
+            "shop_name": "OG电玩",
+            "price_cny": 3899.0,
+            "url": "https://item.taobao.com/item.htm?id=1080213179015"
+          },
+          {
+            "item_id": "866660383052",
+            "title": "索尼PS5主机PlayStation 5游戏机光驱版 PS5slim家用二手游戏机",
+            "shop_name": "小豌豆数码",
+            "price_cny": 3159.0,
+            "url": "https://item.taobao.com/item.htm?id=866660383052"
+          },
+          {
+            "item_id": "632225498808",
+            "title": "长沙实体现货 索尼PS5游戏机slim pro光驱版数字版 日版港版国行",
+            "shop_name": "湖南长沙 星城电玩 游戏专店",
+            "price_cny": 3999.0,
+            "url": "https://item.taobao.com/item.htm?id=632225498808"
+          },
+          {
+            "item_id": "853159294205",
+            "title": "索尼PS5PRO 游戏主机新款slim轻薄款 ps5家用游戏主机港日国行",
+            "shop_name": "广州星空游戏",
+            "price_cny": 3748.0,
+            "url": "https://item.taobao.com/item.htm?id=853159294205"
+          },
+          {
+            "item_id": "631231291384",
+            "title": "索尼PS5PRO 游戏主机新款slim轻薄款 ps5家用游戏主机港日国行",
+            "shop_name": "北京崇文电玩实体店",
+            "price_cny": 4058.0,
+            "url": "https://item.taobao.com/item.htm?id=631231291384"
+          },
+          {
+            "item_id": "1068599004465",
+            "title": "索尼PS5slim PS5pro轻薄国行日版游戏机折腾学习版装满游戏13系统",
+            "shop_name": "妖龙尾巴游戏机",
+            "price_cny": 2940.0,
+            "url": "https://item.taobao.com/item.htm?id=1068599004465"
+          },
+          {
+            "item_id": "1078529030030",
+            "title": "PlayStation索尼PS5新款pro二手游戏主机slim国行光驱港版日版",
+            "shop_name": "广州视觉数码",
+            "price_cny": 3098.0,
+            "url": "https://item.taobao.com/item.htm?id=1078529030030"
+          },
+          {
+            "item_id": "1096304669305",
+            "title": "PlayStation索尼PS5新款pro二手游戏主机slim国行光驱港版日版",
+            "shop_name": "鲸云电玩",
+            "price_cny": 3198.0,
+            "url": "https://item.taobao.com/item.htm?id=1096304669305"
+          },
+          {
+            "item_id": "975542730063",
+            "title": "【优品自营】PlayStation5索尼PS5 slim游戏机国行新世代主机家用光驱版8K高清蓝光数字版",
+            "shop_name": "天猫优品官方旗舰店",
+            "price_cny": 3839.04,
+            "url": "https://detail.tmall.com/item.htm?id=975542730063"
+          },
+          {
+            "item_id": "1056906865650",
+            "title": "索尼PS5PRO 游戏主机新款slim轻薄款 ps5家用游戏主机港日国行",
+            "shop_name": "魔力熊电玩",
+            "price_cny": 3858.0,
+            "url": "https://item.taobao.com/item.htm?id=1056906865650"
+          },
+          {
+            "item_id": "1054743568617",
+            "title": "正品索尼PS5游戏机 PS5slim光驱版数字版国行港版家用游戏主机",
+            "shop_name": "土豆电玩经营店",
+            "price_cny": 3099.0,
+            "url": "https://item.taobao.com/item.htm?id=1054743568617"
+          },
+          {
+            "item_id": "1058417154615",
+            "title": "索尼PS5二手国行主机 PlayStation5游戏机 slim pro 港版日版3C",
+            "shop_name": "老猎人平台",
+            "price_cny": 2980.0,
+            "url": "https://item.taobao.com/item.htm?id=1058417154615"
+          },
+          {
+            "item_id": "1075169806085",
+            "title": "索尼PS5二手游戏机 playstation5国行slim/pro日版主机港版光驱版",
+            "shop_name": "海螺电玩",
+            "price_cny": 4548.0,
+            "url": "https://item.taobao.com/item.htm?id=1075169806085"
+          },
+          {
+            "item_id": "1032582478017",
+            "title": "索尼老款PS5 ps5 pro ps5slim 10.01系统洋葱折腾家用游戏机",
+            "shop_name": "艾琳久赢电玩",
+            "price_cny": 2998.0,
+            "url": "https://item.taobao.com/item.htm?id=1032582478017"
+          },
+          {
+            "item_id": "1093496452517",
+            "title": "全新SONY索尼PS5 SLIM家用游戏机13.6折腾版完全离线防BAN 3A大作",
+            "shop_name": "小亮电玩",
+            "price_cny": 3280.0,
+            "url": "https://item.taobao.com/item.htm?id=1093496452517"
+          },
+          {
+            "item_id": "1095283234684",
+            "title": "Controller For Playstation 5 PS5/PS5 Pro/Slim/PC,RGB",
+            "shop_name": "行如风8500",
+            "price_cny": 236.94,
+            "url": "https://item.taobao.com/item.htm?id=1095283234684"
+          },
+          {
+            "item_id": "1101220916035",
+            "title": "出租PS5索尼PS4 Slim游戏主机PlayStation5光驱游戏机 黑神话悟空",
+            "shop_name": "镖客诚信租赁",
+            "price_cny": 375.0,
+            "url": "https://item.taobao.com/item.htm?id=1101220916035"
+          },
+          {
+            "item_id": "941077351720",
+            "title": "索尼PS5 PlayStation®5（轻薄版）光盘驱动器 slim游戏主机配件",
+            "shop_name": "无限电玩",
+            "price_cny": 558.0,
+            "url": "https://item.taobao.com/item.htm?id=941077351720"
+          },
+          {
+            "item_id": "1051839921103",
+            "title": "索尼（SONY) PS5 PlayStation5 光盘驱动器 适用于Slim轻薄数字版及Pro",
+            "shop_name": "PlayStation授权专营店",
+            "price_cny": 469.0,
+            "url": "https://detail.tmall.com/item.htm?id=1051839921103"
+          },
+          {
+            "item_id": "1075170235913",
+            "title": "国行原封 索尼PS5 PlayStation5轻薄版PS5光盘驱动器Slim PRO光驱",
+            "shop_name": "微软南京新歌图体验店",
+            "price_cny": 750.0,
+            "url": "https://item.taobao.com/item.htm?id=1075170235913"
+          },
+          {
+            "item_id": "1084801006130",
+            "title": "【BY】索尼原装PS5 Slim/Pro数字扩展光盘slim光驱Pro轻薄驱动器",
+            "shop_name": "迟行电玩",
+            "price_cny": 709.0,
+            "url": "https://item.taobao.com/item.htm?id=1084801006130"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:32:40.630081Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 307519101,
+            "name": "Игровая консоль PS5 Slim Blu-Ray Edition",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 80100.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 80100.0,
+            "review_rating": 4.9,
+            "feedbacks": 6730,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 810569989,
+            "name": "Игровая консоль PS5 Slim цифровая версия - 825 ГБ",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 63542.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 451725948,
+            "name": "Игровая консоль PS5 Slim с дисководом - 1 TB",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 68275.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.8,
+            "feedbacks": 9,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 334558625,
+            "name": "Игровая приставка PS 5 Slim Digital Edition HK",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 75192.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 37,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2044911451,
+            "name": "Дисковод Disc Drive для PlayStation 5 Slim и PS5 Pro",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 7247.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 7247.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2151794036,
+            "name": "Приставка PlayStation 5 Slim Blue-Ray 1Тб CFI-2118 A01",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 81936.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2048003569,
+            "name": "Игровая приставка PlayStation 5 Slim Digital 825Gb White",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 76384.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 750981603,
+            "name": "Игровая приставка PS5 Slim Disc Edition",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 79343.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 79343.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2045217720,
+            "name": "Дисковод Disc Drive для PlayStation 5 Slim и PS5 Pro",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 7163.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 7163.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 888450776,
+            "name": "Игровая приставка 5 Slim 1 джойстик с дисководом",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 86707.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588119,
+            "name": "PlayStation 5 Slim GTA 6 1ТБ с дисководом, 2 геймпада, станц…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 136740.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 367514475,
+            "name": "Игровая консоль PS5 Slim Digital Edition",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 73920.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 73920.0,
+            "review_rating": 4.8,
+            "feedbacks": 1858,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 473866619,
+            "name": "Игровая консоль PS5 Blu-Ray Slim 1 ТБ",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 80100.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 80100.0,
+            "review_rating": 4.9,
+            "feedbacks": 6746,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 242101284,
+            "name": "Игровая приставка PlayStation 5 Slim 2 джойстика",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 93644.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 93644.0,
+            "review_rating": 4.8,
+            "feedbacks": 4,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588112,
+            "name": "PlayStation 5 Slim GTA 6, 2 геймпада, станция, 700 игр, 2 ре…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 129108.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588117,
+            "name": "PlayStation 5 Slim GTA 6 1ТБ с дисководом, 2 геймпада, 700 и…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 133560.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588106,
+            "name": "PlayStation 5 Slim GTA 6, 2 геймпада, 700 игр, 2 ревизия, га…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 125928.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588077,
+            "name": "PlayStation 5 Slim 1ТБ с дисководом, 2 геймпада, 700 игр, 2…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 120601.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1286862050,
+            "name": "Игровая консоль PS5 Slim Digital Edition",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 73920.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 73920.0,
+            "review_rating": 4.8,
+            "feedbacks": 1833,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588031,
+            "name": "PlayStation 5 Slim Disk 10.000 игр, 1ТБ, с дисководом, 2 гей…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 143259.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588079,
+            "name": "PlayStation 5 Slim Disk 10.000 игр, 1ТБ, с дисководом, 2 гей…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 139602.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 885058711,
+            "name": "PS 5 Slim с дисководом зарядка 2 ревизия 1000+ игр",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 101188.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 101188.0,
+            "review_rating": 5.0,
+            "feedbacks": 30,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 806260529,
+            "name": "Игровая приставка PS5 1ТБ с дисководом 2116",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 67482.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 32,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588080,
+            "name": "PlayStation 5 Slim GTA 6 1ТБ с дисководом, 700 игр, 2 ревизи…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 123702.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 885058709,
+            "name": "PS5 Slim с дисководом 2 ревизия подписка на 1000+ игр",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 88888.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 88888.0,
+            "review_rating": 5.0,
+            "feedbacks": 9,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588075,
+            "name": "PlayStation 5 Slim GTA 6, 700 игр, 2 ревизия, гарантия",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 116149.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 499708181,
+            "name": "Игровая консоль 5 Slim без дисковода Digital Edition 825 ГБ",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 60960.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 60960.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588035,
+            "name": "PlayStation 5 Slim, 2 геймпада, 700 игр, 2 ревизия, гарантия",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 112969.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588068,
+            "name": "PlayStation 5 Slim, 2 геймпада, станция, 700 игр, 2 ревизия…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 116149.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588052,
+            "name": "PlayStation 5 Slim, 700 игр, 2 ревизия, гарантия",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 103111.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588113,
+            "name": "PlayStation 5 Slim 1ТБ с дисководом, 2 геймпада, станция, 70…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 123702.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2201588107,
+            "name": "PlayStation 5 Slim 1ТБ с дисководом, 700 игр, 2 ревизия, гар…",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 110743.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 100,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 585854921,
+            "name": "5 Slim 2116A (Европа), с дисководом",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 85860.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 85860.0,
+            "review_rating": 5.0,
+            "feedbacks": 234,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 523887744,
+            "name": "Система охлаждения для PS5 Slim",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1164.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1164.0,
+            "review_rating": 4.5,
+            "feedbacks": 289,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 499708180,
+            "name": "Игровая консоль 5 Slim с дисководом",
+            "brand": "Playstation",
+            "supplier": "",
+            "price_rub": 66681.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 4.6,
+            "feedbacks": 10,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 499696054,
+            "name": "PS5 Slim 1ТБ без дисковода 1 геймпад 1 ревизия",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 84952.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 7,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 888450778,
+            "name": "PS5 Slim с дисководом+2 джойстика+зарядная станция",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 98752.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 241329590,
+            "name": "Игровая приставка 5 Slim 1 джойстик с дисководом",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 89380.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 504194306,
+            "name": "PS5 Slim 1ТБ с дисководом 2 геймпада зарядка 1 ревизия",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 96678.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 96678.0,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 205518729,
+            "name": "Приставка PlayStation 5 Slim 1ТБ с дисководом",
+            "brand": "SONY",
+            "supplier": "",
+            "price_rub": 72000.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": 5.0,
+            "feedbacks": 5,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T01:32:49.249256Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "5696598134",
+            "sku_id": "4811001947",
+            "title": "Игровая приставка Sony PlayStation 5 Slim Digital Edition 825GB (2 ревизия) (PS5 SLIM DIGITAL)",
+            "brand": "",
+            "seller": "ТехноЛогично",
+            "price_rub": 76319.0,
+            "price_with_plus": 74793.0,
+            "rating": 5.0,
+            "rating_count": 1,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-sony-playstation-5-slim-digital-edition/5696598134",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20339123/2a0000019dec7a9b3168ec41558868d20ae7/orig"
+          },
+          {
+            "product_id": "5235174357",
+            "sku_id": "4811001947",
+            "title": "Игровая приставка Sony PlayStation 5 PS5 Slim 825 ГБ (цифровая версия) 4K Ultra HD Поддержка русского языка",
+            "brand": "",
+            "seller": "",
+            "price_rub": 72713.0,
+            "price_with_plus": 71259.0,
+            "rating": 4.9,
+            "rating_count": 103,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-sony-playstation-5-ps5-slim-825-gb-tsifrovaya-versiya-4k-ultra-hd-podderzhka-russkogo-yazyka/5235174357",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20019893/2a0000019da986caf0d451506790ae2fa48f/orig"
+          },
+          {
+            "product_id": "6184369200",
+            "sku_id": "4811001947",
+            "title": "Игровая консоль стационарная PlayStation 5 Slim Digital CFI-2016B01Y белый/черный 825 ГБ",
+            "brand": "",
+            "seller": "Sunflower Global Dubai",
+            "price_rub": 73918.0,
+            "price_with_plus": 72440.0,
+            "rating": 5.0,
+            "rating_count": 9,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-konsol-statsionarnaya-playstation-5-slim-digital-cfi-2016b01y-belyychernyy-825-gb/6184369200",
+            "image": "https://avatars.mds.yandex.net/get-mpic/4303817/2a0000019393ea919723bdb6bbf88f8935b9/orig"
+          },
+          {
+            "product_id": "6225674044",
+            "sku_id": "6225675193",
+            "title": "Игровая приставка Sony PlayStation 5 Slim PS5 без игр, белый Slim 1Tb, Disk Edition (с дисководом)",
+            "brand": "",
+            "seller": "КИБЕРКОТ",
+            "price_rub": 85180.0,
+            "price_with_plus": 83476.0,
+            "rating": 4.8,
+            "rating_count": 66,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-sony-playstation-5-ps5-slim-cfi-2000a-versiya-s-diskovodom-1000-gb-ssd-bez-igr-belyy/6225674044",
+            "image": "https://avatars.mds.yandex.net/get-mpic/19824973/pic12e9826478a179618eefefa7bf2156c3/orig"
+          },
+          {
+            "product_id": "4824576454",
+            "sku_id": "103817268437",
+            "title": "Игровая приставка Sony PlayStation 5 Slim Digital Edition, без дисковода, 1000 ГБ SSD, без игр, белый, Japanese plug",
+            "brand": "",
+            "seller": "",
+            "price_rub": 84361.0,
+            "price_with_plus": 82674.0,
+            "rating": 4.9,
+            "rating_count": 1239,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/igrovaya-pristavka-sony-playstation-5-slim-digital-edition-bez-diskovoda-1000-gb-ssd-bez-igr-belyy-japanese-plug/4824576454",
+            "image": "https://avatars.mds.yandex.net/get-mpic/12525950/picfa6f0aa2fce16e7aa66b7d8a7cb138a3/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T01:32:31.868288Z"
+      }
+    }
+  },
+  "schema": 1
+}
