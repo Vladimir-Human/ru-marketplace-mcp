@@ -1263,14 +1263,14 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
             entries = [
                 e for e in raw_price_entries if isinstance(e, dict) and isinstance(e.get("text"), str) and e.get("text")
             ]
-            # Visual order: entries[0] is the price on the tile, entries[1] the struck
-            # original; textStyle values vary across categories ("PRICE", "BIG_PRICE",
-            # "SALE_PRICE"), so the order decides, not the style label.
+            # Tile price first, struck original second (tile-price styles vary); ORIGINAL_PRICE never moves up.
+            if struck := [e for e in entries if e.get("textStyle") == "ORIGINAL_PRICE"]:
+                entries = [*([e for e in entries if e.get("textStyle") != "ORIGINAL_PRICE"][:1] or [{}]), struck[0]]
             if entries and not price_text:
                 price_text = entries[0].get("text")
                 # priceStyle.styleType names the price's condition; only CARD_PRICE is decided.
                 style = pv.get("priceStyle")
-                if isinstance(style, dict) and style.get("styleType") == "CARD_PRICE":
+                if price_text and isinstance(style, dict) and style.get("styleType") == "CARD_PRICE":
                     out["price_kind"] = "card"
             if len(entries) >= 2 and not price_original_text:
                 price_original_text = entries[1].get("text")
