@@ -77,8 +77,7 @@ These rules win over older guidance in other files; report a conflict instead of
 3. `refused`, `needs_human` or `inconclusive` now → one rerun after the source's `retry_after_s` or after the owner has passed the check. Still not healthy and the release changes that source → the same call on the previous tag: old passes and new fails blocks; both fail → release and name the source under known limits.
 4. `scripts/bump_version.py` and the version gate pass; the version is not on PyPI yet.
 5. Every release-note claim is backed by a public-tool call on that source.
-6. At least 24 h since the previous tag unless it fixes that tag's regression; at most one tag a day.
 
-- The release commit is made when 1-5 pass; the tag goes on it when 1-6 pass. If a later release commit exists by then, only the latest is tagged and the earlier number is skipped.
+- The release commit is made and tagged when 1-5 pass.
 - A release that removes or renames a public tool or changes a default waits for the owner's yes.
 - Release notes list user-visible changes only, never checks, tests, CI or reviews.
