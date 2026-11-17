@@ -16,7 +16,7 @@ check before drawing conclusions.
 # START_MODULE_MAP
 # MarketOffer: Carry everyday/native prices and optional source price kind.
 # SourceOutcome: Report source access, diagnostics and recovery signals.
-# CompareResponse: Return eligible winners, all offers and warnings.
+# CompareResponse: Return eligible winners, the ranked offers (whole offers cut past 40,000 characters) and warnings.
 # END_MODULE_MAP
 
 from __future__ import annotations
