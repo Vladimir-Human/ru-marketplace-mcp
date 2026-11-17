@@ -33,13 +33,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Detsky Mir cards, category listings and category discovery.
 # SCOPE: Read-only anonymous JSON; region-aware caching; no text-search tool.
 # DEPENDS: FastMCP; httpx; mcp_core transport/cache; models_output; settings; shape_reference.
-# LINKS: R-NO-MCP-LOGGING; M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/detmir-connector/tests.
+# LINKS: R-NO-MCP-LOGGING; R-OUTPUT-PAGE-URLS.detmir; M-DETMIR; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/detmir-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
 # _fetch_json: Perform bounded, retried API reads and classify failures.
 # _body_error_status: Detect error status embedded inside HTTP-success JSON.
 # _parse_product: Normalize product fields and preserve missing-price semantics.
+# _page_url: Keep a page link on Detsky Mir's own site (R-OUTPUT-PAGE-URLS.detmir).
 # detmir_card: Read one product with a region filter.
 # detmir_category: List a validated category alias with pagination,
 #                   plus a runtime shape-drift warning when a required key family vanishes.
@@ -70,10 +71,12 @@ from mcp_core.errors import (
     TransportDownError,
     raise_tool_error,
 )
+from mcp_core.kit import page_link
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.resources import register_reference_resources
+from mcp_core.sources import BY_NAME
 from mcp_core.transport import DEFAULT_USER_AGENT, RateLimiter, build_client, get_text_with_retries, proxy_from_env
 from pydantic import Field
 
@@ -254,6 +257,11 @@ def _price_from(node: Any) -> float | None:
     return R.coerce_price(node)
 
 
+def _page_url(raw: object) -> str:
+    """A Detsky Mir page link on its own site; a sister-shop link (zoozavr.ru) is dropped (R-OUTPUT-PAGE-URLS)."""
+    return page_link(raw, SITE_BASE, BY_NAME["detsky_mir"].page_hosts)
+
+
 def _as_dict(value: Any) -> dict[str, Any]:
     """Return ``value`` when it is a dict, else an empty dict.
 
@@ -287,8 +295,8 @@ def _parse_product(raw: Any) -> DetmirProduct:
         picture = str(pictures[0].get("web") or pictures[0].get("original") or pictures[0].get("url") or "")
 
     product_id = R.coerce_int(R.first_present(raw, "id", "product_id", default=None))
-    url = str(link_node.get("web_url") or "")
-    if not url and product_id:
+    url = _page_url(link_node.get("web_url"))
+    if not url and not link_node.get("web_url") and product_id:
         url = f"{SITE_BASE}/product/index/id/{product_id}/"
 
     prices_node = _as_dict(raw.get("prices"))
@@ -659,7 +667,7 @@ async def detmir_categories(
                 level=R.coerce_int(R.first_present(raw, "level", default=None)),
                 products_count=R.coerce_int(R.first_present(raw, "products_count", default=None)),
                 parent_id=R.coerce_int(R.first_present(raw, "parentId", "parent_id", default=None)),
-                url=str(R.first_present(raw, "web_url", "url", default="") or ""),
+                url=_page_url(R.first_present(raw, "web_url", "url", default="")),
             )
         )
 

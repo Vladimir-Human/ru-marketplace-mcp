@@ -28,7 +28,7 @@ def test_basket_for_sku_uses_expected_boundaries():
     assert server._basket_for_sku(1) == "basket-01.wbbasket.ru"
     assert server._basket_for_sku(14_300_000) == "basket-01.wbbasket.ru"
     assert server._basket_for_sku(14_400_000) == "basket-02.wbbasket.ru"
-    assert server._basket_for_sku(500_000_000) == "basket-28.wbbasket.ru"
+    assert server._basket_for_sku(500_000_000) == "basket-27.wbbasket.ru"
 
 
 def test_recover_search_ids_accepts_live_shapes():

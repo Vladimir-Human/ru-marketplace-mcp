@@ -7,7 +7,7 @@ Moved verbatim out of server.py (move-only); server.py re-imports every name, so
 # PURPOSE: Pure parsing and routing helpers for the Wildberries tools (no network).
 # SCOPE: Basket host for an nm id, product flattening and prices, response shape checks, review dates, search ids, menu nodes.
 # DEPENDS: mcp_core.resilience, mcp_core.errors, mcp_core.logging; models_output; settings.
-# LINKS: M-WB; packages/wb-connector/tests.
+# LINKS: M-WB; R-WB-BASKET-ROUTE; R-OUTPUT-PAGE-URLS.wb; packages/wb-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _basket_for_sku: Basket CDN host for an nm id.
@@ -15,6 +15,7 @@ Moved verbatim out of server.py (move-only); server.py re-imports every name, so
 # _extract_price_rub: Separate current and basic prices, converting kopecks to rubles.
 # _recover_search_ids: Numeric product ids from a search-goods response.
 # _menu_node/_find_menu_subtree: Bounded category nodes and breadth-first lookup.
+# _category_page_url: A menu path as a full https://www.wildberries.ru link.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -26,44 +27,93 @@ from typing import Any
 
 from mcp_core import resilience as R
 from mcp_core.errors import ParserDriftError, raise_tool_error
+from mcp_core.kit import page_link
 from mcp_core.logging import log_event
+from mcp_core.sources import BY_NAME
 
 from wb_connector.models_output import WbCategoryNode
 from wb_connector.settings import get_settings
 
+# Inclusive upper vol bound (nm_id // 100000) per basket host. Source: WB's own
+# origin route map (cdn.wbbasket.ru/api/v3/upstreams, mediabasket_route_map) as
+# snapshotted on 2026-09-18 by the public wb-private-api package; WB's MediaBasket
+# CTO confirms basket 28 = vol 5190-5501 (Habr, 2025-11-27). The table before
+# 2026-11-17 ended at vol 4997 with wrong bounds for baskets 26-27, so every
+# newer card (e.g. nm 1241789136, vol 12417 -> basket-44) went to the fallback
+# host and read as not_found (audit cycle 1).
+_BASKET_UPPER_VOLS: tuple[tuple[int, str], ...] = (
+    (143, "01"),
+    (287, "02"),
+    (431, "03"),
+    (719, "04"),
+    (1007, "05"),
+    (1061, "06"),
+    (1115, "07"),
+    (1169, "08"),
+    (1313, "09"),
+    (1601, "10"),
+    (1655, "11"),
+    (1919, "12"),
+    (2045, "13"),
+    (2189, "14"),
+    (2405, "15"),
+    (2621, "16"),
+    (2837, "17"),
+    (3053, "18"),
+    (3269, "19"),
+    (3485, "20"),
+    (3701, "21"),
+    (3917, "22"),
+    (4133, "23"),
+    (4349, "24"),
+    (4565, "25"),
+    (4877, "26"),
+    (5189, "27"),
+    (5501, "28"),
+    (5813, "29"),
+    (6125, "30"),
+    (6437, "31"),
+    (6749, "32"),
+    (7061, "33"),
+    (7373, "34"),
+    (7685, "35"),
+    (7997, "36"),
+    (8309, "37"),
+    (8741, "38"),
+    (9173, "39"),
+    (9605, "40"),
+    (10373, "41"),
+    (11141, "42"),
+    (11909, "43"),
+    (12677, "44"),
+    (13445, "45"),
+    (14213, "46"),
+    (14981, "47"),
+    (15749, "48"),
+    (16517, "49"),
+    (17285, "50"),
+    (18053, "51"),
+    (18821, "52"),
+    (19589, "53"),
+    (20357, "54"),
+    (21125, "55"),
+    (21893, "56"),
+    (22661, "57"),
+    (23429, "58"),
+    (24197, "59"),
+    (24965, "60"),
+    (25733, "61"),
+    (26501, "62"),
+    (27269, "63"),
+    (28037, "64"),
+    (28805, "65"),
+)
+
 
 def _basket_for_sku(nm_id: int) -> str:
-    """Compute basket CDN host. Probe range up to 28 for new SKUs."""
+    """Basket CDN host for an nm id from WB's route map; the configured fallback above it."""
     vol = nm_id // 100000
-    table = [
-        (143, "01"),
-        (287, "02"),
-        (431, "03"),
-        (719, "04"),
-        (1007, "05"),
-        (1061, "06"),
-        (1115, "07"),
-        (1169, "08"),
-        (1313, "09"),
-        (1601, "10"),
-        (1655, "11"),
-        (1919, "12"),
-        (2045, "13"),
-        (2189, "14"),
-        (2405, "15"),
-        (2621, "16"),
-        (2837, "17"),
-        (3053, "18"),
-        (3269, "19"),
-        (3485, "20"),
-        (3701, "21"),
-        (3917, "22"),
-        (4133, "23"),
-        (4349, "24"),
-        (4565, "25"),
-        (4781, "26"),
-        (4997, "27"),
-    ]
+    table = _BASKET_UPPER_VOLS
     for upper, nn in table:
         if vol <= upper:
             return f"basket-{nn}.wbbasket.ru"
@@ -343,6 +393,14 @@ def _recover_search_ids(ids: Any) -> list[int]:
     return out
 
 
+WB_SITE = "https://www.wildberries.ru"
+
+
+def _category_page_url(raw: Any) -> str:
+    """The menu's site-relative path as a full https://www.wildberries.ru link; anything else is dropped."""
+    return page_link(raw, WB_SITE, BY_NAME["wildberries"].page_hosts)
+
+
 def _menu_node(raw: Any, depth: int, budget: list[int], max_depth: int) -> WbCategoryNode | None:
     """Convert one raw menu entry into a bounded WbCategoryNode.
 
@@ -368,7 +426,7 @@ def _menu_node(raw: Any, depth: int, budget: list[int], max_depth: int) -> WbCat
     return WbCategoryNode(
         id=R.coerce_int(R.first_present(raw, "id", default=None)),
         name=_decode_mojibake(R.first_present(raw, "name", default="")),
-        url=str(R.first_present(raw, "url", default="") or ""),
+        url=_category_page_url(R.first_present(raw, "url", default="")),
         shard=str(R.first_present(raw, "shard", default="") or ""),
         query=str(R.first_present(raw, "query", default="") or ""),
         depth=depth,
