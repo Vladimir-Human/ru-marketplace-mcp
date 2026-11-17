@@ -623,6 +623,8 @@
   </requirement>
   <requirement id="R-FIRST-RUN-PROBE" kind="requirement" state="tested">
     <test file="scripts/test_first_run_probe.py" name="test_a_work_folder_inside_a_checkout_is_refused" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_chrome_is_closed_and_work_removed_when_a_step_raises" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_cleanup_waits_for_port_and_retries_transient_permission_error" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_doctor_rows_list_each_source_state_and_next_step" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_dry_run_prints_the_plan_runs_nothing_and_removes_its_folder" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_each_step_records_its_exit_seconds_and_output_tail_and_a_timeout_does_not_stop_the_rest" requirements="R-FIRST-RUN-PROBE" />
