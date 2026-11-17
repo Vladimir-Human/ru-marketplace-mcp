@@ -548,7 +548,7 @@ the rest become issues.</detail>
   </requirement>
   <requirement id="R-CDP-SIM-S4" status="accepted" source="Plan item P2-3, scenario S4, 2026-11-17">
     <says>S4 429 → error in ≤12 s.</says>
-    <invariant id="R-CDP-SIM-S4.deadline" owner="M-CDP-SIM" proof="real HTTPS/Chrome public MCP calls">citilink_search receives a 429 whose fixture body never completes; Playwright and raw CDP return the public rate_limited envelope with status_code 429 and retry_after_s 30 within 12 seconds, without a retry or parsing/settling wait. The Playwright tab closes; the raw-CDP tab stays open (gap G-CDP-SIM-RAW-STALLED-429-TAB, a strict xfail).</invariant>
+    <invariant id="R-CDP-SIM-S4.deadline" owner="M-CDP-SIM" proof="real HTTPS/Chrome public MCP calls">citilink_search receives a 429 whose fixture body never completes; Playwright and raw CDP return the public rate_limited envelope with status_code 429 and retry_after_s 30 within 12 seconds, without a retry or parsing/settling wait. Both tabs close: Chrome may answer the raw path's first Target.closeTarget with success and keep the tab (Linux and Windows, 2026-11-17), so mcp_core.transport.raw_targets.close_target re-checks Target.getTargets and closes again, at most 4 times within the tab deadline.</invariant>
   </requirement>
   <requirement id="R-CDP-SIM-S9" status="accepted" source="Plan item P2-3, scenario S9, 2026-11-17">
     <says>S9 a hang → timeout error.</says>

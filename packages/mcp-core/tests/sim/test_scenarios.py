@@ -10,7 +10,7 @@ START_MODULE_MAP
   search: Call the native registered tool through a real in-memory MCP session.
   test_s1_search: Read committed fixtures through Chrome and assert nonempty parsed prices/identities and real request URLs.
   test_s2_401_self_reload: A server-scripted 401 Refresh followed by 200 must succeed through dns_search.
-  test_s4_429_fail_fast: A stalled 429 document must become a typed Citilink rate_limited answer within 12 seconds.
+  test_s4_429_fail_fast: A stalled 429 document must become a typed Citilink rate_limited answer within 12 seconds and close its tab.
   test_s9_hang_timeout: A server that never sends headers must exhaust the real navigation deadline and close its tab.
 END_MODULE_MAP
 """
@@ -110,16 +110,12 @@ async def test_s2_401_self_reload(cdp_sim, connector):
 
 
 @pytest.mark.req("R-CDP-SIM-S4", "R-CDP-NAV-TIMEOUT.qrator-429")
-async def test_s4_429_fail_fast(cdp_sim, connector, request):
-    """S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds."""
-    if cdp_sim.mode == "raw":
-        request.applymarker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="G-CDP-SIM-RAW-STALLED-429-TAB: the raw-CDP tab stays open after a 429 whose body stalls",
-            )
-        )
+async def test_s4_429_fail_fast(cdp_sim, connector):
+    """S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes.
+
+    The raw-CDP tab used to stay open on Linux and Windows: Chrome answered the first close with
+    success and kept the tab (2026-11-17); mcp_core.transport.raw_targets now confirms the close.
+    """
     cdp_sim.server.route("www.citilink.ru", "/search/", Reply("citilink_search", status=429, stall_body=True))
     module = connector("citilink").module
     start = asyncio.get_running_loop().time()
@@ -134,7 +130,7 @@ async def test_s4_429_fail_fast(cdp_sim, connector, request):
         entry for entry in cdp_sim.server.requests if entry.host == "www.citilink.ru" and entry.path == "/search/"
     ]
     assert len(requests) == 1 and requests[0].status == 429 and requests[0].stalled
-    # The tab check runs here, not in the fixture, so the known raw-CDP leak is an xfail, not a teardown error.
+    # The tab check runs here, inside the scenario's own deadline story, not only in the fixture.
     cdp_sim.targets_checked_by_test = True
     await assert_targets_settle(cdp_sim, cdp_sim.before)
 
