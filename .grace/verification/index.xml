@@ -51,7 +51,7 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
-  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE,G-CAPTURE-MUTATION-STUFFED-TITLES">
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE">
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
@@ -69,7 +69,6 @@
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_ambiguous_title_oracle_rejects_a_planted_comparable_winner" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_compare_regular_price_and_winner_ignore_cheaper_conditional_price" requirements="R-CAPTURE-MUTATION.conditional-price" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_permutation_oracle_rejects_planted_order_or_winner" requirements="R-CAPTURE-MUTATION.permutation" />
-    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_ambiguous_title_minimal_violation" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_keyword_stuffed_and_accessory_titles_never_win" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_permutations_keep_winners_and_offer_order" requirements="R-CAPTURE-MUTATION.permutation" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_instructions_keep_prices_ids_identity_and_winners" requirements="R-CAPTURE-MUTATION.seller-text" />
@@ -420,6 +419,12 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_malformed_image_payload_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
+  </requirement>
+  <requirement id="R-COMPARE-MODEL-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_query_that_lists_models_itself_keeps_such_titles_comparable" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_title_naming_several_models_of_one_family_names_no_one_product" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_compare_prices_skips_a_model_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_one_model_a_spec_list_or_a_size_is_no_model_list" requirements="R-COMPARE-MODEL-LIST" />
   </requirement>
   <requirement id="R-COMPARE-MODEL-TOKENS" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />

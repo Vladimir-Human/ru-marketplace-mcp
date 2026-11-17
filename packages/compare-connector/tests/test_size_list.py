@@ -4,7 +4,7 @@ START_MODULE_CONTRACT
 PURPOSE: Prove R-COMPARE-SIZE-LIST on lists_sizes and through the public compare_prices entry.
 SCOPE: identity.lists_sizes; compare_prices with the AliExpress and Citilink search tools replaced by native responses.
 DEPENDS: pytest; compare_connector.identity/server; aliexpress/citilink output models.
-LINKS: M-COMPARE-DECIDE; R-COMPARE-SIZE-LIST; G-CAPTURE-MUTATION-STUFFED-TITLES (P2-1 m6b memory family).
+LINKS: M-COMPARE-DECIDE; R-COMPARE-SIZE-LIST; P2-1 m6b memory family.
 END_MODULE_CONTRACT
 """
 

@@ -336,8 +336,9 @@ offers keeps excluded/unpriced offers at the end; in_stock_only requires
 confirmed stock for ranking but does not discard unconfirmed offers.
 cheapest is the raw lowest eligible price; cheapest_comparable additionally
 excludes accessories, goods made for the device, copies, other conditions,
-explicit size mismatches, titles listing several sizes and titles that miss a
-Latin model word or number of the query or add Pro, Max and the like after it.
+explicit size mismatches, titles listing several sizes or models ("V11/V15")
+and titles that miss a Latin model word or number of the query or add Pro, Max
+and the like after it.
 Avito rows never say new or used, so they qualify only when the query asks for
 a used item. Neither proves exact manufacturer identity. price_spread_rub needs
 two ranked prices.
