@@ -6,8 +6,8 @@ docs/ANTI_BOT.md § Cian). Probed 2026-09-09:
 
 * Plain HTTP is a dead end: Cian's WAF answers every path, the JSON API
   included, with a 403 ``cian_waf_block`` page keyed on IP reputation. There is
-  no fingerprint to clear; since 2026-11-16 the JSON API can demand a captcha
-  (``captchaRequired``), a human step in the scraping Chrome: ``challenge_required``.
+  no fingerprint to clear; the JSON API can demand a captcha (``captchaRequired``,
+  2026-11-16) and a tab can land on the bot check (2026-11-17): ``challenge_required``.
 * Inside the operator's Chrome (tier 2) the site's own JSON API answers an
   in-page ``fetch`` POST: structured offers, no HTML parsing. The offer card
   embeds the whole offer in ``window._cianConfig['frontend-offer-card']``.
@@ -30,7 +30,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; R-CIAN-SEARCH-BOT-CHECK; R-SETTINGS-WIRED.cian-read; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 #        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -147,6 +147,7 @@ _ROOM_CHOICES = frozenset(get_args(RoomCount))
 _REGION_RE = re.compile(r"^\d{1,7}$")
 _OFFER_ID_RE = re.compile(r"cian\.ru/(?:sale|rent)/[a-z-]+/(\d{6,})(?:[/?#]|$)")
 _WAF_MARKER = "cian_waf_block"
+_BOT_CHECK = "cian_bot_check_page"  # the search transport's answer for a tab on the bot check
 # The JSON API's captcha demand, live 2026-11-16: HTTP 403, errors[].code captchaRequired.
 _CAPTCHA_CODE = "captchaRequired"
 # The card transport's own envelope: only a state that actually carried the
@@ -252,18 +253,15 @@ async def _cdp_post_json(json_query: dict[str, Any], ctx: Context | None) -> tup
 
     Serialised via _cdp_lock so a burst of tool calls cannot spray tabs. The
     tab lands on the site root so the request carries the session's cookies
-    and origin, exactly like the site's own search.
+    and origin, exactly like the site's own search; a tab on the bot check sends nothing.
     """
 
     async def _attempt() -> tuple[int, str]:
         async with _cdp_lock, open_page(f"{SITE_BASE}/", wait_ms=2500, allowed_hosts=ALLOWED_HOSTS) as page:
-            raw = await asyncio.wait_for(
-                page.evaluate(
-                    _JS_POST,
-                    {"url": SEARCH_API, "body": {"jsonQuery": json_query}, "cap": MAX_BODY_BYTES},
-                ),
-                timeout=30.0,
-            )
+            if on_bot_check_page(page.url):
+                return 0, _BOT_CHECK
+            args = {"url": SEARCH_API, "body": {"jsonQuery": json_query}, "cap": MAX_BODY_BYTES}
+            raw = await page.evaluate(_JS_POST, args)
         result = json.loads(raw) if isinstance(raw, str) else raw
         return int(result["status"]), str(result["text"])
 
@@ -278,10 +276,7 @@ async def _cdp_page_config(url: str, ctx: Context | None) -> tuple[int, str]:
 
     async def _attempt() -> tuple[int, str]:
         async with _cdp_lock, open_page(url, wait_ms=2500, allowed_hosts=ALLOWED_HOSTS) as page:
-            raw = await asyncio.wait_for(
-                page.evaluate(_JS_CARD_CONFIG, {"key": CARD_CONFIG_KEY, "cap": MAX_BODY_BYTES}),
-                timeout=30.0,
-            )
+            raw = await page.evaluate(_JS_CARD_CONFIG, {"key": CARD_CONFIG_KEY, "cap": MAX_BODY_BYTES})
         return 200, raw if isinstance(raw, str) else json.dumps(raw)
 
     try:
@@ -378,6 +373,9 @@ def _captcha_required(body: str) -> bool:
 
 def _raise_for_fetch_failure(status: int, body: str, tier: str, what: str) -> None:
     """Map a failed fetch to the shared error taxonomy."""
+    if body == _BOT_CHECK:  # R-CIAN-SEARCH-BOT-CHECK: a human step like the captcha demand, so no refusal.
+        message = f"Cian sent the {what} tab to its bot check (a picture slider) via {tier}."
+        raise_tool_error(ChallengeRequiredError(message, provider="cian"))
     if _captcha_required(body):
         # A human passes it (R-CIAN-CAPTCHA): no refusal, so the call after the check goes out.
         message = f"Cian's {what} API answered with a captcha demand (captchaRequired) via {tier}."
@@ -1087,6 +1085,7 @@ async def _cian_selfcheck_impl(ctx: Context | None) -> CianSelfcheckResponse:
             reason = "rate_limited" if status == 429 else ("blocked" if status in (401, 403, 407) else "transport_down")
             if _WAF_MARKER in body[:2000]:
                 reason = "blocked"
+            reason = "challenge_required" if body == _BOT_CHECK else reason
             checks[name] = R.selfcheck_entry(
                 "inconclusive", baseline=baseline, reason=reason, notes=[f"http {status} via {tier}"], code=status
             )

@@ -222,6 +222,11 @@
     <test file="packages/cian-connector/tests/test_server.py" name="test_card_on_the_bot_check_page_is_challenge_required" requirements="R-CIAN-CARD-TRUTH" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_on_bot_check_page_reads_only_the_path" requirements="R-CIAN-CARD-TRUTH" />
   </requirement>
+  <requirement id="R-CIAN-SEARCH-BOT-CHECK" kind="requirement" state="tested">
+    <test file="packages/cian-connector/tests/test_search_bot_check.py" name="test_a_search_tab_on_the_bot_check_sends_nothing_and_needs_a_human" requirements="R-CIAN-SEARCH-BOT-CHECK" />
+    <test file="packages/cian-connector/tests/test_search_bot_check.py" name="test_a_search_tab_on_the_site_still_posts_the_query" requirements="R-CIAN-SEARCH-BOT-CHECK" />
+    <test file="packages/cian-connector/tests/test_search_bot_check.py" name="test_the_selfcheck_names_the_bot_check_as_a_human_step" requirements="R-CIAN-SEARCH-BOT-CHECK" />
+  </requirement>
   <requirement id="R-CITILINK-UNFILLED-PAGE" kind="requirement" state="tested">
     <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_extractor_counts_tiles_without_a_product_link" requirements="R-CITILINK-UNFILLED-PAGE" />
     <test file="packages/citilink-connector/tests/test_unfilled_page.py" name="test_filled_tiles_are_not_placeholders" requirements="R-CITILINK-UNFILLED-PAGE" />
@@ -949,6 +954,7 @@
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_the_canary_is_drift_when_two_identified_products_carry_no_price" requirements="R-SELFCHECK-GATES-PRICE" title="Even a short listing must not certify prices the search tool cannot read." />
   </requirement>
   <requirement id="R-SETTINGS-WIRED" kind="requirement" state="tested">
+    <test file="packages/cian-connector/tests/test_search_bot_check.py" name="test_cian_timeout_is_the_only_bound_on_the_read" requirements="R-SETTINGS-WIRED.cian-read" />
     <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_a_budget_outside_five_to_forty_five_seconds_is_refused" requirements="R-SETTINGS-WIRED" />
     <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_the_configured_timeout_reaches_the_rendered_read" requirements="R-SETTINGS-WIRED" title="The env var must land in the browser read, not in a dead constant." />
     <test file="packages/citilink-connector/tests/test_settings_wiring.py" name="test_the_default_budget_is_the_one_the_read_had_before" requirements="R-SETTINGS-WIRED" />
