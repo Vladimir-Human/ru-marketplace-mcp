@@ -38,6 +38,8 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].canonical_path:str",
     "items[].card_input:str",
     "items[].price:float",
+    "items[].price_kind:null",
+    "items[].price_kind:str",
     "items[].price_original:float",
     "items[].price_original:null",
     "items[].rating:float",

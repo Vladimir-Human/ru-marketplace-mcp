@@ -36,7 +36,6 @@
           "healthy": true,
           "warnings": []
         },
-        "region": "R1",
         "observed_at": "2026-11-16T09:00:01Z"
       }
     },
@@ -76,7 +75,6 @@
           "healthy": true,
           "warnings": []
         },
-        "region": "R2",
         "observed_at": "2026-11-16T09:00:02Z"
       }
     }
