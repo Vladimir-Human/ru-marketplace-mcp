@@ -21,7 +21,6 @@ import importlib
 import pytest
 from fastmcp import Client
 from mcp_core.sources import SOURCES
-from pydantic import SecretStr
 
 # START_BLOCK_SERVER_INVENTORY
 SERVER_MODULES: tuple[str, ...] = tuple(
@@ -35,10 +34,8 @@ LOCAL_ONLY_TOOLS = frozenset({"compare_sources", "marketplace_sources", "marketp
 # START_BLOCK_CONFORMANCE_TESTS
 @pytest.mark.req("R-TOOL-SCHEMA")
 @pytest.mark.parametrize("module_name", SERVER_MODULES)
-async def test_every_advertised_tool_has_complete_deduplicated_annotations(module_name: str, monkeypatch) -> None:
+async def test_every_advertised_tool_has_complete_deduplicated_annotations(module_name: str) -> None:
     module = importlib.import_module(module_name)
-    if module_name == "mpstats_connector.server":
-        monkeypatch.setattr(module._settings, "mp_auth", SecretStr("offline-test-placeholder"))
     async with Client(module.mcp) as client:
         tools = await client.list_tools()
     assert tools, f"{module_name} advertised zero tools"

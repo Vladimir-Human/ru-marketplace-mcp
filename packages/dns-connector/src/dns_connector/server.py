@@ -23,13 +23,14 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose DNS-Shop product search and cards from rendered pages.
 # SCOPE: Read-only paced CDP reads; reject Qrator walls before mapping or caching.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-DNS; M-KIT; M-COMPARE; M-MARKETPLACE; R-SELFCHECK-GATES-PRICE; packages/dns-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: M-DNS; M-KIT; M-COMPARE; M-MARKETPLACE; R-SELFCHECK-GATES-PRICE; R-DNS-FIRST-VISIT-PRICES; packages/dns-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _polite_wait: Delegate this source's pacing gap to mcp_core.kit.polite_wait.
 # _extract_product_id: Validate bare handles or dns-shop.ru product URLs before navigation (shared host check).
 # _search_item_from_tile: Adapt DOM price/availability fields into public models.
 # _cdp_render: Delegate paced browser navigation and extractor execution to mcp_core.kit.render_json.
+# _render_search: Render a search page; once more when no tile carries a price (R-DNS-FIRST-VISIT-PRICES).
 # _is_qrator_wall: Detect positive document-title or Qrator-markup evidence.
 # dns_search: Reject walls before mapping/cache; flag unrecognized empty grids; warn when a required key vanishes.
 # dns_card: Read product-only title/price/stock; reject walls before mapping/cache.
@@ -52,13 +53,14 @@ from mcp_core.dom import JS_HELPERS
 from mcp_core.errors import (
     BadRequestError,
     ChallengeRequiredError,
+    NotFoundError,
     ParserDriftError,
     ToolError,
     TransportDownError,
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import host_checked_id, polite_wait, render_json
+from mcp_core.kit import host_checked_id, page_link, polite_wait, render_json
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -101,8 +103,8 @@ _min_gap = _settings.min_gap
 # Chrome, so `?`, `#`, `%` and `.` stay out: they would let a caller append a
 # query string or walk the path on a page we then render with their cookies.
 _ID_CHARS = r"[A-Za-z0-9_-]"
-_PRODUCT_ID_RE = re.compile(rf"/product/({_ID_CHARS}+)")
-_BARE_ID_RE = re.compile(rf"{_ID_CHARS}{{4,}}")
+_PRODUCT_ID_RE = re.compile(rf"/product/(?:(?:analog|card)/)?(?!(?:analog|card)(?:/|$))({_ID_CHARS}+)")
+_BARE_ID_RE = re.compile(rf"(?!(?:analog|card)$){_ID_CHARS}{{4,}}")
 
 mcp = FastMCP(
     name="dns-connector",
@@ -206,6 +208,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
     }
     // Fallback for a renamed grid: take each product anchor's OUTERMOST ancestor
     // that still holds exactly one product link, which is the tile by definition.
+    const ID_RE = /\\/product\\/(?:(?:analog|card)\\/)?(?!(?:analog|card)(?:\\/|$))([A-Za-z0-9_-]+)/;
     if (!tiles.length) {
         const seenTile = new Set();
         for (const doc of docs) {
@@ -216,7 +219,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
                     const links = node.querySelectorAll('a[href*="/product/"]');
                     const ids = new Set();
                     for (const l of links) {
-                        const mm = (l.href || '').match(/\\/product\\/([A-Za-z0-9_-]+)/);
+                        const mm = (l.href || '').match(ID_RE);
                         if (mm) ids.add(mm[1]);
                     }
                     if (ids.size > 1) break;
@@ -236,7 +239,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
             || tile.querySelector('a[href*="/product/"]');
         if (!nameEl) continue;
         const href = nameEl.href || '';
-        const m = href.match(/\\/product\\/([A-Za-z0-9_-]+)/);
+        const m = href.match(ID_RE);
         if (!m || seen.has(m[1])) continue;
         seen.add(m[1]);
 
@@ -280,30 +283,50 @@ _CARD_EXTRACT_TEMPLATE = """
         || document.querySelector('[class*="product-card-top__title"]');
     const title = cleanText(titleEl) || null;
 
-    // Named price nodes, not a scan of body text: the body carries recommended
-    // products, instalment offers and bonus amounts, any of which is smaller than
-    // the real price and would win a Math.min.
-    const priceEl = document.querySelector('.product-buy__price')
-        || document.querySelector('[class*="product-buy__price"]');
+    // Scope price and primary stock reads to .product-card-top when present (and
+    // exclude accessory/recommendation rails otherwise) so out-of-stock or
+    // half-rendered cards never steal neighbour prices or stock.
+    const railSel = 'aside, [class*="recommend"], [class*="accessor"], [class*="analog"], [class*="similar"], [class*="carousel"], [class*="slider"]';
+    const top = document.querySelector('.product-card-top');
+    const scope = top || document;
+    const pickScoped = (sel) => {
+        for (const el of scope.querySelectorAll(sel)) {
+            if (!top) {
+                let inRail = false;
+                for (let n = el; n; n = n.parentElement) {
+                    if (n.matches && n.matches(railSel)) { inRail = true; break; }
+                }
+                if (inRail) continue;
+            }
+            return el;
+        }
+        return null;
+    };
+    const priceEl = pickScoped('.product-buy__price')
+        || pickScoped('[class*="product-buy__price"]');
     const priceText = cleanTextWithout(priceEl, ['.product-buy__prev', '.product-buy__sub', '.product-buy__hint']);
-    const oldPriceText = cleanText(document.querySelector('.product-buy__prev'));
+    const oldPriceText = cleanText(pickScoped('.product-buy__prev'));
 
-    const availEl = document.querySelector('.order-avail-wrap .available')
-        || document.querySelector('.available');
+    const availEl = pickScoped('.order-avail-wrap .available')
+        || pickScoped('.available');
     const availText = cleanText(availEl);
+    const negAvail = /Нет в наличии|Под заказ|Закончился|распродан|недоступен|снят с продаж/i;
     // Only decide availability from an explicit signal. A page whose stock block
     // has not rendered must read "unknown" (null), not "in stock".
     let available = null;
     if (availText) {
-        available = !/Нет в наличии|Под заказ|Закончился/i.test(availText);
+        if (negAvail.test(availText)) available = false;
+        else if (/В наличии/i.test(availText)) available = true;
+    } else if (top) {
+        const topText = (top.textContent || '').replace(/\\s+/g, ' ');
+        if (negAvail.test(topText)) available = false;
+        else if (/В наличии/i.test(topText)) available = true;
     } else if (document.body) {
-        // Fallback scan of body text. textContent, not innerText: innerText
+        // Fallback scan of non-rail body text. textContent, not innerText: innerText
         // depends on layout visibility, is unavailable in jsdom, and this
         // fallback exists so the DOM fixture can assert on it.
-        const body = (document.body.textContent || '').replace(/\\s+/g, ' ');
-
-
-        if (/Нет в наличии|Под заказ|Закончился/i.test(body)) available = false;
+        const body = cleanTextWithout(document.body, ['script', 'style', railSel]) || (document.body.textContent ? '' : '');
+        if (negAvail.test(body)) available = false;
         else if (/В наличии/i.test(body)) available = true;
     }
 
@@ -347,12 +370,18 @@ def _search_item_from_tile(tile: dict[str, Any]) -> DnsSearchItemOut:
     if price is not None and old_price is not None and old_price <= price:
         old_price = None
     image_url = tile.get("image_url")
+    raw_url = tile.get("url")
+    norm_url = (
+        page_link(raw_url, SITE_BASE, ALLOWED_HOSTS)
+        if isinstance(raw_url, str) and raw_url.strip()
+        else ("" if raw_url == "" else None)
+    )
     return DnsSearchItemOut(
         product_id=tile.get("product_id"),
         title=R.flatten_text(tile.get("title")),
         price_rub=price,
         old_price_rub=old_price,
-        url=tile.get("url"),
+        url=norm_url,
         image_url=image_url if isinstance(image_url, str) and image_url.startswith(("http", "//")) else "",
     )
 
@@ -377,6 +406,21 @@ async def _cdp_render(url: str, extract_js: str, wait_ms: int, ctx: Context | No
         max_body_bytes=MAX_BODY_BYTES,
         evaluate_timeout=_settings.timeout,
     )
+
+
+async def _render_search(url: str, ctx: Context | None) -> dict[str, Any]:
+    """R-DNS-FIRST-VISIT-PRICES: render a search page, and once more when its tiles carry no price at all.
+
+    First-run probe, 2026-11-17: a new scraping profile's first DNS search rendered tiles without a single price,
+    and doctor reported parser drift; the next navigation priced them. One more navigation, only in that case.
+    """
+    payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+    raw_items = payload.get("items")
+    items = raw_items if isinstance(raw_items, list) else []
+    priced = any(isinstance(item, dict) and str(item.get("price_text") or "").strip() for item in items)
+    if items and not priced and not _is_qrator_wall(payload):
+        payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+    return payload
 
 
 def _is_qrator_wall(data: dict[str, Any]) -> bool:
@@ -410,7 +454,7 @@ async def dns_search(
             payload, tier = cached, "cache"
         else:
             try:
-                payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+                payload = await _render_search(url, ctx)
             except NavBlocked as exc:
                 raise_tool_error(
                     TransportDownError(
@@ -451,7 +495,7 @@ async def dns_search(
         result = DnsSearchResponse(query=query, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="dns_search")
         result.meta = MetaOut(**attached["_meta"])
-        if tier == "cdp":
+        if tier == "cdp" and result.meta.healthy:
             _cache.set(url, payload)
         return result
     except ToolError:
@@ -527,6 +571,9 @@ async def dns_card(
         old_price = R.price_from_texts(payload.get("old_price_text"), payload.get("old_price_rub"))
         if price is not None and old_price is not None and old_price <= price:
             old_price = None
+        doc_title = str(payload.get("page_title") or "")
+        if price is None and any("страница не найдена" in s.lower() for s in (title or "", doc_title)):
+            raise_tool_error(NotFoundError(f"DNS product {product_id} not found", provider="dns"))
         if title is None and price is None:
             raise_tool_error(
                 ParserDriftError("rendered card has neither title nor price — the card shape moved; verify manually")
@@ -541,9 +588,11 @@ async def dns_card(
             tier_used=tier,
         )
         card = result.model_dump(by_alias=True, exclude={"meta"})
-        attached = R.attach_meta(card, R.validate_offer(card), source="dns_card")
+        attached = R.attach_meta(
+            card, R.validate_offer({**card, "in_stock": card.get("is_available")}), source="dns_card"
+        )
         result.meta = MetaOut(**attached["_meta"])
-        if tier == "cdp":
+        if tier == "cdp" and result.meta.healthy:
             _cache.set(url, payload)
         return result
     except ToolError:
@@ -593,7 +642,7 @@ async def _dns_selfcheck_impl(ctx: Context | None) -> DnsSelfcheckResponse:
     url = f"{SEARCH_URL}?q={urllib.parse.quote('ноутбук')}"
     try:
         async with asyncio.timeout(90):
-            payload = await _cdp_render(url, _SEARCH_EXTRACT_JS, wait_ms=8000, ctx=ctx)
+            payload = await _render_search(url, ctx)
     except TimeoutError:
         checks["search"] = R.selfcheck_entry(
             "inconclusive", baseline=baseline, reason="timeout", notes=["render exceeded 90s"]

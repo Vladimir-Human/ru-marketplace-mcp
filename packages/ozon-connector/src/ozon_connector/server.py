@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -39,6 +39,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 #              shape-drift warning fires when a required key family vanishes.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
 # _cacheable_composer: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
+# _all_tiers_failed_error: Say "start Chrome" only when Chrome was not reached (R-OZON-CDP-FAILURE-HINT).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -435,63 +436,51 @@ async def _cdp_fetch_json(api_url: str, ctx: Context | None) -> tuple[int, str]:
 
 
 def _price_str_to_float(s: Any) -> float | None:
-    """Parse an Ozon price string like '3\u2009983\u2009₽' (thin-space grouped) to
-    float rubles, via the shared tolerant parser (single source of truth).
-
-    Audit 2026-06-01 (CONFIRMED on the LIVE ozon_card path): the old inline
-    digit-only regex returned 0.0 for a dead '0 ₽' listing (ranks falsely as
-    cheapest) and 19992999.0 for a '1 999 ₽ 2 999 ₽' range. R.coerce_price
-    returns None for <=0 / ambiguous multi-number and the real value for a
-    single decimal price, so the connector fails loud instead of emitting a
-    corrupting number.
-    """
+    """Parse an Ozon price string via shared R.coerce_price (returns None for <=0 or ambiguous ranges)."""
     return R.coerce_price(s)
 
 
 def _parse_widgets(payload: dict) -> dict[str, Any]:
     widgets = payload.get("widgetStates") or {}
     out: dict[str, Any] = {}
+    websale_price = False
 
     for key, val in widgets.items():
         try:
             data = json.loads(val) if isinstance(val, str) else val
         except (json.JSONDecodeError, TypeError):
             continue
-        # A widget value that decodes to null/list/scalar (not a dict) must not
-        # crash the tool (audit 2026-06-01 CONFIRMED: webPrice=null raised
-        # AttributeError before attach_meta). Skip non-dict widget bodies.
         if not isinstance(data, dict):
             continue
 
         if "webPrice" in key:
-            # Nov 2026: webPrice carries clean display strings + availability.
-            #   cardPrice = price with Ozon card (lowest), price = regular,
-            #   originalPrice = strikethrough. isAvailable = sellable now.
-            if "price" not in out and (data.get("price") or data.get("cardPrice")):
-                out["price"] = _price_str_to_float(data.get("price"))
-                out["card_price"] = _price_str_to_float(data.get("cardPrice"))
-                out["price_original"] = _price_str_to_float(data.get("originalPrice"))
-                out["is_available"] = data.get("isAvailable")
+            if isinstance(data.get("isAvailable"), bool):
+                out["is_available"] = data["isAvailable"]
+                if data["isAvailable"] is False and websale_price:
+                    out.pop("price", None)
+                    out.pop("price_original", None)
+                    websale_price = False
+            if ("price" not in out or websale_price) and (data.get("price") or data.get("cardPrice")):
+                p = _price_str_to_float(data.get("price"))
+                orig = _price_str_to_float(data.get("originalPrice"))
+                out["price"], out["card_price"] = p, _price_str_to_float(data.get("cardPrice"))
+                out["price_original"] = orig if (p is None or orig is None or orig > p) else None
+                websale_price = False
 
         elif "webSale" in key:
-            # Fallback price source only if webPrice was absent. Normalize to
-            # float for a consistent type contract with the webPrice path.
             cti = data.get("cellTrackingInfo")
-            tracking = cti.get("product") if isinstance(cti, dict) else None
-            if not isinstance(tracking, dict):
-                tracking = {}  # cellTrackingInfo/product drift to list/scalar must not crash
-            if tracking and "price" not in out:
-                final = tracking.get("finalPrice")
-                base = tracking.get("price")
+            tracking = cti.get("product") if isinstance(cti, dict) else {}
+            if isinstance(tracking, dict) and tracking and "price" not in out and out.get("is_available") is not False:
+                final, base = tracking.get("finalPrice"), tracking.get("price")
                 cur = final if final is not None else base
                 if cur is not None:
-                    # coerce_price handles str AND numeric (and None/<=0/junk),
-                    # so a drifted money-object (finalPrice={...}) no longer
-                    # crashes float() (audit wave-2 DRIFT, reproduced).
-                    out["price"] = R.coerce_price(cur)
-                    out["price_original"] = R.coerce_price(base)
+                    p, orig = R.coerce_price(cur), R.coerce_price(base)
+                    out["price"] = p
+                    out["price_original"] = orig if (p is None or orig is None or orig > p) else None
+                    websale_price = True
                     offer = data.get("offer")
-                    out["is_available"] = offer.get("isAvailable") if isinstance(offer, dict) else None
+                    if "is_available" not in out:
+                        out["is_available"] = offer.get("isAvailable") if isinstance(offer, dict) else None
 
         elif "webReviewProductScore" in key:
             out["rating_score"] = data.get("totalScore")
@@ -607,6 +596,22 @@ def _ozon_blocked_error(tier: str, detail: str = "") -> TransportDownError:
     return TransportDownError(message, status_code=403)
 
 
+def _all_tiers_failed_error(tier: str, body: str, limit: int) -> TransportDownError:
+    """R-OZON-CDP-FAILURE-HINT: tier "cdp" means Chrome answered and the request in the Ozon tab failed or timed
+    out (audit cycle 2: a parallel comparison, Chrome running, was told to start Chrome); others: no browser."""
+    if tier == "cdp":
+        return TransportDownError(
+            "Tier-1 (curl_cffi) blocked, and the request inside the Chrome Ozon tab failed or timed out "
+            "(Chrome is running; do not restart it). Retry once, alone if this ran beside other "
+            f"marketplaces. Last error: {body[:limit]}"
+        )
+    return TransportDownError(
+        "Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
+        f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
+        f"Last error: {body[:limit]}"
+    )
+
+
 def _canonical_product_path_from_input(raw_input: str) -> tuple[str | None, dict[str, Any] | None]:
     raw = raw_input.strip()
     if raw.isdigit():
@@ -706,13 +711,7 @@ async def ozon_card(
         status_code, body, tier = await _fetch_composer(target_path, ctx)
 
         if status_code == 0:
-            raise_tool_error(
-                TransportDownError(
-                    "Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                    f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                    f"Last error: {body[:200]}"
-                )
-            )
+            raise_tool_error(_all_tiers_failed_error(tier, body, 200))
         if status_code == 403:
             raise_tool_error(_ozon_blocked_error(tier, body))
         if status_code != 200:
@@ -734,7 +733,8 @@ async def ozon_card(
         parsed["status"] = "success"
         parsed["url"] = f"https://www.ozon.ru{target_path}"
         parsed["tier_used"] = tier
-        result = R.attach_meta(parsed, R.validate_offer(parsed, require_title=False), source="ozon_card")
+        warnings = R.validate_offer({**parsed, "in_stock": parsed.get("is_available")}, require_title=False)
+        result = R.attach_meta(parsed, warnings, source="ozon_card")
         log_event("ozon_card.done", tier=tier, status="success")
         return OzonCardResponse(**result)
     except ToolError:
@@ -981,13 +981,7 @@ async def _ozon_reviews_impl(
         tier_used = tier
         if status_code == 0:
             if not collected:
-                raise_tool_error(
-                    TransportDownError(
-                        f"Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                        f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                        f"Last error: {body[:300]}"
-                    )
-                )
+                raise_tool_error(_all_tiers_failed_error(tier, body, 300))
             partial = True
             stop_reason = "all_tiers_failed"
             last_error = {"type": "all_tiers_failed", "message": _redact(body[:300])}
@@ -1326,7 +1320,8 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
     if validation_warnings:
         out["_validation_warnings"] = validation_warnings
     out["price"] = R.coerce_price(price_text)
-    out["price_original"] = R.coerce_price(price_original_text)
+    orig = R.coerce_price(price_original_text)
+    out["price_original"] = orig if (out["price"] is None or orig is None or orig > out["price"]) else None
     out["rating"] = R.coerce_rating(rating)
     return out
 
@@ -1453,6 +1448,8 @@ async def _ozon_search_impl(
     """ozon_search implementation — kept separate so the public tool can wrap
     it in a catch-all that converts unexpected exceptions to a typed ToolError.
     """
+    if not (query or "").strip():
+        raise_tool_error(BadRequestError("query must not be empty"))
     if page < 1 or page > 10:
         raise_tool_error(BadRequestError("page must be an integer from 1 to 10"))
 
@@ -1462,14 +1459,10 @@ async def _ozon_search_impl(
 
     status_code, body, tier = await _fetch_composer(search_path, ctx)
 
+    if tier == "invalid_path":
+        raise_tool_error(BadRequestError(body))
     if status_code == 0:
-        raise_tool_error(
-            TransportDownError(
-                f"Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                f"Last error: {body[:300]}"
-            )
-        )
+        raise_tool_error(_all_tiers_failed_error(tier, body, 300))
     if status_code == 403:
         raise_tool_error(_ozon_blocked_error(tier, body))
     if status_code != 200:
@@ -1674,7 +1667,7 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
 
     def _smoke_card(payload: dict) -> dict:
         p = _parse_widgets(payload)
-        w = R.validate_offer(p, require_title=False)
+        w = R.validate_offer({**p, "in_stock": p.get("is_available")}, require_title=False)
         return {
             "ok": bool(p.get("price") and p.get("rating_score")) and not w,
             "warnings": w,

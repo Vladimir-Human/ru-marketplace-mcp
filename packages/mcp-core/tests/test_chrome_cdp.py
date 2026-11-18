@@ -989,7 +989,9 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
     from io import BytesIO
     from types import SimpleNamespace
 
-    browser_ws = _FakeWs([{"id": 1, "result": {"targetId": "T1"}}, {"id": 2, "result": {}}])
+    browser_ws = _FakeWs(
+        [{"id": 1, "result": {"targetId": "T1"}}, {"id": 2, "result": {}}, {"id": 3, "result": {"targetInfos": []}}]
+    )
     page_ws = _FakeWs(
         [
             {"id": 1, "result": {}},
@@ -1045,5 +1047,37 @@ async def test_raw_429_is_not_rechecked(monkeypatch):
     # The 200 reload is never read: the 429 is refused at its own load event.
     assert len(page_ws._responses) == 2
     assert [message["method"] for message in page_ws.sent].count("Page.navigate") == 1
-    assert browser_ws.sent[-1]["method"] == "Target.closeTarget"
-    assert browser_ws.sent[-1]["params"] == {"targetId": "T1"}
+    # One close of its own tab, then the check that Chrome dropped it (R-CDP-SIM-S4).
+    assert [(m["method"], m.get("params")) for m in browser_ws.sent[-2:]] == [
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+    ]
+
+
+@pytest.mark.req("R-CDP-SIM-S4")
+def test_raw_page_close_confirms_and_retries_when_chrome_keeps_the_tab():
+    """R-CDP-SIM-S4: _RawCdpPage.close() re-checks Target.getTargets and closes again if Chrome kept the tab."""
+    import asyncio
+
+    ws = _FakeWs(
+        [
+            {"id": 1, "result": {"success": True}},
+            {"id": 2, "result": {"targetInfos": [{"targetId": "T1", "type": "page"}]}},
+            {"id": 3, "result": {"success": True}},
+            {"id": 4, "result": {"targetInfos": [{"targetId": "other", "type": "page"}]}},
+        ]
+    )
+    page = chrome_cdp._RawCdpPage(ws, "T1")
+
+    asyncio.run(page.close())
+
+    assert [(m["method"], m.get("params")) for m in ws.sent] == [
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+        ("Target.closeTarget", {"targetId": "T1"}),
+        ("Target.getTargets", {}),
+    ]
+
+    browser_channel = chrome_cdp._RawCdpPage(_FakeWs([]), "")
+    asyncio.run(browser_channel.close())
+    assert browser_channel._ws.sent == []

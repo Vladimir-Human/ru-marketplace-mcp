@@ -13,7 +13,9 @@ inventory, the literals existing tests parse out of source).
 
 from __future__ import annotations
 
-from mcp_core import sources
+import pytest
+from mcp_core import source_selection, sources
+from mcp_core.logging import make_stderr_logger
 
 _MARKETPLACE_KEYS = {"access", "requires_cdp", "requires_login", "currency", "text_search"}
 
@@ -105,9 +107,20 @@ def test_comparison_tables_derive_from_the_card_tools():
     assert "taobao" in sources.FOREIGN_CURRENCY_SOURCES
 
 
-def test_mount_gated_sources_are_mounted_but_need_configuration():
-    gated = {spec.name for spec in sources.SOURCES if spec.mount_gated}
-    assert gated == sources.MOUNT_GATED_SOURCES
-    assert gated <= sources.MOUNTABLE
-    for name in gated:
-        assert sources.BY_NAME[name].mount is not None
+@pytest.mark.req("R-MPSTATS-REMOVED")
+def test_removed_mpstats_selection_keeps_sources_and_reports_once(monkeypatch, caplog):
+    notice = getattr(source_selection, "_warn_mpstats_removed", None)
+    if notice is not None:
+        notice.cache_clear()
+    monkeypatch.setenv(source_selection.ENV_VAR, "wildberries,ozon,compare, MPStats ,mpstats")
+    logger = make_stderr_logger("mcp_core.source_selection")
+    logger.addHandler(caplog.handler)
+    try:
+        assert source_selection.selected() == {"wildberries", "ozon", "compare"}
+        assert source_selection.selected() == {"wildberries", "ozon", "compare"}
+    finally:
+        logger.removeHandler(caplog.handler)
+    notices = [record.getMessage() for record in caplog.records if "removed in 2.11.0" in record.getMessage()]
+    assert len(notices) == 1
+    assert "mpstats" in notices[0].lower()
+    assert "https://mcp.mpstats.io/mcp?token=<your MPStats token>" in notices[0]

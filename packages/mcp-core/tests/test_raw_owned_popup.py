@@ -40,7 +40,7 @@ def test_owned_popup_cleanup_never_closes_foreign_same_url(monkeypatch, failure)
                     {"targetId": "foreign", "openerId": "operator", "url": ITEM},
                     *(
                         [{"targetId": "popup", "openerId": "landing"}]
-                        if opened and not (failure == "late_cancel_open" and discoveries == 1)
+                        if opened and "popup" not in closed and not (failure == "late_cancel_open" and discoveries == 1)
                         else []
                     ),
                 ]
@@ -159,9 +159,13 @@ def _fake_cdp(
     timing=None,
     cancel_open=False,
     budget=None,
+    ignore_closes=0,
 ):
     """A fake raw CDP: the landing opens one popup whose URL follows ``urls``."""
-    state = SimpleNamespace(closed=[], sent=[], opened=False, discoveries=0, body_ran=False, url_reads=0)
+    state = SimpleNamespace(
+        closed=[], close_attempts=[], sent=[], opened=False, discoveries=0, body_ran=False, url_reads=0
+    )
+    remaining_ignores: dict[str, int] = {}
     budget = budget or _Budget()
 
     @asynccontextmanager
@@ -181,9 +185,9 @@ def _fake_cdp(
             if get_targets_delay:
                 await asyncio.sleep(get_targets_delay)
             infos = [{"targetId": "foreign", "openerId": "operator", "url": ITEM}]
-            if state.opened:
+            if state.opened and "popup" not in state.closed:
                 infos.append({"targetId": "popup", "openerId": "landing"})
-            if late_second and state.discoveries > 1:
+            if late_second and state.discoveries > 1 and "popup2" not in state.closed:
                 infos.append({"targetId": "popup2", "openerId": "landing"})
             return {"targetInfos": infos}
         if method == "Page.getFrameTree":
@@ -201,7 +205,14 @@ def _fake_cdp(
                 }
             )
         if method == "Target.closeTarget":
-            state.closed.append(params["targetId"])
+            target_id = params["targetId"]
+            state.close_attempts.append(target_id)
+            left = remaining_ignores.get(target_id, ignore_closes)
+            if left > 0:
+                remaining_ignores[target_id] = left - 1
+            else:
+                state.closed.append(target_id)
+            return {"success": True}
         return {}
 
     async def evaluate(self, expression, arg=None):
@@ -409,3 +420,22 @@ def test_cleanup_discovery_shares_cleanup_deadline_beyond_open_discover_cap(monk
     asyncio.run(_open(state))
 
     assert cleanup_timeouts and cleanup_timeouts[0] > c._POPUP_DISCOVER_TIMEOUT_S
+
+
+@pytest.mark.req("R-CDP-SIM-S4")
+def test_owned_popup_cleanup_retries_close_when_chrome_keeps_the_popup(monkeypatch):
+    """R-CDP-SIM-S4: cleanup() confirms Target.getTargets dropped the popup and retries closeTarget."""
+    state = _fake_cdp(monkeypatch, urls=[ITEM], ignore_closes=1)
+
+    asyncio.run(_open(state))
+
+    assert state.body_ran
+    assert state.close_attempts == ["popup", "popup"]
+    assert state.closed == ["popup"]
+    browser_methods = [method for target_id, method in state.sent if target_id == ""]
+    assert browser_methods[-4:] == [
+        "Target.closeTarget",
+        "Target.getTargets",
+        "Target.closeTarget",
+        "Target.getTargets",
+    ]

@@ -20,6 +20,7 @@ import mcp_core
 import pytest
 from fastmcp import Client
 from marketplace_connector import cli
+from mcp_core import build_age
 from mcp_core.cache import TTLCache
 
 # START_BLOCK_PUBLIC_PATH_PROOFS
@@ -30,7 +31,9 @@ UPGRADE = "if a newer version exists: uvx ru-marketplace-mcp@latest (or: pip ins
 @pytest.mark.req("R-OLD-BUILD-INFO")
 @pytest.mark.parametrize("age_days", [10, 30, 40])
 def test_doctor_prints_age_info_as_its_first_row_only_for_an_old_build(monkeypatch, capsys, age_days) -> None:
-    released = (dt.date.today() - dt.timedelta(days=age_days)).isoformat()
+    fixed_today = dt.datetime.now(dt.UTC).date()
+    released = (fixed_today - dt.timedelta(days=age_days)).isoformat()
+    monkeypatch.setattr(build_age, "_utc_today", lambda: fixed_today)
     monkeypatch.setattr(mcp_core, "__release_date__", released, raising=False)
     monkeypatch.setattr(cli, "_run_selfchecks", lambda only: [("yandex", "success", "ok", {})])
     monkeypatch.setattr(cli, "_health_steps", lambda results: ({}, "offline browser probe"))
@@ -53,7 +56,9 @@ def test_doctor_prints_age_info_as_its_first_row_only_for_an_old_build(monkeypat
 async def test_public_yandex_tool_transport_failure_carries_age_info_only_when_old(monkeypatch, age_days) -> None:
     from yandex_connector import server
 
-    released = (dt.date.today() - dt.timedelta(days=age_days)).isoformat()
+    fixed_today = dt.datetime.now(dt.UTC).date()
+    released = (fixed_today - dt.timedelta(days=age_days)).isoformat()
+    monkeypatch.setattr(build_age, "_utc_today", lambda: fixed_today)
     monkeypatch.setattr(mcp_core, "__release_date__", released, raising=False)
     requests = []
 

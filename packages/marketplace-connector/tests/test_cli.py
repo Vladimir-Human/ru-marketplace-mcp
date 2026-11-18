@@ -41,9 +41,6 @@ def test_install_defaults_to_the_compare_profile(capsys):
     assert '"compare-mcp"' in out
     assert "Profile: compare" in out
     assert "--profile full for every per-source tool" in out
-    # The optional paid source still needs its token, whoever wires it in.
-    assert "optional paid analytics" in out
-    assert "MPSTATS_MP_AUTH" in out
 
 
 def test_install_per_source_keeps_the_old_block(capsys):
@@ -54,9 +51,6 @@ def test_install_per_source_keeps_the_old_block(capsys):
     assert '"wildberries"' in out
     assert '"taobao"' in out
     assert '"aliexpress"' in out
-    assert '"mpstats"' in out
-    assert "optional paid analytics" in out
-    assert "MPSTATS_MP_AUTH" in out
     assert "marketplace-mcp" in out
 
 
@@ -197,6 +191,22 @@ def test_doctor_writes_a_status_file(monkeypatch, capsys, tmp_path):
     assert report["healthy"] == 1
     assert report["sources"]["wildberries"]["status"] == "success"
     assert "checked_at" in report
+
+
+@pytest.mark.req("R-DOCTOR-EXIT-CODES")
+def test_doctor_status_file_creates_missing_parent_directories(monkeypatch, capsys, tmp_path):
+    async def fake_selfcheck(name, module_path, tool_name):
+        return name, "success", "ok", {}
+
+    monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
+    target = tmp_path / "nested" / "dir" / "status.json"
+
+    rc = cli.cmd_doctor(["wildberries", "--status-file", str(target)])
+
+    assert rc == 0
+    report = json.loads(target.read_text(encoding="utf-8"))
+    assert report["healthy"] == 1
+    assert report["sources"]["wildberries"]["status"] == "success"
 
 
 def test_install_rejects_an_unknown_client(capsys):
@@ -1004,13 +1014,6 @@ def test_next_step_in_wb_dom_mode_is_not_the_dom_advice():
     assert step == cli.NEXT_STEP_ANTIBOT
 
 
-def test_next_step_for_mpstats_auth():
-    step = cli.next_step("mpstats", "inconclusive", {"auth": {"state": "inconclusive", "reason": "auth_missing"}})
-
-    assert step == cli.NEXT_STEP_MPSTATS_AUTH
-    assert "MPSTATS_MP_AUTH" in step
-
-
 def test_next_step_for_drift():
     step = cli.next_step(
         "citilink",
@@ -1100,7 +1103,6 @@ def test_a_healthy_source_has_no_next_step():
         cli.NEXT_STEP_BROWSER_WALL,
         cli.NEXT_STEP_WB_TRANSPORT,
         cli.NEXT_STEP_WB_DOM_FALLBACK,
-        cli.NEXT_STEP_MPSTATS_AUTH,
         cli.NEXT_STEP_DRIFT,
         cli.NEXT_STEP_DRIFT_ISSUE,
         cli.NEXT_STEP_RATE_LIMITED,
