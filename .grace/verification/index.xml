@@ -232,6 +232,8 @@
   </requirement>
   <requirement id="R-CDP-SIM-S4" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-SIM-S4" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_raw_page_close_confirms_and_retries_when_chrome_keeps_the_tab" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: _RawCdpPage.close() re-checks Target.getTargets and closes again if Chrome kept the tab." />
+    <test file="packages/mcp-core/tests/test_raw_owned_popup.py" name="test_owned_popup_cleanup_retries_close_when_chrome_keeps_the_popup" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: cleanup() confirms Target.getTargets dropped the popup and retries closeTarget." />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_chrome_ignored_is_sent_again_until_the_tab_is_gone" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_that_works_is_checked_once" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_failing_command_ends_the_close_without_raising" requirements="R-CDP-SIM-S4" />
@@ -851,6 +853,7 @@
     <test file="scripts/test_build_mcpb.py" name="test_the_bundle_pins_the_published_package_at_this_version" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_entry_point_starts_the_compare_profile_server" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_manifest_has_the_mcpb_0_4_required_fields_for_a_uv_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_unpacked_bundle_declares_non_package_uv_and_starts_cleanly_offline" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_zip_is_deterministic_and_holds_no_environment" requirements="R-MCPB-BUNDLE" />
   </requirement>
   <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">

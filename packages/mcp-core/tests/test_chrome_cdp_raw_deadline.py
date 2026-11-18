@@ -165,6 +165,8 @@ class _LifecycleSocket:
             result = {"targetId": OWNED_TARGET}
         elif method == "Target.closeTarget":
             result = {"success": True}
+        elif method == "Target.getTargets":
+            result = {"targetInfos": []}
         elif method == "Page.navigate":
             result = {"frameId": "main"}
         self.messages.append({"id": command["id"], "result": result})
@@ -262,9 +264,9 @@ async def test_public_raw_fallback_bounds_outbound_send(monkeypatch, slow_method
     if slow_method == "Target.createTarget":
         assert methods == ["Target.createTarget"]
     else:
-        assert methods == ["Target.createTarget", "Page.enable", "Target.closeTarget"]
-        assert commands[-1][0] == "browser"
-        assert commands[-1][1]["params"] == {"targetId": OWNED_TARGET}
+        assert methods == ["Target.createTarget", "Page.enable", "Target.closeTarget", "Target.getTargets"]
+        assert commands[-2][0] == commands[-1][0] == "browser"
+        assert commands[-2][1]["params"] == {"targetId": OWNED_TARGET}
 
 
 @pytest.mark.req("R-CDP-COMMAND-DEADLINE")
@@ -284,9 +286,10 @@ async def test_public_raw_fallback_still_navigates_and_closes_only_its_target(mo
         "Runtime.enable",
         "Page.navigate",
         "Target.closeTarget",
+        "Target.getTargets",
     ]
-    assert commands[-1][0] == "browser"
-    assert commands[-1][1]["params"] == {"targetId": OWNED_TARGET}
+    assert commands[-2][0] == commands[-1][0] == "browser"
+    assert commands[-2][1]["params"] == {"targetId": OWNED_TARGET}
 
 
 # END_BLOCK_PUBLIC_RAW_OUTBOUND_DEADLINE

@@ -185,6 +185,8 @@ def test_marker_and_ci_configuration():
     job = workflow.split("\n  cdp-sim:\n")[1]
     assert not re.search(r"^  [a-z][a-z0-9-]*:", job, re.MULTILINE), "simulator job must be last"
     assert "continue-on-error: true" in job
+    assert "timeout-minutes: 20" in job
+    assert "--with-deps chrome" not in job
     assert "os: [ubuntu-latest, windows-latest, macos-latest]" in job
     assert "uv run pytest -q packages/mcp-core/tests/sim -m cdp_sim" in job
 
