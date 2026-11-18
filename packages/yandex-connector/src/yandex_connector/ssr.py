@@ -73,7 +73,12 @@ import re
 from collections.abc import Iterator
 from typing import Any
 
-from mcp_core.resilience import coerce_price
+from mcp_core.kit import page_link
+from mcp_core.resilience import coerce_price, flatten_text
+from mcp_core.sources import BY_NAME
+
+SITE_BASE = "https://market.yandex.ru"
+ALLOWED_HOSTS = BY_NAME["yandex_market"].page_hosts
 
 # One state fragment. Yandex emits ~150 of these per search page, ~200 per card.
 _PATCH_RE = re.compile(r'<noframes data-apiary="patch">(.*?)</noframes>', re.S)
@@ -161,9 +166,11 @@ def looks_like_captcha(html: str) -> bool:
 def _iter_patches(html: str):
     for match in _PATCH_RE.finditer(html):
         try:
-            yield json.loads(match.group(1))
+            parsed = json.loads(match.group(1))
         except (json.JSONDecodeError, ValueError):
             continue
+        if isinstance(parsed, dict):
+            yield parsed
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -249,9 +256,30 @@ def merge_card_collections(html: str) -> dict[str, Any]:
 def _iter_ldjson(html: str):
     for match in _LDJSON_RE.finditer(html):
         try:
-            yield json.loads(match.group(1))
+            parsed = json.loads(match.group(1))
         except (json.JSONDecodeError, ValueError):
             continue
+        nodes = parsed if isinstance(parsed, list) else ([parsed] if isinstance(parsed, dict) else [])
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            yield node
+            for sub in _as_list(node.get("@graph")):
+                if isinstance(sub, dict):
+                    yield sub
+
+
+def _ld_image(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        return str(value.get("url") or value.get("contentUrl") or "").strip()
+    if isinstance(value, list):
+        for item in value:
+            got = _ld_image(item)
+            if got:
+                return got
+    return ""
 
 
 def ldjson_product(html: str) -> dict[str, Any]:
@@ -266,8 +294,8 @@ def ldjson_product(html: str) -> dict[str, Any]:
         offers = _as_dict(obj.get("offers"))
         return {
             "title": obj.get("name"),
-            "brand": obj.get("brand"),
-            "image": obj.get("image"),
+            "brand": flatten_text(obj.get("brand")) or "",
+            "image": _ld_image(obj.get("image")),
             "description": obj.get("description"),
             "sku": obj.get("sku"),
             "price": offers.get("price"),
@@ -294,14 +322,15 @@ def ldjson_item_list(html: str) -> list[dict[str, Any]]:
                 continue
             offers = _as_dict(item.get("offers"))
             rating = _as_dict(item.get("aggregateRating"))
-            url = str(item.get("url") or "")
+            raw_url = str(item.get("url") or "")
+            url = page_link(raw_url, SITE_BASE, ALLOWED_HOSTS)
             raw_price = offers.get("price")
             plus_price = _to_money(raw_price)
             row = {
                 "product_id": url.rstrip("/").split("/")[-1] if url else None,
                 "title": item.get("name"),
                 "url": url,
-                "image": item.get("image"),
+                "image": _ld_image(item.get("image")),
                 "sku_id": item.get("sku"),
                 "price_with_plus": plus_price,
                 "rating": _to_number(rating.get("ratingValue")),
@@ -513,8 +542,8 @@ def parse_zone_items(html: str) -> list[dict[str, Any]]:
             "rating_count": _to_int(rating_node.get("gradesCount")) or ld.get("rating_count"),
             "in_stock": is_available if isinstance(is_available, bool) else None,
             "is_express": bool(payload.get("isExpress")),
-            "url": str(ld.get("url") or "") or _absolute_url(None, product_id or None),
-            "image": str(ld.get("image") or ""),
+            "url": _absolute_url(ld.get("url"), product_id or None),
+            "image": _ld_image(ld.get("image")),
             "source": "zone",
         }
         # The raw text of money the shared parser refused, so the connector can
@@ -673,12 +702,17 @@ def _picture_url(node: Any) -> str:
 
 
 def _absolute_url(raw: Any, product_id: Any = None, slug: Any = None) -> str:
-    if isinstance(raw, str) and raw:
-        if raw.startswith("http"):
-            return raw
-        if raw.startswith("//"):
-            return f"https:{raw}"
-        return f"https://market.yandex.ru{raw}"
+    if isinstance(raw, str) and raw.strip():
+        cand = raw.strip()
+        if cand.startswith("//"):
+            cand = f"https:{cand}"
+        elif cand.startswith("http://"):
+            cand = "https://" + cand[len("http://") :]
+        elif not cand.startswith("https://") and not cand.startswith("/") and "/" in cand and ":" not in cand:
+            cand = "/" + cand
+        linked = page_link(cand, SITE_BASE, ALLOWED_HOSTS)
+        if linked:
+            return linked
     if product_id:
         return card_url(product_id, slug)
     return ""
