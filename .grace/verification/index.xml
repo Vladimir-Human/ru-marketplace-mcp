@@ -623,6 +623,16 @@
     <test file="packages/avito-connector/tests/test_item_state.py" name="test_a_missing_or_removed_ad_stays_not_found" requirements="R-ERRORS" title="The contract of main: a missing or removed ad is not_found, never a healthy card." />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_render_json_refusals_are_json_errors" requirements="R-ERRORS" title="Every render_json refusal must carry the shared error JSON the agent reads" />
   </requirement>
+  <requirement id="R-FIRST-RUN-PROBE" kind="requirement" state="tested">
+    <test file="scripts/test_first_run_probe.py" name="test_a_work_folder_inside_a_checkout_is_refused" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_chrome_is_closed_and_work_removed_when_a_step_raises" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_cleanup_waits_for_port_and_retries_transient_permission_error" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_doctor_rows_list_each_source_state_and_next_step" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_dry_run_prints_the_plan_runs_nothing_and_removes_its_folder" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_each_step_records_its_exit_seconds_and_output_tail_and_a_timeout_does_not_stop_the_rest" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_the_settings_keep_every_step_off_the_owner_chrome_profile_and_config" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_the_steps_run_setup_install_doctor_and_matrix_in_order" requirements="R-FIRST-RUN-PROBE" />
+  </requirement>
   <requirement id="R-FIXTURE-PERSONAL-DATA" kind="requirement" state="tested">
     <test file="scripts/test_scrub_fixtures.py" name="test_a_company_avito_seller_is_kept" requirements="R-FIXTURE-PERSONAL-DATA" title="A company seller's name stays: the marketplace says so." />
     <test file="scripts/test_scrub_fixtures.py" name="test_a_phone_keeps_its_format_with_a_fixed_number" requirements="R-FIXTURE-PERSONAL-DATA" title="A phone keeps its shape: the country prefix stays, the number is fixed." />

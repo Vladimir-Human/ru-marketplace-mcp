@@ -199,6 +199,9 @@
     <module id="M-METRICS" file="scripts/metrics_snapshot.py" purpose="Maintainer-only daily reach record (stars, forks, traffic, external authors, PyPI) in .live-metrics.jsonl" depends="gh CLI; stdlib argparse,datetime,json,subprocess,urllib.request,pathlib" exports="external_authors,collect,main">
       <note>Not shipped and not imported by any package; run from the maintainer's SessionStart hook, at most one line a day.</note>
     </module>
+    <module id="M-FIRST-RUN-PROBE" requirements="R-FIRST-RUN-PROBE" file="scripts/first_run_probe.py" purpose="One reproducible first-run measurement of a published build on a fresh profile, port and client config: commands, seconds, doctor rows and next steps" depends="M-LIVE-CHECK; uvx; stdlib argparse,json,os,shutil,socket,subprocess,tempfile,time,urllib; websockets (Browser.close)" exports="inside_checkout,free_port,probe_env,plan_steps,doctor_rows,run_steps,close_chrome,main">
+      <file path="scripts/test_first_run_probe.py" note="Step order and working folders, isolation settings, the 9222 refusals, doctor rows, the step recorder on real subprocesses, dry-run cleanup and the checkout refusal." />
+    </module>
     <module id="M-MCPB-BUNDLE" requirements="R-MCPB-BUNDLE" file="scripts/build_mcpb.py" purpose="The Claude Desktop bundle (MCPB 0.4, uv server) of the compare profile, derived from the root pyproject: manifest, a pyproject pinning the published package, a three-line entry point; deterministic zip" depends="stdlib argparse,json,tomllib,zipfile,pathlib; the published ru-marketplace-mcp package at install time" exports="bundle_files,build,main">
       <file path="scripts/test_build_mcpb.py" note="Manifest required fields, the version pin, the entry point import and a deterministic three-file zip." />
       <file path=".github/workflows/release.yml" note="Attach the Claude Desktop bundle (MCPB): continue-on-error, gh release upload after the wheels and sdists." />
