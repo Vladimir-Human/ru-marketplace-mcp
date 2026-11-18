@@ -37,11 +37,13 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-CHALLENGE-ACTION; R-ALIEXPRESS-LONG-TITLE; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-CHALLENGE-ACTION; R-ALIEXPRESS-LONG-TITLE; R-ALIEXPRESS-SEARCH-RENDERED; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
 # _tile_prices: Separate current, old and conditional/coupon tile prices.
+# _empty_page_summary: Name what an empty grid held, for the drift message.
+# _read_search_grid: Open the search page once and poll it for its item links.
 # _cdp_render_search: Read the rendered search grid from a landing page.
 # _read_card_target: Poll one owned item tab for the price module and classify an x5sec challenge.
 # _cdp_card: Match the full item ID on an owned popup (Playwright or raw CDP) and bound cleanup on all exits.
@@ -58,6 +60,7 @@ import asyncio
 import datetime
 import json
 import re
+import time
 import urllib.parse
 from typing import Annotated, Any, cast
 
@@ -112,6 +115,11 @@ _LANDING = f"{SEARCH_URL}?SearchText={urllib.parse.quote('часы')}"
 TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
+
+# R-ALIEXPRESS-SEARCH-RENDERED: how long an empty grid is polled for its item
+# links, and how often the same page is read while waiting.
+_SEARCH_RENDER_POLL_S = 8.0
+_SEARCH_POLL_INTERVAL_S = 1.0
 
 # Item ids on aliexpress.ru are 9-16 digit strings (1005...); accept a bare id
 # or an aliexpress.ru item URL. The 9-digit floor keeps short garbage out of the
@@ -194,6 +202,25 @@ def _challenge_error(detail: str = "") -> ChallengeRequiredError:
     return ChallengeRequiredError(message, provider="aliexpress")
 
 
+def _empty_page_summary(payload: dict[str, Any]) -> str:
+    """What an empty search page held, in one line.
+
+    The drift message repeats it, so the next report shows which case it was:
+    item links of another shape, the link count, the text length and an
+    empty-result notice (R-ALIEXPRESS-SEARCH-RENDERED).
+    """
+
+    def number(key: str) -> int:
+        value = payload.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+    return (
+        f" (page held: {number('other_item_links')} item link(s) of another shape, "
+        f"{number('links')} link(s) in total, {number('text_len')} characters of text, "
+        f"empty-result notice: {'yes' if payload.get('empty_notice') else 'no'})"
+    )
+
+
 # --------------------------------------------------------------- search JS ----
 #
 # The tile root comes from the shared tileRootFor (the DNS lesson: closest()
@@ -207,6 +234,14 @@ _SEARCH_EXTRACT_TEMPLATE = """
     //__SHARED_HELPERS__
     const anchors = Array.from(document.querySelectorAll('a[href*="/item/"]'))
         .filter(a => /\\/item\\/\\d{9,}\\.html/.test(a.getAttribute('href') || a.href || ''));
+    // What an empty grid actually held: item links of another shape, the link
+    // count, the page text length and an empty-result notice. The drift message
+    // repeats them, so the next report shows which case it was
+    // (R-ALIEXPRESS-SEARCH-RENDERED).
+    const itemLinkCount = document.querySelectorAll('a[href*="/item/"]').length;
+    const pageText = (document.body && document.body.innerText) || '';
+    const linkCount = document.querySelectorAll('a[href]').length;
+    const emptyNotice = /ничего не найдено|нет результатов|не найдено ни одного товара|по вашему запросу ничего|no results/i.test(pageText);
     const out = [];
     const seen = new Set();
     const ratingLeaf = (tile) => {
@@ -267,7 +302,16 @@ _SEARCH_EXTRACT_TEMPLATE = """
             url: href
         });
     }
-    return JSON.stringify({items: out, punish: punished, page_title: document.title || ''});
+    return JSON.stringify({
+        items: out,
+        punish: punished,
+        page_title: document.title || '',
+        item_links: anchors.length,
+        other_item_links: itemLinkCount - anchors.length,
+        links: linkCount,
+        text_len: pageText.length,
+        empty_notice: emptyNotice
+    });
 }
 """
 
@@ -407,15 +451,39 @@ def _item_from_payload(
     )
 
 
+async def _read_search_grid(url: str) -> dict[str, Any]:
+    """Open the search page once and read the grid from it.
+
+    The fixed settle wait is followed by a bounded poll: the grid renders late
+    when several tabs load at once, so the page is read again once its item
+    links appear. A challenge page ends the read at once — it is never polled
+    (R-ALIEXPRESS-SEARCH-RENDERED).
+    """
+    await _polite_wait()
+    async with open_page(url, wait_ms=10000, navigation_timeout_ms=TIMEOUT * 1000, allowed_hosts=ALLOWED_HOSTS) as page:
+        payload = _unwrap_extract(await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0), "search")
+        if _is_punish(payload) or payload.get("items"):
+            return payload
+        deadline = time.monotonic() + _SEARCH_RENDER_POLL_S
+        while time.monotonic() < deadline:
+            await asyncio.sleep(_SEARCH_POLL_INTERVAL_S)
+            payload = _unwrap_extract(await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0), "search")
+            if _is_punish(payload) or payload.get("items"):
+                return payload
+        return payload
+
+
 async def _cdp_render_search(url: str, ctx: Context | None) -> dict[str, Any]:
-    """Open the search URL in the operator's Chrome and extract tiles."""
+    """Open the search URL in the operator's Chrome and extract tiles.
+
+    A grid that stayed empty is read from one more page, paced like any other
+    navigation, before the page is called drifted (R-ALIEXPRESS-SEARCH-RENDERED).
+    """
     async with _cdp_lock:
-        await _polite_wait()
-        async with open_page(
-            url, wait_ms=10000, navigation_timeout_ms=TIMEOUT * 1000, allowed_hosts=ALLOWED_HOSTS
-        ) as page:
-            raw = await asyncio.wait_for(page.evaluate(_SEARCH_EXTRACT_JS), timeout=30.0)
-    return _unwrap_extract(raw, "search")
+        payload = await _read_search_grid(url)
+        if _is_punish(payload) or payload.get("items"):
+            return payload
+        return await _read_search_grid(url)
 
 
 def _unwrap_extract(raw: Any, what: str) -> dict[str, Any]:
@@ -704,7 +772,7 @@ async def aliexpress_search(
             raise_tool_error(
                 ParserDriftError(
                     "rendered search page yielded zero product tiles — either the query matched nothing "
-                    "or the DOM shape moved; verify manually"
+                    "or the DOM shape moved; verify manually" + _empty_page_summary(payload)
                 )
             )
         items = []

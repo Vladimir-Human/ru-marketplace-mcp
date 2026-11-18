@@ -39,11 +39,14 @@ survives CSS class churn; the JS side only collects text.
 # SCOPE: Readiness checks, bounded extraction, price-role parsing and successful-result caching.
 # INVARIANTS: Reopen once only for Playwright's navigation-destroyed execution context;
 #             recheck readiness/status/host and keep pacing; never retry a challenge or refusal.
-# LINKS: M-WB; M-CHROME-CDP; M-SOURCES; R-WB-DOM-NAVIGATION-RETRY; R-NAV-HOSTS.invariant.
+#             A search page that ends its wait without tiles is opened once more, also paced.
+# LINKS: M-WB; M-CHROME-CDP; M-SOURCES; R-WB-DOM-NAVIGATION-RETRY; R-WB-DOM-SEARCH-PRICED; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
+# _search_grid_is_empty: Tell an unrendered search page from an empty one.
 # render: Under the DOM lock, pace and open an owned page, check readiness and extract;
-#         one navigation-race retry repeats the full checked flow before caching success.
+#         one navigation-race retry repeats the full checked flow before caching success;
+#         a search page that came back without tiles is opened once more.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -79,6 +82,13 @@ MAX_PAYLOAD_BYTES = 2_000_000
 # means that price is the struck "before discount" figure, not the regular one.
 WALLET_GAP_MAX = 1.15
 
+# How long a search page may keep its tiles without a single price before the
+# read gives up on prices coming (a page of sold-out items shows none).
+# R-WB-DOM-SEARCH-PRICED: the client-side render is slower when several tabs
+# load at once, so the wait ends on a priced, stable grid instead of on the
+# first tile count.
+SEARCH_UNPRICED_WAIT_S = 6.0
+
 # ---------------------------------------------------------------------------
 # JavaScript: collect text only. All interpretation happens in Python.
 # ---------------------------------------------------------------------------
@@ -101,6 +111,9 @@ PROBE_JS = r"""
     state: state,
     captcha: captcha,
     tiles: document.querySelectorAll('[data-nm-id]').length,
+    // Tiles whose own text shows a price: a grid that has rendered its prices
+    // is readable, one that has not is read again (R-WB-DOM-SEARCH-PRICED).
+    priced: [...document.querySelectorAll('[data-nm-id]')].filter(e => (e.innerText || '').indexOf('₽') >= 0).length,
     h1: !!document.querySelector('h1'),
     sku: /Артикул/.test(full.slice(0, 20000)),
     // «Все 27 предложений от 7 369 ₽» (one offer: «1 предложение от 4 735 ₽») renders after the store block, and only on cards with other sellers.
@@ -762,10 +775,19 @@ def _stop_blocked(url: str, probe: dict[str, Any]) -> None:
 
 
 async def _wait_ready(page: Any, want: str, url: str) -> dict[str, Any]:
-    """Poll until the page is readable; stop on a hard block. ``want``: search|card."""
+    """Poll until the page is readable; stop on a hard block. ``want``: search|card.
+
+    A search page is readable when its tiles show prices: the tile count and the
+    count of priced tiles both stay the same across two polls and at least one
+    tile is priced. Tiles that stay unpriced for ``SEARCH_UNPRICED_WAIT_S`` (a
+    page of sold-out items), WB's own empty-result notice on a page without tiles
+    and the wait budget end the wait too (R-WB-DOM-SEARCH-PRICED).
+    """
     deadline = time.monotonic() + _settings.dom_wait_s
     last: dict[str, Any] = {}
     stable_tiles = -1
+    stable_priced = -1
+    unpriced_since: float | None = None
     card_ready_at: float | None = None
     store_seen_at: float | None = None
     while True:
@@ -778,11 +800,23 @@ async def _wait_ready(page: Any, want: str, url: str) -> dict[str, Any]:
         if state == "ok":
             if want == "search":
                 tiles = int(last.get("tiles") or 0)
+                priced = int(last.get("priced") or 0)
                 if last.get("empty") and tiles == 0:
                     return last
-                if tiles > 0 and tiles == stable_tiles:
-                    return last
-                stable_tiles = tiles
+                if tiles > 0:
+                    if priced > 0:
+                        # The grid rendered its prices and stopped changing: read it.
+                        if tiles == stable_tiles and priced == stable_priced:
+                            return last
+                    else:
+                        # Tiles without a price: give the client-side render a
+                        # bounded window to show them, then take the page as it is.
+                        now = time.monotonic()
+                        if unpriced_since is None:
+                            unpriced_since = now
+                        elif now - unpriced_since >= SEARCH_UNPRICED_WAIT_S:
+                            return last
+                stable_tiles, stable_priced = tiles, priced
             elif last.get("missing"):
                 return last
             elif last.get("sku") and last.get("rub"):
@@ -814,8 +848,25 @@ async def _wait_ready(page: Any, want: str, url: str) -> dict[str, Any]:
         await asyncio.sleep(0.75)
 
 
+def _search_grid_is_empty(probe: dict[str, Any]) -> bool:
+    """True when a search page came back without tiles, without WB's own
+    empty-result notice and without a browser check: the grid had not rendered
+    yet, so the page is worth opening once more (R-WB-DOM-SEARCH-PRICED)."""
+    if probe.get("state") == "challenge":
+        return False
+    if probe.get("empty"):
+        return False
+    return int(probe.get("tiles") or 0) == 0
+
+
 async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
-    """Open ``url`` in the scraping-profile Chrome, wait, extract, close the tab."""
+    """Open ``url`` in the scraping-profile Chrome, wait, extract, close the tab.
+
+    A search page that comes back without a single tile, without WB's own
+    empty-result notice and without a browser check is opened once more, paced
+    like any other navigation: the grid may simply have not rendered yet
+    (R-WB-DOM-SEARCH-PRICED).
+    """
     global _last_nav
     cached = _dom_cache.get(url)
     if cached is not None:
@@ -831,13 +882,16 @@ async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
         cached = _dom_cache.get(url)
         if cached is not None:
             return cached
-        for attempt in range(2):
+        raw: Any = None
+        probe: dict[str, Any] = {}
+        attempt = 0
+        reopened = False
+        while True:
             await _gap()
             try:
                 async with open_page(url, wait_ms=_settings.dom_settle_ms, allowed_hosts=ALLOWED_HOSTS) as page:
                     probe = await _wait_ready(page, want, url)
                     raw = await asyncio.wait_for(page.evaluate(extract_js), timeout=30.0)
-                break
             except PlaywrightError as exc:
                 # WB can reload after navigation while its automatic browser check
                 # finishes. Reopen once so readiness, HTTP status and host policy
@@ -845,6 +899,8 @@ async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
                 if attempt or "Execution context was destroyed, most likely because of a navigation" not in str(exc):
                     raise
                 log_event("wb_dom.navigation_retry", attempt=attempt + 1)
+                attempt += 1
+                continue
             except NavBlocked as exc:
                 log_event("wb_dom.nav_blocked", status=exc.status)
                 raise_tool_error(
@@ -858,6 +914,13 @@ async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
                 raise_tool_error(TransportDownError("WB page did not answer the extractor in time", provider="wb"))
             finally:
                 _last_nav = time.monotonic()
+            if not reopened and want == "search" and _search_grid_is_empty(probe):
+                # The grid had not rendered yet: read the same search page once
+                # more, paced like any other navigation.
+                reopened = True
+                log_event("wb_dom.empty_reopen")
+                continue
+            break
     if not isinstance(raw, str) or len(raw.encode()) > MAX_PAYLOAD_BYTES:
         raise_tool_error(ParserDriftError("WB page extractor returned no payload or an oversized one", provider="wb"))
     try:
