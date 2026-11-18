@@ -422,7 +422,7 @@ jobs:
     name: CDP simulator (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     continue-on-error: true
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -442,8 +442,30 @@ jobs:
       - name: Sync workspace
         run: uv sync --all-packages --python 3.12
 
-      - name: Install simulator Chrome and its system dependencies
-        run: uv run playwright install --with-deps chrome
+      - name: Ensure simulator Chrome is available
+        shell: bash
+        run: |
+          uv run python - <<'PY'
+          import os, subprocess, sys
+          from pathlib import Path
+          from mcp_core.transport.chrome_cdp import _chrome_candidates
+
+          candidates = [p for p in _chrome_candidates() if "edge" not in p.lower()]
+          binary = next((p for p in candidates if Path(p).is_file()), None)
+          if not binary:
+              cmd = [sys.executable, "-m", "playwright", "install"]
+              if sys.platform == "linux":
+                  cmd.append("--with-deps")
+              cmd.append("chromium")
+              subprocess.run(cmd, check=True)
+              from playwright.sync_api import sync_playwright
+              with sync_playwright() as pw:
+                  binary = pw.chromium.executable_path
+          assert binary and Path(binary).is_file(), f"simulator Chrome binary missing: {binary!r}"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"CHROME_BINARY={binary}\n")
+          print(f"Simulator Chrome: {Path(binary).name}", file=sys.stderr)
+          PY
 
       - name: Run isolated offline CDP scenarios
         run: uv run pytest -q packages/mcp-core/tests/sim -m cdp_sim

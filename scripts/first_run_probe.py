@@ -28,6 +28,8 @@ removed at the end unless ``--keep``.
 # doctor_rows: The status-file JSON as rows of source, state and next step.
 # run_steps: Run each step with a timeout; record exit code, seconds and the output tail.
 # close_chrome: Browser.close over the probe's own CDP port; never another port.
+# wait_port_closed: Wait briefly for the probe's CDP port to stop accepting TCP connections.
+# remove_work_dir: Bounded PermissionError/OSError retry around shutil.rmtree with clean fallback.
 # main: Arguments, the work folder, the report and the cleanup.
 # END_MODULE_MAP
 
@@ -182,6 +184,40 @@ def close_chrome(port: int) -> bool:
         return False
 
 
+def wait_port_closed(port: int, *, timeout_s: float = 2.0, poll_s: float = 0.05) -> bool:
+    """Wait briefly for the probe's CDP port to stop accepting TCP connections."""
+    if port == OWNER_PORT:
+        raise ValueError("the probe never touches the owner's Chrome on 9222")
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                pass
+        except OSError:
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(poll_s, remaining))
+
+
+def remove_work_dir(work: Path, *, timeout_s: float = 2.5, initial_delay_s: float = 0.05) -> None:
+    """Retry rmtree briefly while Windows Chrome Crashpad/GPU children release file locks."""
+    deadline = time.monotonic() + timeout_s
+    delay = initial_delay_s
+    while work.exists():
+        try:
+            shutil.rmtree(work)
+            return
+        except (PermissionError, OSError):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                shutil.rmtree(work, ignore_errors=True)
+                return
+            time.sleep(min(delay, remaining))
+            delay = min(delay * 2.0, 0.25)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Measure a first run of a published build on a fresh profile.")
     parser.add_argument(
@@ -213,15 +249,20 @@ def main(argv: list[str] | None = None) -> int:
             report["steps"] = [{"step": s.name, "argv": s.argv, "live": s.live} for s in steps]
         else:
             started = time.monotonic()
-            report["steps"] = run_steps(steps, env)
-            report["total_seconds"] = round(time.monotonic() - started, 1)
-            status = work / "doctor.json"
-            if status.exists():
-                report["doctor"] = doctor_rows(json.loads(status.read_text(encoding="utf-8")))
-            report["chrome_closed"] = close_chrome(port)
+            try:
+                report["steps"] = run_steps(steps, env)
+                report["total_seconds"] = round(time.monotonic() - started, 1)
+                status = work / "doctor.json"
+                if status.exists():
+                    report["doctor"] = doctor_rows(json.loads(status.read_text(encoding="utf-8")))
+            finally:
+                try:
+                    report["chrome_closed"] = close_chrome(port)
+                finally:
+                    wait_port_closed(port)
     finally:
         if not args.keep:
-            shutil.rmtree(work, ignore_errors=True)
+            remove_work_dir(work)
     sys.stdout.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     for row in report.get("steps", []):
         sys.stderr.write(f"{row['step']:<20} exit={row.get('exit')} {row.get('seconds', '')} s\n")

@@ -192,6 +192,8 @@ def raw_tab(monkeypatch):
             state.events.append((self.kind, method, params))
             if method == "Target.createTarget":
                 return {"targetId": "owned"}
+            if method == "Target.getTargets":
+                return {"targetInfos": []}
             if method == "Browser.getVersion":
                 return dict(VERSION)
             return {}
@@ -216,6 +218,10 @@ def raw_tab(monkeypatch):
     return state
 
 
+# The owned tab is closed, then the target list is checked so a tab Chrome kept is closed again (R-CDP-SIM-S4).
+CLOSED_OWNED = [("browser", "Target.closeTarget", {"targetId": "owned"}), ("browser", "Target.getTargets", {})]
+
+
 @pytest.mark.req("R-OZON-CHROME-COMPAT")
 async def test_raw_applies_page_scoped_override_before_navigation_and_closes_owned_target(raw_tab):
     async with C._raw_cdp_page(OZON, 0, ozon_windows_compat=True):
@@ -226,7 +232,7 @@ async def test_raw_applies_page_scoped_override_before_navigation_and_closes_own
         override = next(entry for entry in raw_tab.events if entry[1] == "Network.setUserAgentOverride")
         assert override == ("page", "Network.setUserAgentOverride", C._windows_chrome_ua_override(VERSION))
         assert "Target.closeTarget" not in methods
-    assert raw_tab.events[-1] == ("browser", "Target.closeTarget", {"targetId": "owned"})
+    assert raw_tab.events[-2:] == CLOSED_OWNED
 
 
 async def test_raw_native_default_does_not_override_identity(raw_tab):
@@ -241,7 +247,7 @@ async def test_raw_compat_preserves_http_403(raw_tab):
         async with C._raw_cdp_page(OZON, 0, ozon_windows_compat=True):
             pytest.fail("a raw HTTP 403 must remain a block")
     assert caught.value.status == 403
-    assert raw_tab.events[-1] == ("browser", "Target.closeTarget", {"targetId": "owned"})
+    assert raw_tab.events[-2:] == CLOSED_OWNED
 
 
 @pytest.mark.parametrize("final_url", [OZON, "https://other.test/"], ids=["allowed", "off-host"])

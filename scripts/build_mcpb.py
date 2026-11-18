@@ -83,6 +83,9 @@ def bundle_files(root: Path = REPO_ROOT) -> dict[str, str]:
         f'version = "{version}"\n'
         f'requires-python = "{project.get("requires-python", ">=3.12")}"\n'
         f'dependencies = ["{PACKAGE}=={version}"]\n'
+        "\n"
+        "[tool.uv]\n"
+        "package = false\n"
     )
     return {
         "manifest.json": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
