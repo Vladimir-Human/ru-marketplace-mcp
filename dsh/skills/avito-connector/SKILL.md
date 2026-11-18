@@ -6,7 +6,7 @@ description: Use this skill when the operator needs Avito classifieds data — s
 # Avito Connector
 
 Reads Avito via the internal `js/items` JSON API. Two tiers: impersonated HTTPS
-(curl_cffi) works from a residential Russian IP; from a datacenter the firewall
+(curl_cffi) works outside datacenter networks; from a datacenter the firewall
 answers 403 + captcha, so the fetch falls back to the operator's logged-in
 Chrome over CDP — same pattern as Ozon.
 

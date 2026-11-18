@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="276" viewBox="0 0 560 276" role="img" aria-labelledby="t d">
+  <title id="t">compare_prices: filtering accessories and conditional wallet prices</title>
+  <desc id="d">Live replay of compare_prices("iphone 16 128gb"): a 1,531 RUB USB drive and a 56,833 RUB WB Wallet conditional price are excluded from like-for-like ranking; cheapest_comparable picks Apple iPhone 16 at 64,990 RUB on AliExpress.</desc>
+  <style>
+    .m { font-family: "IBM Plex Mono", "JetBrains Mono", "DejaVu Sans Mono", Consolas, ui-monospace, Menlo, monospace; font-size: 14px; }
+    .hdr { font-family: "IBM Plex Mono", "JetBrains Mono", "DejaVu Sans Mono", Consolas, ui-monospace, Menlo, monospace; font-size: 12px; fill: #9ba5b8; }
+    .ink { fill: #e6edf3; }
+    .soft { fill: #9ba5b8; }
+    .dim { fill: #8b949e; }
+    .acc { fill: #79c0ff; }
+    .ok { fill: #7ee787; font-weight: 600; }
+    .price { fill: #f2cc60; }
+  </style>
+  <rect x="0.75" y="0.75" width="558.5" height="274.5" rx="12" fill="#12161e" stroke="#30363d" stroke-width="1.5"/>
+  <path d="M1.5 12a10.5 10.5 0 0 1 10.5-10.5h536a10.5 10.5 0 0 1 10.5 10.5v24H1.5z" fill="#191e28"/>
+  <line x1="1.5" y1="36" x2="558.5" y2="36" stroke="#283040"/>
+  <circle cx="22" cy="18" r="5.5" fill="#f08a83"/>
+  <circle cx="40" cy="18" r="5.5" fill="#f2c879"/>
+  <circle cx="58" cy="18" r="5.5" fill="#7fd1a0"/>
+  <text x="280" y="22.5" text-anchor="middle" class="hdr">compare-mcp · live replay</text>
+  <text x="22" y="66" class="m"><tspan class="acc">›</tspan><tspan class="ink" dx="7">compare_prices(</tspan><tspan class="price">"iphone 16 128gb"</tspan><tspan class="ink">)</tspan></text>
+  <text x="22" y="100" class="m dim">aliexpress</text><text x="218" y="100" text-anchor="end" class="m dim">1,531 ₽</text><text x="234" y="100" class="m dim">USB-C drive 128 GB · accessory</text>
+  <text x="22" y="126" class="m dim">wildberries</text><text x="218" y="126" text-anchor="end" class="m dim">56,833 ₽</text><text x="234" y="126" class="m dim">WB Wallet only · not ranked</text>
+  <rect x="14" y="138" width="532" height="28" rx="6" fill="#162b24" stroke="#2d5a47" stroke-width="1"/>
+  <text x="22" y="157" class="m ok">aliexpress</text><text x="218" y="157" text-anchor="end" class="m ok">64,990 ₽</text><text x="234" y="157" class="m ok">Apple iPhone 16 8/128GB · best</text>
+  <text x="22" y="186" class="m soft">yandex_market</text><text x="218" y="186" text-anchor="end" class="m price">68,060 ₽</text><text x="234" y="186" class="m ink">Apple iPhone 16 128 GB</text>
+  <text x="22" y="212" class="m soft">dns</text><text x="218" y="212" text-anchor="end" class="m price">70,299 ₽</text><text x="234" y="212" class="m ink">6.1" Apple iPhone 16 128 GB</text>
+  <line x1="22" y1="231" x2="538" y2="231" stroke="#2c3442"/>
+  <text x="22" y="256" class="m"><tspan class="ok">cheapest_comparable:</tspan><tspan class="ink" dx="6">64,990 RUB · 5/6 · partial</tspan></text>
+</svg>

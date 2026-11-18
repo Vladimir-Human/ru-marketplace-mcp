@@ -6,11 +6,10 @@
 
 [![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ru-marketplace-mcp.svg)](https://pypi.org/project/ru-marketplace-mcp/)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
-[![Glama MCP](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp)
 [![npm](https://img.shields.io/npm/v/ru-marketplace-mcp-dsh.svg?label=npm%20%28dsh%29)](https://www.npmjs.com/package/ru-marketplace-mcp-dsh)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Живые цены, остатки, рейтинги, отзывы и реквизиты продавцов с 12 площадок РФ и
 Китая: **Wildberries**, **Ozon**, **Яндекс Маркет**, **Авито**, **AliExpress**,
@@ -25,11 +24,11 @@
 обычный покупательский вход).
 
 <p align="center">
-  <img src="docs/assets/demo-compare.svg" width="760"
-       alt="compare_prices(&quot;кроссовки мужские&quot;): предложения Wildberries и Яндекс Маркета по цене, дешевле всего wildberries 712 ₽">
+  <img src="docs/assets/demo-compare.svg" width="560"
+       alt="compare_prices(&quot;iphone 16 128gb&quot;): флешка 1 531 ₽ и цена по WB Кошельку 56 833 ₽ не побеждают; лидер comparable — Apple iPhone 16 за 64 990 ₽ на AliExpress">
 </p>
 
-<sub>Пример вызова из раздела [«Сравнение цен»](docs/TOOLS.ru.md#сравнение-цен--compare_).</sub>
+<sub>Реальный разбор из раздела <a href="#настоящий-ответ">«Настоящий ответ»</a> (`c1-iphone16-128gb.json`).</sub>
 
 ## Быстрый старт
 
@@ -41,22 +40,24 @@
 uvx ru-marketplace-mcp setup
 ```
 
-Или в один клик:
+Или установка в один клик:
+
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=marketplace&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22ru-marketplace-mcp%22%2C%22compare-mcp%22%5D%7D)
 [![Install in Cursor](https://img.shields.io/badge/Cursor-Install_MCP-000000?logo=cursor&logoColor=white)](https://cursor.com/en/install-mcp?name=marketplace&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJydS1tYXJrZXRwbGFjZS1tY3AiLCJjb21wYXJlLW1jcCJdfQ==)
-· для **Claude Desktop** без терминала — бандл `ru-marketplace-mcp-compare-<версия>.mcpb` в [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) (проверено на Windows, на macOS не проверялось).
+
+Для **Claude Desktop** без терминала — бандл `ru-marketplace-mcp-compare-<версия>.mcpb` в [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) (проверено на Windows, на macOS не проверялось).
 
 ### Какой профиль выбрать
 
 Описания подключённых инструментов уходят модели в каждом запросе, поэтому
 `setup` и `install` по умолчанию ставят компактный профиль `compare`:
 
-| Профиль (`--profile`) | Сервер | Инструментов | Токенов в запросе | Когда выбирать |
-| --- | --- | ---: | ---: | --- |
-| **`compare`** *(по умолчанию)* | `compare-mcp` | 4 | ≈1.8k | Сравнить цены по всем площадкам (`compare_prices`) и сверить карточку лидера (`compare_verify_offer`) |
-| **`decision`** | `decision-mcp` | 5 | ≈2.0k | Всё из `compare` плюс осмотр шортлиста с отзывами (`decision_inspect`) |
-| **`full`** | `marketplace-mcp` | 39 | ≈13.4k | Прямой поиск, отзывы, вопросы, реквизиты продавца, категории и Циан (сужается через `MARKETPLACE_SOURCES`) |
-| Отдельная площадка (`--per-source`) | `wb-mcp`, `ozon-mcp`, `cian-mcp` и др. | 2–8 | минимум | Нужен только один маркетплейс или только Циан |
+| Профиль | Объём | Когда выбирать |
+| --- | --- | --- |
+| **`compare`** *(по умолч.)*<br>`compare-mcp` | 4 · ≈1.7k | Сравнить цены по площадкам и проверить карточку лидера |
+| **`decision`**<br>`decision-mcp` | 5 · ≈2.0k | Всё из `compare` плюс осмотр шортлиста с отзывами |
+| **`full`**<br>`marketplace-mcp` | 39 · ≈13.1k | Прямой поиск, отзывы, продавцы, категории и Циан |
+| Одна площадка<br>`--per-source` | 2–8 · мин. | Нужен только один маркетплейс |
 
 > **Безопасность и границы:** не включайте эти серверы в одну сессию агента с инструментами, которые читают личные данные и могут отправить их наружу без вашего подтверждения, и держите отдельный профиль Chrome без почты и банка ([SECURITY.md](SECURITY.md)).
 
@@ -67,29 +68,29 @@ uvx ru-marketplace-mcp setup
 
 ## Поддерживаемые площадки (12 источников)
 
-| Сервер            | Инструментов | Что нужно, чтобы читалось                                                  | Что умеет                                                                                 |
-| ----------------- | ------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Wildberries**   | 8            | анонимный HTTP (при 403 — запасной ход через ваш Chrome)                   | Поиск, карточки, отзывы, вопросы о товаре, реквизиты продавца, каталог и товары категории |
-| **Яндекс Маркет** | 2            | анонимный HTTP                                                             | Цены разных продавцов, разбивка оценок по звёздам, отзывы                                 |
-| **Детский мир**   | 3            | анонимный HTTP                                                             | Детские товары, наличие в офлайн-магазинах, категории                                     |
-| **Ozon**          | 3            | ваш Chrome; с домашнего IP часто и без него                                | Поиск, карточки, отзывы                                                                   |
-| **Авито**         | 3            | ваш Chrome + российский домашний IP и запросы вразрядку — иначе блок по IP | Поиск объявлений, карточки, репутация продавца                                            |
-| **Taobao**        | 2            | ваш Chrome с активным входом в Taobao                                      | Поиск и карточки, цены в юанях                                                            |
-| **Мегамаркет**    | 2            | ваш Chrome с активным входом — анонимной сессии API отдаёт пусто           | Поиск и карточки через мобильный API                                                      |
-| **Lamoda**        | 2            | карточки: HTTP GraphQL → Chrome при отказе; поиск — Chrome                 | Поиск, карточки с размерами                                                               |
-| **DNS**           | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
-| **Ситилинк**      | 2            | ваш Chrome (Qrator)                                                        | Поиск и карточки электроники                                                              |
-| **AliExpress**    | 2            | ваш Chrome (x5sec)                                                         | Поиск и карточки, цены в рублях                                                           |
-| **Циан**          | 2            | ваш Chrome (WAF по IP)                                                     | Недвижимость: поиск по фильтрам (продажа, аренда, посуточно) и карточка объявления        |
-| **Сравнение**     | 4            | опрашивает товарные площадки выше                                          | «Где дешевле?», сверка карточки, доступные источники и снимок вкладки                     |
+| Площадка | Доступ | Что умеет |
+| --- | --- | --- |
+| **Wildberries** (8) | HTTP (403 → Chrome) | Поиск, карты, отзывы, Q&A, seller ID, каталог |
+| **Яндекс Маркет** (2) | прямой HTTP | Цены и отзывы, оценки по звёздам |
+| **Детский мир** (3) | прямой HTTP | Детские товары, остатки, каталог |
+| **Ozon** (3) | Chrome / HTTP | Поиск, карты, отзывы |
+| **Авито** (3) | Chrome + паузы | Лоты, карты, рейтинг продавца |
+| **Taobao** (2) | Chrome + вход | Поиск, карты, цены в юанях |
+| **Мегамаркет** (2) | Chrome + вход | Поиск и карты через API |
+| **Lamoda** (2) | HTTP → Chrome | Поиск, карты, размеры |
+| **DNS** (2) | Chrome (Qrator) | Поиск и карты техники |
+| **Ситилинк** (2) | Chrome (Qrator) | Поиск и карты техники |
+| **AliExpress** (2) | Chrome (x5sec) | Поиск и карты в рублях |
+| **Циан** (2) | Chrome (WAF IP) | Жильё: продажа, аренда, сутки |
+| **Сравнение** (4) | по площадкам | «Где дешевле?», сверка, снимок |
 
 Без браузера работают Wildberries, Яндекс Маркет и Детский мир (если API
 Wildberries отвечает 403, поиск и карточки сами перечитываются через ваш Chrome).
 Карточки Lamoda сначала идут по HTTP GraphQL и обращаются к Chrome (CDP) только
 при отказе. Остальным нужен ваш Chrome с CDP, а Taobao и Мегамаркету — ещё и вход
 в аккаунт площадки: без него Taobao упирается в страницу входа, а Мегамаркет
-возвращает пустую выдачу. Авито режет датацентровые адреса, но с российского
-домашнего IP отвечает при спокойном темпе запросов. К браузерным источникам
+возвращает пустую выдачу. Авито режет датацентровые адреса и отвечает с обычного
+(не облачного) подключения при спокойном темпе запросов. К браузерным источникам
 коннекторы ходят с паузой: очередь без передышки роняет сессию (так на проверках
 отваливались DNS и Taobao). Точное состояние из вашей среды покажет
 `marketplace-mcp doctor`.
@@ -105,13 +106,18 @@ Wildberries отвечает 403, поиск и карточки сами пер
 
 ### Настоящий ответ
 
-`compare_prices(query="iphone 16 128gb")`. Ответы площадок записаны в Chrome на машине владельца 17 ноября 2026 года в 01:29 UTC (аудит, цикл 1, запись `packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json`) и пропущены через код `2.10.0` (коммит `058846ba`). Оставлены поля, которые агент читает первыми; полный ответ ещё содержит `source_outcomes` и все 25 предложений в `offers`.
+`compare_prices(query="iphone 16 128gb")`. Ответы площадок записаны в Chrome на машине владельца 17 ноября 2026 года в 01:29 UTC (аудит, цикл 1, запись [c1-iphone16-128gb.json](packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json)) и пропущены через код `2.11.0` (коммит `f39a786f`). Ниже оставлены ключевые поля и по одному предупреждению каждого типа; полный ответ ещё содержит `source_outcomes` и все 25 предложений в `offers`.
 
 ```json
 {
   "query": "iphone 16 128gb",
-  "sources_queried": ["aliexpress", "citilink", "dns", "taobao", "wildberries", "yandex_market"],
-  "sources_ok": ["aliexpress", "dns", "taobao", "wildberries", "yandex_market"],
+  "sources_queried": [
+    "aliexpress", "citilink", "dns",
+    "taobao", "wildberries", "yandex_market"
+  ],
+  "sources_ok": [
+    "aliexpress", "dns", "taobao", "wildberries", "yandex_market"
+  ],
   "complete": false,
   "total_offers": 25,
   "cheapest": {
@@ -134,25 +140,41 @@ Wildberries отвечает 403, поиск и карточки сами пер
   },
   "price_spread_rub": 93459.0,
   "warnings": [
-    "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
-    "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
-    "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
-    "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+    "partial: 1 of 6 marketplaces did not answer (citilink) ...",
     "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
-    "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
-    "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
-    "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
     "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
-    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers ...",
     "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
-    "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+    "foreign_currency: 5 offer(s) are priced in cny, not roubles ... excluded from the ranking"
   ],
-  "server_version": "2.10.0"
+  "server_version": "2.11.0"
 }
 ```
+
+<details>
+<summary>Полный список <code>warnings</code> из этой записи (15 строк)</summary>
+
+```json
+[
+  "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
+  "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
+  "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+  "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+  "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
+  "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
+  "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
+  "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
+  "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+  "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
+  "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+]
+```
+
+</details>
 
 Самым дешёвым формально оказалась флешка: в её названии есть «128». Поэтому ответ отдельно называет `cheapest_comparable`, то есть сам телефон, и предупреждает о выбросе цены. Цена Wildberries, которая действует только с WB Кошельком, показана, но в сравнении не участвует. Ситилинк в этом вызове ответил отказом, и ответ говорит, что он неполный.
 
@@ -172,17 +194,19 @@ Wildberries отвечает 403, поиск и карточки сами пер
 uvx ru-marketplace-mcp install <client> --write --profile compare
 ```
 
-| `<client>` | Клиент | Куда и как пишется конфигурация |
-| --- | --- | --- |
-| `claude` | Claude Desktop | Дописывает `mcpServers.marketplace` в `%APPDATA%\Claude\claude_desktop_config.json` (Win), `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/Claude/claude_desktop_config.json` (Linux) с копией `.bak-<метка>`. Есть и `.mcpb`-бандл в один клик в [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases). |
-| `cursor` | Cursor | Дописывает `mcpServers.marketplace` в `~/.cursor/mcp.json` с копией `.bak-<метка>`. |
-| `vscode` | VS Code | Дописывает **`servers.marketplace`** (с `"type": "stdio"`, не `mcpServers`) в `Code/User/mcp.json` с копией `.bak-<метка>`. |
-| `windsurf` | Windsurf | Дописывает `mcpServers.marketplace` в `~/.codeium/windsurf/mcp_config.json` с копией `.bak-<метка>`. |
-| `antigravity` | Antigravity | Дописывает `mcpServers.marketplace` в `~/.gemini/config/mcp_config.json` с копией `.bak-<метка>`. |
-| `gemini` | Gemini CLI | Дописывает `mcpServers.marketplace` в `~/.gemini/settings.json` с копией `.bak-<метка>`. |
-| `claude-code` | Claude Code | Печатает готовую команду `claude mcp add marketplace --scope user -- ...` (выполните её в терминале; либо поставьте плагин с 14 навыками ниже). |
-| `codex` | Codex CLI | Печатает готовую команду `codex mcp add marketplace -- ...` (выполните её в терминале). |
-| `dsh` | DeepSeek Harness | Печатает блок `cordis.patch.yml` (установка плагином — в спойлере ниже и в [dsh/README.md](dsh/README.md)). |
+| Клиент (`<client>`) | Что обновляет `--write` |
+| --- | --- |
+| **Claude Desktop**<br>`claude` | `mcpServers.marketplace` в конфиге Claude Desktop + `.bak`; есть и `.mcpb` в [Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) |
+| **Cursor**<br>`cursor` | `mcpServers.marketplace` в `~/.cursor/mcp.json` + `.bak` |
+| **VS Code**<br>`vscode` | **`servers.marketplace`** (`"type": "stdio"`) в `Code/User/mcp.json` + `.bak` |
+| **Windsurf**<br>`windsurf` | `mcpServers.marketplace` в конфиге Windsurf + `.bak` |
+| **Antigravity**<br>`antigravity` | `mcpServers.marketplace` в конфиге Antigravity + `.bak` |
+| **Gemini CLI**<br>`gemini` | `mcpServers.marketplace` в `~/.gemini/settings.json` + `.bak` |
+| **Claude Code**<br>`claude-code` | Печатает `claude mcp add marketplace --scope user -- ...` |
+| **Codex CLI**<br>`codex` | Печатает `codex mcp add marketplace -- ...` |
+| **DeepSeek Harness**<br>`dsh` | Печатает `cordis.patch.yml` (плагин — в спойлере и [dsh/README.md](dsh/README.md)) |
+
+<sub>Пути конфигов: **Claude Desktop** — `%APPDATA%\Claude\claude_desktop_config.json` (Win), `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/Claude/claude_desktop_config.json` (Linux); **Windsurf** — `~/.codeium/windsurf/mcp_config.json`; **Antigravity** — `~/.gemini/config/mcp_config.json`. Перед записью создаётся копия `.bak-&lt;метка&gt;`.</sub>
 
 По умолчанию ставится профиль `compare` (`compare-mcp`). `--profile decision`
 переключает запись на `decision-mcp`, `--profile full` — на полный
@@ -376,7 +400,7 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 `mcp-core` — общий рантайм под остальными серверами. Своего навыка у него нет.
 
 Соответствие проверяется тестом
-(`packages/marketplace-connector/tests/test_skills_parity.py`): новый коннектор
+([test_skills_parity.py](packages/marketplace-connector/tests/test_skills_parity.py)): новый коннектор
 без навыка роняет прогон, как и навык, который называет несуществующий
 инструмент или забыл существующий. До этого теста навык DNS почти год советовал
 формат ссылки `/product/<24-hex>/` — тот самый шаблон, который чинили как баг.
@@ -523,7 +547,7 @@ CI прогоняет тесты на Ubuntu, Windows и macOS против Pyth
 - [@Khalmatov](https://github.com/Khalmatov) — provenance отзывов Ozon, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
 - [@fosteev](https://github.com/fosteev) — macOS CDP stealth и коннектор Циана, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
 - [@ilodezis](https://github.com/ilodezis) — выбор источников unified-сервера через `MARKETPLACE_SOURCES`, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
-- [@HeckfyCU](https://github.com/HeckfyCU) — замеры навигации AliExpress на российском IP, [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): по его замерам найден и исправлен предел ожидания страницы.
+- [@HeckfyCU](https://github.com/HeckfyCU) — замеры навигации AliExpress в [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): по его замерам найден и исправлен предел ожидания страницы.
 - [@XaruStar](https://github.com/XaruStar) — разбор живого ответа Ozon `webListReviews` со строковым `itemId`, [issue #214](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/214): по нему исправлен учёт `own_reviews` и проверка `item_id` в `ozon_selfcheck`.
 
 ## Лицензия

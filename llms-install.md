@@ -19,9 +19,9 @@ Every mounted tool schema is sent on **every** model turn (measured from `tools/
 
 | Profile (`--profile`) | Console script | Tools | `tools/list` cost | When to pick |
 | --- | --- | ---: | ---: | --- |
-| **`compare`** *(default)* | `compare-mcp` | 4 | ≈1.8k tokens | Cross-marketplace price comparison and offer card verification (`compare_prices`, `compare_verify_offer`, `compare_sources`, `compare_browser_snapshot`). |
+| **`compare`** *(default)* | `compare-mcp` | 4 | ≈1.7k tokens | Cross-marketplace price comparison and offer card verification (`compare_prices`, `compare_verify_offer`, `compare_sources`, `compare_browser_snapshot`). |
 | **`decision`** | `decision-mcp` | 5 | ≈2.0k tokens | `compare-mcp` plus `decision_inspect` to inspect a shortlisted card (optionally with reviews). |
-| **`full`** | `marketplace-mcp` | 39 | ≈13.4k tokens | Direct per-marketplace search, cards, reviews, buyer questions, seller tax IDs, Detsky Mir categories, or Cian real estate. Trim with `MARKETPLACE_SOURCES=wildberries,ozon,compare` (aliases `wb`, `ym`/`yandex`, `detmir`, `ali`). |
+| **`full`** | `marketplace-mcp` | 39 | ≈13.1k tokens | Direct per-marketplace search, cards, reviews, buyer questions, seller tax IDs, Detsky Mir categories, or Cian real estate. Trim with `MARKETPLACE_SOURCES=wildberries,ozon,compare` (aliases `wb`, `ym`/`yandex`, `detmir`, `ali`). |
 | Single source (`--per-source`) | `wb-mcp`, `ozon-mcp`, `cian-mcp`, … | 2–8 | minimal | Only one specific marketplace or Cian real estate (`--per-source` is mutually exclusive with `--profile`). |
 
 > **Entrypoint note:** `uvx ru-marketplace-mcp <subcommand>` runs the operator CLI (`setup`, `install`, `doctor`, `browser`, `unblock`, `help`). Bare `uvx ru-marketplace-mcp` with **no** arguments starts the 39-tool `marketplace-mcp` stdio server. To run the compact 4-tool server over `uvx`, invoke `uvx --from ru-marketplace-mcp compare-mcp`.
@@ -110,7 +110,7 @@ VS Code (`mcp.json` requires `"servers"` and `"type": "stdio"`):
 
 ### Docker alternative (stdio)
 
-The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0`) is built from `Dockerfile.stdio` (`MCP_TRANSPORT=stdio`, default entry point `marketplace-mcp`). Pass `compare-mcp` as the command argument for the compact 4-tool profile. Note that the root `Dockerfile` is HTTP-first (`wb-mcp` on port 8000); for local stdio builds use `docker build -f Dockerfile.stdio .` or pass `-e MCP_TRANSPORT=stdio`.
+The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0`) is built from `Dockerfile.stdio` (`MCP_TRANSPORT=stdio`, default entry point `marketplace-mcp`). Pass `compare-mcp` as the command argument for the compact 4-tool profile. Note that the root `Dockerfile` is HTTP-first (`wb-mcp` on port 8000); for local stdio builds use `docker build -f Dockerfile.stdio .` or pass `-e MCP_TRANSPORT=stdio`.
 
 ```json
 {
@@ -123,7 +123,7 @@ The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0`) is
         "-i",
         "-e",
         "MCP_TRANSPORT=stdio",
-        "ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0",
+        "ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0",
         "compare-mcp"
       ]
     }

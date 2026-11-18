@@ -38,7 +38,7 @@ The verbs cover the moments an operator actually needs help with:
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Operator CLI — write or print a client config, show usage, report per-source health with one next step, inspect or start the scraping Chrome, open unblock pages, and run the end-to-end setup flow.
-# SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, claude-code, cursor, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
+# SCOPE: setup (detect clients, write configs, start Chrome, health, unblock offer), install (claude, cursor, vscode, windsurf, antigravity, gemini, claude-code, codex, dsh; --profile compare|decision|full), doctor (selfchecks + optional status file), browser (status, show, start), unblock, help.
 # DEPENDS: mcp_core.build_age; mcp_core.logging; mcp_core.source_selection; mcp_core.sources (source registry; per-source tables derived there); mcp_core.transport.chrome_cdp (browser verbs, setup); local capabilities (static source table); local unblock map.
 # LINKS: M-MARKETPLACE; M-UNBLOCK; M-BUILD-AGE; R-CLI-INSTALL-PROFILE; R-CLI-INSTALL-UVX; R-CLI-SETUP; R-DOCTOR-EXIT-CODES; R-OLD-BUILD-INFO.
 # END_MODULE_CONTRACT
@@ -155,7 +155,7 @@ USAGE = """marketplace-mcp — Operator CLI and unified server for the marketpla
 Usage:
   marketplace-mcp                  start the unified MCP server (stdio)
   marketplace-mcp setup            wire a detected client and check the first sources
-  marketplace-mcp install <client> write the client config (claude, claude-code, cursor, dsh)
+  marketplace-mcp install <client> config: claude|cursor|vscode|windsurf|antigravity|gemini|claude-code|codex|dsh
                                    --profile compare|decision|full (default: compare)
   marketplace-mcp doctor [source]  run every connector's selfcheck and report health
   marketplace-mcp browser status   check the scraping Chrome and where its window is
@@ -1809,7 +1809,7 @@ def cmd_setup(argv: list[str]) -> int:
     elif targets:
         print(f"   detected: {_join_labels(targets)}")
     else:
-        print("   no supported client detected (Claude Desktop, Cursor, Claude Code).")
+        print(f"   no supported client detected ({_join_labels(list(SETUP_CLIENTS))}).")
         print("   wire one by hand:")
         for client in SETUP_CLIENTS:
             print(f"     marketplace-mcp install {client} --write")

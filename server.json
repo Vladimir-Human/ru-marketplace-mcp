@@ -3,7 +3,7 @@
   "name": "io.github.Vladimir-Human/ru-marketplace-mcp",
   "description": "Read-only MCP for 12 RU/CN marketplaces (WB, Ozon, Yandex, Avito, Ali): prices, stock, comparison",
   "title": "ru-marketplace-mcp",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "websiteUrl": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
   "repository": {
     "url": "https://github.com/Vladimir-Human/ru-marketplace-mcp",
@@ -134,7 +134,7 @@
     {
       "registryType": "pypi",
       "identifier": "ru-marketplace-mcp",
-      "version": "2.10.0",
+      "version": "2.11.0",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -142,7 +142,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0",
+      "identifier": "ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"

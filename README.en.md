@@ -4,11 +4,10 @@
 
 [![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ru-marketplace-mcp.svg)](https://pypi.org/project/ru-marketplace-mcp/)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
-[![Glama MCP](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp)
 [![npm](https://img.shields.io/npm/v/ru-marketplace-mcp-dsh.svg?label=npm%20%28dsh%29)](https://www.npmjs.com/package/ru-marketplace-mcp-dsh)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20http-orange.svg)](https://modelcontextprotocol.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Live prices, stock, ratings, reviews, and seller legal identity across 12 Russian
 and Chinese platforms: **Wildberries**, **Ozon**, **Yandex Market**, **Avito**,
@@ -24,11 +23,11 @@ your own dedicated Chrome (Taobao and Megamarket need a shopper login in that
 browser).
 
 <p align="center">
-  <img src="docs/assets/demo-compare.svg" width="760"
-       alt="compare_prices(&quot;кроссовки мужские&quot;) (&quot;men's sneakers&quot;): Wildberries and Yandex Market offers sorted by price, cheapest wildberries 712 RUB">
+  <img src="docs/assets/demo-compare.en.svg" width="560"
+       alt="compare_prices(&quot;iphone 16 128gb&quot;): 1,531 RUB USB drive and 56,833 RUB WB Wallet price excluded; cheapest_comparable picks Apple iPhone 16 at 64,990 RUB on AliExpress">
 </p>
 
-<sub>Example call from the [cross-marketplace section](#cross-marketplace--compare_); product names are as the marketplaces list them.</sub>
+<sub>Live replay from <a href="#a-real-answer">A real answer</a> (`c1-iphone16-128gb.json`); product names match the marketplaces.</sub>
 
 ## Quickstart
 
@@ -40,22 +39,24 @@ connection (`--dry-run` shows the plan and writes nothing):
 uvx ru-marketplace-mcp setup
 ```
 
-Or in one click:
+Or install in one click:
+
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=marketplace&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22ru-marketplace-mcp%22%2C%22compare-mcp%22%5D%7D)
 [![Install in Cursor](https://img.shields.io/badge/Cursor-Install_MCP-000000?logo=cursor&logoColor=white)](https://cursor.com/en/install-mcp?name=marketplace&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJydS1tYXJrZXRwbGFjZS1tY3AiLCJjb21wYXJlLW1jcCJdfQ==)
-· for **Claude Desktop** without a terminal, open `ru-marketplace-mcp-compare-<version>.mcpb` from [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) (checked on Windows, not on macOS).
+
+For **Claude Desktop** without a terminal, open `ru-marketplace-mcp-compare-<version>.mcpb` from [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) (checked on Windows, not checked on macOS).
 
 ### Choose a profile
 
 Every mounted MCP tool schema is paid on each model request, so `setup` and
 `install` default to the compact `compare` profile:
 
-| Profile (`--profile`) | Server command | Tools | Context cost / request | Best for |
-| --- | --- | ---: | ---: | --- |
-| **`compare`** *(default)* | `compare-mcp` | 4 | ≈1.8k tokens | Cross-marketplace price comparison (`compare_prices`) and offer card verification (`compare_verify_offer`) |
-| **`decision`** | `decision-mcp` | 5 | ≈2.0k tokens | Everything in `compare` plus shortlist card & review inspection (`decision_inspect`) |
-| **`full`** | `marketplace-mcp` | 39 | ≈13.4k tokens | Every per-marketplace search, card, review, seller-identity, catalog tool, and Cian real estate (filterable via `MARKETPLACE_SOURCES`) |
-| Single marketplace (`--per-source`) | `wb-mcp`, `ozon-mcp`, `cian-mcp`, … | 2–8 | minimal | Only one marketplace or Cian real estate |
+| Profile | Size | Best for |
+| --- | --- | --- |
+| **`compare`** *(default)*<br>`compare-mcp` | 4 · ≈1.7k | Compare prices across sites and verify the winning offer |
+| **`decision`**<br>`decision-mcp` | 5 · ≈2.0k | Compare plus shortlist card and review inspection |
+| **`full`**<br>`marketplace-mcp` | 39 · ≈13.1k | Per-site search, reviews, seller tax IDs, catalogs, Cian |
+| Single marketplace<br>`--per-source` | 2–8 · min. | Only one connector (`wb-mcp`, `ozon-mcp`, `cian-mcp`, …) |
 
 > **Security and limits:** Do not run these servers in one agent session with tools that read private data and can send it out without your approval, and use a separate scraping Chrome profile without email or banking ([SECURITY.md](SECURITY.md#security)).
 
@@ -75,17 +76,19 @@ To configure one target directly:
 uvx ru-marketplace-mcp install <client> --write --profile compare
 ```
 
-| `<client>` | Client | Config target & behavior |
-| --- | --- | --- |
-| `claude` | Claude Desktop | Merges `mcpServers.marketplace` into `%APPDATA%\Claude\claude_desktop_config.json` (Win), `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/Claude/claude_desktop_config.json` (Linux) with `.bak-<timestamp>` backup. |
-| `cursor` | Cursor | Merges `mcpServers.marketplace` into `~/.cursor/mcp.json` with `.bak-<timestamp>` backup. |
-| `vscode` | VS Code | Merges **`servers.marketplace`** (with `"type": "stdio"`, **not** `mcpServers`) into `Code/User/mcp.json` with `.bak-<timestamp>` backup. |
-| `windsurf` | Windsurf | Merges `mcpServers.marketplace` into `~/.codeium/windsurf/mcp_config.json` with `.bak-<timestamp>` backup. |
-| `antigravity` | Antigravity | Merges `mcpServers.marketplace` into `~/.gemini/config/mcp_config.json` with `.bak-<timestamp>` backup. |
-| `gemini` | Gemini CLI | Merges `mcpServers.marketplace` into `~/.gemini/settings.json` with `.bak-<timestamp>` backup. |
-| `claude-code` | Claude Code | Prints the exact `claude mcp add marketplace --scope user -- ...` command (run it in your shell, or `/plugin install ru-marketplace-mcp --marketplace Vladimir-Human/ru-marketplace-mcp`). |
-| `codex` | Codex CLI | Prints the exact `codex mcp add marketplace -- ...` command (run it in your shell). |
-| `dsh` | DeepSeek Harness | Prints `cordis.patch.yml` rows (plugin bundle install below and in [dsh/README.md](dsh/README.md)). |
+| Client (`<client>`) | What `--write` updates |
+| --- | --- |
+| **Claude Desktop**<br>`claude` | `mcpServers.marketplace` in Claude Desktop config + `.bak` (or `.mcpb` in [Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases)) |
+| **Cursor**<br>`cursor` | `mcpServers.marketplace` in `~/.cursor/mcp.json` + `.bak` |
+| **VS Code**<br>`vscode` | **`servers.marketplace`** (`"type": "stdio"`) in `Code/User/mcp.json` + `.bak` |
+| **Windsurf**<br>`windsurf` | `mcpServers.marketplace` in Windsurf config + `.bak` |
+| **Antigravity**<br>`antigravity` | `mcpServers.marketplace` in Antigravity config + `.bak` |
+| **Gemini CLI**<br>`gemini` | `mcpServers.marketplace` in `~/.gemini/settings.json` + `.bak` |
+| **Claude Code**<br>`claude-code` | Prints `claude mcp add marketplace --scope user -- ...` (or `/plugin install` below) |
+| **Codex CLI**<br>`codex` | Prints `codex mcp add marketplace -- ...` to run in your shell |
+| **DeepSeek Harness**<br>`dsh` | Prints `cordis.patch.yml` rows (plugin bundle install below and in [dsh/README.md](dsh/README.md)) |
+
+<sub>Config paths: **Claude Desktop** — `%APPDATA%\Claude\claude_desktop_config.json` (Win), `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/Claude/claude_desktop_config.json` (Linux); **Windsurf** — `~/.codeium/windsurf/mcp_config.json`; **Antigravity** — `~/.gemini/config/mcp_config.json`. Existing files get a `.bak-&lt;timestamp&gt;` backup first.</sub>
 
 `--write --dry-run` previews changes without writing; `--force` replaces an
 existing conflicting `marketplace` entry; `--per-source` emits per-source
@@ -136,21 +139,21 @@ recommended price-comparison profile, ≈2.0k for the decision profile and
 
 ## Supported marketplaces (12 sources)
 
-| Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
-| ----------------- | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **Wildberries**   | 8     | anonymous HTTP (falls back to your Chrome on 403)                             | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
-| **Yandex Market** | 2     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
-| **Detsky Mir**    | 3     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
-| **Ozon**          | 3     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
-| **Avito**         | 3     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
-| **Taobao**        | 2     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
-| **Megamarket**    | 2     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
-| **Lamoda**        | 2     | cards: HTTP GraphQL → Chrome on refusal; search via Chrome                    | Search, cards with sizes                                                                           |
-| **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
-| **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
-| **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                                                                     |
-| **Cian**          | 2     | your Chrome (WAF by IP)                                                       | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
-| **Compare**       | 4     | queries the goods marketplaces above                                          | "Where is this cheapest?", card verification, source list, browser handoff snapshot                |
+| Source | Access | Scope |
+| --- | --- | --- |
+| **Wildberries** (8) | direct HTTP (Chrome on 403) | Search, cards, reviews, Q&A, seller tax IDs, catalogs |
+| **Yandex Market** (2) | direct HTTP | Multi-seller prices, star breakdown, reviews |
+| **Detsky Mir** (3) | direct HTTP | Kids' goods, offline store stock, catalogs |
+| **Ozon** (3) | Chrome (or HTTP outside cloud) | Search, cards, reviews |
+| **Avito** (3) | Chrome + non-cloud IP & pauses | Classifieds, cards, seller reputation |
+| **Taobao** (2) | Chrome with login | Search and cards, prices in yuan |
+| **Megamarket** (2) | Chrome with login | Search and cards via mobile API |
+| **Lamoda** (2) | HTTP → Chrome (search Chrome) | Search, cards with sizes |
+| **DNS** (2) | Chrome (Qrator) | Tech search and cards |
+| **Citilink** (2) | Chrome (Qrator) | Tech search and cards |
+| **AliExpress** (2) | Chrome (x5sec) | Search and cards, ruble prices |
+| **Cian** (2) | Chrome (WAF by IP) | Real estate: sale, rent, daily, card |
+| **Compare** (4) | queries sites above | Comparison, card check, sources, snapshot |
 
 Anonymous, no browser: Wildberries, Yandex Market and Detsky Mir (when WB's API
 returns 403, `wb_search` and `wb_card` re-read through your Chrome automatically).
@@ -158,7 +161,7 @@ Lamoda cards try HTTP GraphQL first and need your Chrome (CDP) only for the
 fallback tier. The rest need your Chrome (CDP), and Taobao and Megamarket
 additionally need you signed into a shopper account in that browser — without it
 Taobao hits a login wall and Megamarket returns an empty result. Avito blocks
-datacenter IPs, while a Russian residential IP works when requests are spaced
+datacenter IPs and expects a non-cloud connection with requests spaced
 apart. Connectors hold a deliberate gap between CDP calls so back-to-back bursts
 do not drop sessions. Run `marketplace-mcp doctor` from your own environment for
 the current state.
@@ -173,13 +176,18 @@ deployment — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### A real answer
 
-`compare_prices(query="iphone 16 128gb")`. The marketplaces' answers were recorded in Chrome on the owner's machine on 17 November 2026 at 01:29 UTC (audit cycle 1, record `packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json`) and replayed through `2.10.0` (commit `058846ba`). Cut to the fields an agent reads first; the full answer also includes `source_outcomes` and all 25 entries in `offers`.
+`compare_prices(query="iphone 16 128gb")`. The marketplaces' answers were recorded in Chrome on the owner's machine on 17 November 2026 at 01:29 UTC (audit cycle 1, record [c1-iphone16-128gb.json](packages/compare-connector/tests/benchmark/recordings/c1-iphone16-128gb.json)) and replayed through `2.11.0` (commit `f39a786f`). Trimmed to key fields and one warning per kind; the full answer also includes `source_outcomes` and all 25 entries in `offers`.
 
 ```json
 {
   "query": "iphone 16 128gb",
-  "sources_queried": ["aliexpress", "citilink", "dns", "taobao", "wildberries", "yandex_market"],
-  "sources_ok": ["aliexpress", "dns", "taobao", "wildberries", "yandex_market"],
+  "sources_queried": [
+    "aliexpress", "citilink", "dns",
+    "taobao", "wildberries", "yandex_market"
+  ],
+  "sources_ok": [
+    "aliexpress", "dns", "taobao", "wildberries", "yandex_market"
+  ],
   "complete": false,
   "total_offers": 25,
   "cheapest": {
@@ -202,25 +210,41 @@ deployment — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
   },
   "price_spread_rub": 93459.0,
   "warnings": [
-    "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
-    "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
-    "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
-    "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+    "partial: 1 of 6 marketplaces did not answer (citilink) ...",
     "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
-    "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
-    "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
-    "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
     "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
-    "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
-    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+    "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers ...",
     "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
-    "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+    "foreign_currency: 5 offer(s) are priced in cny, not roubles ... excluded from the ranking"
   ],
-  "server_version": "2.10.0"
+  "server_version": "2.11.0"
 }
 ```
+
+<details>
+<summary>Full <code>warnings</code> list from this recording (15 entries)</summary>
+
+```json
+[
+  "partial: 1 of 6 marketplaces did not answer (citilink) — prices below cover only aliexpress, dns, taobao, wildberries, yandex_market",
+  "source_warning:aliexpress: 2 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care",
+  "source_warning:wildberries: dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+  "source_warning:wildberries: wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)",
+  "conditional_price: wildberries/1415238452: 56833 RUB requires WB Wallet; not ranked",
+  "conditional_price: wildberries/580725150: 76922 RUB requires WB Wallet; not ranked",
+  "conditional_price: wildberries/580725161: 76922 RUB requires WB Wallet; not ranked",
+  "info:conditional_price_available: yandex_market/103572173063: 71800 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/103530694148: 72825 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/4775394349: 68107 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/5302780524: 66699 RUB with Yandex Pay",
+  "info:conditional_price_available: yandex_market/4775394347: 69323 RUB with Yandex Pay",
+  "price_outlier: the cheapest offer is 1531.0 ₽ against a median of 70299.0 ₽ across 17 offers — check it is the same product and configuration",
+  "comparable_price: the raw cheapest listing is an accessory, a different condition, variant or model; cheapest_comparable is the safer like-for-like candidate",
+  "foreign_currency: 5 offer(s) are priced in cny, not roubles — their price is in price_native and they are excluded from the ranking and from cheapest"
+]
+```
+
+</details>
 
 The raw cheapest listing is a USB stick whose title contains "128", so the answer names `cheapest_comparable`, the phone itself, and warns about the price outlier. The Wildberries price that needs WB Wallet is shown but not ranked. Citilink refused this call, and the answer says it is incomplete.
 
@@ -235,16 +259,16 @@ on every request. `marketplace-mcp doctor` runs them all from the command line.
 
 ### Wildberries — `wb_*`
 
-| Tool                                                   | What it does                                                |
-| ------------------------------------------------------ | ----------------------------------------------------------- |
-| `wb_search(query, page)`                               | Text search, up to 100 products/page with prices and stock  |
-| `wb_card(nm_ids)`                                      | Batch lookup for up to 100 known SKUs                       |
-| `wb_root_info(nm_id)`                                  | Resolves `imt_id` (needed for reviews) plus colour variants |
-| `wb_reviews(imt_id, limit, sort)`                      | Review pool, keyed by `imt_id`, not `nm_id`                 |
-| `wb_questions(imt_id, limit, skip, answered_only)`     | Buyer questions with seller answers, also keyed by `imt_id` |
-| `wb_seller(supplier_id)`                               | Registered entity, INN, KPP, OGRN, legal address            |
-| `wb_categories(root, max_depth)`                       | Catalog tree with WB's own shard/query selectors            |
-| `wb_category_products(shard, query, page, sort, dest)` | Products in a category, using those selectors               |
+| Tool | What it does |
+| --- | --- |
+| `wb_search`<br><sub>`query, page`</sub> | Text search, up to 100 products/page with prices and stock |
+| `wb_card`<br><sub>`nm_ids`</sub> | Batch lookup for up to 100 known SKUs |
+| `wb_root_info`<br><sub>`nm_id`</sub> | Resolves `imt_id` (needed for reviews) plus colour variants |
+| `wb_reviews`<br><sub>`imt_id, limit, sort`</sub> | Review pool, keyed by `imt_id`, not `nm_id` |
+| `wb_questions`<br><sub>`imt_id, limit, skip, answered_only`</sub> | Buyer questions with seller answers, also keyed by `imt_id` |
+| `wb_seller`<br><sub>`supplier_id`</sub> | Registered entity, INN, KPP, OGRN, legal address |
+| `wb_categories`<br><sub>`root, max_depth`</sub> | Catalog tree with WB's own shard/query selectors |
+| `wb_category_products`<br><sub>`shard, query, page, sort, dest`</sub> | Products in a category, using those selectors |
 
 `wb_seller` answers the question a listing hides: who actually ships this? It returns
 the registered legal entity and tax ids, which is how you distinguish an official
@@ -277,10 +301,10 @@ probe still use HTTP. Details in
 
 ### Yandex Market — `yandex_*`
 
-| Tool                                       | What it does                                |
-| ------------------------------------------ | ------------------------------------------- |
-| `yandex_search(query, page, limit)`        | Search with both prices, ratings, sellers   |
-| `yandex_card(product_id, include_reviews)` | Full detail plus star breakdown and reviews |
+| Tool | What it does |
+| --- | --- |
+| `yandex_search`<br><sub>`query, page, limit`</sub> | Search with both prices, ratings, sellers |
+| `yandex_card`<br><sub>`product_id, include_reviews`</sub> | Full detail plus star breakdown and reviews |
 
 **Two prices, always.** `price_rub` is what anyone pays. `price_with_plus` is the
 conditional price for paying with Yandex Pay (the page's «Пэй» price; earlier Yandex Plus).
@@ -296,11 +320,11 @@ That reveals whether a 4.8 average is earned or hides a cluster of complaints.
 
 ### Detsky Mir — `detmir_*`
 
-| Tool                                            | What it does                                  |
-| ----------------------------------------------- | --------------------------------------------- |
-| `detmir_categories(parent, limit, region)`      | Catalog tree, start here                      |
-| `detmir_category(alias, limit, offset, region)` | Products in a category, with real totals      |
-| `detmir_card(product_id, region)`               | Price, rating, online and offline store stock |
+| Tool | What it does |
+| --- | --- |
+| `detmir_categories`<br><sub>`parent, limit, region`</sub> | Catalog tree, start here |
+| `detmir_category`<br><sub>`alias, limit, offset, region`</sub> | Products in a category, with real totals |
+| `detmir_card`<br><sub>`product_id, region`</sub> | Price, rating, online and offline store stock |
 
 **Region is per call.** Prices and especially offline availability swing by city —
 one item sat in 152 Moscow stores, 37 in St Petersburg, 2 in Khabarovsk. The
@@ -314,18 +338,18 @@ wrong products, so discovery goes through categories instead. See
 
 ### Ozon — `ozon_*`
 
-| Tool                                     | What it does   |
-| ---------------------------------------- | -------------- |
-| `ozon_search(query)`                     | Text search    |
-| `ozon_card(sku_or_path)`                 | Product detail |
-| `ozon_reviews(sku_or_path, limit, sort)` | Reviews        |
+| Tool | What it does |
+| --- | --- |
+| `ozon_search`<br><sub>`query`</sub> | Text search |
+| `ozon_card`<br><sub>`sku_or_path`</sub> | Product detail |
+| `ozon_reviews`<br><sub>`sku_or_path, limit, sort`</sub> | Reviews |
 
 Ozon rejects datacenter traffic, so this connector is two-tier: TLS impersonation
 first, then a fetch inside your own logged-in Chrome over the DevTools Protocol when
 Cloudflare challenges. Nothing is stored; you log in yourself, in a browser you
 control. Setup: [docs/CDP_SETUP.md](docs/CDP_SETUP.md).
 
-From a Russian residential IP the first tier usually works and no browser is needed.
+Outside cloud and datacenter networks, the first tier usually works and no browser is needed.
 
 **Ozon pools reviews per card family, and the neighbours are often a different
 product from a different brand.** A live card for a 1500 W Huter oil heater (SKU
@@ -341,10 +365,10 @@ that the product has no reviews of its own.
 
 ### AliExpress — `aliexpress_*`
 
-| Tool                                  | What it does                              |
-| ------------------------------------- | ----------------------------------------- |
-| `aliexpress_search(query)`            | Search: up to 48 tiles with ruble prices  |
-| `aliexpress_card(item_id_or_url)`     | Card: title, price, rating, order count   |
+| Tool | What it does |
+| --- | --- |
+| `aliexpress_search`<br><sub>`query`</sub> | Search: up to 48 tiles with ruble prices |
+| `aliexpress_card`<br><sub>`item_id_or_url`</sub> | Card: title, price, rating, order count |
 
 Read through your Chrome (CDP): x5sec challenges anonymous clients, so the
 connector lands on a search page (never challenged) and opens the card in a new
@@ -358,10 +382,10 @@ transport answered — not that a given price is right.
 
 ### Cian — `cian_*`
 
-| Tool                                                                                        | What it does                                                    |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `cian_search(deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page)` | Search by filters — sale, long-term rent, daily: 28 offers per page |
-| `cian_card(offer_id_or_url)`                                                                | One offer: price and its history, layout, building, address, metro, publisher |
+| Tool | What it does |
+| --- | --- |
+| `cian_search`<br><sub>`deal, offer_type, region, rooms, price_min, price_max, area_min, area_max, page`</sub> | Search by filters — sale, long-term rent, daily: 28 offers per page |
+| `cian_card`<br><sub>`offer_id_or_url`</sub> | One offer: price and its history, layout, building, address, metro, publisher |
 
 Real estate, not goods: flats, rooms, houses and commercial property for sale,
 long-term rent or daily rent (`deal="daily"`; Cian has no daily commercial
@@ -380,11 +404,11 @@ takes no part in `compare_prices`.
 
 ### Avito — `avito_*`
 
-| Tool                                              | What it does                                      |
-| ------------------------------------------------- | ------------------------------------------------- |
-| `avito_search(query, page, location_id, category_id, include_inactive)` | Classified search through the internal `js/items` API; `availability` from `isReserved`; reserved hits kept, `include_inactive=false` drops them (`excluded_inactive`) |
-| `avito_card(item_id_or_url, photos)`              | CDP item page: title, price, description, image count, seller (rating, profile link), up to 3 photos of an active ad on request (`photos`, costly), reservation `availability` (active/reserved/unknown) from the page's service flags, never seller text, deal and delivery terms, seller checks, city and stations (street address for companies only), date, views |
-| `avito_seller(seller_id_or_url)`                  | Seller rating, review count; active listing count unavailable (`null`)       |
+| Tool | What it does |
+| --- | --- |
+| `avito_search`<br><sub>`query, page, location_id, category_id, include_inactive`</sub> | Classified search through the internal `js/items` API; `availability` from `isReserved`; reserved hits kept, `include_inactive=false` drops them (`excluded_inactive`) |
+| `avito_card`<br><sub>`item_id_or_url, photos`</sub> | CDP item page: title, price, description, image count, seller (rating, profile link), up to 3 photos of an active ad on request (`photos`, costly), reservation `availability` (active/reserved/unknown) from service flags, deal/delivery terms, city and stations |
+| `avito_seller`<br><sub>`seller_id_or_url`</sub> | Seller rating, review count; active listing count unavailable (`null`) |
 
 Avito is classifieds, not a catalog: there is no per-product review pool, the
 seller's reputation IS the trust signal. A free/swap listing arrives with
@@ -405,10 +429,10 @@ IPs can still receive the 403 firewall.
 
 ### Taobao — `taobao_*`
 
-| Tool                            | What it does             |
-| ------------------------------- | ------------------------ |
-| `taobao_search(query, page)`    | Catalog search           |
-| `taobao_card(item_id_or_url)`   | Product card             |
+| Tool | What it does |
+| --- | --- |
+| `taobao_search`<br><sub>`query, page`</sub> | Catalog search |
+| `taobao_card`<br><sub>`item_id_or_url`</sub> | Product card |
 
 Taobao search is a signed-mtop React app: every request needs a `sign` derived
 from a cookie token, so there is no anonymous path. All reads run inside your
@@ -438,12 +462,12 @@ when its API returns 403 (`WB_DOM_FALLBACK=1`).
 
 ### Cross-marketplace — `compare_*`
 
-| Tool                                                                                                          | What it does                                                |
-| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `compare_prices(query, per_source_limit, sources, in_stock_only)`                                             | Every searchable marketplace at once, ranked                |
-| `compare_verify_offer(source, product_id_or_url, expected_price_rub, expected_identity, expected_variant_id)` | Verify one winning offer against its live card tool         |
-| `compare_sources()`                                                                                           | Which marketplaces this install can query                   |
-| `compare_browser_snapshot(handoff_id)`                                                                        | Return a retained challenge viewport as an MCP image        |
+| Tool | What it does |
+| --- | --- |
+| `compare_prices`<br><sub>`query, per_source_limit, sources, in_stock_only`</sub> | Rank all sources at once |
+| `compare_verify_offer`<br><sub>`source, product_id_or_url,`<br>`expected_price_rub, expected_identity,`<br>`expected_variant_id`</sub> | Verify winning offer on card |
+| `compare_sources()` | Sources active in install |
+| `compare_browser_snapshot`<br><sub>`handoff_id`</sub> | Retained tab screenshot |
 
 ```
 compare_prices("кроссовки мужские")
@@ -510,7 +534,7 @@ answers should not be trusted without a second look.
 `mcp-core` is the shared runtime rather than a server, so it has no skill.
 
 The mapping is enforced by a test
-(`packages/marketplace-connector/tests/test_skills_parity.py`): a new connector
+([test_skills_parity.py](packages/marketplace-connector/tests/test_skills_parity.py)): a new connector
 without a skill fails the run, and so does a skill that names a tool which does
 not exist — or omits one that does. Before that test existed, the DNS skill spent
 months telling operators to pass `/product/<24-hex>/`, the exact pattern a fix had
@@ -562,7 +586,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 **Only the sources you use: `MARKETPLACE_SOURCES`.** The unified server mounts every
 source, and their tool schemas are sent to the client on every request. Set
 `MARKETPLACE_SOURCES` in the `marketplace-mcp` entry's env to a comma-separated list
-to mount only those, e.g. `wildberries,ozon,yandex_market,avito,aliexpress,dns,compare`.
+to mount only those, e.g. `wildberries,ozon,compare` (plus `yandex_market`, `avito`, `aliexpress`, `dns`).
 Names are canonical (`wildberries`, `ozon`, `yandex_market`, `detsky_mir`, `avito`,
 `taobao`, `megamarket`, `lamoda`, `dns`, `citilink`, `aliexpress`, `cian`, `compare`); the aliases `wb`, `ym`/`yandex`, `detmir` and `ali` work too. An unknown
 name is rejected at startup with the supported-source list, so a typo cannot
@@ -653,7 +677,7 @@ credit too: the full contributor and PR index is in
 - [@Khalmatov](https://github.com/Khalmatov) — Ozon review provenance, [PR #38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38).
 - [@fosteev](https://github.com/fosteev) — macOS CDP stealth and the Cian connector, [PR #42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [PR #47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47).
 - [@ilodezis](https://github.com/ilodezis) — unified-server source selection, [PR #48](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/48).
-- [@HeckfyCU](https://github.com/HeckfyCU) — AliExpress navigation timing measured on a Russian residential IP, [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): those measurements located the page-readiness deadline that has been fixed.
+- [@HeckfyCU](https://github.com/HeckfyCU) — AliExpress navigation timing measurements in [issue #190](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/190): those measurements located the page-readiness deadline that has been fixed.
 - [@XaruStar](https://github.com/XaruStar) — live Ozon `webListReviews` report on decimal-string `itemId`, [issue #214](https://github.com/Vladimir-Human/ru-marketplace-mcp/issues/214): fixed review SKU attribution (`own_reviews`) and `ozon_selfcheck` `item_id` drift detection.
 
 ## License

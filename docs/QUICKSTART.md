@@ -34,12 +34,12 @@ servers without running the test suite or installing Node.
 
 ## 2. Choose one server for your task
 
-| Task | Profile (`--profile`) | Command | Tools & context cost |
-| --- | --- | --- | --- |
-| Compare product prices and verify an offer | `compare` *(default)* | `compare-mcp` | 4 tools (≈1.8k tokens/request): comparison, source inventory, card verification, browser handoff snapshot |
-| Inspect a shortlist with optional reviews | `decision` | `decision-mcp` | 5 tools (≈2.0k tokens/request): comparison tools plus `decision_inspect` |
-| Search a specific marketplace, read reviews, or use Cian | `full` | `marketplace-mcp` | 39 tools (≈13.4k tokens/request): all installed connectors (narrowable via `MARKETPLACE_SOURCES`) |
-| Single marketplace only | `--per-source` | `wb-mcp`, `ozon-mcp`, `cian-mcp`, … | 2–8 tools: only that connector |
+| Profile (`--profile`) | Size | Best for |
+| --- | --- | --- |
+| **`compare`** *(default)*<br>`compare-mcp` | 4 · ≈1.7k | Compare prices and verify an offer |
+| **`decision`**<br>`decision-mcp` | 5 · ≈2.0k | Compare + `decision_inspect` shortlist card/reviews |
+| **`full`**<br>`marketplace-mcp` | 39 · ≈13.1k | Per-marketplace search, reviews, seller IDs, Cian (`MARKETPLACE_SOURCES` narrows it) |
+| Single marketplace<br>`--per-source` | 2–8 · min. | Only one connector (`wb-mcp`, `ozon-mcp`, `cian-mcp`, …) |
 
 Start with the guided setup:
 
@@ -131,14 +131,13 @@ the operator's Chrome (baseline card and search grid); a captcha is `inconclusiv
 and is never solved or retried. WB's other probes still use HTTP; see
 [the rendered-page notes](ANTI_BOT.md#when-the-api-refuses-rendered-pages-wb_transportdom).
 
-| Result | Meaning | Next step |
+| Verdict | Meaning | Next step |
 | --- | --- | --- |
-| `success`, exit 0 | Selected selfchecks passed | Try the request below |
-| `drift_detected`, exit 1 | A response no longer matched the parser checks | Report the affected source and diagnostic output |
-| `inconclusive`, exit 2 | Acknowledged block or unavailable probe; `budget_refused` means the live budget prevented verification | Follow the next step; this is not verified health or an alarm |
-| Status-file write failure, exit 3 | The report could not be saved | Check the output path and permissions |
-| `error`, exit 4 | A selfcheck raised or returned invalid output | Report the checker failure; this is a hard-failure alarm, not a source block |
-| Argument/setup error, exit 4 | Unknown source, option, missing argument, or doctor could not run | Correct the command or setup; no successful verdict was produced |
+| `success` (`0`) | Selected selfchecks passed | Try the request below |
+| `drift_detected` (`1`) | Response stopped matching parser checks | Report source and diagnostics |
+| `inconclusive` (`2`) | Block, unavailable probe, or `budget_refused` | Follow `next:` hint (not health or alarm) |
+| Write fail (`3`) | `--status-file` could not be saved | Check path and permissions |
+| `error` (`4`) | Selfcheck raised or bad args/setup | Alarm / fix arguments |
 
 A failed checker takes precedence over drift, and drift over an inconclusive
 source. Alarm on `1` and `4`, not on `2`. A budget refusal never counts as a

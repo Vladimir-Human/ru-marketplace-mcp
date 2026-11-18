@@ -2,7 +2,7 @@
 
 > Read-only Model Context Protocol (MCP) servers and 14 Agent Skills for 12 Russian and Chinese marketplaces and classifieds (Wildberries, Ozon, Yandex Market, Detsky Mir, Avito, AliExpress, Taobao, Megamarket, Lamoda, DNS, Citilink, and Cian real estate), plus cross-marketplace price comparison in one call. No API keys or seller accounts required; anti-bot-gated sites run through the user's own local Chrome over CDP.
 
-Pick the smallest MCP profile that fits the task: `compare-mcp` (default, 4 tools, ~1.8k tokens/request) for cross-marketplace price comparison and offer verification, `decision-mcp` (5 tools, ~2.0k tokens/request) to add `decision_inspect` for shortlisted cards, or `marketplace-mcp` (39 tools, ~13.4k tokens/request; filterable via `MARKETPLACE_SOURCES`) for per-marketplace search, reviews, seller legal identity, categories, and Cian real estate. Requires Python 3.12+ and `uv` (or Docker).
+Pick the smallest MCP profile that fits the task: `compare-mcp` (default, 4 tools, ~1.7k tokens/request) for cross-marketplace price comparison and offer verification, `decision-mcp` (5 tools, ~2.0k tokens/request) to add `decision_inspect` for shortlisted cards, or `marketplace-mcp` (39 tools, ~13.1k tokens/request; filterable via `MARKETPLACE_SOURCES`) for per-marketplace search, reviews, seller legal identity, categories, and Cian real estate. Requires Python 3.12+ and `uv` (or Docker).
 
 ## Agent Setup & Reference
 
@@ -23,7 +23,7 @@ Pick the smallest MCP profile that fits the task: `compare-mcp` (default, 4 tool
 
 - [Russian Per-Marketplace Tool Guide](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/TOOLS.ru.md): Detailed Russian notes and caveats for every connector (`wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`, `lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `cian_*`, `compare_*`).
 - [Chrome CDP Setup](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/CDP_SETUP.md): Dedicated scraping Chrome setup, `CHROME_CHALLENGE_HANDOFF_S`, Linux `OZON_CHROME_COMPAT`, and browser troubleshooting.
-- [Anti-Bot Notes](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/ANTI_BOT.md): Per-source transport tiers, `WB_TRANSPORT=dom`, residential IP requirements, and known marketplace quirks.
+- [Anti-Bot Notes](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/ANTI_BOT.md): Per-source transport tiers, `WB_TRANSPORT=dom`, network/session requirements, and known marketplace quirks.
 - [Deployment Guide](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/DEPLOYMENT.md): `MCP_TRANSPORT=http`, bearer auth, `MARKETPLACE_SOURCES`, and Docker Compose with Chrome sidecar.
 - [DeepSeek Harness Bundle](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/dsh/README.md): `ru-marketplace-mcp-dsh` plugin setup (`dsh plugin`) and env switches (`RU_MARKETPLACE_MCP_DIR`, `RU_MARKETPLACE_MCP_DECISION`, `RU_MARKETPLACE_MCP_FULL`).
 - [Contributor Rules](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/AGENTS.md): Repository constraints, GRACE verification, and live-check budget rules before editing code in this repository.

@@ -129,7 +129,7 @@ GRACE (Graph-RAG Anchored Code Engineering) связывает требован�
 
 1. Коннектор и инструмент.
 2. Вывод соответствующего `*_selfcheck`. Он отличает дрейф формата от блокировки.
-3. Откуда идёшь: российский домашний IP, датацентр или VPN. Обычно это решающий
+3. Откуда идёшь: обычное подключение, датацентр или VPN. Обычно это решающий
    фактор.
 4. JSON ошибки, вычистив личные данные, если они там есть.
 
@@ -286,7 +286,7 @@ include:
 
 1. The connector and tool.
 2. Output of the relevant `*_selfcheck` (it distinguishes drift from a block).
-3. Whether you are on a Russian residential IP, a datacenter IP, or a VPN. This is
+3. Whether you are on a standard connection, a datacenter IP, or a VPN. This is
    usually the deciding factor.
 4. The error JSON, redacted if it contains anything personal.
 
