@@ -228,3 +228,49 @@ def test_cleanup_waits_for_port_and_retries_transient_permission_error(
     probe.remove_work_dir(stuck, timeout_s=0.05, initial_delay_s=0.02)
     assert fallback_flags[-1] is True and False in fallback_flags
     assert not stuck.exists()
+
+
+@pytest.mark.req("R-FIRST-RUN-PROBE")
+def test_local_wheel_sdist_and_directory_specs_resolve_before_temp_cwd(
+    tmp_path_factory: pytest.TempPathFactory, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    caller_dir = tmp_path_factory.mktemp("caller")
+    outside = tmp_path_factory.mktemp("outside-wheel")
+    monkeypatch.setattr(probe, "inside_checkout", lambda path: None)
+    wheel = caller_dir / "dist" / "ru_marketplace_mcp-2.10.0-py3-none-any.whl"
+    wheel.parent.mkdir(parents=True)
+    wheel.write_bytes(b"PK")
+    local_dir = caller_dir / "wheelhouse"
+    local_dir.mkdir()
+    monkeypatch.chdir(caller_dir)
+
+    assert (
+        probe.main(
+            [
+                "--from",
+                "dist/ru_marketplace_mcp-2.10.0-py3-none-any.whl",
+                "--dry-run",
+                "--work-root",
+                str(outside),
+            ]
+        )
+        == 0
+    )
+    report = json.loads(capsys.readouterr().out)
+    expected_wheel = str(wheel.resolve())
+    assert report["steps"][0]["argv"][:4] == ["uvx", "--from", expected_wheel, "marketplace-mcp"]
+    assert report["steps"][1]["argv"][:4] == ["uvx", "--from", expected_wheel, "marketplace-mcp"]
+
+    sdist_steps = probe.plan_steps("dist/ru_marketplace_mcp-2.10.0.tar.gz", outside, "python", skip_live=True)
+    assert sdist_steps[0].argv[2] == str((caller_dir / "dist" / "ru_marketplace_mcp-2.10.0.tar.gz").resolve())
+
+    dir_steps = probe.plan_steps("./wheelhouse", outside, "python", skip_live=True)
+    assert dir_steps[0].argv[2] == str(local_dir.resolve())
+
+    pypi_steps = probe.plan_steps("ru-marketplace-mcp==2.10.0", outside, "python", skip_live=True)
+    assert pypi_steps[0].argv[2] == "ru-marketplace-mcp==2.10.0"
+
+    url_steps = probe.plan_steps(
+        "https://example.invalid/ru_marketplace_mcp-2.10.0-py3-none-any.whl", outside, "python", skip_live=True
+    )
+    assert url_steps[0].argv[2] == "https://example.invalid/ru_marketplace_mcp-2.10.0-py3-none-any.whl"

@@ -48,13 +48,14 @@ if (-not $Profile) {
     }
 }
 
-# A trailing backslash would escape the closing quote of --user-data-dir below.
-if ($Profile.Length -gt 3) { $Profile = $Profile.TrimEnd('\') }
+# A trailing backslash (including on a drive root like D:\) would escape the
+# closing quote of --user-data-dir below.
+$Profile = $Profile.TrimEnd('\')
 
 function Get-CdpVersion {
-    # A CDP endpoint answers /json/version with its browser version. Read it
-    # through System.Net with a 3-second timeout, the same way in Windows
-    # PowerShell 5.1 and PowerShell 7.
+    # A CDP endpoint answers /json/version with JSON naming Browser and
+    # webSocketDebuggerUrl. Read and parse it with a 3-second timeout, the same
+    # way in Windows PowerShell 5.1 and PowerShell 7.
     try {
         $request = [System.Net.WebRequest]::Create("http://127.0.0.1:$Port/json/version")
         $request.Timeout = 3000
@@ -63,7 +64,12 @@ function Get-CdpVersion {
         $body = $reader.ReadToEnd()
         $reader.Close()
         $response.Close()
-        return $body
+        if (-not $body) { return $null }
+        $info = $body | ConvertFrom-Json
+        if ($info -and $info.Browser -and $info.webSocketDebuggerUrl) {
+            return $info
+        }
+        return $null
     } catch {
         return $null
     }
@@ -110,8 +116,9 @@ if (-not $chrome) {
 $profileInUse = $false
 try {
     # The whole switch, quoted or bare, anchored at its end: a sibling profile
-    # such as "Chrome-Scraping-2" is not this one.
-    $profilePattern = '--user-data-dir="?' + [regex]::Escape($Profile) + '("|\s|$)'
+    # such as "Chrome-Scraping-2" or "Shop Two" is not this one.
+    $escapedProfile = [regex]::Escape($Profile)
+    $profilePattern = '(?:--user-data-dir="' + $escapedProfile + '\\?"(?:\s|$)|--user-data-dir=' + $escapedProfile + '\\?(?:\s|$))'
     $running = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction Stop
     foreach ($proc in $running) {
         if ($proc.CommandLine -and $proc.CommandLine -match $profilePattern) {

@@ -69,6 +69,7 @@ def test_the_registry_publisher_is_verified_before_it_is_unpacked() -> None:
     check = step.index("sha256sum -c -")
     assert check < step.index("tar xzf mcp-publisher.tar.gz mcp-publisher") < step.index("./mcp-publisher --help")
     pypi_wait = text.index("https://pypi.org/pypi/ru-marketplace-mcp/")
+    assert "deadline = time.monotonic() + 600.0" in text
     assert pypi_wait < text.index("./mcp-publisher publish")
 
 

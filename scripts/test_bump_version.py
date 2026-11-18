@@ -398,3 +398,73 @@ def test_an_existing_core_package_must_declare_its_release_date(mini_tree, capsy
     _write(mini_tree, "packages/mcp-core/src/mcp_core/__init__.py", '__version__ = "1.2.3"\n')
     assert check_versions.main([], root=mini_tree) == 1
     assert "__init__.py" in capsys.readouterr().err
+
+
+@pytest.mark.req("R-VERSION", "R-RELEASE-BUMP")
+def test_server_json_pypi_key_order_and_strict_root_version(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    real_server_decls = [
+        d
+        for d in version_sites.iter_declarations(repo_root)
+        if d.path == repo_root / "server.json" and d.site.label in ("server.json", "MCP registry PyPI version")
+    ]
+    assert len(real_server_decls) == 2
+
+    reordered = (
+        "{\n"
+        '  "version": "1.2.3",\n'
+        '  "packages": [\n'
+        "    {\n"
+        '      "transport": { "type": "stdio" },\n'
+        '      "version": "1.2.3",\n'
+        '      "identifier": "ru-marketplace-mcp",\n'
+        '      "registryType": "pypi"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", reordered)
+    assert check_versions.main([], root=mini_tree) == 0
+    capsys.readouterr()
+    assert bump_version.bump(mini_tree, NEW) == 0
+    capsys.readouterr()
+    bumped_text = (mini_tree / "server.json").read_text(encoding="utf-8")
+    assert bumped_text.count('"version": "1.3.0"') == 2
+    assert OLD not in bumped_text
+
+    # Deleting the root "version" in server.json must not fall back to packages[].version.
+    missing_root = (
+        "{\n"
+        '  "packages": [\n'
+        "    {\n"
+        '      "registryType": "pypi",\n'
+        '      "identifier": "ru-marketplace-mcp",\n'
+        '      "version": "1.3.0"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.3.0"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", missing_root)
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "server.json" in capsys.readouterr().err
+
+    # Deleting "version" inside the PyPI package block must also fail check_versions.
+    missing_pypi_version = (
+        "{\n"
+        '  "version": "1.3.0",\n'
+        '  "packages": [\n'
+        "    {\n"
+        '      "registryType": "pypi",\n'
+        '      "identifier": "ru-marketplace-mcp"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.3.0"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", missing_pypi_version)
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "server.json" in capsys.readouterr().err

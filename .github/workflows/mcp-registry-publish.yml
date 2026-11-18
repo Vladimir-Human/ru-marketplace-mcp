@@ -114,7 +114,7 @@ jobs:
 
           version = os.environ["EXPECTED_VERSION"]
           url = f"https://pypi.org/pypi/ru-marketplace-mcp/{version}/json"
-          deadline = time.monotonic() + 240.0
+          deadline = time.monotonic() + 600.0
           while True:
               try:
                   with urllib.request.urlopen(url, timeout=10) as resp:
