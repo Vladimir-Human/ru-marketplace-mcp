@@ -673,3 +673,58 @@ async def test_concurrent_card_misses_collapse_onto_one_upstream_fetch(monkeypat
 
     assert calls == 1
     assert all(r.product.price_rub == results[0].product.price_rub for r in results)
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_parse_product_availability_checks_warehouse_codes_stores_and_explicit_booleans() -> None:
+    empty_stock = server._parse_product(
+        {
+            "id": 1001,
+            "title": "Кукла",
+            "price": {"price": 999},
+            "available": {
+                "online": {"warehouse_codes": []},
+                "offline": {"stores": [], "region_iso_codes": []},
+            },
+        }
+    )
+    assert empty_stock.available_online is False
+    assert empty_stock.available_offline is False
+    assert empty_stock.store_count == 0
+
+    stocked = server._parse_product(
+        {
+            "id": 1002,
+            "title": "Коляска",
+            "price": {"price": 19999},
+            "available": {
+                "online": {"warehouse_codes": ["WH1"]},
+                "offline": {"stores": [{"id": 1}]},
+            },
+        }
+    )
+    assert stocked.available_online is True
+    assert stocked.available_offline is True
+    assert stocked.store_count == 1
+
+    explicit_flags = server._parse_product(
+        {
+            "id": 1003,
+            "title": "Конструктор",
+            "isAvailableOnline": False,
+            "isAvailableOffline": True,
+            "available": {
+                "online": {"warehouse_codes": ["STALE"]},
+                "offline": {"stores": []},
+            },
+        }
+    )
+    assert explicit_flags.available_online is False
+    assert explicit_flags.available_offline is True
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_parse_product_coerces_rating_on_five_point_scale() -> None:
+    assert server._parse_product({"id": 1, "rating": 49}).rating is None
+    assert server._parse_product({"id": 1, "rating": "1 234"}).rating is None
+    assert server._parse_product({"id": 1, "rating": "4,8"}).rating == 4.8

@@ -97,8 +97,10 @@ def test_the_captured_item_pages_carry_their_id_in_the_url_tail():
     [
         "/4612345678",
         "/noutbuk_thinkpad_x1_4612345678",
+        "/moskva/fixture_9000000032",
         "/moskva/noutbuki/noutbuk_thinkpad_x1_4612345678",
         "/moskva/noutbuki/noutbuk_thinkpad_x1_4612345678/",
+        "/moskva/avtomobili/bmw/x5_9000000032",
     ],
 )
 def test_the_item_path_regex_accepts_the_item_page_shapes(path):

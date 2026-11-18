@@ -43,7 +43,7 @@ from mcp_core.errors import (
     RateLimitedError,
     TransportDownError,
 )
-from mcp_core.kit import url_on_hosts
+from mcp_core.kit import page_link, url_on_hosts
 from mcp_core.redact import redact_error_text as _redact
 from mcp_core.sources import BY_NAME
 
@@ -54,6 +54,16 @@ ALLOWED_HOSTS = BY_NAME["avito"].page_hosts
 
 
 SITE_BASE = "https://www.avito.ru"
+
+
+def _avito_page_link(raw: Any) -> str | None:
+    """Normalize an Avito listing/profile URL to https on ALLOWED_HOSTS, or None."""
+    if not isinstance(raw, str):
+        return None
+    candidate = raw.strip()
+    if candidate.lower().startswith("http://"):
+        candidate = "https://" + candidate[7:]
+    return page_link(candidate, SITE_BASE, ALLOWED_HOSTS) or None
 
 
 # The canonical item URL carries the id in the tail of its last segment, however
@@ -202,7 +212,7 @@ def parse_item_page(html: str, item_id: int | None = None) -> dict[str, Any]:
         "description": R.flatten_text(product.get("description")),
         # schema.org allows one image as a bare URL; no image key means unknown, not zero.
         "images": len(images) if isinstance(images, list) else 1 if isinstance(images, str) and images else None,
-        "url": R.flatten_text(offers.get("url")),
+        "url": _avito_page_link(R.flatten_text(offers.get("url"))),
         "location": None,
         "posted_at": None,
         "views": None,
@@ -555,26 +565,27 @@ def _parse_search_items(payload: dict) -> tuple[list[dict[str, Any]], int | None
         item_id = R.first_present(it, "id", "itemId", "item_id")
         item_id = R.coerce_int(item_id)
         title = R.flatten_text(R.first_present(it, "title", "name"))
-        price = R.coerce_price(R.first_present(it, "price", "priceRub", "price_rub"))
-        if price is None and isinstance(it.get("priceDetailed"), dict):
-            price = R.coerce_price(R.first_present(it["priceDetailed"], "value", "price"))
-        # During an Avito sale priceDetailed.value stays the listing price; the
-        # price the buyer pays is in the hit's own PriceStep (live 2026-11-06).
-        sale, price_conflict = _state.search_sale_price(it)
-        if sale is not None and price not in (None, sale["price_rub"], sale["old_price_rub"]):
-            price_conflict = f"price {price} is neither {sale['price_rub']} nor {sale['old_price_rub']}"
-        if price_conflict:
-            price, sale = None, None
-        elif sale is not None:
-            price = float(sale["price_rub"])
+        if _state.is_non_unit_price_detailed(it.get("priceDetailed")):
+            price, sale, price_conflict = None, None, None
+        else:
+            price = R.coerce_price(R.first_present(it, "price", "priceRub", "price_rub"))
+            if price is None and isinstance(it.get("priceDetailed"), dict):
+                price = R.coerce_price(R.first_present(it["priceDetailed"], "value", "price"))
+            # During an Avito sale priceDetailed.value stays the listing price; the
+            # price the buyer pays is in the hit's own PriceStep (live 2026-11-06).
+            sale, price_conflict = _state.search_sale_price(it)
+            if sale is not None and price not in (None, sale["price_rub"], sale["old_price_rub"]):
+                price_conflict = f"price {price} is neither {sale['price_rub']} nor {sale['old_price_rub']}"
+            if price_conflict:
+                price, sale = None, None
+            elif sale is not None:
+                price = float(sale["price_rub"])
         # The live js/items key is `urlPath`. The alias list used to read `uriPath`
         # — one letter out — so every search hit came back with url=None while the
         # rest of the row parsed fine. Verified 2026-07-28 against a real response
         # captured from a residential session: `urlPath` is the ONLY url-bearing
         # key on the item (there is no `uri`, `url` or `itemUrl`).
-        uri = R.first_present(it, "uri", "url", "urlPath", "uriPath", "itemUrl") or ""
-        if uri and uri.startswith("/"):
-            uri = SITE_BASE + uri
+        uri = _avito_page_link(R.first_present(it, "uri", "url", "urlPath", "uriPath", "itemUrl"))
         # location arrives as a nested object on the live endpoint, not a string:
         # {"id": 637640, "name": "Москва", ...}. flatten_text pulls the name out
         # (or yields None) so one extra level of nesting upstream can no longer

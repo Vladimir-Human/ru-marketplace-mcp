@@ -190,7 +190,11 @@ def _is_tmall_url(raw: str) -> bool:
         return False
     if candidate.startswith("//"):
         candidate = "https:" + candidate
-    return url_on_hosts(candidate, ("detail.tmall.com", ".tmall.com"), allow_schemeless=True)
+    return url_on_hosts(
+        candidate,
+        ("detail.tmall.com", ".tmall.com", "detail.tmall.hk", ".tmall.hk"),
+        allow_schemeless=True,
+    )
 
 
 def _extract_item_id(raw: str) -> str | None:
@@ -342,7 +346,8 @@ _SEARCH_EXTRACT_TEMPLATE = """
     // logged-out pages rendering 29-38 items were convicted by the hidden
     // baxia widget's «人机» (live probe 2026-09-10) and the shape-drift canary
     // never ran; the Python verdict gates the wording on zero extracted items.
-    const wallText = cleanTextWithout(document.body, ['script', 'style']) || '';
+    const punishUrl = /\\/punish\\b|x5secdata=/i.test(String(location && location.href || '')) ? ' punish' : '';
+    const wallText = (cleanTextWithout(document.body, ['script', 'style']) || '') + punishUrl;
     return JSON.stringify({
         items: out,
         title: document.title || '',
@@ -398,9 +403,19 @@ _CARD_EXTRACT_TEMPLATE = """
             // on the block (live capture: highlightPrice uses symbol--,
             // subPrice uses a second text-- span). Concatenate every part in
             // DOM order and keep results that carry digits.
+            const spans = Array.from(block.querySelectorAll('[class*="symbol"], [class*="text"]'));
+            if (!spans.length) continue;
             const parts = [];
-            for (const el of block.querySelectorAll('[class*="symbol"], [class*="text"]')) {
-                const t = cleanText(el);
+            for (let i = 0; i < spans.length; i++) {
+                if (i > 0) {
+                    let sib = spans[i - 1].nextSibling;
+                    while (sib && sib !== spans[i] && !sib.contains(spans[i])) {
+                        const mid = (sib.textContent || '').trim();
+                        if (/^[-~～–—]+$/.test(mid)) parts.push(mid);
+                        sib = sib.nextSibling;
+                    }
+                }
+                const t = cleanText(spans[i]);
                 if (t) parts.push(t);
             }
             const joined = parts.join('');
@@ -442,7 +457,8 @@ _CARD_EXTRACT_TEMPLATE = """
     // Same structural wall markers as the search extractor (see the comment
     // there): item pages redirect to the same title-less login wall variant,
     // and the verdict is Python's, not the browser's.
-    const wallText = cleanTextWithout(document.body, ['script', 'style']) || '';
+    const punishUrl = /\\/punish\\b|x5secdata=/i.test(String(location && location.href || '')) ? ' punish' : '';
+    const wallText = (cleanTextWithout(document.body, ['script', 'style']) || '') + punishUrl;
     // A card has no search-items gate: discard passive hidden widget subtrees
     // before transporting challenge text, rather than trusting its title/price.
     // 5 = SHOW_ELEMENT | SHOW_TEXT; 1/2/3 = ACCEPT/REJECT/SKIP.
@@ -460,6 +476,7 @@ _CARD_EXTRACT_TEMPLATE = """
     while ((challengeNode = challengeWalker.nextNode())) {
         challengeParts.push(challengeNode.textContent || '');
     }
+    if (punishUrl) challengeParts.push(punishUrl);
     return JSON.stringify({
         title: title,
         price_texts: priceTexts,
@@ -645,6 +662,9 @@ def _login_wall_markers(data: dict[str, Any]) -> tuple[str, ...]:
     build) fall back to the title marker alone — coerce_int(None) is None, so
     the gated markers simply stay silent instead of guessing.
     """
+    items = data.get("items")
+    if isinstance(items, list) and items:
+        return ()
     markers: list[str] = []
     # The DOCUMENT title only, never the product name: card payloads carry the
     # product name in `title` and document.title in `page_title` (see
@@ -692,7 +712,10 @@ def _grid_still_loading(data: dict[str, Any]) -> bool:
 # no items gate, so their challenge_snippet also excludes hidden DOM subtrees;
 # older payloads fall back to body_snippet. Both snippets exclude scripts/styles.
 # 验证 also covers 验证码, so the old alternation's extra branch is not needed.
-_CHALLENGE_TEXT_RE = re.compile(r"验证|人机|captcha|are you human|access denied", re.IGNORECASE)
+_CHALLENGE_TEXT_RE = re.compile(
+    r"验证|人机|滑动一下|拖动.{0,6}滑块|punish|captcha|are you human|access denied",
+    re.IGNORECASE,
+)
 
 
 def _anti_bot_challenge(data: dict[str, Any]) -> bool:
@@ -816,12 +839,13 @@ async def taobao_search(
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
         # Taobao prices are yuan, so the shared validator needs the field name.
-        warnings: list[str] = R.validate_items(
+        item_warnings: list[str] = R.validate_items(
             [it.model_dump() for it in items],
             require_title=True,
             price_key="price_cny",
             absent_price="no_prices_on_page",
         )
+        warnings = list(item_warnings)
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family (a price alias or a
         # structural wall marker) is drift the agent must see, not only a
@@ -833,7 +857,8 @@ async def taobao_search(
         result = TaobaoSearchResponse(query=query, page=page, tier_used=tier, count=len(items), items=items)
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="taobao_search")
         result.meta = MetaOut(**attached["_meta"])
-        if tier == "cdp":
+        cache_ok = result.meta.healthy or ("body_snippet" not in payload and not R.health_warnings(item_warnings))
+        if tier == "cdp" and cache_ok:
             _cache.set(url, payload)
         return result
     except ToolError:
@@ -969,11 +994,11 @@ async def taobao_card(
         card = result.model_dump(by_alias=True, exclude={"meta"})
         attached = R.attach_meta(
             card,
-            [*R.validate_offer(card, price_key="price_cny"), *card_warnings],
+            [*R.validate_offer(card, require_title=True, price_key="price_cny"), *card_warnings],
             source="taobao_card",
         )
         result.meta = MetaOut(**attached["_meta"])
-        if tier == "cdp":
+        if tier == "cdp" and result.meta.healthy and result.price_cny is not None:
             _cache.set(url, payload)
         return result
     except ToolError:

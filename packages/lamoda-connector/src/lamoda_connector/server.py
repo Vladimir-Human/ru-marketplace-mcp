@@ -106,9 +106,9 @@ TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
 
-# SKUs look like MP002XM1RMM3: two letters, alphanumerics, 8-20 chars. URLs
-# carry them lowercased, so match case-insensitively and normalise to upper.
-_SKU_RE = re.compile(r"\b([a-zA-Z]{2}[a-zA-Z0-9]{6,18})\b")
+# SKUs look like MP002XM1RMM3: two letters, alphanumerics with >=1 digit, 8-20 chars.
+# URLs carry them lowercased, so match case-insensitively and normalise to upper.
+_SKU_RE = re.compile(r"\b(?=[a-zA-Z0-9]{8,20}\b)(?=[a-zA-Z0-9]*\d)([a-zA-Z]{2}[a-zA-Z0-9]{6,18})\b")
 
 # Field names verified against the live endpoint, July 2026. `old_price_amount`
 # is the real name: asking for `old_price` answers HTTP 200 with
@@ -230,10 +230,11 @@ _SEARCH_EXTRACT_TEMPLATE = """
         const oldPriceMarked = !!priceRoot.querySelector(
             '[class*="__price-new"], [class*="__price-single"], [class*="d-card__current-price"]'
         );
+        const brandEl = card.querySelector('[class*="brand-name"]');
         out.push({
             sku: m[1],
             title: title,
-            brand: null,
+            brand: cleanText(brandEl),
             old_price_text: cleanText(oldPriceEl),
             old_price_marked: oldPriceMarked,
             price_texts: priceTextsIn(priceRoot),
@@ -573,7 +574,9 @@ async def lamoda_search(
         try:
             payload = await _cdp_render_search(query.strip(), ctx)
         except NavBlocked as exc:
-            raise_tool_error(TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status})."))
+            raise_tool_error(
+                TransportDownError(f"Lamoda navigation blocked (HTTP {exc.status}).", status_code=exc.status or None)
+            )
         if _refusal_page(payload):
             raise_tool_error(_refusal_error())
         if _anti_bot_challenge(payload):
@@ -594,9 +597,10 @@ async def lamoda_search(
                 )
             )
         items = [_search_item_from_tile(it) for it in items_raw if isinstance(it, dict)]
-        warnings: list[str] = R.validate_items(
+        item_warnings: list[str] = R.validate_items(
             [it.model_dump() for it in items], require_title=True, absent_price="no_prices_on_page"
         )
+        warnings = list(item_warnings)
         # The selfcheck's family registry now also guards the tool's own
         # answer: a payload that lost a whole key family is drift the agent
         # must see, not only a human running doctor. The four render-based
@@ -609,7 +613,8 @@ async def lamoda_search(
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="lamoda_search")
         result.meta = MetaOut(**attached["_meta"])
         key = f"search:{query.strip()}"
-        if _cache.get(key) is None:
+        cache_ok = result.meta.healthy or ("body_snippet" not in payload and not R.health_warnings(item_warnings))
+        if cache_ok and _cache.get(key) is None:
             _cache.set(key, payload)
         return result
     except ToolError:
@@ -666,9 +671,13 @@ async def lamoda_card(
             tier_used=product.get("_tier_used", "graphql"),
         )
         card = result.model_dump(by_alias=True, exclude={"meta", "sizes"})
-        attached = R.attach_meta(card, R.validate_offer(card), source="lamoda_card")
+        attached = R.attach_meta(
+            card,
+            R.validate_offer({**card, "in_stock": card.get("is_available")}, require_title=True),
+            source="lamoda_card",
+        )
         result.meta = MetaOut(**attached["_meta"])
-        if _cache.get(f"graphql:{sku}") is None:
+        if result.meta.healthy and _cache.get(f"graphql:{sku}") is None:
             _cache.set(f"graphql:{sku}", product)
         return result
     except ToolError:
@@ -718,15 +727,26 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
     # GraphQL tier: a 502/403 here means the endpoint moved or the wall grew.
     try:
         async with asyncio.timeout(60):
-            await _graphql_card("MP002XM1RMM3", ctx)
-        checks["card_graphql"] = R.selfcheck_entry(
-            "healthy", baseline="graphql-products-v2", notes=["SKU enrichment answered"]
-        )
+            card_product = await _graphql_card("MP002XM1RMM3", ctx)
+        if R.coerce_price(card_product.get("price_amount")) is None and card_product.get("is_available") is not False:
+            checks["card_graphql"] = R.selfcheck_entry(
+                "drift", baseline="graphql-products-v2", reason="no_prices", notes=["card returned without a price"]
+            )
+        else:
+            checks["card_graphql"] = R.selfcheck_entry(
+                "healthy", baseline="graphql-products-v2", notes=["SKU enrichment answered"]
+            )
     except ToolError as exc:
-        state = "drift" if "ParserDrift" in type(exc).__name__ else "inconclusive"
-        reason = "parse_smoke_failed" if state == "drift" else "transport_down"
+        err_str = str(exc)
+        is_drift = '"parser_drift"' in err_str or "ParserDrift" in err_str
+        state = "drift" if is_drift else "inconclusive"
+        reason = (
+            "parse_smoke_failed"
+            if state == "drift"
+            else ("baseline_gone" if '"not_found"' in err_str else "transport_down")
+        )
         checks["card_graphql"] = R.selfcheck_entry(
-            state, baseline="graphql-products-v2", reason=reason, notes=[str(exc)[:160]]
+            state, baseline="graphql-products-v2", reason=reason, notes=[err_str[:160]]
         )
     except Exception as exc:
         checks["card_graphql"] = R.selfcheck_entry(
@@ -738,10 +758,11 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
     try:
         async with asyncio.timeout(90):
             payload = await _cdp_render_search("кроссовки", ctx)
-        if _anti_bot_challenge(payload):
-            checks["search"] = R.selfcheck_entry(
-                "inconclusive", baseline=baseline, reason="blocked", notes=["anti-bot challenge in rendered page"]
+        if _anti_bot_challenge(payload) or _refusal_page(payload):
+            note = (
+                "refusal page in rendered search" if _refusal_page(payload) else "anti-bot challenge in rendered page"
             )
+            checks["search"] = R.selfcheck_entry("inconclusive", baseline=baseline, reason="blocked", notes=[note])
         else:
             items_raw = [*payload.get("items", [])] if isinstance(payload.get("items"), list) else []
             if items_raw:

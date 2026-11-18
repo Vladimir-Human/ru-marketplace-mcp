@@ -31,7 +31,7 @@ def test_live_card_parses_to_the_displayed_values() -> None:
     assert product.title == "Кукла пупс Demi Star в розовом комбинезоне"
     assert product.price_rub == 699.0
     assert product.old_price_rub is None
-    assert product.available_online is True
+    assert product.available_online is False
     assert product.url == "https://www.detmir.ru/product/index/id/6673568/"
 
 

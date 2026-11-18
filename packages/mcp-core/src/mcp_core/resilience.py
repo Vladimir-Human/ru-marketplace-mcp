@@ -322,6 +322,9 @@ DECOY_MARKERS: tuple[str, ...] = (
     "trade-in",
     "пункт",
     "отзыв",
+    "пошлин",
+    "тамож",
+    "доставк",
     "выгод",
     "скидк",
     "эконом",
@@ -382,7 +385,7 @@ def _parse_money_string(s: str) -> float | None:
     # marketplaces use interchangeably.
     if matches:
         before = t[: matches[0].start()].rstrip()
-        if before.endswith(("-", "\u2212", "\u2013", "\u2014")):
+        if before.endswith(("+", "\uff0b", "-", "\u2212", "\u2013", "\u2014")):
             return None
     tokens = [m.group(0).strip() for m in matches]
     tokens = [tok for tok in tokens if tok]
@@ -714,7 +717,9 @@ def validate_review_block(block: dict) -> list[str]:
     # least REVIEW_TEXT_DRIFT_MIN_SAMPLE reviews with zero text is drift.
     if reviews and len(reviews) >= REVIEW_TEXT_DRIFT_MIN_SAMPLE:
         texts_present = sum(
-            1 for r in reviews if (r.get("text") or r.get("positive") or r.get("cons") or r.get("pros"))
+            1
+            for r in reviews
+            if (r.get("text") or r.get("positive") or r.get("negative") or r.get("cons") or r.get("pros"))
         )
         if texts_present == 0:
             warnings.append(

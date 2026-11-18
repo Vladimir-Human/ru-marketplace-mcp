@@ -90,6 +90,49 @@ def test_compact_falls_back_to_permissive_object_for_unknown_shapes():
     assert compact_output_schema({"type": "object"}) == EMPTY_OBJECT_SCHEMA
 
 
+@pytest.mark.req("R-TOOL-SCHEMA")
+def test_compact_returns_fresh_empty_object_schema_copies():
+    first = compact_output_schema(None)
+    second = compact_output_schema({"type": "object"})
+    assert first is not EMPTY_OBJECT_SCHEMA
+    assert second is not EMPTY_OBJECT_SCHEMA
+    assert first is not second
+    first["mutated"] = True
+    assert "mutated" not in EMPTY_OBJECT_SCHEMA
+    assert "mutated" not in compact_output_schema(None)
+
+
+@pytest.mark.req("R-TOOL-SCHEMA")
+async def test_apply_promotes_and_deduplicates_tool_annotations_title():
+    from mcp.types import ToolAnnotations
+
+    app = FastMCP("annotations-dedup")
+
+    @app.tool(
+        name="sample",
+        annotations=ToolAnnotations(
+            title="Sample Tool Title",
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=True,
+        ),
+    )
+    async def sample() -> _Named:
+        return _Named(title="x")
+
+    assert apply_compact_output_schemas(app) == 1
+    async with Client(app) as client:
+        tools = await client.list_tools()
+    assert len(tools) == 1
+    assert tools[0].title == "Sample Tool Title"
+    assert tools[0].annotations is not None
+    assert tools[0].annotations.title is None
+    wire = tools[0].model_dump(by_alias=True, exclude_none=True)
+    assert wire["title"] == "Sample Tool Title"
+    assert "title" not in wire["annotations"]
+
+
 def test_registered_tool_reaches_clients_with_a_compact_schema():
     app = _heavy_tool()
 

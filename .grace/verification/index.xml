@@ -35,8 +35,10 @@
     <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_the_item_path_regex_accepts_the_item_page_shapes" requirements="R-AVITO-ITEM-PATH" />
     <test file="packages/avito-connector/tests/test_item_path_regex.py" name="test_the_item_path_regex_refuses_everything_that_is_not_an_ascii_slug" requirements="R-AVITO-ITEM-PATH" title="A wider shape than the captures need would let a crafted path through." />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_accepts_a_bare_id_item_url" requirements="R-AVITO-ITEM-PATH" title="/&lt;id&gt; is the item-page shape the bare-id branch itself navigates to." />
+    <test file="packages/avito-connector/tests/test_server.py" name="test_card_accepts_one_and_multi_segment_paths_and_normalizes_https_output_url" requirements="R-AVITO-ITEM-PATH" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_keeps_opening_real_item_urls_normalized" requirements="R-AVITO-ITEM-PATH" title="Real item URLs keep working: city/category slug segments, with or" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_non_item_page_paths_before_transport" requirements="R-AVITO-ITEM-PATH" title="R-INPUT-TRUST: the card opens pages in the operator's logged-in Chrome," />
+    <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_schemeless_foreign_and_personal_urls_before_transport" requirements="R-AVITO-ITEM-PATH" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_separator_escapes_before_transport" requirements="R-AVITO-ITEM-PATH" title="R-AVITO-ITEM-PATH: an item path is a plain ASCII slug, so a backslash or" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_still_opens_a_plain_city_category_slug_path" requirements="R-AVITO-ITEM-PATH" title="The same guard must not touch ordinary slugs: plain ASCII item paths keep" />
   </requirement>
@@ -46,10 +48,13 @@
     <test file="packages/avito-connector/tests/test_seller_roundtrip.py" name="test_the_handed_on_seller_id_opens_the_same_profile" requirements="R-AVITO-SELLER-ROUNDTRIP" />
   </requirement>
   <requirement id="R-CACHE-VALIDATED" kind="requirement" state="tested">
+    <test file="packages/cian-connector/tests/test_server.py" name="test_unhealthy_search_and_card_responses_are_not_cached" requirements="R-CACHE-VALIDATED" />
     <test file="packages/detmir-connector/tests/test_server.py" name="test_concurrent_card_misses_collapse_onto_one_upstream_fetch" requirements="R-CACHE-VALIDATED" title="Concurrent identical misses share one fetch; rejected payloads stay uncached." />
+    <test file="packages/lamoda-connector/tests/test_server.py" name="test_search_nav_blocked_403_preserves_status_code_and_unhealthy_responses_skip_cache" requirements="R-CACHE-VALIDATED" />
     <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_every_response_cache_has_a_case" requirements="R-CACHE-VALIDATED" />
     <test file="packages/marketplace-connector/tests/conformance/test_cache_validated.py" name="test_rejected_response_is_not_cached" requirements="R-CACHE-VALIDATED" />
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_unhealthy_search_and_card_responses_are_not_cached" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
   <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE">
@@ -215,6 +220,7 @@
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_required_says_a_plain_retry_will_not_help" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retryable in principle, never self-retryable now." />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_with_retention_points_at_the_kept_open_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: a retained page is completed in place, not re-opened." />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_without_retention_names_the_unblock_command" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: with no retained page the action is the real CLI command." />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_baxia_slider_copy_and_punish_url_trigger_challenge_required" requirements="R-CHALLENGE-ACTION" />
     <test file="packages/taobao-connector/tests/test_server.py" name="test_search_challenge_message_does_not_promise_a_visible_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retention is off, so no message may claim a visible page." />
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_captcha_action_does_not_promise_a_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retention is off, so no field may claim a visible page." />
   </requirement>
@@ -520,6 +526,7 @@
     <test file="packages/marketplace-connector/tests/test_cli.py" name="test_doctor_reads_the_wb_dom_fallback_setting" requirements="R-DOCTOR-NEXT-STEP" />
   </requirement>
   <requirement id="R-DRIFT" kind="rule" state="tested" gaps="G-LIVE-SMOKE-STRENGTH">
+    <test file="packages/lamoda-connector/tests/test_server.py" name="test_selfcheck_reports_graphql_parser_drift_and_refusal_page_blocked" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_render_json_refusals_are_json_errors" requirements="R-DRIFT" title="Every render_json refusal must carry the shared error JSON the agent reads" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_all_healthy_is_success" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_drift_dominates" requirements="R-DRIFT" />
@@ -677,6 +684,8 @@
     <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_a_real_challenge_is_still_a_challenge" requirements="R-LAMODA-REFUSAL-HONEST" />
     <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_refusal_page_is_not_a_challenge" requirements="R-LAMODA-REFUSAL-HONEST" />
     <test file="packages/lamoda-connector/tests/test_refusal_page.py" name="test_search_on_the_refusal_page_answers_rate_limited_with_a_wait" requirements="R-LAMODA-REFUSAL-HONEST" />
+    <test file="packages/lamoda-connector/tests/test_server.py" name="test_search_nav_blocked_403_preserves_status_code_and_unhealthy_responses_skip_cache" requirements="R-LAMODA-REFUSAL-HONEST" />
+    <test file="packages/lamoda-connector/tests/test_server.py" name="test_selfcheck_reports_graphql_parser_drift_and_refusal_page_blocked" requirements="R-LAMODA-REFUSAL-HONEST" />
   </requirement>
   <requirement id="R-LIVE-AUDIT" kind="requirement" state="tested">
     <test file="scripts/test_live_audit.py" name="test_a_budget_refusal_inside_the_child_is_a_budget_skip_not_a_dead_source" requirements="R-LIVE-AUDIT.runner" title="A call our own budget cut short is skipped: budget, pauses nothing, and costs one request more next time." />
@@ -827,6 +836,7 @@
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
     <test file="packages/aliexpress-connector/tests/test_server.py" name="test_extract_item_id_refuses_schemeless_off_host_urls" requirements="R-NAV-HOSTS.invariant" />
+    <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_schemeless_foreign_and_personal_urls_before_transport" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_foreign_links_have_no_id" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_offer_links_keep_the_id" requirements="R-NAV-HOSTS.kept-inputs" />
     <test file="packages/lamoda-connector/tests/test_server.py" name="test_extract_sku" requirements="R-NAV-HOSTS.invariant" />
@@ -895,8 +905,20 @@
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_a_percent_that_is_not_a_number_is_computed_from_the_prices" requirements="R-NO-FABRICATION" />
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_a_product_offer_at_the_struck_price_takes_the_sale_price" requirements="R-NO-FABRICATION" title="A schema.org offer may carry the listing price; the card state says what the buyer pays." />
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_the_sale_of_another_item_is_not_read" requirements="R-NO-FABRICATION" />
+    <test file="packages/avito-connector/tests/test_server.py" name="test_search_and_card_nullify_non_unit_postfix_and_disabled_prices" requirements="R-NO-FABRICATION" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_card_metro_reads_travel_time_and_travel_type" requirements="R-NO-FABRICATION" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_foreign_currency_offer_reads_rur_prices_never_raw_usd_or_eur" requirements="R-NO-FABRICATION" />
+    <test file="packages/cian-connector/tests/test_server.py" name="test_square_meter_price_type_uses_total_rur_or_explicit_m2_unit" requirements="R-NO-FABRICATION" />
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_wb_wallet_only_price_is_not_certified" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE.verify, R-NO-FABRICATION: a DOM card whose price_rub" />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/detmir-connector/tests/test_server.py" name="test_parse_product_availability_checks_warehouse_codes_stores_and_explicit_booleans" requirements="R-NO-FABRICATION" />
+    <test file="packages/detmir-connector/tests/test_server.py" name="test_parse_product_coerces_rating_on_five_point_scale" requirements="R-NO-FABRICATION" />
+    <test file="packages/lamoda-connector/tests/test_server.py" name="test_extract_sku_requires_at_least_one_digit" requirements="R-NO-FABRICATION" />
+    <test file="packages/mcp-core/tests/test_resilience.py" name="test_coerce_price_rejects_customs_delivery_and_leading_plus_deltas" requirements="R-NO-FABRICATION" />
+    <test file="packages/mcp-core/tests/test_resilience.py" name="test_validate_review_block_counts_negative_only_reviews_as_text" requirements="R-NO-FABRICATION" />
+    <test file="packages/megamarket-connector/tests/test_server.py" name="test_extract_item_id_reads_trailing_goods_id_not_model_digits_and_strips_merchant_suffix" requirements="R-NO-FABRICATION" />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_card_extractor_preserves_range_separator_in_highlight_price" requirements="R-NO-FABRICATION" />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_login_wall_markers_ignore_link_poor_search_pages_that_have_items" requirements="R-NO-FABRICATION" />
   </requirement>
   <requirement id="R-NO-MCP-LOGGING" kind="requirement" state="tested">
     <test file="packages/avito-connector/tests/test_server.py" name="test_fetch_debug_never_leaks_tier1_exception_secrets" requirements="R-NO-MCP-LOGGING.diagnostics" />
@@ -939,9 +961,12 @@
     <test file="packages/mcp-core/tests/test_old_price_by_marker.py" name="test_unreadable_marked_old_price_stays_unknown" requirements="R-OLD-PRICE-BY-MARKER" />
   </requirement>
   <requirement id="R-OUTPUT-PAGE-URLS" kind="requirement" state="tested">
+    <test file="packages/avito-connector/tests/test_server.py" name="test_card_accepts_one_and_multi_segment_paths_and_normalizes_https_output_url" requirements="R-OUTPUT-PAGE-URLS" />
+    <test file="packages/avito-connector/tests/test_server.py" name="test_search_normalizes_http_and_rejects_scheme_relative_or_foreign_urls" requirements="R-OUTPUT-PAGE-URLS" />
     <test file="packages/detmir-connector/tests/test_page_links.py" name="test_a_product_link_on_another_host_is_dropped_and_a_missing_one_is_built" requirements="R-OUTPUT-PAGE-URLS.detmir" />
     <test file="packages/detmir-connector/tests/test_page_links.py" name="test_a_sister_shop_category_link_is_dropped" requirements="R-OUTPUT-PAGE-URLS.detmir" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_page_link_keeps_only_full_links_on_the_page_hosts" requirements="R-OUTPUT-PAGE-URLS" title="One rule for every page link a tool returns (R-OUTPUT-PAGE-URLS)." />
+    <test file="packages/megamarket-connector/tests/test_server.py" name="test_search_and_card_normalize_output_urls_via_page_link" requirements="R-OUTPUT-PAGE-URLS" />
     <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_a_category_page_is_a_full_link_on_wildberries" requirements="R-OUTPUT-PAGE-URLS.wb" />
     <test file="packages/wb-connector/tests/test_page_links_and_routing.py" name="test_every_card_item_carries_its_product_page" requirements="R-OUTPUT-PAGE-URLS.wb" />
   </requirement>
@@ -1119,6 +1144,7 @@
   <requirement id="R-TAOBAO-TMALL-CARD" kind="requirement" state="tested">
     <test file="packages/taobao-connector/tests/test_search_urls_and_tmall_cards.py" name="test_card_redirect_refusal_preserves_host_policy" requirements="R-TAOBAO-TMALL-CARD" title="R-TAOBAO-TMALL-CARD, R-INPUT-TRUST: translate the refused host, never allow or retry it." />
     <test file="packages/taobao-connector/tests/test_search_urls_and_tmall_cards.py" name="test_card_refuses_tmall_url_without_navigation" requirements="R-TAOBAO-TMALL-CARD" title="R-TAOBAO-TMALL-CARD: a known unsupported host needs an actionable, non-retryable refusal." />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_tmall_hk_url_is_refused_as_bad_request" requirements="R-TAOBAO-TMALL-CARD" />
   </requirement>
   <requirement id="R-TAOBAO-TMALL-SEARCH" kind="requirement" state="tested">
     <test file="packages/taobao-connector/tests/test_search_tmall_live_dom.py" name="test_ad_click_tracker_is_excluded" requirements="R-TAOBAO-TMALL-SEARCH" title="R-TAOBAO-TMALL-SEARCH: an id-bearing real ad is not an ordinary product URL." />
@@ -1144,6 +1170,9 @@
   </requirement>
   <requirement id="R-TOOL-SCHEMA" kind="rule" state="tested">
     <test file="packages/avito-connector/tests/test_item_photos.py" name="test_the_advertised_photos_argument_is_capped_at_three_and_off_by_default" requirements="R-TOOL-SCHEMA" title="Review #199: the cap is 3, not 5; the description is short and points to the guide." />
+    <test file="packages/marketplace-connector/tests/conformance/test_tool_annotations.py" name="test_every_advertised_tool_has_complete_deduplicated_annotations" requirements="R-TOOL-SCHEMA" />
+    <test file="packages/mcp-core/tests/test_output_schema.py" name="test_apply_promotes_and_deduplicates_tool_annotations_title" requirements="R-TOOL-SCHEMA" />
+    <test file="packages/mcp-core/tests/test_output_schema.py" name="test_compact_returns_fresh_empty_object_schema_copies" requirements="R-TOOL-SCHEMA" />
   </requirement>
   <requirement id="R-TRANSPORT" kind="rule" state="tested">
     <test file="packages/avito-connector/tests/test_item_photos.py" name="test_a_declared_oversized_photo_is_not_read" requirements="R-TRANSPORT" />

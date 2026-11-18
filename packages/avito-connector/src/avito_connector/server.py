@@ -127,6 +127,7 @@ from avito_connector.models_output import (
 from avito_connector.parse import (
     ALLOWED_HOSTS,
     SITE_BASE,
+    _avito_page_link,
     _ItemPageHTML,
     _parse_search_items,
     _posted_at,  # noqa: F401 - re-exported, imported from server by tests
@@ -172,7 +173,7 @@ _ITEM_ID_RE = re.compile(r"_(\d{6,})(?:\?|/|$)")
 # (a separator to the browser, plain text to a wider regex) — never reaches
 # the operator's logged-in browser.
 _SLUG_CHARS = r"[A-Za-z0-9_-]"
-_ITEM_URL_PATH_RE = re.compile(rf"/(?:(?:{_SLUG_CHARS}+/){{2}})?(?:{_SLUG_CHARS}+_)?(\d{{6,}})/?")
+_ITEM_URL_PATH_RE = re.compile(rf"/(?:(?:{_SLUG_CHARS}+/){{1,5}})?(?:{_SLUG_CHARS}+_)?(\d{{6,}})/?")
 # The /<city>/<category>/ shape cannot tell a city slug from a route prefix by
 # form alone, so first segments that are Avito's own personal or service routes
 # are refused outright: an item-shaped tail under them is not an item page.
@@ -445,10 +446,16 @@ def _extract_item_id(raw: str) -> int | None:
     raw = raw.strip()
     if raw.isdigit():
         return int(raw) if len(raw) >= 6 else None
-    match = _ITEM_ID_RE.search(raw)
-    if match:
-        return int(match.group(1))
-    return None
+    if re.fullmatch(rf"{_SLUG_CHARS}+_(\d{{6,}})", raw):
+        return int(raw.rsplit("_", 1)[-1])
+    if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
+        path = urllib.parse.urlsplit(raw).path
+    elif url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
+        path = (urllib.parse.urlsplit(raw) if "://" in raw else urllib.parse.urlsplit("https://" + raw)).path
+    else:
+        return None
+    match = _ITEM_ID_RE.search(path)
+    return int(match.group(1)) if match else None
 
 
 def _valid_location_id(raw: str) -> bool:
@@ -787,25 +794,24 @@ async def avito_card(
             port = parts.port
         except ValueError:
             raise_tool_error(BadRequestError("invalid Avito item URL"))
+        schemeless_on_host = (
+            not parts.scheme
+            and not parts.netloc
+            and not raw.startswith("/")
+            and "/" in raw
+            and url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True)
+        )
+        if schemeless_on_host:
+            parts = urllib.parse.urlsplit("https://" + raw)
+            port = parts.port
         if parts.scheme or parts.netloc:
             if (
-                not url_on_hosts(raw, ALLOWED_HOSTS)
+                not url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=schemeless_on_host)
                 or parts.username is not None
                 or parts.password is not None
                 or port not in (None, 80, 443)
             ):
                 raise_tool_error(BadRequestError("pass an http(s) avito.ru item URL without credentials"))
-            # A full URL is agent-controlled input aimed at the operator's
-            # logged-in browser: the path must be an item page, never an
-            # arbitrary avito.ru route, so only the item-page shapes above
-            # survive here (R-INPUT-TRUST).
-            #
-            # An item path is a plain ASCII slug: a backslash or a percent
-            # escape in it would let the browser read a different path than
-            # this check does — Chromium treats "\" as "/" in http(s) URLs, and
-            # a server decodes "%2F"/"%5C" into a separator — so
-            # /profile\x_1234567890 and /profile%2Fx_1234567890 would open the
-            # personal route the check exists to refuse (R-AVITO-ITEM-PATH).
             unsafe_path = "\\" in parts.path or "%" in parts.path
             path_match = _ITEM_URL_PATH_RE.fullmatch(parts.path)
             root = parts.path.strip("/").split("/", 1)[0].lower()
@@ -817,10 +823,9 @@ async def avito_card(
                     )
                 )
             item_id = int(path_match.group(1))
-            # Rebuilt from validated pieces only: query and fragment are dropped.
             url = urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         else:
-            extracted = _extract_item_id(parts.path)
+            extracted = _extract_item_id(raw)
             if extracted is None:
                 raise_tool_error(
                     BadRequestError(
@@ -829,8 +834,6 @@ async def avito_card(
                     )
                 )
             item_id = extracted
-            # Live 2026-10-12: /{id} redirects to the canonical item page, while
-            # /_/{id} answers Avito's 404 page.
             url = f"{SITE_BASE}/{item_id}"
         status, body, tier = await _fetch_item_page(url, ctx)
         _check_rendered_page(status, body, tier, "card")
@@ -838,6 +841,8 @@ async def avito_card(
             item = parse_item_page(body, item_id)
         except (ParserDriftError, NotFoundError) as exc:
             raise_tool_error(exc)
+        if _state.card_has_non_unit_price(body, item_id):
+            item["price_rub"] = None
         details = _state.card_details(body, item_id, item.get("description"))
         seller_data = parse_item_seller(body, company_hint=details["is_company"])
         # The card hands on the id avito_seller opens as this same profile (R-AVITO-SELLER-ROUNDTRIP).
@@ -845,7 +850,7 @@ async def avito_card(
         item["seller"] = (
             AvitoSellerOut(**seller_data) if any(value is not None for value in seller_data.values()) else None
         )
-        item["url"] = item["url"] or url
+        item["url"] = item["url"] or _avito_page_link(url) or f"{SITE_BASE}/{item_id}"
         item["availability"], item["availability_evidence"] = _state.card_availability(body, item_id)
         _apply_details(item, details)
         price_warnings = _apply_sale(item, *_state.card_sale_price(body, item_id))

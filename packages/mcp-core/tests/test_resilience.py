@@ -554,3 +554,29 @@ def test_large_sample_with_some_text_is_healthy() -> None:
     block = _rating_only(REVIEW_TEXT_DRIFT_MIN_SAMPLE)
     block["reviews"] = [*block["reviews"][:-1], {"text": "ok"}]
     assert validate_review_block(block) == []
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+@pytest.mark.parametrize(
+    "decoy_text",
+    [
+        "Пошлина 2 450 ₽",
+        "Таможенный платёж 1 500 ₽",
+        "Доставка 299 ₽",
+        "+ 349 ₽",
+        "+349 ₽",
+        "＋ 349 ₽",
+    ],
+)
+def test_coerce_price_rejects_customs_delivery_and_leading_plus_deltas(decoy_text: str) -> None:
+    from mcp_core.resilience import coerce_price
+
+    assert coerce_price(decoy_text) is None
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_validate_review_block_counts_negative_only_reviews_as_text() -> None:
+    reviews = [{"text": "", "positive": "", "negative": "Сломался через день", "score": 1}] * (
+        REVIEW_TEXT_DRIFT_MIN_SAMPLE
+    )
+    assert validate_review_block({"returned": len(reviews), "reviews": reviews}) == []

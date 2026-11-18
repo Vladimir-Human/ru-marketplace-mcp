@@ -138,6 +138,7 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
         "/catalog/details/100000123456/",
         "/cian.ru/sale/flat/123456789/",
         "/sale/flat/123456789/",
+        "/moskva/noutbuki/thinkpad_1234567890",
         "/brands/abc123",
     )
     foreign += [base.rstrip("/") + path for base in foreign for path in paths]

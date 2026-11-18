@@ -891,3 +891,88 @@ async def test_captcha_demand_records_no_refusal_but_the_waf_page_does(monkeypat
     with pytest.raises(ToolError):
         await server.cian_search("sale")
     assert server._pacer.consecutive_refusals == before + 1
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_foreign_currency_offer_reads_rur_prices_never_raw_usd_or_eur():
+    usd_offer = {
+        "id": 900000101,
+        "title": "Офис в центре",
+        "dealType": "rent",
+        "category": "officeRent",
+        "bargainTerms": {
+            "currency": "usd",
+            "price": 24000,
+            "prices": {"rur": 2160000, "usd": 24000},
+            "deposit": 5000,
+            "depositPrices": {"rur": 450000, "usd": 5000},
+            "paymentPeriod": "monthly",
+        },
+    }
+    row = server._offer_row(usd_offer)
+    assert row["price_rub"] == 2160000.0
+    assert row["deposit_rub"] == 450000.0
+
+    unconverted_usd = {
+        "id": 900000102,
+        "title": "Особняк",
+        "dealType": "sale",
+        "category": "buildingSale",
+        "bargainTerms": {"currency": "usd", "price": 5000000, "deposit": 100000},
+        "priceTotal": 5000000,
+    }
+    row_no_rur = server._offer_row(unconverted_usd)
+    assert row_no_rur["price_rub"] is None
+    assert row_no_rur["deposit_rub"] is None
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_square_meter_price_type_uses_total_rur_or_explicit_m2_unit():
+    rate_only_sale = {
+        "id": 900000103,
+        "title": "Торговое помещение",
+        "dealType": "sale",
+        "category": "shoppingAreaSale",
+        "bargainTerms": {"currency": "rur", "price": 250000, "priceType": "squareMeter"},
+    }
+    row_sale = server._offer_row(rate_only_sale)
+    assert row_sale["price_rub"] == 250000.0
+    assert row_sale["price_unit"] == "m2"
+
+    rate_with_total = {
+        **rate_only_sale,
+        "priceTotalRur": 25000000,
+    }
+    row_total = server._offer_row(rate_with_total)
+    assert row_total["price_rub"] == 25000000.0
+    assert row_total["price_unit"] == "total"
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_card_metro_reads_travel_time_and_travel_type():
+    row = server._parse_card(CARD_SALE["offerData"])
+    assert row["metro"]
+    assert row["metro"][0]["minutes"] == 6
+    assert row["metro"][0]["mode"] == "transport"
+
+
+@pytest.mark.req("R-CACHE-VALIDATED")
+async def test_unhealthy_search_and_card_responses_are_not_cached(monkeypatch):
+    unpriced_search = copy.deepcopy(SEARCH_SALE)
+    for offer in unpriced_search["data"]["offersSerialized"]:
+        offer["bargainTerms"] = {}
+        offer.pop("priceTotalRur", None)
+        offer.pop("priceTotal", None)
+    _patch_search(monkeypatch, (200, json.dumps(unpriced_search, ensure_ascii=False), "cdp"))
+    s_res = await server.cian_search("sale")
+    assert s_res.meta.healthy is False
+    assert len(server._cache) == 0
+
+    unpriced_card = copy.deepcopy(CARD_SALE)
+    unpriced_card["offerData"]["offer"]["bargainTerms"] = {}
+    unpriced_card["offerData"]["offer"].pop("priceTotalRur", None)
+    unpriced_card["offerData"]["offer"].pop("priceTotal", None)
+    _patch_card(monkeypatch, (200, _card_body(unpriced_card), "cdp"))
+    c_res = await server.cian_card("331002424")
+    assert c_res.meta.healthy is False
+    assert len(server._cache) == 0

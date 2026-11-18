@@ -63,6 +63,7 @@ def test_live_search_shape_matches_the_selfcheck_registry() -> None:
         LIVE_FIXTURE,
         page_url="https://www.lamoda.ru/catalogsearch/result/?q=%D0%BA%D1%80%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BA%D0%B8",
     )
+    assert payload["items"][0]["brand"] == "adidas Originals"
     signature = shape_signature(payload)
     assert signature == list(SEARCH_SHAPE_REFERENCE)
     assert missing_required_families(signature) == []
