@@ -116,16 +116,21 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
     # fail merely because SourceSpec.hosts has not been implemented yet.
     host = (getattr(spec, "hosts", ()) or (spec.unblock_page or "https://www.wildberries.ru").split("/")[2:3])[0]
     host = host.lstrip(".")
+    cross_host = "wildberries.ru" if spec.name == "ozon" else "ozon.ru"
     foreign = [
         "https://example.com/x",
         "http://127.0.0.1:9222/json/version",
         f"https://{host}@example.com/",
         f"https://{host}.example.com/",
+        f"https://{host}:notaport",
+        "https://[",
         "https://[::1]/x",
         "file:///c:/x",
         "file:///product/123456789/",
         "ftp://example.com/product/123456789/",
         "//example.com/product/123456789/",
+        "evil.example/",
+        f"{cross_host}/",
     ]
     # Valid-looking paths and query ids must not rescue an off-host authority.
     paths = (
@@ -135,6 +140,7 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
         "/catalog/details/100000123456/",
         "/cian.ru/sale/flat/123456789/",
         "/sale/flat/123456789/",
+        "/moskva/noutbuki/thinkpad_1234567890",
         "/brands/abc123",
     )
     foreign += [base.rstrip("/") + path for base in foreign for path in paths]

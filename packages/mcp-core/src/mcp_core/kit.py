@@ -123,6 +123,7 @@ def url_on_hosts(url: str, hosts: Collection[str], *, allow_schemeless: bool = F
         parts = urllib.parse.urlsplit(url)
         if allow_schemeless and not parts.scheme and "//" not in url:
             parts = urllib.parse.urlsplit("https://" + url)
+        _ = parts.port
         host = (parts.hostname or "").rstrip(".").lower()
     except ValueError:
         return False
@@ -172,14 +173,17 @@ def host_checked_id(
         return None
     if bare_re.fullmatch(raw):
         return raw.lower()
-    parts = urllib.parse.urlsplit(raw)
-    if parts.scheme:
-        if not url_on_hosts(raw, hosts):
-            return None
-        raw = parts.path
-    elif raw.startswith("//"):
+    try:
+        parts = urllib.parse.urlsplit(raw)
+    except ValueError:
         return None
-    match = path_re.search(raw)
+    if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
+        path = parts.path
+    elif url_on_hosts(raw, hosts, allow_schemeless=True):
+        path = (parts if parts.scheme else urllib.parse.urlsplit("https://" + raw)).path
+    else:
+        return None
+    match = path_re.search(path)
     return match.group(1).lower() if match else None
 
 

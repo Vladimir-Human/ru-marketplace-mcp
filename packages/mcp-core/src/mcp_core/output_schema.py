@@ -27,7 +27,7 @@ errors remain MCP ``isError`` replies without successful structured output.
 # START_MODULE_MAP
 # compact_output_schema: Keep permissive property names plus the SDK's required result wrapper.
 # registered_tools: Read the Tool objects this server answers tools/list with.
-# apply_compact_output_schemas: Rewrite local Tool schemas and count rewritten tools.
+# apply_compact_output_schemas: Rewrite local Tool schemas and deduplicate ToolAnnotations.title onto Tool.title.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -51,10 +51,10 @@ def compact_output_schema(schema: Any) -> dict[str, Any]:
     otherwise FastMCP serializes the raw value under a fictitious wrapper schema.
     """
     if not isinstance(schema, dict):
-        return EMPTY_OBJECT_SCHEMA
+        return dict(EMPTY_OBJECT_SCHEMA)
     properties = schema.get("properties")
     if schema.get("type") != "object" or not isinstance(properties, dict):
-        return EMPTY_OBJECT_SCHEMA
+        return dict(EMPTY_OBJECT_SCHEMA)
     compact: dict[str, Any] = {"type": "object", "properties": {name: {} for name in properties}}
     if schema.get("x-fastmcp-wrap-result"):
         compact["x-fastmcp-wrap-result"] = True
@@ -94,6 +94,11 @@ def apply_compact_output_schemas(mcp: FastMCP) -> int:
     rewritten = 0
     for component in registered_tools(mcp):
         component.output_schema = compact_output_schema(component.output_schema)
+        if component.annotations is not None and component.annotations.title:
+            if not component.title:
+                component.title = component.annotations.title
+            if component.title == component.annotations.title:
+                component.annotations = component.annotations.model_copy(update={"title": None})
         rewritten += 1
     return rewritten
 

@@ -89,6 +89,24 @@ def test_safe_child_env_excludes_secrets_on_every_platform(monkeypatch):
     assert "AWS_SECRET_ACCESS_KEY" not in env
 
 
+def test_safe_child_env_preserves_utf8_encoding_variables(monkeypatch):
+    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
+    monkeypatch.setattr(
+        process.os,
+        "environ",
+        {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "SECRET_KEY": "nope"},
+    )
+    assert process.safe_child_env() == {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
+    monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "nt")
+    monkeypatch.setattr(
+        process.os,
+        "environ",
+        {"PythonUtf8": "1", "PythonIoEncoding": "utf-8", "SECRET_KEY": "nope"},
+    )
+    assert process.safe_child_env() == {"PythonUtf8": "1", "PythonIoEncoding": "utf-8"}
+
+
 def test_worker_process_kwargs_per_platform(monkeypatch):
     monkeypatch.setattr(process, "PLATFORM_OVERRIDE", "posix")
     assert process.worker_process_kwargs() == {"start_new_session": True}

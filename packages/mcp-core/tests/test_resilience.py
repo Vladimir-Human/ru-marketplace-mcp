@@ -554,3 +554,53 @@ def test_large_sample_with_some_text_is_healthy() -> None:
     block = _rating_only(REVIEW_TEXT_DRIFT_MIN_SAMPLE)
     block["reviews"] = [*block["reviews"][:-1], {"text": "ok"}]
     assert validate_review_block(block) == []
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+@pytest.mark.parametrize(
+    "decoy_text",
+    [
+        "Пошлина 2 450 ₽",
+        "Таможенный платёж 1 500 ₽",
+        "Доставка 299 ₽",
+        "+ 349 ₽",
+        "+349 ₽",
+        "＋ 349 ₽",
+    ],
+)
+def test_coerce_price_rejects_customs_delivery_and_leading_plus_deltas(decoy_text: str) -> None:
+    from mcp_core.resilience import coerce_price
+
+    assert coerce_price(decoy_text) is None
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_validate_review_block_counts_negative_only_reviews_as_text() -> None:
+    reviews = [{"text": "", "positive": "", "negative": "Сломался через день", "score": 1}] * (
+        REVIEW_TEXT_DRIFT_MIN_SAMPLE
+    )
+    assert validate_review_block({"returned": len(reviews), "reviews": reviews}) == []
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_free_shipping_and_duty_free_labels_keep_price_while_thresholds_and_currency_deltas_fail() -> None:
+    from mcp_core.dom import prices_from_tile
+
+    assert coerce_price("1 999 ₽ — доставка бесплатно") == pytest.approx(1999.0)
+    assert coerce_price("1 999 ₽ — беспошлинный товар") == pytest.approx(1999.0)
+    assert coerce_price("Доставка бесплатно от 2 500 ₽") is None
+    assert prices_from_tile(
+        {"price_texts": {"attached": ["1 999 ₽ — доставка бесплатно", "2 999 ₽"], "other": []}}
+    ) == (
+        1999.0,
+        2999.0,
+    )
+    for delta in ("＋₽500", "−₽500", "+$10"):
+        assert coerce_price(delta) is None
+
+
+@pytest.mark.req("R-DRIFT")
+def test_validate_review_block_flags_out_of_range_rating_score_and_ignores_blank() -> None:
+    warnings = validate_review_block({"rating_score": 6, "reviews": []})
+    assert any(w.startswith("score_out_of_range:") for w in warnings)
+    assert validate_review_block({"valuation": "", "reviews": []}) == []

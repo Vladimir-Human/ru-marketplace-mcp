@@ -38,6 +38,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # START_MODULE_MAP
 # _resolve_region: Validate and normalize explicit or configured region codes.
 # _fetch_json: Perform bounded, retried API reads and classify failures.
+# _cacheable_json: Keep rejected payloads out of the in-process cache (R-CACHE-VALIDATED).
 # _body_error_status: Detect error status embedded inside HTTP-success JSON.
 # _parse_product: Normalize product fields and preserve missing-price semantics.
 # _page_url: Keep a page link on Detsky Mir's own site (R-OUTPUT-PAGE-URLS.detmir).
@@ -210,12 +211,33 @@ async def _fetch_json(url: str, label: str, ctx: Context | None) -> Any:
             raise_tool_error(ParserDriftError(f"{label}: response was not valid JSON ({exc})", provider="detmir"))
             raise AssertionError("unreachable") from exc  # pragma: no cover
 
-    cached = _cache.get(url)
-    if cached is not None:
-        log_event(f"{label}: cache hit", level=logging.DEBUG, logger_name=__name__)
-        return cached
-    # Public tools store only after their body-status, parse and output checks.
-    return await fetch()
+    return await _cache.get_or_fetch(url, fetch, cache_if=lambda payload: _cacheable_json(payload, label))
+
+
+def _cacheable_json(payload: Any, label: str) -> bool:
+    """Keep payloads a public tool will reject out of the cache (R-CACHE-VALIDATED)."""
+    try:
+        if _body_error_status(payload) is not None:
+            return False
+        if label == "detmir_card":
+            node = _product_node(payload)
+            if node is None:
+                return False
+            _parse_product(node)
+            return True
+        if label == "detmir_category":
+            if isinstance(payload, list):
+                items_raw = payload
+            elif isinstance(payload, dict):
+                items_raw = _as_list(payload.get("items"))
+            else:
+                return False
+            for item in items_raw:
+                _parse_product(item)
+            return True
+        return isinstance(payload, dict)
+    except Exception:
+        return False
 
 
 def _body_error_status(payload: Any) -> int | None:
@@ -306,6 +328,29 @@ def _parse_product(raw: Any) -> DetmirProduct:
     if price is None:
         price = _price_from(raw.get("final_price"))
 
+    raw_online = raw.get("isAvailableOnline")
+    raw_offline = raw.get("isAvailableOffline")
+    warehouses = online.get("warehouse_codes")
+    region_codes = offline.get("region_iso_codes")
+    avail_online = (
+        raw_online
+        if isinstance(raw_online, bool)
+        else (
+            bool(warehouses)
+            if isinstance(warehouses, list)
+            else (bool(online) if online and "warehouse_codes" not in online else None)
+        )
+    )
+    avail_offline = (
+        raw_offline
+        if isinstance(raw_offline, bool)
+        else (
+            bool(stores or _as_list(region_codes))
+            if isinstance(offline.get("stores"), list) or isinstance(region_codes, list)
+            else (bool(offline) if offline and not ("stores" in offline or "region_iso_codes" in offline) else None)
+        )
+    )
+
     return DetmirProduct(
         product_id=product_id,
         title=str(R.first_present(raw, "title", "name", default="") or ""),
@@ -314,12 +359,12 @@ def _parse_product(raw: Any) -> DetmirProduct:
         price_rub=price,
         old_price_rub=_price_from(raw.get("old_price")),
         discount_percent=R.coerce_int(R.first_present(raw, "discount_percentage", "discount", default=None)),
-        rating=R.coerce_price(R.first_present(raw, "rating", default=None)),
+        rating=R.coerce_rating(R.first_present(raw, "rating", default=None)),
         review_count=R.coerce_int(R.first_present(raw, "review_count", "reviews_count", default=None)),
         questions_count=R.coerce_int(R.first_present(raw, "questions_count", default=None)),
         availability=str(R.first_present(raw, "availability", default="") or ""),
-        available_online=bool(online) if available else None,
-        available_offline=bool(offline) if available else None,
+        available_online=avail_online,
+        available_offline=avail_offline,
         store_count=len(stores) if offline else None,
         is_marketplace=raw.get("is_from_marketplace") if isinstance(raw.get("is_from_marketplace"), bool) else None,
         vendor=str(vendor_node.get("title") or "") if vendor_node else "",
@@ -426,7 +471,10 @@ async def detmir_card(
         warnings.append("no_price: no usable price in the payload (item may be delisted)")
     # The card is the same offer shape as one category row, so the shared
     # invariants apply here too (a rating off its scale, a count below zero).
-    warnings.extend(R.validate_offer(product.model_dump(), require_title=True))
+    offer_check = product.model_dump()
+    if offer_check.get("rating") is None and node.get("rating") is not None:
+        offer_check["rating"] = node.get("rating")
+    warnings.extend(R.validate_offer(offer_check, require_title=True))
 
     log_event("detmir_card.done", product_id=product_id, price=product.price_rub, warnings=len(warnings))
     result = DetmirCardResponse(
@@ -439,8 +487,6 @@ async def detmir_card(
             cached=was_cached,
         ),
     )
-    if not was_cached:
-        _cache.set(url, payload)
     return result
 
 
@@ -552,9 +598,13 @@ async def detmir_category(
             warnings.append(drift)
         # Per-offer invariants for the whole page: one fabricated or absent price
         # is a listing, every price gone is the category payload drifting.
-        warnings.extend(
-            R.validate_items([p.model_dump() for p in products], require_title=True, absent_price="no_prices_on_page")
-        )
+        check_rows = []
+        for prod, raw_item in zip(products, items_raw, strict=False):
+            dumped = prod.model_dump()
+            if dumped.get("rating") is None and isinstance(raw_item, dict) and raw_item.get("rating") is not None:
+                dumped["rating"] = raw_item.get("rating")
+            check_rows.append(dumped)
+        warnings.extend(R.validate_items(check_rows, require_title=True, absent_price="no_prices_on_page"))
 
     log_event("detmir_category.done", alias=slug, returned=len(products), total=total)
     result = DetmirListResponse(
@@ -568,8 +618,6 @@ async def detmir_category(
         region=region_used,
         meta=MetaOut(source="detmir_category", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
-    if _cache.get(url) is None:
-        _cache.set(url, payload)
     return result
 
 
@@ -684,8 +732,6 @@ async def detmir_categories(
         region=region_used,
         meta=MetaOut(source="detmir_categories", healthy=not R.health_warnings(warnings), warnings=warnings),
     )
-    if _cache.get(url) is None:
-        _cache.set(url, payload)
     return result
 
 

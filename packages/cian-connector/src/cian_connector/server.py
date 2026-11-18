@@ -422,15 +422,18 @@ def _as_float(value: Any) -> float | None:
     return None
 
 
+def _is_rur(node: dict[str, Any]) -> bool:
+    return (_s(node.get("currency")) or "rur").lower() in ("rur", "rub")
+
+
 def _price_of(offer: dict[str, Any]) -> float | None:
-    """The price is ``bargainTerms.priceRur``; a new-building card carries only
-    ``bargainTerms.price`` and ``priceTotalRur`` (verified 2026-09-09), so all
-    three are read, in that order. None when none of them holds a real price."""
-    terms = _d(offer.get("bargainTerms"))
-    price = R.coerce_price(R.first_present(terms, "priceRur", "price"))
-    if price is None:
-        price = R.coerce_price(R.first_present(offer, "priceTotalRur", "priceTotal"))
-    return price
+    """RUB price from ``bargainTerms`` (``priceRur``, RUR ``price``, or foreign ``prices.rur``) or ``priceTotalRur``."""
+    terms, rur = _d(offer.get("bargainTerms")), _is_rur(_d(offer.get("bargainTerms")))
+    total = R.coerce_price(offer.get("priceTotalRur")) or (R.coerce_price(offer.get("priceTotal")) if rur else None)
+    if _s(terms.get("priceType")) == "squareMeter" and total is not None:
+        return total
+    fallback = terms.get("price") if rur else _d(terms.get("prices")).get("rur")
+    return R.coerce_price(terms.get("priceRur")) or R.coerce_price(fallback) or total
 
 
 def _clean_url(value: Any) -> str | None:
@@ -453,10 +456,7 @@ def _address(geo: dict[str, Any]) -> str | None:
 
 
 def _metro_rows(geo: dict[str, Any]) -> list[dict[str, Any]]:
-    """Stations as Cian ranks them: the one it marks ``isDefault`` (the station
-    shown on the tile) first, then by travel time. Minutes alone would put a
-    7-minute bus ride ahead of a 10-minute walk, which is not what the site
-    shows and not what a reader means by "nearest"."""
+    """Stations ranked by ``isDefault`` first, then travel time (reading both search and card keys)."""
     rows: list[tuple[bool, dict[str, Any]]] = []
     for node in geo.get("undergrounds") or []:
         station = _d(node)
@@ -467,8 +467,8 @@ def _metro_rows(geo: dict[str, Any]) -> list[dict[str, Any]]:
                 station.get("isDefault") is True,
                 {
                     "name": _s(station.get("name")),
-                    "minutes": R.coerce_int(station.get("time")),
-                    "mode": _s(station.get("transportType")),
+                    "minutes": R.coerce_int(R.first_present(station, "time", "travelTime")),
+                    "mode": _s(R.first_present(station, "transportType", "travelType")),
                 },
             )
         )
@@ -511,21 +511,17 @@ def _compose_title(
     return ", ".join(bits) or None
 
 
-def _price_unit(category: str | None, deal_type: str | None, period: str | None) -> str | None:
-    """What one ``price_rub`` actually buys: the whole property, a month, a night.
-
-    Cian encodes this only in the category (``dailyFlatRent`` and friends) and
-    leaves ``paymentPeriod`` null on daily offers, so a caller comparing a
-    nightly 5 000 ₽ against a monthly 90 000 ₽ has nothing to go on unless the
-    connector says it outright.
-    """
+def _price_unit(
+    category: str | None, deal_type: str | None, period: str | None, price_type: str | None = None
+) -> str | None:
+    """Unit of ``price_rub`` ('total', 'month', 'day', 'm2', 'm2_month', 'm2_year')."""
+    if price_type == "squareMeter":
+        return ("m2_year" if period == "annual" else "m2_month") if deal_type == "rent" else "m2"
     if category and "daily" in category.lower():
         return "day"
     if deal_type == "sale":
         return "total"
     if deal_type == "rent":
-        # Long-term rent is quoted monthly; anything else Cian names, we pass
-        # through rather than flatten to a month we did not verify.
         return "month" if period in (None, "monthly") else period
     return None
 
@@ -533,6 +529,9 @@ def _price_unit(category: str | None, deal_type: str | None, period: str | None)
 def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
     """The fields shared by a search hit and a card, read from one offer object."""
     terms = _d(offer.get("bargainTerms"))
+    rur = _is_rur(terms)
+    has_total = R.coerce_price(offer.get("priceTotalRur") or (offer.get("priceTotal") if rur else None)) is not None
+    p_type = None if has_total else _s(terms.get("priceType"))
     building = _d(offer.get("building"))
     geo = _d(offer.get("geo"))
     user = _d(offer.get("user"))
@@ -550,10 +549,13 @@ def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
         "deal_type": _s(offer.get("dealType")),
         "category": _s(offer.get("category")),
         "price_rub": _price_of(offer),
-        "price_unit": _price_unit(_s(offer.get("category")), _s(offer.get("dealType")), _s(terms.get("paymentPeriod"))),
+        "price_unit": _price_unit(
+            _s(offer.get("category")), _s(offer.get("dealType")), _s(terms.get("paymentPeriod")), p_type
+        ),
         "price_period": _s(terms.get("paymentPeriod")),
         "lease_term": _s(terms.get("leaseTermType")),
-        "deposit_rub": R.coerce_price(terms.get("deposit")),
+        "deposit_rub": R.coerce_price(terms.get("depositRur"))
+        or R.coerce_price(terms.get("deposit") if rur else _d(terms.get("depositPrices")).get("rur")),
         "rooms": rooms,
         "flat_type": flat_type,
         "is_apartments": _b(offer.get("isApartments")),
@@ -604,13 +606,9 @@ def _views(stats: Any) -> int | None:
 def _price_history(changes: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for change in changes if isinstance(changes, list) else []:
-        node = _d(change)
-        rows.append(
-            {
-                "changed_at": _s(node.get("changeTime")),
-                "price_rub": R.coerce_price(_d(node.get("priceData")).get("price")),
-            }
-        )
+        node, pd = _d(change), _d(_d(change).get("priceData"))
+        raw = pd.get("price") if _is_rur(pd) else _d(pd.get("prices")).get("rur")
+        rows.append({"changed_at": _s(node.get("changeTime")), "price_rub": R.coerce_price(raw)})
     return rows
 
 
@@ -905,7 +903,7 @@ async def cian_search(
         )
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="cian_search")
         result.meta = MetaOut(**attached["_meta"])
-        if tier != "cache":
+        if tier != "cache" and result.meta.healthy:
             key = "search:" + json.dumps(query, sort_keys=True, ensure_ascii=False)
             _cache.set(key, (status, body))
         return result
@@ -1007,7 +1005,7 @@ async def cian_card(
         warnings.extend(R.validate_offer(card, require_title=True))
         attached = R.attach_meta(result.model_dump(by_alias=True, exclude={"meta"}), warnings, source="cian_card")
         result.meta = MetaOut(**attached["_meta"])
-        if tier != "cache":
+        if tier != "cache" and result.meta.healthy:
             _cache.set(f"card:{offer_id}", (status, body))
         return result
     except ToolError:

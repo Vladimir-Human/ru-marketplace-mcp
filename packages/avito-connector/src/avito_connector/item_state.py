@@ -672,6 +672,34 @@ def _blank(value: Any) -> bool:
     return value is None or (isinstance(value, str) and not value.strip())
 
 
+_NON_UNIT_POSTFIX_RE = re.compile(
+    r"\b(?:час\w*|сут\w*|день|дня|дней|мес\w*|недел\w*|смен\w*|услуг\w*|соток|сотку|га|км|год\w*)\b|м²|м2|кв\.?\s*м",
+    re.IGNORECASE,
+)
+
+
+def is_non_unit_price_detailed(pd: Any) -> bool:
+    """True when ``priceDetailed`` disables its value or quotes a rental/service/unit rate."""
+    if not isinstance(pd, dict):
+        return False
+    if pd.get("enabled") is False or pd.get("hasValue") is False:
+        return True
+    postfix = pd.get("postfix")
+    return isinstance(postfix, str) and bool(_NON_UNIT_POSTFIX_RE.search(postfix))
+
+
+def card_has_non_unit_price(html: str, item_id: int | None) -> bool:
+    """True when the card's hydrated ``buyerItem.item`` marks its price as non-unit or absent."""
+    hydrated = buyer_item(load_hydration(html), item_id)
+    item = _dict(hydrated, "item")
+    if not item:
+        return False
+    if is_non_unit_price_detailed(item.get("priceDetailed")) or is_non_unit_price_detailed(item.get("formattedPrice")):
+        return True
+    postfix = item.get("pricePostfix")
+    return isinstance(postfix, str) and bool(_NON_UNIT_POSTFIX_RE.search(postfix))
+
+
 def _resolve_sale(
     base: int | None, now: int | None, old: int | None, percent: int | None
 ) -> tuple[SalePrice | None, str | None]:
@@ -699,13 +727,18 @@ def search_sale_price(item: dict[str, Any]) -> tuple[SalePrice | None, str | Non
     renders the price the buyer sees (component ``price``) and, during a sale,
     a ``discount`` component with the struck ``old_string`` and ``percent``.
     """
+    if is_non_unit_price_detailed(item.get("priceDetailed")):
+        return None, None
     steps: dict[str, dict[str, Any]] = {}
     for step in _list(_dict(item, "iva"), "PriceStep"):
         name = _dict(step, "componentData").get("component")
         if isinstance(name, str) and name not in steps:
             steps[name] = _dict(step, "payload")
     base = _rub(_dict(item, "priceDetailed").get("value"))
-    now = _rub(_dict(steps.get("price"), "priceDetailed").get("value"))
+    step_pd = _dict(steps.get("price"), "priceDetailed")
+    if is_non_unit_price_detailed(step_pd):
+        return None, None
+    now = _rub(step_pd.get("value"))
     discount = steps.get("discount")
     if discount is None or (_blank(discount.get("old_string")) and _blank(discount.get("percent"))):
         if now is not None and base is not None and now != base:
@@ -721,6 +754,8 @@ def card_sale_price(html: str, item_id: int | None) -> tuple[SalePrice | None, s
     the page shows, and during a sale ``oldString`` is the struck price and
     ``saleDiscount`` Avito's percent («–5%»).
     """
+    if card_has_non_unit_price(html, item_id):
+        return None, None
     item = _dict(buyer_item(load_hydration(html), item_id), "item")
     shown = _dict(item, "formattedPrice")
     base, now = _rub(item.get("price")), _rub(shown.get("value"))

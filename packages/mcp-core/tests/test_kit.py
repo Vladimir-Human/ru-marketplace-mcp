@@ -180,20 +180,23 @@ def test_blocked_error_is_the_bare_message_until_refusals_add_up():
 # --------------------------------------------------------------- id checking ----
 
 
-@pytest.mark.req("R-CONNECTOR-KIT")
+@pytest.mark.req("R-CONNECTOR-KIT", "R-NAV-HOSTS.invariant")
 def test_host_checked_id_accepts_bare_ids_and_our_own_hosts():
     assert _extract("B7A1667F9B19ED20") == "b7a1667f9b19ed20"
     assert _extract("https://www.dns-shop.ru/product/B7A1667F9B19ED20/x/") == "b7a1667f9b19ed20"
     assert _extract("dns-shop.ru/product/abc123/") == "abc123"
+    assert _extract("/product/abc123/") == "abc123"
 
 
-@pytest.mark.req("R-CONNECTOR-KIT")
+@pytest.mark.req("R-CONNECTOR-KIT", "R-NAV-HOSTS.invariant")
 def test_host_checked_id_refuses_off_host_and_odd_shapes():
     assert _extract("") is None
     assert _extract("abc") is None
     assert _extract("//www.dns-shop.ru/product/abc123/") is None
     assert _extract("ftp://www.dns-shop.ru/product/abc123/") is None
     assert _extract("https://evil.example/product/abc123/") is None
+    assert _extract("evil.example/product/abc123/") is None
+    assert _extract("ozon.ru/product/abc123/") is None
     assert _extract("https://dns-shop.ru.evil.example/product/abc123/") is None
     assert _extract("https://notdns-shop.ru/product/abc123/") is None
 
@@ -456,6 +459,8 @@ def test_on_bot_check_page_reads_only_the_path(url, expected):
         ("https://www.example.ru/p/1/", "https://www.example.ru/p/1/"),
         ("https://example.ru/p/1/", "https://example.ru/p/1/"),
         ("https://sister.example/p/1/", ""),
+        ("https://www.example.ru:notaport/p/1/", ""),
+        ("https://[/p/1/", ""),
         ("http://www.example.ru/p/1/", ""),
         ("//sister.example/p/1/", ""),
         ("catalog/obuv", ""),

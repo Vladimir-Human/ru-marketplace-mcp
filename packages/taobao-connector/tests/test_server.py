@@ -796,11 +796,14 @@ _OFF_HOST_INPUTS = [
     "https://evil.example/item.htm?id=123456789012",
     "https://taobao.com.evil.example/item.htm?id=123456789012",
     "//evil.example/item.htm?id=123456789012",
+    "evil.example/item.htm?id=123456789012",
+    "ozon.ru/product/123456789012/?id=123456789012",
     "file:///etc/passwd?id=123456789012",
     "javascript:fetch('/item.htm?id=123456789012')",
 ]
 
 
+@pytest.mark.req("R-NAV-HOSTS.invariant")
 @pytest.mark.parametrize("hostile", _OFF_HOST_INPUTS)
 def test_extract_item_id_refuses_off_host_input(hostile):
     assert server._extract_item_id(hostile) is None
@@ -822,3 +825,172 @@ def test_the_card_navigates_a_rebuilt_item_base_url():
 
     assert item_id == "123456789012"
     assert f"{server.ITEM_BASE}?id={item_id}" == "https://item.taobao.com/item.htm?id=123456789012"
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_card_extractor_preserves_range_separator_in_highlight_price(tmp_path):
+    from mcp_core.dom import prices_from_tile
+    from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+    page = tmp_path / "range_card.html"
+    page.write_text(
+        """<!doctype html><html><head><meta charset="utf-8"><title>壳-淘宝网</title></head><body>
+        <span class="mainTitle--R75fTcZL">手机壳防摔</span>
+        <div class="priceWrap--R3TrPIS6">
+          <div class="highlightPrice--LlVWiXXs">
+            <span class="title--kN9LzdoY">价格</span>
+            <span class="symbol--q9DjRF01">¥</span>
+            <span class="text--LP7Wf49z">19</span>
+            <span class="sep">-</span>
+            <span class="text--LP7Wf49z">99</span>
+          </div>
+        </div></body></html>""",
+        encoding="utf-8",
+    )
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            page,
+            page_url="https://item.taobao.com/item.htm?id=123456789012",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    price, _old = prices_from_tile(payload)
+    assert price is None
+
+
+@pytest.mark.req("R-CHALLENGE-ACTION")
+async def test_baxia_slider_copy_and_punish_url_trigger_challenge_required(monkeypatch, tmp_path):
+    from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+    page = tmp_path / "baxia_slider.html"
+    page.write_text(
+        """<!doctype html><html><head><meta charset="utf-8"><title>淘宝网</title></head><body>
+        <div id="baxia-punish"><p>亲，小二正忙，滑动一下马上回来</p></div>
+        </body></html>""",
+        encoding="utf-8",
+    )
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            page,
+            page_url="https://item.taobao.com/item.htm?id=123456789012",
+        )
+        punish_url_payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            tmp_path / "baxia_slider.html",
+            page_url="https://item.taobao.com/punish?x5secdata=abc",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    assert server._anti_bot_challenge(payload) is True
+    assert (
+        server._anti_bot_challenge({**punish_url_payload, "challenge_snippet": punish_url_payload["challenge_snippet"]})
+        is True
+    )
+
+    _patch_render(monkeypatch, payload)
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_card("123456789012")
+    assert json.loads(str(excinfo.value))["error"] == "challenge_required"
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_login_wall_markers_ignore_link_poor_search_pages_that_have_items():
+    niche_catalog = {
+        "title": "login cable_淘宝搜索",
+        "anchors_total": 18,
+        "login_anchors": 1,
+        "body_snippet": "亲，请登录 login cable",
+        "items": [{"item_id": "123456789012", "title": "USB login cable", "price_cny": 29.9}],
+    }
+    assert server._login_wall_markers(niche_catalog) == ()
+
+
+@pytest.mark.req("R-TAOBAO-TMALL-CARD")
+async def test_tmall_hk_url_is_refused_as_bad_request():
+    assert server._is_tmall_url("https://detail.tmall.hk/hk/item.htm?id=123456789012") is True
+    assert server._is_tmall_url("detail.tmall.hk/hk/item.htm?id=123456789012") is True
+    with pytest.raises(ToolError) as excinfo:
+        await server.taobao_card("https://detail.tmall.hk/hk/item.htm?id=123456789012")
+    assert json.loads(str(excinfo.value))["error"] == "bad_request"
+
+
+@pytest.mark.req("R-CACHE-VALIDATED")
+async def test_unhealthy_search_and_card_responses_are_not_cached(monkeypatch):
+    from mcp_core.cache import TTLCache
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+    unpriced_search = {
+        **SEARCH_EXTRACTED,
+        "items": [{**SEARCH_EXTRACTED["items"][0], "price_cny": None}],
+    }
+    _patch_render(monkeypatch, unpriced_search)
+    s_res = await server.taobao_search("手机")
+    assert s_res.meta.healthy is False
+    assert len(server._cache) == 0
+
+    nameless_card = {**CARD_EXTRACTED, "title": None}
+    _patch_render(monkeypatch, nameless_card)
+    c_res = await server.taobao_card("123456789012")
+    assert c_res.meta.healthy is False
+    assert len(server._cache) == 0
+
+    unpriced_card = {**CARD_EXTRACTED, "price_cny": None}
+    _patch_render(monkeypatch, unpriced_card)
+    c_unpriced = await server.taobao_card("123456789012")
+    assert c_unpriced.price_cny is None
+    assert len(server._cache) == 0
+
+
+@pytest.mark.req("R-CHALLENGE-ACTION")
+@pytest.mark.parametrize(
+    "title",
+    [
+        "罗技 ERGO K860 人机工程学键盘",
+        "大疆 DJI Mini 4 Pro 无人机航拍器",
+        "官方旗舰店 正品验证 假一赔四 蓝牙耳机",
+    ],
+)
+def test_ergonomic_drone_and_verified_product_copy_never_fake_card_challenge(title: str) -> None:
+    payload = {
+        "title": title,
+        "page_title": f"{title}-淘宝网",
+        "challenge_snippet": f"{title} ¥ 699.00 立即购买 加入购物车",
+    }
+    assert server._anti_bot_challenge(payload) is False
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+@pytest.mark.parametrize(
+    "price_html",
+    [
+        '<span class="symbol--s">¥</span><span class="text--t">100</span>至<span class="text--t">200</span>',
+        '<span class="text--t">¥100</span><span class="sep">~</span><span class="text--t">¥200</span>',
+    ],
+)
+def test_card_extractor_rejects_zhi_and_dual_glyph_tilde_ranges(tmp_path, price_html: str) -> None:
+    from mcp_core.dom import prices_from_tile
+    from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+    page = tmp_path / "range_variants.html"
+    page.write_text(
+        f"""<!doctype html><html><head><meta charset="utf-8"><title>壳-淘宝网</title></head><body>
+        <span class="mainTitle--R75fTcZL">手机壳防摔</span>
+        <div class="priceWrap--R3TrPIS6">
+          <div class="highlightPrice--LlVWiXXs">{price_html}</div>
+        </div></body></html>""",
+        encoding="utf-8",
+    )
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            page,
+            page_url="https://item.taobao.com/item.htm?id=123456789012",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    assert prices_from_tile(payload) == (None, None)

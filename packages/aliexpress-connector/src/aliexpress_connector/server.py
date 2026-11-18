@@ -37,7 +37,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose AliExpress search and cards from the operator's rendered pages.
 # SCOPE: Read-only CDP; owned card popups and bounded cleanup; x5sec refusal classification.
 # DEPENDS: FastMCP; mcp_core DOM/CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-ALIEXPRESS-LONG-TITLE; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: M-ALIEXPRESS; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-NAV-TIMEOUT; R-CACHE-VALIDATED; R-CHALLENGE-ACTION; R-ALIEXPRESS-LONG-TITLE; R-SELFCHECK-GATES-PRICE; packages/aliexpress-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_item_id: Validate numeric item handles and AliExpress URLs.
@@ -159,16 +159,17 @@ def _extract_item_id(raw: str) -> str | None:
         return None
     if _BARE_ID_RE.fullmatch(raw):
         return raw
-    parts = urllib.parse.urlsplit(raw)
-    if parts.scheme:
-        if parts.scheme not in ("http", "https"):
-            return None
-        if not url_on_hosts(raw, ALLOWED_HOSTS):
-            return None
-        raw = parts.path
-    elif raw.startswith("//"):
+    try:
+        parts = urllib.parse.urlsplit(raw)
+    except ValueError:
         return None
-    match = _ITEM_ID_RE.search(raw)
+    if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
+        path = parts.path
+    elif url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
+        path = (parts if parts.scheme else urllib.parse.urlsplit("https://" + raw)).path
+    else:
+        return None
+    match = _ITEM_ID_RE.search(path)
     return match.group(1) if match else None
 
 
@@ -179,8 +180,7 @@ def _is_punish(payload: dict[str, Any]) -> bool:
 
 def _challenge_error(detail: str = "") -> ChallengeRequiredError:
     # A human must pass x5sec, so this is challenge_required (retryable_now
-    # false), as for Taobao's x5sec (R-CHALLENGE-ACTION). There is no
-    # `marketplace-mcp unblock aliexpress`, so the manual step is spelled out.
+    # false), as for Taobao's x5sec (R-CHALLENGE-ACTION).
     message = (
         "AliExpress challenged the session (x5sec). Open aliexpress.ru in the "
         "scraping-profile Chrome, pass the check by hand, then retry; the "
@@ -191,15 +191,7 @@ def _challenge_error(detail: str = "") -> ChallengeRequiredError:
         message += f" {hint}"
     if detail:
         message += f" Detail: {detail[:160]}"
-    return ChallengeRequiredError(
-        message,
-        provider="aliexpress",
-        user_action=(
-            "Open aliexpress.ru in the scraping-profile Chrome (run `marketplace-mcp browser show` "
-            "if the window is off-screen) and have the user pass the check there. Then call this "
-            "tool again after the user confirms it is done."
-        ),
-    )
+    return ChallengeRequiredError(message, provider="aliexpress")
 
 
 # --------------------------------------------------------------- search JS ----
@@ -604,12 +596,19 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                         if candidate not in owned:
                             continue
                         candidate_url = candidate.url or ""
-                        if wants.search(urllib.parse.urlsplit(candidate_url).path) and "punish" not in candidate_url:
+                        if (
+                            url_on_hosts(candidate_url, _CARD_HOSTS)
+                            and wants.search(urllib.parse.urlsplit(candidate_url).path)
+                            and "punish" not in candidate_url
+                        ):
                             target = candidate
                             break
                     if target is not None:
                         break
                 if target is None:
+                    if any("punish" in (c.url or "") for c in owned):
+                        _pacer.record_refusal()
+                        raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
                     # No delivered item is a transport outcome, not a proven refusal.
                     raise_tool_error(
                         TransportDownError(

@@ -16,13 +16,13 @@ a Cyrillic character as 1/3 token and any other character as 1/4.
 
 | Profile | Console script | Tools | `tools/list` bytes | Tokens (≈) |
 | --- | --- | ---: | ---: | ---: |
-| compare | `compare-mcp` | 4 | 7051 | ≈1.8k |
-| decision | `decision-mcp` | 5 | 8146 | ≈2.0k |
-| full | `marketplace-mcp` | 39 | 53907 | ≈13.4k |
+| compare | `compare-mcp` | 4 | 6885 | ≈1.7k |
+| decision | `decision-mcp` | 5 | 7931 | ≈2.0k |
+| full | `marketplace-mcp` | 39 | 52645 | ≈13.1k |
 
 ## compare — `compare-mcp`
 
-4 tools, 7051 `tools/list` bytes (≈1.8k tokens).
+4 tools, 6885 `tools/list` bytes (≈1.7k tokens).
 
 Resources (5): `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list
@@ -40,7 +40,7 @@ every error code.
 
 ## decision — `decision-mcp`
 
-5 tools, 8146 `tools/list` bytes (≈2.0k tokens).
+5 tools, 7931 `tools/list` bytes (≈2.0k tokens).
 
 Resources (6): `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://decision/decision_inspect`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list
@@ -64,7 +64,7 @@ every error code.
 
 ## full — `marketplace-mcp`
 
-39 tools, 53907 `tools/list` bytes (≈13.4k tokens).
+39 tools, 52645 `tools/list` bytes (≈13.1k tokens).
 
 Resources (40): `guide://aliexpress/aliexpress_card`, `guide://aliexpress/aliexpress_search`, `guide://avito/avito_card`, `guide://avito/avito_search`, `guide://avito/avito_seller`, `guide://cian/cian_card`, `guide://cian/cian_search`, `guide://citilink/citilink_card`, `guide://citilink/citilink_search`, `guide://compare/compare_browser_snapshot`, `guide://compare/compare_prices`, `guide://compare/compare_sources`, `guide://compare/compare_verify_offer`, `guide://detmir/detmir_card`, `guide://detmir/detmir_categories`, `guide://detmir/detmir_category`, `guide://dns/dns_card`, `guide://dns/dns_search`, `guide://lamoda/lamoda_card`, `guide://lamoda/lamoda_search`, `guide://marketplace/marketplace_health`, `guide://marketplace/marketplace_sources`, `guide://megamarket/megamarket_card`, `guide://megamarket/megamarket_search`, `guide://ozon/ozon_card`, `guide://ozon/ozon_reviews`, `guide://ozon/ozon_search`, `guide://taobao/taobao_card`, `guide://taobao/taobao_search`, `guide://wb/wb_card`, `guide://wb/wb_categories`, `guide://wb/wb_category_products`, `guide://wb/wb_questions`, `guide://wb/wb_reviews`, `guide://wb/wb_root_info`, `guide://wb/wb_search`, `guide://wb/wb_seller`, `guide://yandex/yandex_card`, `guide://yandex/yandex_search`, `marketplace://errors`.
 Each tool description names its own guide, which carries the return-format field list

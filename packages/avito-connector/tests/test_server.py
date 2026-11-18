@@ -828,3 +828,149 @@ async def test_fetch_debug_never_leaks_tier1_exception_secrets(monkeypatch, capl
     debugged = "\n".join(json.loads(record.getMessage())["event"] for record in records)
     assert "p/ss" not in debugged, f"proxy password leaked into stderr debug: {debugged}"
     assert "proxy.example:3128" in debugged, "redaction ate the host — the diagnosis must survive"
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant", "R-AVITO-ITEM-PATH")
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "evil.example/moskva/noutbuki/thinkpad_1234567890",
+        "ozon.ru/moskva/noutbuki/thinkpad_1234567890",
+        "//evil.example/moskva/noutbuki/thinkpad_1234567890",
+        "www.avito.ru/profile/x_1234567890",
+    ],
+)
+async def test_card_refuses_schemeless_foreign_and_personal_urls_before_transport(monkeypatch, bad):
+    calls = _patch_item_page_recording(monkeypatch, (200, CARD_HTML, "cdp"))
+
+    with pytest.raises(ToolError) as excinfo:
+        await server.avito_card(bad)
+
+    assert "bad_request" in str(excinfo.value)
+    assert calls == []
+
+
+@pytest.mark.req("R-AVITO-ITEM-PATH", "R-OUTPUT-PAGE-URLS")
+async def test_card_accepts_one_and_multi_segment_paths_and_normalizes_https_output_url(monkeypatch):
+    no_ld_url_html = CARD_HTML.replace(
+        '"url": "https://www.avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678"',
+        '"url": "http://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678"',
+    )
+    calls = _patch_item_page_recording(monkeypatch, (200, no_ld_url_html, "cdp"))
+
+    one_seg = await server.avito_card("https://www.avito.ru/moskva/fixture_4612345678")
+    deep_seg = await server.avito_card("https://www.avito.ru/moskva/avtomobili/bmw/x5_4612345678")
+    http_in = await server.avito_card("http://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678")
+
+    assert one_seg.item_id == 4612345678
+    assert deep_seg.item_id == 4612345678
+    assert http_in.url == "https://avito.ru/moskva/noutbuki/noutbuk_thinkpad_x1_carbon_4612345678"
+    assert len(calls) == 3
+
+
+@pytest.mark.req("R-OUTPUT-PAGE-URLS")
+async def test_search_normalizes_http_and_rejects_scheme_relative_or_foreign_urls(monkeypatch):
+    payload = {
+        "totalCount": 3,
+        "items": [
+            {"id": 4612345601, "title": "Item A", "price": 1000, "urlPath": "//evil.example/steal_4612345601"},
+            {"id": 4612345602, "title": "Item B", "price": 1000, "url": "https://evil.example/steal_4612345602"},
+            {
+                "id": 4612345603,
+                "title": "Item C",
+                "price": 1000,
+                "url": "http://www.avito.ru/moskva/noutbuki/item_4612345603",
+            },
+        ],
+    }
+    _patch_fetch(monkeypatch, _ok(payload))
+
+    result = await server.avito_search("item")
+
+    assert result.items[0].url is None
+    assert result.items[1].url is None
+    assert result.items[2].url == "https://www.avito.ru/moskva/noutbuki/item_4612345603"
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+async def test_search_and_card_nullify_non_unit_postfix_and_disabled_prices(monkeypatch):
+    payload = {
+        "totalCount": 5,
+        "items": [
+            {
+                "id": 4612345611,
+                "title": "Аренда PS5",
+                "price": 800,
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "в сутки", "value": 800},
+            },
+            {
+                "id": 4612345612,
+                "title": "Ремонт ноутбуков",
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "за услугу", "value": 500},
+            },
+            {
+                "id": 4612345613,
+                "title": "Грузчики",
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "за час", "value": 600},
+            },
+            {
+                "id": 4612345614,
+                "title": "Плитка",
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "за м²", "value": 1200},
+            },
+            {
+                "id": 4612345615,
+                "title": "Договорная цена",
+                "priceDetailed": {"enabled": True, "hasValue": False, "postfix": "", "value": 100},
+            },
+            {
+                "id": 4612345616,
+                "title": "Прокат велосипеда",
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "в день", "value": 1500},
+            },
+            {
+                "id": 4612345617,
+                "title": "Скрытая скидка",
+                "priceDetailed": {"enabled": True, "hasValue": True, "value": 2000},
+                "iva": {
+                    "PriceStep": [
+                        {
+                            "componentData": {"component": "price"},
+                            "payload": {"priceDetailed": {"value": 1000, "hasValue": False, "enabled": False}},
+                        },
+                        {"componentData": {"component": "discount"}, "payload": {"old_string": "2000", "percent": 50}},
+                    ]
+                },
+            },
+        ],
+    }
+    _patch_fetch(monkeypatch, _ok(payload))
+    search_res = await server.avito_search("ps5")
+    assert [it.price_rub for it in search_res.items] == [None, None, None, None, None, None, 2000.0]
+
+    hydration = json.dumps(
+        json.dumps(
+            {
+                "loaderData": {
+                    "item": {
+                        "buyerItem": {
+                            "item": {
+                                "id": 4612345678,
+                                "price": 800,
+                                "priceDetailed": {"hasValue": True, "postfix": "в сутки", "value": 800},
+                                "formattedPrice": {"value": "800", "postfix": "в сутки"},
+                            }
+                        }
+                    }
+                }
+            },
+            ensure_ascii=False,
+        )
+    )
+    rental_card_html = CARD_HTML.replace(
+        "</body>",
+        f"<script>window.__staticRouterHydrationData = JSON.parse({hydration});</script></body>",
+    )
+    _patch_item_page(monkeypatch, (200, rental_card_html, "cdp"))
+    card_res = await server.avito_card("4612345678")
+    assert card_res.price_rub is None

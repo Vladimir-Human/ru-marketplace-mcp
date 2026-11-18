@@ -7,7 +7,7 @@ context manager alive; resuming never searches for tabs or navigates again.
 # PURPOSE: Retain and resume exact client-owned browser challenge pages.
 # SCOPE: Bounded process-local leases, immutable lifetime, idle expiry and snapshots.
 # DEPENDS: mcp_core.errors,transport.chrome_cdp; stdlib asyncio,hashlib,json,time.
-# LINKS: M-BROWSER-HANDOFF; M-CHROME-CDP; M-ERRORS; M-RUNTIME.
+# LINKS: M-BROWSER-HANDOFF; M-CHROME-CDP; M-ERRORS; M-RUNTIME; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # HandoffBusyError: Distinguish concurrent reads from a full retention registry.
@@ -481,13 +481,15 @@ async def read_with_handoff(
     (``data_changed`` is ``None`` when there is nothing to compare against, which
     is not the same as "nothing changed").
     """
+    hosts = frozenset(h for h in (allowed_hosts or ()) if isinstance(h, str) and h.strip())
+    if not hosts:
+        raise ValueError("allowed_hosts is required")
     duration = _duration_s()
     if not duration or not scope or chrome_cdp.HEADLESS:
-        async with chrome_cdp.open_page(url, wait_ms, allowed_hosts=allowed_hosts) as page:
+        async with chrome_cdp.open_page(url, wait_ms, allowed_hosts=hosts) as page:
             return await read(page), None
 
     key = _key(scope, operation, url)
-    hosts = frozenset(allowed_hosts or {urlsplit(url).hostname or ""})
     loop = asyncio.get_running_loop()
     lease = _leases.get(key)
     if lease is not None and lease.busy:

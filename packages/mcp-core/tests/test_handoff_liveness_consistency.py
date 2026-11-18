@@ -49,6 +49,7 @@ def _call():
         operation="search",
         read=blocked,
         challenge=lambda payload: payload.get("challenge"),
+        allowed_hosts={"shop.test"},
     )
 
 
