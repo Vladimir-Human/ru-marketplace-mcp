@@ -451,6 +451,7 @@
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_regular_price_ranks_and_wallet_amount_is_warned" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: the everyday price ranks and the lower Wallet amount is named." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_subscription_amount_is_named_without_ranking_it" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code keeps Plus unranked but emits no warning naming its 900 RUB." />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-COMPARE-CONDITIONAL-PRICE" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_ozon_single_card_read_skips_mismatched_model_size_list_and_invalid_prices" requirements="R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_card_without_an_everyday_price_ranks_nothing" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_plain_ozon_tile_is_conditional_and_the_cheapest_ranks_by_its_cards_everyday_price" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_a_refused_card_leaves_every_ozon_tile_unranked_and_says_why" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
@@ -459,6 +460,18 @@
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_one_card_ranks_one_tile_even_when_its_sku_repeats" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/compare-connector/tests/test_ozon_card_read.py" name="test_the_card_read_goes_to_the_cheapest_tile_that_could_be_the_product" requirements="R-COMPARE-CONDITIONAL-PRICE,R-COMPARE-CONDITIONAL-PRICE.ozon-card" />
     <test file="packages/ozon-connector/tests/test_search_parser_live.py" name="test_only_a_card_price_tile_is_marked_as_a_card_price" requirements="R-COMPARE-CONDITIONAL-PRICE.adapters" title="R-COMPARE-CONDITIONAL-PRICE.adapters: the card price is named, other styles are not." />
+  </requirement>
+  <requirement id="R-COMPARE-DEEP-TRAPS" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_aliexpress_ram_rom_and_range_size_lists_are_detected" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.lists-and-tokens" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_blank_or_invalid_source_timeout_falls_back_and_pyproject_maps_aliexpress" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.price-and-verify-guards" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_classifieds_and_condition_traps_never_win_cheapest_comparable" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.classifieds-and-conditions" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_compact_slash_model_lists_are_detected_without_false_positives" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.lists-and-tokens" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_hyphenated_negation_and_genuine_category_words_stay_comparable" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.classifieds-and-conditions" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_model_mismatch_catches_plus_decimals_suffixes_subbrands_and_for_windows" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.lists-and-tokens" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_multi_size_ram_storage_query_requires_every_asked_size_to_match" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.lists-and-tokens" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_nonpositive_and_nonfinite_prices_never_rank_or_corrupt_spread_or_notes" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.price-and-verify-guards" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_ozon_single_card_read_skips_mismatched_model_size_list_and_invalid_prices" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.ozon-candidate" />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_verify_offer_fast_fails_cny_expected_price_and_tmall_offers" requirements="R-COMPARE-DEEP-TRAPS,R-COMPARE-DEEP-TRAPS.price-and-verify-guards" />
   </requirement>
   <requirement id="R-COMPARE-FOREIGN-DETAIL" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_server.py" name="test_foreign_source_detail_counts_native_prices_without_changing_ranking" requirements="R-COMPARE-FOREIGN-DETAIL" title="R-COMPARE-FOREIGN-DETAIL: 20 CNY prices are visible, never ranked as RUB." />
@@ -474,12 +487,14 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
   </requirement>
   <requirement id="R-COMPARE-MODEL-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_compact_slash_model_lists_are_detected_without_false_positives" requirements="R-COMPARE-MODEL-LIST" />
     <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_query_that_lists_models_itself_keeps_such_titles_comparable" requirements="R-COMPARE-MODEL-LIST" />
     <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_title_naming_several_models_of_one_family_names_no_one_product" requirements="R-COMPARE-MODEL-LIST" />
     <test file="packages/compare-connector/tests/test_model_list.py" name="test_compare_prices_skips_a_model_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-LIST" />
     <test file="packages/compare-connector/tests/test_model_list.py" name="test_one_model_a_spec_list_or_a_size_is_no_model_list" requirements="R-COMPARE-MODEL-LIST" />
   </requirement>
   <requirement id="R-COMPARE-MODEL-TOKENS" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_model_mismatch_catches_plus_decimals_suffixes_subbrands_and_for_windows" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_compare_prices_skips_another_model_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-TOKENS" />
@@ -502,6 +517,7 @@
     <test file="packages/compare-connector/tests/test_relevance_markers.py" name="test_compare_mcp_relevance_markers" requirements="R-COMPARE-RELEVANCE-BOUNDARIES" title="R-COMPARE-RELEVANCE-BOUNDARIES: no false drops; real unrequested markers still drop." />
   </requirement>
   <requirement id="R-COMPARE-SIZE-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_aliexpress_ram_rom_and_range_size_lists_are_detected" requirements="R-COMPARE-SIZE-LIST" />
     <test file="packages/compare-connector/tests/test_size_list.py" name="test_a_title_listing_several_sizes_names_no_one_variant" requirements="R-COMPARE-SIZE-LIST" />
     <test file="packages/compare-connector/tests/test_size_list.py" name="test_compare_prices_skips_a_size_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-SIZE-LIST" />
     <test file="packages/compare-connector/tests/test_size_list.py" name="test_one_size_a_ram_storage_pair_or_one_size_in_two_units_is_no_list" requirements="R-COMPARE-SIZE-LIST" />
@@ -522,6 +538,7 @@
     <test file="packages/marketplace-connector/tests/conformance/test_schema_descriptions.py" name="test_compare_descriptions_name_every_compare_source" requirements="R-COMPARE-SOURCE-SELECTION.descriptions" title="R-COMPARE-SOURCE-SELECTION.descriptions: name exactly the queryable sources." />
   </requirement>
   <requirement id="R-COMPARE-VARIANT-IDENTITY" kind="requirement" state="tested" gaps="G-COMPARE-VARIANT-EXECUTION">
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_multi_size_ram_storage_query_requires_every_asked_size_to_match" requirements="R-COMPARE-VARIANT-IDENTITY" />
     <test file="packages/compare-connector/tests/test_identity.py" name="test_sizes_are_listed_in_capacity_order_across_units" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: the warning lists sizes by capacity, keeping each title's unit." />
     <test file="packages/compare-connector/tests/test_identity.py" name="test_sizes_compare_in_gigabytes" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: 1 TB reads as 1024 GB or 1000 GB, as storage is sold; nothing in between." />
     <test file="packages/compare-connector/tests/test_variant_sizes.py" name="test_offer_without_a_size_in_the_title_stays_comparable" requirements="R-COMPARE-VARIANT-IDENTITY" title="R-COMPARE-VARIANT-IDENTITY: unknown is not a contradiction." />
@@ -954,6 +971,7 @@
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_the_sale_of_another_item_is_not_read" requirements="R-NO-FABRICATION" />
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_wb_wallet_only_price_is_not_certified" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE.verify, R-NO-FABRICATION: a DOM card whose price_rub" />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/compare-connector/tests/test_deep_compare_traps.py" name="test_nonpositive_and_nonfinite_prices_never_rank_or_corrupt_spread_or_notes" requirements="R-NO-FABRICATION" />
   </requirement>
   <requirement id="R-NO-MCP-LOGGING" kind="requirement" state="tested">
     <test file="packages/avito-connector/tests/test_server.py" name="test_fetch_debug_never_leaks_tier1_exception_secrets" requirements="R-NO-MCP-LOGGING.diagnostics" />

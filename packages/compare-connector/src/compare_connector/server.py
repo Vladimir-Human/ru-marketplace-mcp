@@ -32,10 +32,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
-# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
+# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-DEEP-TRAPS; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); decide (the ranking decision); source_error (a failed source's error fields); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
-# LINKS: R-NO-MCP-LOGGING; R-NAV-HOSTS.invariant; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# LINKS: R-NO-MCP-LOGGING; R-NAV-HOSTS.invariant; R-COMPARE-DEEP-TRAPS; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
@@ -59,8 +59,10 @@ import json
 import math
 import os
 import time
+from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
@@ -124,9 +126,32 @@ from compare_connector.vision_policy import client_vision_hint, resolve_image_de
 SERVER_VERSION = "2.10.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+
+def _parse_source_timeout(raw: str | None, default: float = 45.0) -> float:
+    if raw is None or not raw.strip():
+        return default
+    try:
+        parsed = float(raw.strip())
+    except ValueError:
+        return default
+    return parsed if math.isfinite(parsed) and parsed > 0 else default
+
+
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
 # a slow source must not hold the whole comparison hostage.
-SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
+SOURCE_TIMEOUT_S = _parse_source_timeout(os.environ.get("COMPARE_SOURCE_TIMEOUT"))
+
+_MAX_TMALL_IDS = 512
+_RECENT_TMALL_IDS: OrderedDict[str, None] = OrderedDict()
+
+
+def _is_tmall_url(raw: str) -> bool:
+    try:
+        host = (urlsplit(raw.strip()).hostname or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    return host == "detail.tmall.com" or host.endswith(".tmall.com")
+
 
 mcp = FastMCP(
     name="compare-connector",
@@ -408,10 +433,19 @@ async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
 
     offers: list[MarketOffer] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
+        item_id = str(item.item_id or "")
+        url = item.url or ""
+        if item_id and _is_tmall_url(url):
+            _RECENT_TMALL_IDS[item_id] = None
+            _RECENT_TMALL_IDS.move_to_end(item_id)
+            while len(_RECENT_TMALL_IDS) > _MAX_TMALL_IDS:
+                _RECENT_TMALL_IDS.popitem(last=False)
+        elif item_id in _RECENT_TMALL_IDS and url:
+            _RECENT_TMALL_IDS.pop(item_id, None)
         offers.append(
             MarketOffer(
                 source="taobao",
-                product_id=str(item.item_id or ""),
+                product_id=item_id,
                 title=item.title or "",
                 brand="",
                 seller=item.shop_name or "",
@@ -421,7 +455,7 @@ async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
                 rating=None,
                 rating_count=None,
                 in_stock=None,
-                url=item.url or "",
+                url=url,
             )
         )
     return OfferBatch(offers, response)
@@ -780,6 +814,13 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
     tool = getattr(module, _CARD_TOOL_NAMES[name], None)
     if tool is None:
         raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
+    if name == "taobao" and (_is_tmall_url(product_id_or_url) or product_id_or_url.strip() in _RECENT_TMALL_IDS):
+        raise_tool_error(
+            BadRequestError(
+                "Tmall listings (detail.tmall.com) are not readable by taobao_card; "
+                "the compare_prices offer already carries title, price_native (CNY), seller and url"
+            )
+        )
 
     requested_numeric_id = ""
     if name == "wildberries":
@@ -862,6 +903,11 @@ async def compare_verify_offer(
     name = canonical(source)
     if expected_variant_id is not None and name != "yandex_market":
         raise_tool_error(BadRequestError("expected_variant_id is supported only for yandex_market"))
+    if expected_price_rub is not None and name in FOREIGN_CURRENCY_SOURCES:
+        currency = BY_NAME[name].currency.upper()
+        raise_tool_error(
+            BadRequestError(f"{name} quotes prices in {currency} (price_native), not RUB; omit expected_price_rub")
+        )
     payload, requested_numeric_id = await _call_card_tool(name, product_id_or_url)
     if name == "yandex_market" and expected_variant_id:
         observed_variant = str(payload.get("sku_id") or "") if isinstance(payload, dict) else ""

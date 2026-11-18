@@ -10,7 +10,7 @@ check before drawing conclusions.
 # SCOPE: Additive typed outputs; preserve native conditional prices without ranking them;
 #        describe comparison sources from the registry without changing field types or behavior.
 # DEPENDS: Pydantic; compare_connector.identity; mcp_core.sources.
-# LINKS: M-COMPARE; M-SOURCES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-NO-FABRICATION; R-TOOL-SCHEMA;
+# LINKS: M-COMPARE; M-SOURCES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-DEEP-TRAPS; R-NO-FABRICATION; R-TOOL-SCHEMA;
 #        R-CDP-HOST-PAUSE; R-CHALLENGE-ACTION; R-COMPARE-SOURCE-SELECTION.descriptions; R-COMPARE-IMAGE-URL; R-COMPARE-PRICE-CONTEXT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -21,6 +21,7 @@ check before drawing conclusions.
 
 from __future__ import annotations
 
+import math
 import re
 from urllib.parse import parse_qsl, urlsplit
 
@@ -88,6 +89,16 @@ class MarketOffer(BaseModel):
         default=None,
         description="Optional provenance for the native offer and its identity evidence.",
     )
+
+    @field_validator("price_rub", "price_native", "price_with_subscription_rub", mode="before")
+    @classmethod
+    def _positive_finite_price(cls, value: object) -> object:
+        """R-NO-FABRICATION: non-positive, boolean and non-finite amounts normalize to None."""
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return value if math.isfinite(value) and value > 0 else None
+        return value
 
     @field_validator("image_url", mode="before")
     @classmethod

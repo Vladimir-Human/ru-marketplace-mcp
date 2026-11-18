@@ -1,4 +1,18 @@
 """Conservative product and offer identity helpers."""
+# START_MODULE_CONTRACT
+# PURPOSE: Extract and compare product identifiers, capacity tokens, size/model lists and query model tokens.
+# SCOPE: Pure text/identifier helpers with no I/O, network or browser access.
+# DEPENDS: Pydantic; stdlib re, unicodedata, collections.abc, typing.
+# LINKS: M-COMPARE; M-COMPARE-DECIDE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-SIZE-LIST; R-COMPARE-MODEL-LIST;
+#        R-COMPARE-MODEL-TOKENS; R-COMPARE-DEEP-TRAPS.
+# END_MODULE_CONTRACT
+# START_MODULE_MAP
+# ProductIdentity/OfferEvidence/IdentityMatch: Typed product and offer identity models.
+# extract_size_tokens/sizes_conflict/lists_sizes: Capacity extraction, conflict checks and multi-size list detection.
+# lists_models: Multi-model family and compact slash list detection.
+# match_product_identity: Conservative GTIN/MPN/model/variant matching.
+# model_mismatch: Query model token, suffix, sub-brand, decimal and accessory-window checks.
+# END_MODULE_MAP
 
 from __future__ import annotations
 
@@ -142,6 +156,18 @@ def _size_readings(token: str) -> set[int]:
     return {number * 1024, number * 1000} if token.endswith("TB") else {number}
 
 
+_RAM_RATIO = 4
+
+
+def _distinct_sizes(tokens: Iterable[str]) -> list[set[int]]:
+    distinct: list[set[int]] = []
+    for token in tokens:
+        readings = _size_readings(token)
+        if not any(readings & seen for seen in distinct):
+            distinct.append(readings)
+    return distinct
+
+
 def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     """Whether sizes named in a title contradict the sizes a query asks for.
 
@@ -149,30 +175,52 @@ def sizes_conflict(asked: frozenset[str], stated: frozenset[str]) -> bool:
     on both sides can disagree. A query that states no size, a title that names
     none, and a title naming one of the asked sizes are all unknown, never a
     contradiction — the same reason a missing variant attribute abstains.
+    When a RAM + storage query names two or more sizes and the title also states
+    two or more sizes, every asked size must appear in the title's stated sizes.
     Sizes are compared in gigabytes, so ``"1TB"`` agrees with ``"1024GB"`` and ``"1000GB"``.
     """
     if not (asked and stated):
         return False
-    asked_gb = {reading for token in asked for reading in _size_readings(token)}
-    return not (asked_gb & {reading for token in stated for reading in _size_readings(token)})
+    stated_gb = {reading for token in stated for reading in _size_readings(token)}
+    asked_distinct = _distinct_sizes(asked)
+    stated_distinct = _distinct_sizes(stated)
+    if len(asked_distinct) >= 2 and len(stated_distinct) >= 2:
+        mins = sorted(min(readings) for readings in asked_distinct)
+        if mins[-1] >= _RAM_RATIO * mins[0]:
+            return not all(readings & stated_gb for readings in asked_distinct)
+    asked_gb = {reading for readings in asked_distinct for reading in readings}
+    return not (asked_gb & stated_gb)
 
 
 # START_BLOCK_SIZE_LIST
-# A title listing several capacities ("128GB/256GB/512GB", "64 / 128 / 256 ГБ") sells
-# several variants under one price that belongs to a variant it does not name
-# (R-COMPARE-SIZE-LIST). A RAM + storage pair ("8/256GB", "16 ГБ / 512 ГБ") is one
-# variant: two sizes, the larger at least four times the smaller.
+# A title listing several capacities ("128GB/256GB/512GB", "64 / 128 / 256 ГБ",
+# "6/128ГБ, 6/256ГБ", "8/128, 8/256 ГБ", "128-256 ГБ") sells several variants under
+# one price that belongs to a variant it does not name (R-COMPARE-SIZE-LIST).
+# A single RAM + storage pair ("8/256GB", "16 ГБ / 512 ГБ") is one variant: two sizes,
+# the larger at least four times the smaller.
 _SIZE_RUN = re.compile(r"(?<!\w)(?<!\d[.,])(\d{1,4})((?:\s*/\s*\d{1,4})+)\s*(gb|гб|tb|тб)(?!\w)", re.IGNORECASE)
-_LIST_GAP = re.compile(r"\s*(?:[/|,]|или|or)\s*", re.IGNORECASE)
-_RAM_RATIO = 4
+_SIZE_RANGE = re.compile(
+    r"(?<!\w)(?<!\d[.,])(\d{1,4})(?:\s*(gb|гб|tb|тб))?[-–](\d{1,4})\s*(gb|гб|tb|тб)(?!\w)",
+    re.IGNORECASE,
+)
+_PAIR_SIZE_LIST = re.compile(
+    r"(?<!\w)\d{1,2}\s*/\s*\d{2,4}(?:\s*(?:gb|гб|tb|тб))?"
+    r"(?:\s*(?:[,|/]|или|or)\s*\d{1,2}\s*/\s*\d{2,4}(?:\s*(?:gb|гб|tb|тб))?)+\s*(?!\w)",
+    re.IGNORECASE,
+)
+_LIST_GAP = re.compile(r"\s*(?:[/|,]|или|or)\s*(?:\d{1,3}\s*/\s*)?", re.IGNORECASE)
 
 
 def _size_lists(text: str) -> list[list[str]]:
-    """Runs of two or more sizes joined only by a slash, bar, comma or "или"/"or"."""
+    """Runs of two or more sizes joined by a slash, bar, comma, range or "или"/"or"."""
     lists = []
     for match in _SIZE_RUN.finditer(text):
         unit = _SIZE_UNITS[match[3].lower()]
         lists.append([f"{int(number)}{unit}" for number in (match[1], *re.findall(r"\d{1,4}", match[2]))])
+    for match in _SIZE_RANGE.finditer(text):
+        first_unit = _SIZE_UNITS[(match[2] or match[4]).lower()]
+        second_unit = _SIZE_UNITS[match[4].lower()]
+        lists.append([f"{int(match[1])}{first_unit}", f"{int(match[3])}{second_unit}"])
     run: list[str] = []
     end = None
     for match in _SIZE_TOKEN.finditer(text):
@@ -193,12 +241,15 @@ def lists_sizes(title: Any) -> bool:
     Sizes compare in gigabytes ("1TB / 1000GB" is one size). Two sizes are a RAM +
     storage pair, not a list, when the larger is at least four times the smaller.
     """
-    for sizes in _size_lists(_text(title)):
-        distinct: list[set[int]] = []
-        for token in sizes:
-            readings = _size_readings(token)
-            if not any(readings & seen for seen in distinct):
-                distinct.append(readings)
+    raw = _text(title)
+    for match in _PAIR_SIZE_LIST.finditer(raw):
+        chunk = match[0]
+        if re.search(r"(?:gb|гб|tb|тб)", chunk, re.IGNORECASE):
+            pairs = {(int(ram), int(rom)) for ram, rom in re.findall(r"(\d{1,2})\s*/\s*(\d{2,4})", chunk)}
+            if len(pairs) > 1:
+                return True
+    for sizes in _size_lists(raw):
+        distinct = _distinct_sizes(sizes)
         if len(distinct) > 2:
             return True
         if len(distinct) == 2:
@@ -213,19 +264,20 @@ def lists_sizes(title: Any) -> bool:
 
 # START_BLOCK_MODEL_LIST
 # A title naming several models of one family ("Dyson V11/V15", "iPhone 15 / iPhone 16",
-# "Galaxy S24 / S25") sells or fits several products under one price (R-COMPARE-MODEL-LIST).
-# A family is the same word before two different numbers, or the same one-to-four-letter
-# prefix glued to two different numbers. IP ratings and USB, DDR and Wi-Fi versions are
-# specs, not models; a number followed by a unit is a size, which the size-list rule judges.
+# "Galaxy S24 / S25", "iPhone 15/16", "Galaxy S24/25", "Redmi Note 13/14") sells or fits
+# several products under one price (R-COMPARE-MODEL-LIST).
 _MODEL_GAP = r"\s*(?:/|\||,|\bили\b|\bor\b)\s*"
 _SAME_WORD_MODELS = re.compile(
     r"(?<![\w-])([a-zа-яё]{2,})\s*(\d{1,4}[a-zа-яё]{0,2})\b" + _MODEL_GAP + r"\1\s*(\d{1,4}[a-zа-яё]{0,2})\b",
     re.IGNORECASE,
 )
 _SAME_PREFIX_MODELS = re.compile(r"(?<![\w-])([a-z]{1,4})(\d{1,5})\b" + _MODEL_GAP + r"\1(\d{1,5})\b", re.IGNORECASE)
-_SPEC_PREFIXES = frozenset({"ip", "usb", "ddr", "lpddr", "wifi"})
+_SHARED_WORD_MODELS = re.compile(r"(?<![\w-])([a-z]{2,})\s+(\d{1,4})\s*/\s*(\d{1,4})(?![\w.,-])", re.IGNORECASE)
+_SHARED_PREFIX_MODELS = re.compile(r"(?<![\w-])([a-z]{1,4})(\d{1,4})\s*/\s*(\d{1,4})(?![\w.,-])", re.IGNORECASE)
+_SPEC_PREFIXES = frozenset({"ip", "usb", "ddr", "lpddr", "wifi", "bt", "pcie", "hdmi", "cat"})
 _UNIT_AFTER = re.compile(
-    r"\s*(?:gb|гб|tb|тб|mb|мб|мм|mm|см|cm|кг|kg|г|g|л|l|мл|ml|w|вт|mah|мач|гц|hz|шт|%)(?!\w)", re.IGNORECASE
+    r"\s*(?:gb|гб|tb|тб|mb|мб|мм|mm|см|cm|кг|kg|г|g|л|l|мл|ml|w|вт|mah|мач|гц|hz|шт|дюйм\w*|r\d{2}|%)(?!\w)",
+    re.IGNORECASE,
 )
 
 
@@ -236,6 +288,19 @@ def lists_models(title: Any) -> bool:
         for match in pattern.finditer(text):
             family, first, second = match[1], match[2], match[3]
             if family.lower() in _SPEC_PREFIXES or first.lower() == second.lower():
+                continue
+            if _UNIT_AFTER.match(text, match.end()):
+                continue
+            return True
+    for pattern in (_SHARED_WORD_MODELS, _SHARED_PREFIX_MODELS):
+        for match in pattern.finditer(text):
+            family, first, second = match[1], match[2], match[3]
+            if family.lower() in _SPEC_PREFIXES:
+                continue
+            n1, n2 = int(first), int(second)
+            if n1 == n2 or n1 == 0 or n2 == 0 or max(n1, n2) >= _RAM_RATIO * min(n1, n2):
+                continue
+            if len(first) != len(second) and {len(first), len(second)} != {1, 2}:
                 continue
             if _UNIT_AFTER.match(text, match.end()):
                 continue
@@ -293,8 +358,12 @@ def match_product_identity(expected: ProductIdentity, observed: ProductIdentity)
 _WORD_EDGE = "0-9a-zа-яё"
 _LATIN_TOKEN = re.compile(rf"(?<![{_WORD_EDGE}])[0-9a-z]+(?:-[0-9a-z]+)*(?![{_WORD_EDGE}])")
 _RUNS = re.compile(r"[a-z]+|[0-9]+")
-# One spelling per product line: titles write "PS5", "PS 5" and "PlayStation 5".
-_ALIASES = ((re.compile(rf"(?<![{_WORD_EDGE}])(?:playstation|ps)[\s-]?5(?![{_WORD_EDGE}])"), "ps5"),)
+# One spelling per product line: titles write "PS5", "PS 5" and "PlayStation 5", and "S25+" / "S25 Plus".
+_ALIASES = (
+    (re.compile(rf"(?<![{_WORD_EDGE}])(?:playstation|ps)[\s-]?5(?![{_WORD_EDGE}])"), "ps5"),
+    (re.compile(rf"(?<=[0-9a-z])\+(?![{_WORD_EDGE}])"), " plus"),
+    (re.compile(rf"(\d+)(?=(?:шт|л|мл|кг|г|м|см|мм)(?![{_WORD_EDGE}]))"), r"\1 "),
+)
 # Words that name the kind of goods or a sales claim, not the model: the DNS title of
 # the 990 PRO says "NVMe накопитель", not "SSD"; Russian titles name the category in
 # Russian when a query names it in English.
@@ -306,16 +375,34 @@ _GENERIC_WORDS = frozenset(
         "original", "new", "global",
     }
 )  # fmt: skip
-# A suffix right after a model word names a different model ("iPhone 16 Pro", "PS5 Pro", "Switch OLED").
-_MODEL_SUFFIXES = frozenset({"pro", "max", "plus", "ultra", "mini", "lite", "fe", "edge", "oled"})
+_SUFFIX_CANON = {
+    "про": "pro",
+    "макс": "max",
+    "плюс": "plus",
+    "ультра": "ultra",
+    "мини": "mini",
+    "лайт": "lite",
+    "фе": "fe",
+}
+_SUBBRANDS = ("redmi", "poco", "note")
+# A suffix right after a model word names a different model ("iPhone 16 Pro", "PS5 Pro", "Switch OLED", "S25+", "Watch SE").
+_MODEL_SUFFIXES = frozenset(
+    {
+        "pro", "max", "plus", "ultra", "mini", "lite", "fe", "edge", "oled",
+        "se", "air", "fold", "flip",
+        *_SUBBRANDS,
+        *_SUFFIX_CANON,
+    }
+)  # fmt: skip
+_DIGIT_LETTER_SUFFIXES = frozenset({"e", "c", "s", "t", "a", "i"})
 # "для", "под", "for", "совместим с", "compatible with" before a model word mark goods made for the device.
 _FOR_WORD = re.compile(
     rf"(?<![{_WORD_EDGE}])(?:для|под|for|совместим[а-я]*\s+с|compatible\s+with)\s+(?=(?P<window>[^,;|(]*))"
 )
-_FOR_WINDOW_WORDS = 3
+_FOR_WINDOW_WORDS = 5
 # A title that calls itself a copy is not the original the query names.
 _COPY_WORDS = re.compile(rf"(?<![{_WORD_EDGE}])(?:аналог|копия|реплика|replica)(?![{_WORD_EDGE}])")
-_NEXT_WORD = re.compile(r"[\s-]*([0-9a-z]+)")
+_NEXT_WORD = re.compile(r"[\s-]*([0-9a-zа-яё]+)")
 
 
 def _fold(text: str) -> str:
@@ -330,9 +417,12 @@ def _model_tokens(query: str) -> list[str]:
     return [token for token in dict.fromkeys(tokens) if token not in _GENERIC_WORDS]
 
 
-def _token_pattern(token: str) -> re.Pattern[str]:
+def _token_pattern(token: str, *, allow_after_decimal: bool = False) -> re.Pattern[str]:
     """A token as a whole word whose letter and digit runs may be split by a space or hyphen (WH-1000XM5)."""
-    return re.compile(rf"(?<![{_WORD_EDGE}])" + r"[\s-]?".join(_RUNS.findall(token)) + rf"(?![{_WORD_EDGE}])")
+    decimal_guard = "" if (not token.isdigit() or allow_after_decimal) else r"(?<!\d[.,])"
+    return re.compile(
+        rf"(?<![{_WORD_EDGE}]){decimal_guard}" + r"[\s-]?".join(_RUNS.findall(token)) + rf"(?![{_WORD_EDGE}])"
+    )
 
 
 def _is_code(token: str) -> bool:
@@ -346,20 +436,23 @@ def _is_code(token: str) -> bool:
 # INPUTS: query and title, free text; brand, the offer's own brand field (Wildberries keeps it out of the
 #         title); titles and brands are untrusted marketplace data.
 # OUTPUTS: None for a query with no Latin model token (the rule abstains) or a title that names them all;
-#          otherwise a short reason: "missing <token>", "for <token>" (goods made for the device), "copy"
-#          or "<token> <suffix>" (another model, e.g. "16 pro").
-# RULES: every token must appear as a whole word in the title or the brand, except that pure-letter words
-#        (brand, series) may be absent when a code token (_is_code) is present; "для", "под", "for",
-#        "совместим с" or "compatible with" followed within three words (not past a comma) by a non-number
-#        token marks goods for the device, and аналог/копия/реплика a copy, unless the query says so too;
-#        a _MODEL_SUFFIXES word right after a token is another model unless the query names it.
+#          otherwise a short reason: "missing <token>", "for <token>" (goods made for the device), "copy",
+#          "<token> <suffix>" (another model, e.g. "16 pro", "s25 plus", "16 e") or an unrequested sub-brand.
 # SIDE_EFFECTS: None.
 def model_mismatch(query: str, title: str, brand: str = "") -> str | None:
     tokens = _model_tokens(query)
     if not tokens:
         return None
     text, asked = _fold(title), _fold(query)
-    patterns = {token: _token_pattern(token) for token in tokens}
+    patterns = {
+        token: _token_pattern(
+            token,
+            allow_after_decimal=bool(
+                token.isdigit() and re.search(rf"\d[.,]{re.escape(token)}(?![{_WORD_EDGE}])", asked)
+            ),
+        )
+        for token in tokens
+    }
     named = f"{text} {_fold(brand)}"
     found = [token for token in tokens if patterns[token].search(named)]
     has_code = any(_is_code(token) for token in found)
@@ -370,16 +463,26 @@ def model_mismatch(query: str, title: str, brand: str = "") -> str | None:
         for match in _FOR_WORD.finditer(text):
             window = " ".join(match.group("window").split()[:_FOR_WINDOW_WORDS])
             for token in found:
-                if not token.isdigit() and patterns[token].search(window):
+                if (not token.isdigit() or _is_code(token)) and patterns[token].search(window):
                     return f"for {token}"
     if _COPY_WORDS.search(text) and not _COPY_WORDS.search(asked):
         return "copy"
-    asked_words = set(_LATIN_TOKEN.findall(asked))
+    raw_asked_words = set(re.findall(rf"[{_WORD_EDGE}]+", asked))
+    asked_words = raw_asked_words | {_SUFFIX_CANON[w] for w in raw_asked_words if w in _SUFFIX_CANON}
     for token in found:
         for match in patterns[token].finditer(text):
             suffix = _NEXT_WORD.match(text, match.end())
-            if suffix and suffix.group(1) in _MODEL_SUFFIXES and suffix.group(1) not in asked_words:
-                return f"{token} {suffix.group(1)}"
+            if not suffix:
+                continue
+            word = suffix.group(1)
+            canon = _SUFFIX_CANON.get(word, word)
+            if canon in _MODEL_SUFFIXES and canon not in asked_words and word not in asked_words:
+                return f"{token} {word}"
+            if token[-1].isdigit() and word in _DIGIT_LETTER_SUFFIXES and word not in asked_words:
+                return f"{token} {word}"
+    for subbrand in _SUBBRANDS:
+        if subbrand not in asked_words and re.search(rf"(?<![{_WORD_EDGE}]){subbrand}(?![{_WORD_EDGE}])", text):
+            return subbrand
     return None
 
 
