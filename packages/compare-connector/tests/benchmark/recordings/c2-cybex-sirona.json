@@ -1,0 +1,590 @@
+{
+  "query": "автокресло cybex sirona",
+  "captured_at": "2026-11-17T19:18:43.870614Z",
+  "sources": {
+    "aliexpress": {
+      "error": {
+        "code": "parser_drift",
+        "message": "rendered search page yielded zero product tiles — either the query matched nothing or the DOM shape moved; verify manually"
+      }
+    },
+    "citilink": {
+      "error": {
+        "code": "rate_limited",
+        "message": "citilink rate-limited"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "242b2ce5038ed582",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0B/AM] [PCIe 4.0 x4, чтение - 7450 Мбайт/сек, запись - 6900 Мбайт/сек, 3 бит MLC (TLC), NVM Express, TBW - 600 ТБ]",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/242b2ce5038ed582/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0bam/",
+            "image_url": ""
+          },
+          {
+            "product_id": "26135ef669a0ed20",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0CW] [PCIe 4.0 x4, чтение - 7450 Мбайт/сек, запись - 6900 Мбайт/сек, 3 бит MLC (TLC), NVM Express, TBW - 600 ТБ]",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/26135ef669a0ed20/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0cw/",
+            "image_url": ""
+          },
+          {
+            "product_id": "39779619c38e0fd2",
+            "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 PRO [MZ-V9P1T0BW] [PCIe 4.0 x4, чтение - 7450 Мбайт/сек, запись - 6900 Мбайт/сек, 3 бит MLC (TLC), NVM Express, TBW - 600 ТБ]",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/39779619c38e0fd2/1000-gb-m2-nvme-nakopitel-samsung-990-pro-mz-v9p1t0bw/",
+            "image_url": ""
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "no_prices_on_page"
+          ]
+        },
+        "observed_at": "2026-11-17T19:18:39.954263Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 963554561,
+            "name": "Автокресло детское Sirona T i-Size Sepia Black",
+            "brand": "Cybex",
+            "supplier": "",
+            "price_rub": 43865.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1544749933,
+            "name": "База isofix T i-Size для автокресел Cloud, Sirona",
+            "brand": "Cybex",
+            "supplier": "",
+            "price_rub": 33095.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 33095.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1795981681,
+            "name": "Автокресло Cybex Sirona Gi i-Size с базой isofix",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 116942.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 116942.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1989720630,
+            "name": "Держатель для напитков для детского автокресла Cybex Sirona",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1237.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1237.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 583199491,
+            "name": "Держатель для напитков Cybex Sirona Pallas Solution Черный",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 2485.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 2485.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 605204943,
+            "name": "Держатель для напитков Cybex Sirona Pallas Solution черный",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1008.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1008.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 487271137,
+            "name": "Держатель для напитков Cybex Sirona Pallas Solution черный",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1330.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1330.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1905960379,
+            "name": "Держатель для напитков для детского автокресла Cybex Sirona",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 2130.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 2130.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1859101902,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1479.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1479.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1488194225,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1584.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1584.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1894977433,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1161.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1161.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 497787944,
+            "name": "База Base T-Fix Isofix 360 для автокресел Cloud",
+            "brand": "Cybex",
+            "supplier": "",
+            "price_rub": 37801.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 37801.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1099087597,
+            "name": "Держатель для напитков для детского автокресла Cybex Sirona",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1038.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1038.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1693547042,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1529.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1529.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1575694664,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1695.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1695.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1567315339,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1087.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1087.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1559991219,
+            "name": "Держатель для напитков Cybex Sirona Pallas Solution черный",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1185.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1185.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1309228338,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1375.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1375.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1378594524,
+            "name": "Держатель для напитков Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1392.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1392.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1740582372,
+            "name": "Cybex Sirona Gi i-Size Автокресло + база isofix c вращением",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 133061.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 133061.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1508387013,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1031.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1031.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1504449978,
+            "name": "Подстаканник для автокресла Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1076.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1076.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2113548605,
+            "name": "Подстаканник для автокресла Cybex",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1330.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1330.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 825727755,
+            "name": "Аксессуар для напитков к автокреслу Cybex",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1738.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1738.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1753763858,
+            "name": "Подстаканник для детского автокресла Cybex",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 808.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 808.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1250512633,
+            "name": "Черный держатель для напитков к автокреслу Cybex",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 2303.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 2303.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1497040574,
+            "name": "Подстаканник для автокресла Cybex",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1216.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1216.0,
+            "review_rating": 5.0,
+            "feedbacks": 15,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1084830207,
+            "name": "Держатель для напитков для детского автокресла Cybex Sirona",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1354.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1354.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1993583719,
+            "name": "Подстаканник для автокресла Cybex Sirona, Pallas, Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1204.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1204.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1504300695,
+            "name": "Подстаканник для автокресел Cybex Sirona Pallas Solution",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1191.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1191.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2015610792,
+            "name": "Подстаканник для автокресла Cybex, черный",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 1422.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 1422.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1741122029,
+            "name": "Cybex Sirona Gi i-Size Автокресло + база isofix c вращением",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 191352.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 191352.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1795981236,
+            "name": "Автокресло Cybex Sirona Gi i-Size с базой isofix",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 171640.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 171640.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1795985895,
+            "name": "Автокресло Cybex Sirona Gi i-Size с базой isofix",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 171640.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 171640.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T19:18:43.767344Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "5148915627",
+            "sku_id": "5735741645",
+            "title": "Cybex Sirona Gi i-Size Автокресло + база isofix c вращением 360 Almond Beige PLUS",
+            "brand": "",
+            "seller": "MISHKA STORE",
+            "price_rub": 49099.0,
+            "price_with_plus": 48117.0,
+            "rating": 5.0,
+            "rating_count": 3,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/cybex-sirona-gi-i-size-new-2025-avtokreslo-almond-beige-plus--baza-isofix-c-vrashcheniyem-360-somfort/5148915627",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20424884/2a0000019ed4039a3a47cb32bbca5435a473/orig"
+          },
+          {
+            "product_id": "102590620664",
+            "sku_id": "103667501451",
+            "title": "Cybex Sirona T i-Size, автокресло с рождения до 3-4 лет гр.0-1 (0-18 кг), цвет Sepia Black",
+            "brand": "",
+            "seller": "МирАвтокресел",
+            "price_rub": 36064.0,
+            "price_with_plus": 35343.0,
+            "rating": 5.0,
+            "rating_count": 1,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/avtokreslo-cybex-sirona-t-i-size-sepia-black/102590620664",
+            "image": "https://avatars.mds.yandex.net/get-mpic/9067823/2a0000018c690b1b4ed7c08bd75cceafebfe/orig"
+          },
+          {
+            "product_id": "5143618473",
+            "sku_id": "5143618473",
+            "title": "Cybex Sirona Gi i-Size with Base, автокресло от 3 месяцев до 3-4 лет гр.0-1 (0-18 кг), цвет Stone Grey PLUS",
+            "brand": "",
+            "seller": "МирАвтокресел",
+            "price_rub": 50327.0,
+            "price_with_plus": 49320.0,
+            "rating": 4.8,
+            "rating_count": 6,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/cybex-sirona-gi-i-size-with-base-avtokreslo-ot-3-mesyatsev-do-3-4-let-gr0-1-0-18-kg-tsvet-stone-grey-plus/5143618473",
+            "image": "https://avatars.mds.yandex.net/get-mpic/17662038/2a0000019c61dd57b634df3bb4ba69d22281/orig"
+          },
+          {
+            "product_id": "4507840591",
+            "sku_id": "5895871259",
+            "title": "Cybex Sirona Gi i-Size with Base, автокресло от 3 месяцев до 3-4 лет гр.0-1 (0-18 кг), цвет Fog Grey",
+            "brand": "",
+            "seller": "МирАвтокресел",
+            "price_rub": 40788.0,
+            "price_with_plus": 39972.0,
+            "rating": 4.8,
+            "rating_count": 6,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/cybex-sirona-gi-i-size-with-base-avtokreslo-ot-3-mesyatsev-do-3-4-let-gr0-1-0-18-kg-tsvet-fog-grey/4507840591",
+            "image": "https://avatars.mds.yandex.net/get-mpic/3609127/2a00000197ebc6bcb06969b75f6a030e7b53/orig"
+          },
+          {
+            "product_id": "4850289621",
+            "sku_id": "5839971363",
+            "title": "Cybex Sirona G i-Size, автокресло с рождения до 3-4 лет гр.0-1 (0-18 кг), цвет Magic Black",
+            "brand": "",
+            "seller": "МирАвтокресел",
+            "price_rub": 32732.0,
+            "price_with_plus": 32077.0,
+            "rating": null,
+            "rating_count": null,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/cybex-sirona-g-i-size-avtokreslo-s-rozhdeniya-do-3-4-let-gr0-1-0-18-kg-tsvet-magic-black/4850289621",
+            "image": "https://avatars.mds.yandex.net/get-mpic/15034155/2a0000019b0e24987ef14260ebb97b069c6e/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:18:16.363958Z"
+      }
+    }
+  },
+  "schema": 1
+}

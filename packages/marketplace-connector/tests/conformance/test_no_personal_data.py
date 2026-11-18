@@ -57,7 +57,6 @@ ALLOWLIST = {
     "cian_card.agent": "CianAgentOut: its name follows the organisation rule.",
     "MarketOffer.seller": "Filled from each source's seller name, which the source's own rule already nulls.",
     "DetmirProduct.vendor": "Marketplace shop selling on Detsky Mir.",
-    "MpStatsItem.seller": "WB/Ozon shop in the analytics data.",
     "ozon_card.seller": "OzonSellerOut: marketplace shop.",
     "yandex_card.seller": "Shop of the displayed offer.",
     "YandexProduct.seller": "Shop of the default offer.",

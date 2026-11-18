@@ -1,5 +1,5 @@
 {
-  "_about": "A7 benchmark labels for the cycle-1 recordings (2026-11-17). cheapest_comparable: walk the offers in ascending price to the first true match (brand, model and suffix, memory or size, pack, new condition; the device itself, not an accessory or a part); that offer and its same-price matching ties are the acceptable set. cheapest: the lowest-priced offer and its ties. Proposed by MiniMax M3.1 Flash, decided by Claude offer by offer. Ozon is absent: these recordings predate compare reading an Ozon card for its cheapest tile (#302).",
+  "_about": "A7 benchmark labels for the audit recordings (cycle 1 and cycle 2, 2026-11-17). cheapest_comparable: walk the offers in ascending price to the first true match (brand, model and suffix, memory or size, pack, new condition; the device itself, not an accessory or a part); that offer and its same-price matching ties are the acceptable set; an empty set means no recorded offer is the asked product, so the right answer names none. The match is judged on what the recorded offer itself says (title, brand field): a title that omits the asked brand with an empty brand field does not prove it (cycle 2 Samba OG: Yandex 'Кроссовки Samba OG', 6949 ₽), and a title the parser did not read ('20 купили') proves nothing; a branded listing at a fraction of the like-for-like prices with no seller and no rating is a replica, not the product (cycle 2 AirPods Pro 2, Yandex 4227 ₽ against 20452-23444 ₽). cheapest: the lowest-priced offer and its ties. Cycle 1 proposed by MiniMax M3.1 Flash, decided by Claude offer by offer; cycle 2 decided by Claude offer by offer. Ozon is absent: the cycle-1 recordings predate compare reading an Ozon card for its cheapest tile (#302), and in cycle 2 Ozon did not answer.",
   "queries": {
     "c1-dyson-v15-detect": {
       "query": "dyson v15 detect",
@@ -147,6 +147,157 @@
         ]
       ],
       "comparable_price_rub": 25499.0,
+      "set_incomplete": false
+    },
+    "c2-adidas-samba-og": {
+      "query": "кроссовки adidas samba og",
+      "cheapest": [
+        [
+          "dns",
+          "46dc0efd6beeb587"
+        ],
+        [
+          "dns",
+          "7efb177d133e5ed3"
+        ],
+        [
+          "dns",
+          "eea441add3b94f65"
+        ],
+        [
+          "dns",
+          "f509bc635cf3fe73"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "aliexpress",
+          "1005013085768658"
+        ]
+      ],
+      "comparable_price_rub": 8072.0,
+      "set_incomplete": false
+    },
+    "c2-airpods-pro-2": {
+      "query": "apple airpods pro 2",
+      "cheapest": [
+        [
+          "yandex_market",
+          "6044877739"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "103174645689"
+        ]
+      ],
+      "comparable_price_rub": 20452.0,
+      "set_incomplete": false
+    },
+    "c2-cybex-sirona": {
+      "query": "автокресло cybex sirona",
+      "cheapest": [
+        [
+          "yandex_market",
+          "4850289621"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "4850289621"
+        ]
+      ],
+      "comparable_price_rub": 32732.0,
+      "set_incomplete": false
+    },
+    "c2-delonghi-ecam22110": {
+      "query": "кофемашина delonghi magnifica s ecam22.110",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005011847952998"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "102204063980"
+        ]
+      ],
+      "comparable_price_rub": 36414.0,
+      "set_incomplete": false
+    },
+    "c2-michelin-xice-north4-205-55-r16": {
+      "query": "шины michelin x-ice north 4 205/55 r16",
+      "cheapest": [
+        [
+          "yandex_market",
+          "102299338604"
+        ]
+      ],
+      "cheapest_comparable": [],
+      "comparable_price_rub": null,
+      "set_incomplete": false
+    },
+    "c2-oral-b-io9": {
+      "query": "электрическая зубная щетка oral-b io 9",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005012532566125"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "4975912128"
+        ]
+      ],
+      "comparable_price_rub": 20015.0,
+      "set_incomplete": false
+    },
+    "c2-samsung-galaxy-s25-256gb": {
+      "query": "samsung galaxy s25 256gb",
+      "cheapest": [
+        [
+          "aliexpress",
+          "1005008389185334"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "452080863"
+        ]
+      ],
+      "comparable_price_rub": 49628.0,
+      "set_incomplete": false
+    },
+    "c2-switch-oled": {
+      "query": "nintendo switch oled",
+      "cheapest": [
+        [
+          "wildberries",
+          "634461808"
+        ],
+        [
+          "wildberries",
+          "760424918"
+        ]
+      ],
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "634461808"
+        ],
+        [
+          "wildberries",
+          "760424918"
+        ]
+      ],
+      "comparable_price_rub": 24719.0,
       "set_incomplete": false
     }
   }

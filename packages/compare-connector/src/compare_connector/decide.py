@@ -11,9 +11,9 @@ Nothing in this module fetches, waits, sleeps or writes to stdout: it is on the
 architecture gate's pure list.
 """
 # START_MODULE_CONTRACT
-# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers, other models and size conflicts, and build the comparison answer.
+# PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-OWN-CHARGING-CASE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-COMPARE-COMPARABLE-OUTLIER; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers, other models and size conflicts, and build the comparison answer.
 # SCOPE: Pure decisions over the results a comparison gathered; no source access, no browser, no model, no stdout.
-# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
+# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-OWN-CHARGING-CASE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-COMPARE-COMPARABLE-OUTLIER; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
 # DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib json, re, collections.abc, dataclasses.
 # SCHEMA: CompareResponse keeps its fields, types and meanings; this module only fills them.
 # LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING.
@@ -24,9 +24,12 @@ architecture gate's pure list.
 # _has_bundle_phrase_prefix: Recognize up to three local modifiers between an explicit bundle cue and this accessory.
 # _has_bundle_phrase_suffix: Recognize bounded lexical noun/modifier tails without crossing accessory clauses.
 # _has_unrequested_marker: Match Unicode words/phrases after occurrence-local bundle/negation checks.
+# _mask_own_charging_case: Blank a charging case the title names as part of the device, keep one it sells.
 # _looks_like_an_accessory/_looks_like_another_condition: Share relevance rules for warnings and comparability.
 # _size_mismatch_warning: Name the excluded offers and the asked sizes once per call.
-# _relevance_warnings: Flag a cheapest offer that probably answers a different question.
+# _relevance_warnings: Flag a cheapest offer that probably answers a different question; name skipped outliers.
+# _split_comparable_outliers/_comparable_winner: Skip like-for-like offers under a quarter of their median.
+# _comparable_outlier_warning: Name the skipped offers and the chosen one's price.
 # _ranks_in_rubles: Whether an offer may enter the cheapest-in-rubles ranking.
 # ConditionalPriceDecision: What one offer's everyday and conditional prices say about its rank.
 # decide_conditional_price: The one rule for an everyday price beside a conditional one.
@@ -237,6 +240,33 @@ def _has_bundle_phrase_suffix(text: str, match: re.Match[str], pattern: re.Patte
     return False
 
 
+# R-COMPARE-OWN-CHARGING-CASE: earbuds ship in a charging case, and their product name says so ("AirPods Pro 2 with
+# MagSafe Charging Case (USB-C)" is Apple's own). A charging case after other title words is the device's own case;
+# a title that starts with it, or a relation word (for, для, replacement, сменный, запасной) next to it or up to four
+# words before it, sells the case. Audit cycle 2 (2026-11-17): the cheapest genuine AirPods Pro 2 (20 452 ₽) was read
+# as an accessory.
+_CHARGING_CASE = re.compile(r"(?<!\w)charging\s+case(?!\w)", re.IGNORECASE)
+_CHARGING_CASE_SOLD_AFTER = re.compile(r"\s*(?:for|для|replacement|сменн\w*|запасн\w*)(?!\w)", re.IGNORECASE)
+_CHARGING_CASE_SOLD_BEFORE = re.compile(
+    r"(?<!\w)(?:for|для|replacement|сменн\w*|запасн\w*)(?:\s+\S+){0,4}\s+\Z", re.IGNORECASE
+)
+
+
+def _mask_own_charging_case(title: str) -> str:
+    """Blank a charging case the title names as part of the device; keep one the listing sells."""
+
+    def replace(match: re.Match[str]) -> str:
+        before = title[: match.start()]
+        sold = (
+            not before.strip()
+            or _CHARGING_CASE_SOLD_AFTER.match(title, match.end())
+            or _CHARGING_CASE_SOLD_BEFORE.search(before)
+        )
+        return match.group() if sold else " " * len(match.group())
+
+    return _CHARGING_CASE.sub(replace, title)
+
+
 def _positive_marker_text(text: str, pattern: re.Pattern[str], *, bundles: bool) -> str:
     """Mask only explicitly negated or locally bundled marker occurrences.
 
@@ -307,7 +337,7 @@ def _looks_like_an_accessory(title: str, query: str) -> bool:
     These rules also apply to queries, without exempting whole titles or treating
     a bundled accessory as a standalone-accessory request.
     """
-    return _has_unrequested_marker(title, query, _ACCESSORY_MARKERS, bundles=True)
+    return _has_unrequested_marker(_mask_own_charging_case(title), query, _ACCESSORY_MARKERS, bundles=True)
 
 
 def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: frozenset[str]) -> str:
@@ -317,8 +347,13 @@ def _size_mismatch_warning(count: int, stated: Iterable[frozenset[str]], asked: 
     return f"identity_mismatch: {count} {verb} {sizes}, query asks {format_size_tokens(asked)}; not comparable"
 
 
-def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
-    """Flag a cheapest offer that probably answers a different question.
+def _relevance_warnings(
+    query: str,
+    priced: list[MarketOffer],
+    outliers: list[MarketOffer] | None = None,
+    chosen: MarketOffer | None = None,
+) -> list[str]:
+    """Flag a cheapest offer that probably answers a different question, and name skipped comparable outliers.
 
     Warnings never remove an offer or change raw cheapest. The same bounded
     accessory/condition checks steer cheapest_comparable; an explicit bundle or
@@ -355,7 +390,45 @@ def _relevance_warnings(query: str, priced: list[MarketOffer]) -> list[str]:
                 f"price_outlier: the cheapest offer is {low} ₽ against a median of {median} ₽ across "
                 f"{len(priced)} offers — check it is the same product and configuration"
             )
+    if outliers:
+        warnings.append(_comparable_outlier_warning(outliers, chosen))
     return warnings
+
+
+# R-COMPARE-COMPARABLE-OUTLIER: a like-for-like title far under the like-for-like median is likelier a replica than a
+# bargain (audit cycle 2: "Apple AirPods Pro 2" at 4 227 ₽, 18% of 23 185 ₽, no seller, no rating). Calibrated on the
+# 16 recorded A7 queries: true cheapest matches sit at 0.35 of that median and above, the replica at 0.18; the cut sits
+# between. It only steers cheapest_comparable: the offer keeps its rank, may stay plain cheapest, and the answer names it.
+_COMPARABLE_OUTLIER_SHARE = 0.25
+_COMPARABLE_OUTLIER_MIN_OFFERS = 4
+
+
+def _split_comparable_outliers(comparable: list[MarketOffer]) -> tuple[list[MarketOffer], list[MarketOffer]]:
+    """The leading like-for-like offers under a quarter of their median, and the rest (both in price order)."""
+    if len(comparable) < _COMPARABLE_OUTLIER_MIN_OFFERS:
+        return [], comparable
+    prices = sorted(offer.price_rub or 0.0 for offer in comparable)
+    cut = prices[len(prices) // 2] * _COMPARABLE_OUTLIER_SHARE
+    count = 0
+    while count < len(comparable) and (comparable[count].price_rub or 0.0) < cut:
+        count += 1
+    return comparable[:count], comparable[count:]
+
+
+def _comparable_winner(comparable: list[MarketOffer]) -> tuple[list[MarketOffer], MarketOffer | None]:
+    """The skipped outliers and cheapest_comparable: the first like-for-like offer that is not one."""
+    outliers, rest = _split_comparable_outliers(comparable)
+    return outliers, (rest[0] if rest else None)
+
+
+def _comparable_outlier_warning(outliers: list[MarketOffer], chosen: MarketOffer | None) -> str:
+    named = ", ".join(f"{offer.source}/{offer.product_id} at {offer.price_rub:g} ₽" for offer in outliers[:3])
+    more = f" and {len(outliers) - 3} more" if len(outliers) > 3 else ""
+    after = f"; cheapest_comparable is the next one, {chosen.price_rub:g} ₽" if chosen and chosen.price_rub else ""
+    return (
+        f"price_outlier: skipped {named}{more} for cheapest_comparable: under a quarter of the median like-for-like "
+        f"price, so a replica or another configuration is likelier than a bargain{after}; verify before quoting it"
+    )
 
 
 # END_BLOCK_RELEVANCE_POLICY
@@ -603,7 +676,7 @@ def build_response(
             size_excluded.append(title_sizes)
             continue
         comparable.append(offer)
-    cheapest_comparable = comparable[0] if comparable else None
+    outliers, cheapest_comparable = _comparable_winner(comparable)
     price_spread = None
     if len(priced) >= 2:
         low, high = priced[0].price_rub, priced[-1].price_rub
@@ -644,7 +717,7 @@ def build_response(
             decision = decide_conditional_price(offer.source, offer.product_id, None, native, kind, offer.currency)
             if decision.note and decision.note not in already_named:
                 warnings.append(decision.note)
-    warnings.extend(_relevance_warnings(query, priced))
+    warnings.extend(_relevance_warnings(query, priced, outliers, cheapest_comparable))
     if size_excluded:
         warnings.append(_size_mismatch_warning(len(size_excluded), size_excluded, query_sizes))
     if cheapest is not None and cheapest_comparable is not None and cheapest is not cheapest_comparable:
