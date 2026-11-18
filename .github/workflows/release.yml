@@ -102,3 +102,14 @@ jobs:
           # fallback затирал руками написанный текст релиза строчкой-заглушкой.
           body_path: docs/releases/RELEASE_NOTES_${{ github.ref_name }}.md
           generate_release_notes: false
+
+      - name: Attach the Claude Desktop bundle (MCPB)
+        # P3-5: a convenience asset built from this version's metadata; it must
+        # never fail the release, so the step may fail on its own.
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run python scripts/build_mcpb.py --out dist-mcpb
+          gh release upload "$GITHUB_REF_NAME" dist-mcpb/*.mcpb --clobber
