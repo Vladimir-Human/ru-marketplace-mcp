@@ -615,6 +615,21 @@ def decide_conditional_price(
 # END_CONTRACT: decide_conditional_price
 
 
+def customs_duty_note(product_id: str, everyday_price_rub: float, duty_rub: float | None) -> str:
+    """R-OZON-CUSTOMS-DUTY: why an offer whose price leaves out a customs payment is not ranked, with its total."""
+
+    def rub(amount: float) -> str:
+        return f"{amount:,.0f}".replace(",", " ")
+
+    head = f"customs_duty: ozon/{product_id or '?'} also needs a customs payment on delivery"
+    if duty_rub is None:
+        return f"{head} (amount not stated) that its {rub(everyday_price_rub)} ₽ price leaves out, so it is not ranked"
+    return (
+        f"{head} of about {rub(duty_rub)} ₽ that its {rub(everyday_price_rub)} ₽ price leaves out, so it is not "
+        f"ranked; with the payment it comes to about {rub(everyday_price_rub + duty_rub)} ₽"
+    )
+
+
 def _is_comparable_offer(
     offer: MarketOffer,
     query: str,
