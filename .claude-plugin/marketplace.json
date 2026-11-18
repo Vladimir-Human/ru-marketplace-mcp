@@ -8,7 +8,7 @@
       "name": "ru-marketplace-mcp",
       "source": "./",
       "description": "Двенадцать площадок РФ и Китая (Wildberries, Ozon, Яндекс Маркет, Авито, Циан, AliExpress, Taobao, Детский мир, Мегамаркет, Lamoda, DNS, Ситилинк) как MCP-серверы и 14 навыков. Сравнение цен без ключей API.",
-      "version": "2.10.0",
+      "version": "2.11.0",
       "license": "MIT",
       "keywords": ["mcp", "wildberries", "ozon", "yandex-market", "avito", "cian", "aliexpress", "taobao", "price-comparison", "russia"]
     }

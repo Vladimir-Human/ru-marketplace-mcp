@@ -315,6 +315,8 @@
   <requirement id="R-CHROME-LAUNCHER" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_candidates_win32.py" name="test_windows_candidates_rank_localappdata_chrome_before_edge_and_include_x86_edge" requirements="R-CHROME-LAUNCHER" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_stealth.py" name="test_windows_profile_pattern_takes_our_profile_only" requirements="R-CHROME-LAUNCHER" title="(audit S2-F6) Bare or quoted, our profile matches; a sibling profile never does." />
+    <test file="scripts/test_start_chrome_cdp.py" name="test_powershell_launcher_verifies_cdp_json_bounds_quoted_profiles_and_trims_drive_root" requirements="R-CHROME-LAUNCHER" />
+    <test file="scripts/test_start_chrome_cdp.py" name="test_the_powershell_launcher_discovers_env_localappdata_and_edge_binaries" requirements="R-CHROME-LAUNCHER" />
   </requirement>
   <requirement id="R-CI-IMAGE-CHECK" kind="requirement" state="tested">
     <test file="scripts/test_ci_concurrency.py" name="test_the_image_check_workflow_uses_an_event_aware_concurrency_group" requirements="R-CI-IMAGE-CHECK" title="A manual image build must not cancel a pull-request build (audit S4-F16)." />
@@ -326,6 +328,9 @@
   </requirement>
   <requirement id="R-CI-TAG-WORKFLOWS" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_an_ipv6_host_dials_in_brackets_and_stays_loopback" requirements="R-CI-TAG-WORKFLOWS" title="(audit S1-F7) Bare ::1 used to build http://::1:9222; [::1] used to count as remote." />
+    <test file="scripts/test_tag_workflows.py" name="test_npm_publish_uses_pinned_node_without_unpinned_global_npm_install" requirements="R-CI-TAG-WORKFLOWS" />
+    <test file="scripts/test_tag_workflows.py" name="test_release_workflow_freezes_the_lockfile" requirements="R-CI-TAG-WORKFLOWS" />
+    <test file="scripts/test_tag_workflows.py" name="test_the_registry_workflow_guards_tag_and_proves_stdio_before_pushing" requirements="R-CI-TAG-WORKFLOWS" />
   </requirement>
   <requirement id="R-CI-TOKEN-SCOPE" kind="requirement" state="tested">
     <test file="scripts/test_workflow_permissions.py" name="test_ci_is_read_only_and_no_job_widens_it" requirements="R-CI-TOKEN-SCOPE" />
@@ -724,6 +729,7 @@
     <test file="scripts/test_first_run_probe.py" name="test_doctor_rows_list_each_source_state_and_next_step" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_dry_run_prints_the_plan_runs_nothing_and_removes_its_folder" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_each_step_records_its_exit_seconds_and_output_tail_and_a_timeout_does_not_stop_the_rest" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_local_wheel_sdist_and_directory_specs_resolve_before_temp_cwd" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_the_settings_keep_every_step_off_the_owner_chrome_profile_and_config" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_the_steps_run_setup_install_doctor_and_matrix_in_order" requirements="R-FIRST-RUN-PROBE" />
   </requirement>
@@ -1204,6 +1210,9 @@
     <test file="scripts/test_bump_version.py" name="test_a_failed_post_write_check_makes_the_bump_fail" requirements="R-RELEASE-BUMP" />
     <test file="scripts/test_bump_version.py" name="test_dry_run_prints_the_plan_and_writes_nothing" requirements="R-RELEASE-BUMP" />
     <test file="scripts/test_bump_version.py" name="test_every_site_family_is_bumped" requirements="R-RELEASE-BUMP" />
+    <test file="scripts/test_bump_version.py" name="test_server_json_advertises_pypi_and_oci_within_registry_meta_budget" requirements="R-RELEASE-BUMP" />
+    <test file="scripts/test_bump_version.py" name="test_server_json_pypi_key_order_and_strict_root_version" requirements="R-RELEASE-BUMP" />
+    <test file="scripts/test_bump_version.py" name="test_the_bump_and_check_cover_llms_install_image_tags" requirements="R-RELEASE-BUMP" title="llms-install.md pins the GHCR tag in inline Markdown code and JSON args (audit T1-5)." />
     <test file="scripts/test_bump_version.py" name="test_the_expected_declaration_files_are_pinned_in_this_test" requirements="R-RELEASE-BUMP" title="The table under test must not be allowed to shrink unnoticed (audit S4-F11)." />
     <test file="scripts/test_bump_version.py" name="test_the_shared_site_table_is_what_both_scripts_use" requirements="R-RELEASE-BUMP" />
   </requirement>
@@ -1368,6 +1377,9 @@
   </requirement>
   <requirement id="R-VERSION" kind="rule" state="tested">
     <test file="scripts/test_bump_version.py" name="test_deleting_one_plugin_manifest_fails_the_version_check" requirements="R-VERSION" title="Deleting one of the 5 plugin manifests must fail check_versions, not shrink the table." />
+    <test file="scripts/test_bump_version.py" name="test_server_json_advertises_pypi_and_oci_within_registry_meta_budget" requirements="R-VERSION" />
+    <test file="scripts/test_bump_version.py" name="test_server_json_pypi_key_order_and_strict_root_version" requirements="R-VERSION" />
+    <test file="scripts/test_bump_version.py" name="test_the_bump_and_check_cover_llms_install_image_tags" requirements="R-VERSION" title="llms-install.md pins the GHCR tag in inline Markdown code and JSON args (audit T1-5)." />
     <test file="scripts/test_bump_version.py" name="test_the_expected_declaration_files_are_pinned_in_this_test" requirements="R-VERSION" title="The table under test must not be allowed to shrink unnoticed (audit S4-F11)." />
     <test file="scripts/test_bump_version.py" name="test_the_version_check_fails_on_a_file_that_kept_the_old_version" requirements="R-VERSION" title="The gate exists for exactly this case (audit S4-F10)." />
     <test file="scripts/test_bump_version.py" name="test_the_version_check_passes_when_every_declaration_agrees" requirements="R-VERSION" />

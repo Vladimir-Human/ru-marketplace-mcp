@@ -8,7 +8,15 @@ because running them starts a real browser.
 
 from __future__ import annotations
 
+import http.server
+import json
+import re
+import shutil
+import subprocess
+import threading
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PS1 = REPO_ROOT / "scripts" / "start_chrome_cdp.ps1"
@@ -44,8 +52,11 @@ def test_the_powershell_launcher_refuses_only_the_same_profile():
     text = _read(PS1)
 
     assert "Get-CimInstance Win32_Process" in text
-    # Anchored, optionally quoted (audit S2-F6): a sibling profile is not this one.
-    assert "$profilePattern = '--user-data-dir=\"?' + [regex]::Escape($Profile) + '(\"|\\s|$)'" in text
+    # Anchored separately for quoted and bare paths so "Shop Two" never matches "Shop".
+    assert (
+        "$profilePattern = '(?:--user-data-dir=\"' + $escapedProfile + '\\\\?\"(?:\\s|$)|--user-data-dir=' + $escapedProfile + '\\\\?(?:\\s|$))'"
+        in text
+    )
     assert "-match $profilePattern" in text
     assert "IndexOf($Profile" not in text
     assert "Another Chrome is already using the profile" in text
@@ -131,3 +142,80 @@ def test_the_shell_launcher_asks_the_endpoint_before_saying_already_running():
 
     assert probe < already < listener
     assert "does not answer as a CDP endpoint" in text
+
+
+@pytest.mark.req("R-CHROME-LAUNCHER")
+def test_the_powershell_launcher_discovers_env_localappdata_and_edge_binaries():
+    text = _read(PS1)
+
+    override_idx = text.index("$env:CHROME_BINARY")
+    progfiles_idx = text.index("${env:ProgramFiles}\\Google\\Chrome\\Application\\chrome.exe")
+    localapp_idx = text.index("${env:LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe")
+    edge_idx = text.index("Microsoft\\Edge\\Application\\msedge.exe")
+    assert override_idx < progfiles_idx < localapp_idx < edge_idx
+    assert "Name='chrome.exe' OR Name='msedge.exe'" in text
+
+
+@pytest.mark.req("R-CHROME-LAUNCHER")
+def test_powershell_launcher_verifies_cdp_json_bounds_quoted_profiles_and_trims_drive_root() -> None:
+    text = _read(PS1)
+
+    assert "ConvertFrom-Json" in text
+    assert ".Browser" in text and ".webSocketDebuggerUrl" in text
+    assert "$Profile.Length -gt 3" not in text
+    assert "$Profile = $Profile.TrimEnd('\\')" in text
+
+    escaped = re.escape(r"C:\Profiles\Shop")
+    pattern = re.compile(rf'(?:--user-data-dir="{escaped}\\?"(?:\s|$)|--user-data-dir={escaped}\\?(?:\s|$))', re.I)
+    assert pattern.search(r'chrome.exe --user-data-dir="C:\Profiles\Shop" about:blank') is not None
+    assert pattern.search(r'chrome.exe --user-data-dir="C:\Profiles\Shop\" about:blank') is not None
+    assert pattern.search(r"chrome.exe --user-data-dir=C:\Profiles\Shop about:blank") is not None
+    assert pattern.search(r'chrome.exe --user-data-dir="C:\Profiles\Shop Two" about:blank') is None
+    assert pattern.search(r'chrome.exe --user-data-dir="C:\Profiles\Shop-2" about:blank') is None
+
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell:
+        fn_match = re.search(r"(function Get-CdpVersion \{.*?\n\})", text, re.S)
+        assert fn_match is not None
+        fn_body = fn_match.group(1)
+
+        state = {"body": b"<html>not chrome</html>", "ctype": "text/html"}
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                self.send_response(200)
+                self.send_header("Content-Type", str(state["ctype"]))
+                self.end_headers()
+                self.wfile.write(bytes(state["body"]))
+
+            def log_message(self, fmt: str, *args: object) -> None:
+                return
+
+        srv = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        port = srv.server_address[1]
+        thread = threading.Thread(target=srv.serve_forever, daemon=True)
+        thread.start()
+        try:
+            ps_check = f"$Port = {port}\n{fn_body}\nif (Get-CdpVersion) {{ 'READY' }} else {{ 'NOT_READY' }}"
+            html_out = subprocess.run(
+                [shell, "-NoProfile", "-Command", ps_check], capture_output=True, text=True, check=True
+            )
+            assert html_out.stdout.strip() == "NOT_READY"
+
+            state["ctype"] = "application/json"
+            state["body"] = json.dumps({"status": "ok"}).encode("utf-8")
+            other_out = subprocess.run(
+                [shell, "-NoProfile", "-Command", ps_check], capture_output=True, text=True, check=True
+            )
+            assert other_out.stdout.strip() == "NOT_READY"
+
+            state["body"] = json.dumps(
+                {"Browser": "Chrome/136.0.0.0", "webSocketDebuggerUrl": f"ws://127.0.0.1:{port}/devtools/browser/1"}
+            ).encode("utf-8")
+            cdp_out = subprocess.run(
+                [shell, "-NoProfile", "-Command", ps_check], capture_output=True, text=True, check=True
+            )
+            assert cdp_out.stdout.strip() == "READY"
+        finally:
+            srv.shutdown()
+            srv.server_close()

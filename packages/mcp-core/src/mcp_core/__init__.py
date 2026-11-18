@@ -65,6 +65,6 @@ __all__ = [
 ]
 
 # START_BLOCK_RELEASE_METADATA
-__version__ = "2.10.0"
-__release_date__ = "2026-11-17"
+__version__ = "2.11.0"
+__release_date__ = "2026-11-18"
 # END_BLOCK_RELEASE_METADATA

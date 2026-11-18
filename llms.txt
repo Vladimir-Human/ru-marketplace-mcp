@@ -1,0 +1,29 @@
+# ru-marketplace-mcp
+
+> Read-only Model Context Protocol (MCP) servers and 14 Agent Skills for 12 Russian and Chinese marketplaces and classifieds (Wildberries, Ozon, Yandex Market, Detsky Mir, Avito, AliExpress, Taobao, Megamarket, Lamoda, DNS, Citilink, and Cian real estate), plus cross-marketplace price comparison in one call. No API keys or seller accounts required; anti-bot-gated sites run through the user's own local Chrome over CDP.
+
+Pick the smallest MCP profile that fits the task: `compare-mcp` (default, 4 tools, ~1.7k tokens/request) for cross-marketplace price comparison and offer verification, `decision-mcp` (5 tools, ~2.0k tokens/request) to add `decision_inspect` for shortlisted cards, or `marketplace-mcp` (39 tools, ~13.1k tokens/request; filterable via `MARKETPLACE_SOURCES`) for per-marketplace search, reviews, seller legal identity, categories, and Cian real estate. Requires Python 3.12+ and `uv` (or Docker).
+
+## Agent Setup & Reference
+
+- [AI Agent Install Guide](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/llms-install.md): Deterministic setup via `uvx ru-marketplace-mcp`, profile chooser, all 9 `install <client>` targets (`claude`, `claude-code`, `cursor`, `vscode`, `windsurf`, `antigravity`, `gemini`, `codex`, `dsh`), VS Code `"servers"` vs `"mcpServers"`, `doctor` exit codes (`0..4`), `browser` / `unblock` rules, and Docker stdio config.
+- [Quickstart](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/QUICKSTART.md): Step-by-step installation, targeted `doctor` health checks, `compare_prices` + `compare_verify_offer` workflow, and troubleshooting.
+- [Tool Reference](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/TOOLS.md): CI-generated schemas, parameters, MCP resources (`guide://...`, `marketplace://errors`), and measured `tools/list` byte/token cost per profile.
+- [Security & Trust Boundaries](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/SECURITY.md): Bilingual (RU/EN) security model, dedicated scraping Chrome profile isolation, host allowlists, and prompt-injection rules for untrusted seller/review text.
+- [English README](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/README.en.md): Full English overview, real `compare_prices` response, per-source caveats, configuration variables, and reliability rules.
+- [Russian README](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/README.md): Primary Russian overview, client setup examples, configuration, and architecture summary.
+- [MCP Registry Manifest](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/server.json): Machine-readable registry metadata, PyPI & GHCR OCI package identifiers, and all 14 server entry points.
+
+## Agent Skills
+
+- [Cross-Marketplace Price Comparison Skill](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/skills/compare-prices/SKILL.md): How an agent calls `compare_prices`, checks `complete` and `source_outcomes`, prefers `cheapest_comparable`, handles conditional/CNY prices, and verifies winners with `compare_verify_offer`.
+- [Unified Marketplace Skill](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/skills/marketplace/SKILL.md): Routing across mounted connectors, `marketplace_sources`, `marketplace_health`, and `MARKETPLACE_SOURCES` filtering.
+
+## Optional
+
+- [Russian Per-Marketplace Tool Guide](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/TOOLS.ru.md): Detailed Russian notes and caveats for every connector (`wb_*`, `ozon_*`, `yandex_*`, `detmir_*`, `avito_*`, `taobao_*`, `megamarket_*`, `lamoda_*`, `dns_*`, `citilink_*`, `aliexpress_*`, `cian_*`, `compare_*`).
+- [Chrome CDP Setup](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/CDP_SETUP.md): Dedicated scraping Chrome setup, `CHROME_CHALLENGE_HANDOFF_S`, Linux `OZON_CHROME_COMPAT`, and browser troubleshooting.
+- [Anti-Bot Notes](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/ANTI_BOT.md): Per-source transport tiers, `WB_TRANSPORT=dom`, network/session requirements, and known marketplace quirks.
+- [Deployment Guide](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/docs/DEPLOYMENT.md): `MCP_TRANSPORT=http`, bearer auth, `MARKETPLACE_SOURCES`, and Docker Compose with Chrome sidecar.
+- [DeepSeek Harness Bundle](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/dsh/README.md): `ru-marketplace-mcp-dsh` plugin setup (`dsh plugin`) and env switches (`RU_MARKETPLACE_MCP_DIR`, `RU_MARKETPLACE_MCP_DECISION`, `RU_MARKETPLACE_MCP_FULL`).
+- [Contributor Rules](https://raw.githubusercontent.com/Vladimir-Human/ru-marketplace-mcp/main/AGENTS.md): Repository constraints, GRACE verification, and live-check budget rules before editing code in this repository.

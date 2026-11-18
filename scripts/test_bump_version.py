@@ -57,8 +57,16 @@ def mini_tree(tmp_path: Path) -> Path:
     )
     _write(
         tmp_path,
+        "llms-install.md",
+        "The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.3`) is built from Dockerfile.stdio.\n"
+        '  "ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.3",\n',
+    )
+    _write(
+        tmp_path,
         "server.json",
         '{\n  "version": "1.2.3",\n  "packages": [\n    {\n'
+        '      "registryType": "pypi",\n      "identifier": "ru-marketplace-mcp",\n      "version": "1.2.3"\n'
+        "    },\n    {\n"
         '      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"\n    }\n  ]\n}\n',
     )
     _write(tmp_path, "dsh/package.json", '{\n  "name": "bundle",\n  "version": "1.2.3"\n}\n')
@@ -99,6 +107,7 @@ def test_the_expected_declaration_files_are_pinned_in_this_test(mini_tree: Path)
         "dsh/README.md",
         "dsh/package.json",
         "gemini-extension.json",
+        "llms-install.md",
         "packages/a/pyproject.toml",
         "packages/a/src/a/__init__.py",
         "packages/a/src/a/server.py",
@@ -121,6 +130,7 @@ def test_the_site_table_names_every_declaration_family(mini_tree: Path) -> None:
         "deployment release pin",
         "mcp-core pin",
         "server.json",
+        "MCP registry PyPI version",
         "OCI image tag",
         "dsh/package.json",
         "plugin manifest",
@@ -134,6 +144,43 @@ def test_the_bump_reaches_the_dsh_bundle_readme_image_tag(mini_tree: Path) -> No
     readme = (mini_tree / "dsh" / "README.md").read_text(encoding="utf-8")
     assert "ru-marketplace-mcp:1.3.0" in readme
     assert OLD not in readme
+
+
+@pytest.mark.req("R-VERSION", "R-RELEASE-BUMP")
+def test_the_bump_and_check_cover_llms_install_image_tags(mini_tree: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """llms-install.md pins the GHCR tag in inline Markdown code and JSON args (audit T1-5)."""
+    assert check_versions.main([], root=mini_tree) == 0
+    assert bump_version.bump(mini_tree, NEW) == 0
+
+    doc = (mini_tree / "llms-install.md").read_text(encoding="utf-8")
+    assert doc.count("ghcr.io/vladimir-human/ru-marketplace-mcp:1.3.0") == 2
+    assert OLD not in doc
+    assert ":latest" not in (Path(__file__).resolve().parents[1] / "llms-install.md").read_text(encoding="utf-8")
+
+    _write(
+        mini_tree,
+        "llms-install.md",
+        "The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:1.2.9`) is stale.\n",
+    )
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "llms-install.md:1: 1.2.9 should be 1.3.0" in capsys.readouterr().err
+
+
+@pytest.mark.req("R-VERSION", "R-RELEASE-BUMP")
+def test_server_json_advertises_pypi_and_oci_within_registry_meta_budget() -> None:
+    import json
+
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((repo_root / "server.json").read_text(encoding="utf-8"))
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+
+    assert "<!-- mcp-name: io.github.Vladimir-Human/ru-marketplace-mcp -->" in readme
+    meta_bytes = len(json.dumps(manifest["_meta"], ensure_ascii=False).encode("utf-8"))
+    assert meta_bytes < 4096
+    by_type = {pkg["registryType"]: pkg for pkg in manifest["packages"]}
+    assert by_type["pypi"]["identifier"] == "ru-marketplace-mcp"
+    assert by_type["pypi"]["runtimeHint"] == "uvx"
+    assert by_type["pypi"]["version"] == manifest["version"]
 
 
 @pytest.mark.req("R-RELEASE-BUMP")
@@ -351,3 +398,73 @@ def test_an_existing_core_package_must_declare_its_release_date(mini_tree, capsy
     _write(mini_tree, "packages/mcp-core/src/mcp_core/__init__.py", '__version__ = "1.2.3"\n')
     assert check_versions.main([], root=mini_tree) == 1
     assert "__init__.py" in capsys.readouterr().err
+
+
+@pytest.mark.req("R-VERSION", "R-RELEASE-BUMP")
+def test_server_json_pypi_key_order_and_strict_root_version(
+    mini_tree: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    real_server_decls = [
+        d
+        for d in version_sites.iter_declarations(repo_root)
+        if d.path == repo_root / "server.json" and d.site.label in ("server.json", "MCP registry PyPI version")
+    ]
+    assert len(real_server_decls) == 2
+
+    reordered = (
+        "{\n"
+        '  "version": "1.2.3",\n'
+        '  "packages": [\n'
+        "    {\n"
+        '      "transport": { "type": "stdio" },\n'
+        '      "version": "1.2.3",\n'
+        '      "identifier": "ru-marketplace-mcp",\n'
+        '      "registryType": "pypi"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.2.3"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", reordered)
+    assert check_versions.main([], root=mini_tree) == 0
+    capsys.readouterr()
+    assert bump_version.bump(mini_tree, NEW) == 0
+    capsys.readouterr()
+    bumped_text = (mini_tree / "server.json").read_text(encoding="utf-8")
+    assert bumped_text.count('"version": "1.3.0"') == 2
+    assert OLD not in bumped_text
+
+    # Deleting the root "version" in server.json must not fall back to packages[].version.
+    missing_root = (
+        "{\n"
+        '  "packages": [\n'
+        "    {\n"
+        '      "registryType": "pypi",\n'
+        '      "identifier": "ru-marketplace-mcp",\n'
+        '      "version": "1.3.0"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.3.0"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", missing_root)
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "server.json" in capsys.readouterr().err
+
+    # Deleting "version" inside the PyPI package block must also fail check_versions.
+    missing_pypi_version = (
+        "{\n"
+        '  "version": "1.3.0",\n'
+        '  "packages": [\n'
+        "    {\n"
+        '      "registryType": "pypi",\n'
+        '      "identifier": "ru-marketplace-mcp"\n'
+        "    },\n"
+        '    {\n      "identifier": "ghcr.io/x/ru-marketplace-mcp:1.3.0"\n    }\n'
+        "  ]\n"
+        "}\n"
+    )
+    _write(mini_tree, "server.json", missing_pypi_version)
+    assert check_versions.main([], root=mini_tree) == 1
+    assert "server.json" in capsys.readouterr().err

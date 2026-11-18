@@ -102,9 +102,24 @@ def probe_env(work: Path, port: int, *, warm_cache: bool) -> dict[str, str]:
     return env
 
 
+def resolve_from_spec(spec: str) -> str:
+    """Resolve a local wheel, sdist or directory before steps execute in temp ``work``."""
+    if "://" in spec or spec.startswith("git+"):
+        return spec
+    candidate = Path(spec).expanduser()
+    try:
+        exists = candidate.exists()
+    except OSError:
+        exists = False
+    if exists or spec.lower().endswith((".whl", ".tar.gz", ".zip")):
+        return str(candidate.resolve())
+    return spec
+
+
 def plan_steps(spec: str, work: Path, python: str, *, skip_live: bool) -> list[Step]:
     """The first run, in the order a user meets it."""
-    cli = ["uvx", "--from", spec, "marketplace-mcp"]
+    resolved_spec = resolve_from_spec(spec)
+    cli = ["uvx", "--from", resolved_spec, "marketplace-mcp"]
     steps = [
         Step("setup", [*cli, "setup", "--client", "claude", "--profile", "compare", "--no-doctor"], 1200, cwd=work),
         Step("install claude-code", [*cli, "install", "claude-code", "--profile", "compare"], 300, cwd=work),
@@ -152,7 +167,12 @@ def run_steps(steps: list[Step], env: dict[str, str]) -> list[dict[str, Any]]:
             )
             code, output = done.returncode, f"{done.stdout}\n{done.stderr}"
         except subprocess.TimeoutExpired as expired:
-            code, output = None, f"timed out after {step.timeout_s} s\n{expired.stdout or ''}"
+            timed_out = (
+                expired.stdout.decode("utf-8", errors="replace")
+                if isinstance(expired.stdout, bytes)
+                else (expired.stdout or "")
+            )
+            code, output = None, f"timed out after {step.timeout_s} s\n{timed_out}"
         except OSError as error:
             code, output = None, f"could not start: {error}"
         results.append(

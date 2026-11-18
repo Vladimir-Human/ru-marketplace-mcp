@@ -123,7 +123,7 @@ class MarketplaceHealthResponse(BaseModel):
     server_version: str = Field(default="", description="Unified server version.")
 
 
-SERVER_VERSION = "2.10.0"
+SERVER_VERSION = "2.11.0"
 
 mcp = FastMCP(
     "marketplace",
