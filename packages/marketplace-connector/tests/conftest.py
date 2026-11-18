@@ -42,6 +42,8 @@ os.environ["WB_DOM_FALLBACK"] = "1"
 def _client_configs_never_reach_the_real_ones(tmp_path, monkeypatch):
     monkeypatch.setenv("MARKETPLACE_MCP_CLAUDE_CONFIG", str(tmp_path / "Claude" / "claude_desktop_config.json"))
     monkeypatch.setenv("MARKETPLACE_MCP_CURSOR_CONFIG", str(tmp_path / ".cursor" / "mcp.json"))
+    for var in ("VSCODE", "WINDSURF", "ANTIGRAVITY", "GEMINI"):
+        monkeypatch.delenv(f"MARKETPLACE_MCP_{var}_CONFIG", raising=False)
     monkeypatch.setattr(cli.pathlib.Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))

@@ -596,6 +596,7 @@
   </requirement>
   <requirement id="R-DOCTOR-NEXT-STEP" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_cli.py" name="test_doctor_reads_the_wb_dom_fallback_setting" requirements="R-DOCTOR-NEXT-STEP" />
+    <test file="packages/marketplace-connector/tests/test_clients_and_wb_dom_cli.py" name="test_next_step_budget_refused_precedence_with_cdp_and_transport_down" requirements="R-DOCTOR-NEXT-STEP" />
     <test file="packages/marketplace-connector/tests/test_clients_and_wb_dom_cli.py" name="test_wb_transport_dom_unblocks_wildberries_and_setup_filters_non_browser_walls" requirements="R-DOCTOR-NEXT-STEP" />
     <test file="packages/marketplace-connector/tests/test_next_step_first_run.py" name="test_a_browser_page_that_did_not_load_with_chrome_up_names_unblock" requirements="R-DOCTOR-NEXT-STEP" />
     <test file="packages/marketplace-connector/tests/test_next_step_first_run.py" name="test_a_budget_refusal_alone_still_says_it_judges_nothing" requirements="R-DOCTOR-NEXT-STEP" />

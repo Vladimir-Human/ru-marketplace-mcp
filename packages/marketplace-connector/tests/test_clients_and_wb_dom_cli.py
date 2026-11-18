@@ -121,3 +121,23 @@ def test_setup_multi_client_with_claude_code_reminds_to_run_mcp_add(
     assert rc == 0
     out = capfd.readouterr().out
     assert "claude mcp add" in out.splitlines()[-1]
+
+
+@pytest.mark.req("R-DOCTOR-NEXT-STEP")
+def test_next_step_budget_refused_precedence_with_cdp_and_transport_down() -> None:
+    pure_budget = {"budget": {"state": "inconclusive", "reason": "budget_refused"}}
+    step_pure = cli.next_step(
+        "ozon", "inconclusive", pure_budget, cdp_reachable=False, install_mode=cli.INSTALL_CHECKOUT
+    )
+    assert step_pure is not None and "budget refused" in step_pure
+
+    mixed = {
+        "search": {"state": "inconclusive", "reason": "transport_down"},
+        "budget": {"state": "inconclusive", "reason": "budget_refused"},
+    }
+    assert (
+        cli.next_step("lamoda", "inconclusive", mixed, cdp_reachable=False, install_mode=cli.INSTALL_CHECKOUT)
+        == cli.NEXT_STEP_CDP_DOWN
+    )
+    step_up = cli.next_step("lamoda", "inconclusive", mixed, cdp_reachable=True, install_mode=cli.INSTALL_CHECKOUT)
+    assert step_up is not None and "uv run marketplace-mcp unblock lamoda" in step_up

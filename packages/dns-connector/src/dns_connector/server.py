@@ -103,8 +103,8 @@ _min_gap = _settings.min_gap
 # Chrome, so `?`, `#`, `%` and `.` stay out: they would let a caller append a
 # query string or walk the path on a page we then render with their cookies.
 _ID_CHARS = r"[A-Za-z0-9_-]"
-_PRODUCT_ID_RE = re.compile(rf"/product/(?:(?:analog|card)/)?(?!analog(?:/|$))({_ID_CHARS}+)")
-_BARE_ID_RE = re.compile(rf"(?!analog$){_ID_CHARS}{{4,}}")
+_PRODUCT_ID_RE = re.compile(rf"/product/(?:(?:analog|card)/)?(?!(?:analog|card)(?:/|$))({_ID_CHARS}+)")
+_BARE_ID_RE = re.compile(rf"(?!(?:analog|card)$){_ID_CHARS}{{4,}}")
 
 mcp = FastMCP(
     name="dns-connector",
@@ -208,7 +208,7 @@ _SEARCH_EXTRACT_TEMPLATE = """
     }
     // Fallback for a renamed grid: take each product anchor's OUTERMOST ancestor
     // that still holds exactly one product link, which is the tile by definition.
-    const ID_RE = /\\/product\\/(?:(?:analog|card)\\/)?(?!analog(?:\\/|$))([A-Za-z0-9_-]+)/;
+    const ID_RE = /\\/product\\/(?:(?:analog|card)\\/)?(?!(?:analog|card)(?:\\/|$))([A-Za-z0-9_-]+)/;
     if (!tiles.length) {
         const seenTile = new Set();
         for (const doc of docs) {

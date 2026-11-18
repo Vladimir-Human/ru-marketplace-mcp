@@ -25,7 +25,9 @@ def test_extract_product_id_handles_analog_and_rejects_bare_analog() -> None:
     )
     assert server._extract_product_id("https://www.dns-shop.ru/product/card/05ebcc7973baed20/") == "05ebcc7973baed20"
     assert server._extract_product_id("https://www.dns-shop.ru/product/analog/") is None
+    assert server._extract_product_id("https://www.dns-shop.ru/product/card/") is None
     assert server._extract_product_id("analog") is None
+    assert server._extract_product_id("card") is None
     assert server._extract_product_id("https://evil.example/product/analog/05ebcc7973baed20/stiralnaya-masina/") is None
 
 
