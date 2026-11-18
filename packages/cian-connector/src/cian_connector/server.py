@@ -30,7 +30,7 @@ price carries, because Cian leaves ``paymentPeriod`` null on daily offers.
 # PURPOSE: Expose Cian filtered real-estate search and offer cards.
 # SCOPE: Read-only browser API/state; sale, monthly rent and daily price units.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; R-CIAN-SEARCH-BOT-CHECK; R-SETTINGS-WIRED.cian-read; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs.
+# LINKS: R-NO-PERSONAL-DATA; M-CIAN; M-KIT; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; R-CIAN-CAPTCHA; R-CIAN-SEARCH-BOT-CHECK; R-SETTINGS-WIRED.cian-read; M-SOURCES; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs; R-CDP-QUEUE-CREDIT.
 #        packages/cian-connector/tests.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
@@ -67,7 +67,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, on_bot_check_page, polite_wait, url_on_hosts
+from mcp_core.kit import blocked_error, bounded_attempt, on_bot_check_page, polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -266,7 +266,7 @@ async def _cdp_post_json(json_query: dict[str, Any], ctx: Context | None) -> tup
         return int(result["status"]), str(result["text"])
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
 
@@ -280,7 +280,7 @@ async def _cdp_page_config(url: str, ctx: Context | None) -> tuple[int, str]:
         return 200, raw if isinstance(raw, str) else json.dumps(raw)
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
 

@@ -451,3 +451,18 @@ def test_budget_snapshot_helper_reads_the_process_budget(monkeypatch):
 
     assert snap["hosts"] == {}
     assert snap["in_flight"] == 0
+
+
+@pytest.mark.req("R-CDP-BUDGET-SCHEDULING")
+async def test_retry_after_never_exceeds_the_cooldown(clock):
+    """At this clock reading (t + 60) - t is 60.000000000000014: the pause must still be at most the cooldown."""
+    clock.now = 127.50443333072847
+    budget = NavigationBudget(max_concurrent=2, breaker_threshold=1, breaker_cooldown_s=60.0, clock=clock)
+    async with budget.slot("dns.example") as slot:
+        slot.refused(429)
+
+    with pytest.raises(HostRefusingError) as excinfo:
+        async with budget.slot("dns.example"):
+            pass  # pragma: no cover - the slot never opens
+
+    assert 0 < excinfo.value.retry_after_s <= 60.0
