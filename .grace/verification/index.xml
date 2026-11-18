@@ -217,6 +217,9 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_without_load_events_yields_owned_page" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_is_bounded_and_never_yielded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_timeout_says_the_page_was_still_parsing" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_403_response_waits_for_commit_and_antibot_recheck" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_shielded_cleanup_completes_target_close_when_caller_cancels" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_stalled_429_fails_fast_before_commit_and_confirms_target_close" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
   </requirement>
   <requirement id="R-CDP-SIM-INFRA" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_extra_flags_default" requirements="R-CDP-SIM-INFRA.flags" />
@@ -241,6 +244,9 @@
   </requirement>
   <requirement id="R-CDP-SIM-S4" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-SIM-S4" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_403_response_waits_for_commit_and_antibot_recheck" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_shielded_cleanup_completes_target_close_when_caller_cancels" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_stalled_429_fails_fast_before_commit_and_confirms_target_close" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_chrome_ignored_is_sent_again_until_the_tab_is_gone" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_that_works_is_checked_once" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_failing_command_ends_the_close_without_raising" requirements="R-CDP-SIM-S4" />
