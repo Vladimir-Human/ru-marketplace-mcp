@@ -134,7 +134,7 @@ async def test_ram_and_storage_pair_is_not_excluded_by_its_ram_size(monkeypatch)
     result = await server.compare_prices("ACME X100 128GB", sources=["citilink"])
 
     assert result.cheapest_comparable.title == "Ноутбук ACME X100 8/128GB"
-    assert "identity_mismatch: 1 offer states 64GB, query asks 128GB; not comparable" in result.warnings
+    assert "identity_mismatch: 1 offer states 8GB/64GB, query asks 128GB; not comparable" in result.warnings
 
 
 @pytest.mark.req("R-COMPARE-VARIANT-IDENTITY")

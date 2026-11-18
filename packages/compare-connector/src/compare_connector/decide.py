@@ -13,10 +13,10 @@ architecture gate's pure list.
 # START_MODULE_CONTRACT
 # PURPOSE: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-OWN-CHARGING-CASE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-COMPARE-COMPARABLE-OUTLIER; R-NO-FABRICATION: rank everyday-ruble offers, warn about accessories, conditions, outliers, other models and size conflicts, and build the comparison answer.
 # SCOPE: Pure decisions over the results a comparison gathered; no source access, no browser, no model, no stdout.
-# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-OWN-CHARGING-CASE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-COMPARE-COMPARABLE-OUTLIER; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
-# DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib json, re, collections.abc, dataclasses.
+# REQUIREMENTS: R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-OWN-CHARGING-CASE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-MODEL-TOKENS; R-COMPARE-COMPARABLE-OUTLIER; R-COMPARE-DEEP-TRAPS; R-NO-FABRICATION; R-COMPARE-PRICE-CONTEXT; R-INTERFACE-GUARDS.output-size.
+# DEPENDS: compare_connector.identity (size tokens); compare_connector.models_output (CompareResponse, MarketOffer, SourceOutcome); mcp_core.logging (stderr events); stdlib json, math, re, collections.abc, dataclasses.
 # SCHEMA: CompareResponse keeps its fields, types and meanings; this module only fills them.
-# LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING.
+# LINKS: M-COMPARE; M-COMPARE-DECIDE; M-LOGGING; R-STDOUT; R-NO-MCP-LOGGING; R-COMPARE-DEEP-TRAPS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # ResponseOptions: Carry what the tool knew before the gather into the decision.
@@ -26,15 +26,16 @@ architecture gate's pure list.
 # _has_unrequested_marker: Match Unicode words/phrases after occurrence-local bundle/negation checks.
 # _mask_own_charging_case: Blank a charging case the title names as part of the device, keep one it sells.
 # _looks_like_an_accessory/_looks_like_another_condition: Share relevance rules for warnings and comparability.
+# _is_comparable_offer: Share like-for-like comparability between build_response and pick_card_candidate.
 # _size_mismatch_warning: Name the excluded offers and the asked sizes once per call.
 # _relevance_warnings: Flag a cheapest offer that probably answers a different question; name skipped outliers.
 # _split_comparable_outliers/_comparable_winner: Skip like-for-like offers under a quarter of their median.
 # _comparable_outlier_warning: Name the skipped offers and the chosen one's price.
-# _ranks_in_rubles: Whether an offer may enter the cheapest-in-rubles ranking.
+# _valid_price/_ranks_in_rubles: Enforce positive finite everyday RUB ranking.
 # ConditionalPriceDecision: What one offer's everyday and conditional prices say about its rank.
 # decide_conditional_price: The one rule for an everyday price beside a conditional one.
 # _conditional_price_note: Name the excluded amount, not the offer whose everyday price may still rank.
-# pick_card_candidate: The cheapest tile worth one card read (numeric id, an amount, not an accessory).
+# pick_card_candidate: The cheapest comparable tile worth one card read (numeric id, positive finite amount).
 # _mixed_regions_notes: Name the regions when answered sources priced in different ones.
 # _omitted_note: Name how many offers the size budget left out and how to get them.
 # _fit_answer: Leave whole offers out from the end until the answer fits ANSWER_CHAR_LIMIT characters.
@@ -44,6 +45,7 @@ architecture gate's pure list.
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -128,6 +130,49 @@ _ACCESSORY_MARKERS = (
     "ремешок",
     "подставка",
     "наклейка",
+    "коробка от",
+    "пустая коробка",
+    "муляж",
+    "макет",
+    "на запчасти",
+    "в разбор",
+    "на разбор",
+    "скупка",
+    "выкуп",
+    "обмен",
+    "трейд-ин",
+    "trade-in",
+    "аренда",
+    "прокат",
+    "в сутки",
+    "посуточно",
+    "ремонт",
+    "замена дисплея",
+    "замена экрана",
+    "замена стекла",
+    "замена аккумулятора",
+    "услуга",
+    "аккаунт",
+    "оффлайн активация",
+    "офлайн активация",
+    "оффлайн-активация",
+    "офлайн-активация",
+    "оффлайн активации",
+    "офлайн активации",
+    "предзаказ",
+    "депозит",
+    "платёж в месяц",
+    "платеж в месяц",
+    "ежемесячный платёж",
+    "ежемесячный платеж",
+    "без акб",
+    "детский игрушечный",
+    "детская игрушечная",
+    "детское игрушечное",
+    "игрушечный",
+    "игрушечная",
+    "игрушечное",
+    "игрушечные",
     "case",
     "cover",
     "screen protector",
@@ -147,19 +192,63 @@ _ACCESSORY_MARKERS = (
 _CONDITION_MARKERS = (
     "восстановленный",
     "восстановленная",
+    "восстановленное",
+    "восстановленные",
+    "под восстановление",
     "витринный образец",
     "витринный",
+    "витринная",
+    "витринное",
+    "витринные",
+    "с витрины",
     "уценка",
     "уценённый",
     "уцененный",
+    "уценённая",
+    "уцененная",
+    "уценённое",
+    "уцененное",
+    "уценённые",
+    "уцененные",
     "б/у",
+    "б.у",
     "бывший в употреблении",
     "как новый",
+    "как новая",
+    "как новое",
+    "как новые",
+    "ресейл",
+    "resale",
+    "после ремонта",
+    "не включается",
+    "донор",
+    "неисправный",
+    "неисправная",
+    "неисправное",
+    "неисправные",
+    "неисправен",
+    "неисправна",
+    "разбитый",
+    "разбитая",
+    "разбитое",
+    "разбитые",
+    "разбит",
+    "разбита",
+    "только активирован",
+    "активирован",
+    "активирована",
+    "активировано",
+    "активированы",
+    "активированный",
+    "активированная",
+    "активированное",
+    "активированные",
     "refurbished",
     "renewed",
     "pre-owned",
     "used",
     "open box",
+    "open-box",
 )
 
 
@@ -171,7 +260,7 @@ def _marker_pattern(markers: tuple[str, ...]) -> re.Pattern[str]:
     return re.compile(r"(?<!\w)(?:" + "|".join(phrases) + r")(?!\w)", re.IGNORECASE)
 
 
-_NEGATION_PREFIX = re.compile(r"(?<!\w)(?:не|not)\s+$", re.IGNORECASE)
+_NEGATION_PREFIX = re.compile(r"(?<!\w)(?:не|not)(?:\s+|-)$", re.IGNORECASE)
 _BUNDLE_PREFIX = re.compile(r"(?<!\w)(?:в\s+комплекте|with(?:\s+(?:a|an))?)\s*[:—-]?\s*$", re.IGNORECASE)
 _BUNDLE_SUFFIX = re.compile(r"\s*(?:[:—-]\s*)?в\s+комплекте(?!\w)", re.IGNORECASE)
 
@@ -320,10 +409,13 @@ def _condition_unstated(source: str, query: str) -> bool:
 
     Live, 2026-11-17: an Avito "iPhone 16, 128 ГБ" row was cheapest_comparable for
     "iphone 16 128gb"; its card said «Б/у». Such a row is a candidate only when the
-    query itself names a used or refurbished condition.
+    query itself positively names a used or refurbished condition.
     """
     spec = BY_NAME.get(source)
-    return bool(spec and spec.condition_on_card) and not _marker_pattern(_CONDITION_MARKERS).search(query)
+    if not (spec and spec.condition_on_card):
+        return False
+    pattern = _marker_pattern(_CONDITION_MARKERS)
+    return not pattern.search(_positive_marker_text(query, pattern, bundles=False))
 
 
 def _looks_like_an_accessory(title: str, query: str) -> bool:
@@ -435,14 +527,19 @@ def _comparable_outlier_warning(outliers: list[MarketOffer], chosen: MarketOffer
 
 
 # START_BLOCK_PRICE_POLICY
+def _valid_price(value: float | None) -> bool:
+    return value is not None and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
 def _ranks_in_rubles(offer: MarketOffer) -> bool:
     """Whether an offer may enter the cheapest-in-rubles ranking.
 
     R-COMPARE-CONDITIONAL-PRICE: an explicitly conditional price never ranks,
     even if an adapter fills price_rub with it. Unmarked source prices retain
-    their existing treatment; no missing price or foreign currency may rank.
+    their existing treatment; no missing, non-positive, non-finite price or
+    foreign currency may rank.
     """
-    return offer.price_rub is not None and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
+    return _valid_price(offer.price_rub) and offer.currency == "rub" and offer.price_kind in (None, "", "regular")
 
 
 def _conditional_price_note(source: str, product_id: str, price: float, kind: str, currency: str = "rub") -> str:
@@ -501,42 +598,84 @@ def decide_conditional_price(
     A conditional amount that is not lower than the everyday price is no bargain,
     so it stays unmentioned; the everyday price is the whole answer then.
     """
-    if conditional_price_rub is None:
-        return ConditionalPriceDecision(everyday_price_rub, None)
-    if everyday_price_rub is None:
-        note = _conditional_price_note(source, product_id, conditional_price_rub, kind, currency)
+    everyday = everyday_price_rub if _valid_price(everyday_price_rub) else None
+    conditional = conditional_price_rub if _valid_price(conditional_price_rub) else None
+    if conditional is None:
+        return ConditionalPriceDecision(everyday, None)
+    if everyday is None:
+        note = _conditional_price_note(source, product_id, conditional, kind, currency)
         return ConditionalPriceDecision(None, note)
-    if conditional_price_rub >= everyday_price_rub:
-        return ConditionalPriceDecision(everyday_price_rub, None)
+    if conditional >= everyday:
+        return ConditionalPriceDecision(everyday, None)
     label = "Yandex Pay" if (source, kind) == ("yandex_market", "subscription") else kind
-    note = (
-        f"info:conditional_price_available: {source}/{product_id or '?'}: "
-        f"{conditional_price_rub:g} {currency.upper()} with {label}"
-    )
-    return ConditionalPriceDecision(everyday_price_rub, note)
+    note = f"info:conditional_price_available: {source}/{product_id or '?'}: {conditional:g} {currency.upper()} with {label}"
+    return ConditionalPriceDecision(everyday, note)
 
 
 # END_CONTRACT: decide_conditional_price
 
 
-def pick_card_candidate(query: str, tiles: Iterable[tuple[str, str, float | None, bool | None]]) -> str | None:
+def _is_comparable_offer(
+    offer: MarketOffer,
+    query: str,
+    query_sizes: frozenset[str],
+    *,
+    query_lists_models: bool = False,
+    size_excluded: list[frozenset[str]] | None = None,
+) -> bool:
+    """Whether an offer passes every like-for-like check for cheapest_comparable and card selection."""
+    if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
+        return False
+    if model_mismatch(query, offer.title, offer.brand) or _condition_unstated(offer.source, query):
+        return False
+    if lists_sizes(offer.title) or (lists_models(offer.title) and not query_lists_models):
+        return False
+    title_sizes = extract_size_tokens(offer.title)
+    if sizes_conflict(query_sizes, title_sizes):
+        if size_excluded is not None:
+            size_excluded.append(title_sizes)
+        return False
+    return True
+
+
+def pick_card_candidate(
+    query: str,
+    tiles: Iterable[tuple[str, str, float | None, bool | None]],
+    *,
+    in_stock_only: bool = False,
+) -> str | None:
     """The product id of the cheapest tile worth one card read, or None.
 
     R-COMPARE-CONDITIONAL-PRICE.ozon-card: ``tiles`` are (product id, title,
-    conditional amount, in stock). A tile without a numeric id or an amount
-    cannot be read or ranked; a tile marked out of stock, an unrequested accessory
-    or another condition would spend the one read on an offer the comparison
-    would not count as the product asked for.
+    conditional amount, in stock). Comparable tiles win first so a cheaper wrong
+    model, wrong capacity or variant-list tile never steals Ozon's single card
+    read; when ``in_stock_only`` is set, confirmed ``in_stock is True`` tiles win
+    ahead of unlabeled ``in_stock is None`` tiles before falling back to reading
+    an unlabeled tile's card availability.
     """
-    best: tuple[float, str] | None = None
+    query_sizes = extract_size_tokens(query)
+    query_lists_models = lists_models(query)
+    best_comparable: tuple[int, float, str] | None = None
+    best_fallback: tuple[int, float, str] | None = None
     for product_id, title, amount, in_stock in tiles:
-        if amount is None or not product_id.isdigit() or in_stock is False:
+        if not _valid_price(amount) or amount is None or not product_id.isdigit() or in_stock is False:
             continue
         if _looks_like_an_accessory(title, query) or _looks_like_another_condition(title, query):
             continue
-        if best is None or amount < best[0]:
-            best = (amount, product_id)
-    return best[1] if best else None
+        stock_rank = 0 if (not in_stock_only or in_stock is True) else 1
+        key = (stock_rank, amount)
+        candidate = MarketOffer.model_construct(source="ozon", product_id=product_id, title=title, brand="")
+        if _is_comparable_offer(candidate, query, query_sizes, query_lists_models=query_lists_models):
+            if best_comparable is None or key < best_comparable[:2]:
+                best_comparable = (*key, product_id)
+            continue
+        mismatch = model_mismatch(query, title)
+        if mismatch and (mismatch.startswith("for ") or mismatch == "copy"):
+            continue
+        if best_fallback is None or key < best_fallback[:2]:
+            best_fallback = (*key, product_id)
+    chosen = best_comparable or best_fallback
+    return chosen[2] if chosen else None
 
 
 # END_BLOCK_PRICE_POLICY
@@ -662,25 +801,20 @@ def build_response(
     # (R-COMPARE-MODEL-TOKENS), a title listing several sizes or, unless the query does, several models
     # (R-COMPARE-SIZE-LIST, R-COMPARE-MODEL-LIST). The offer keeps its rank and may remain plain cheapest.
     query_sizes = extract_size_tokens(query)
-    comparable: list[MarketOffer] = []
+    query_lists_models = lists_models(query)
     size_excluded: list[frozenset[str]] = []
-    for offer in priced:
-        if _looks_like_an_accessory(offer.title, query) or _looks_like_another_condition(offer.title, query):
-            continue
-        if model_mismatch(query, offer.title, offer.brand) or _condition_unstated(offer.source, query):
-            continue
-        if lists_sizes(offer.title) or (lists_models(offer.title) and not lists_models(query)):
-            continue
-        title_sizes = extract_size_tokens(offer.title)
-        if sizes_conflict(query_sizes, title_sizes):
-            size_excluded.append(title_sizes)
-            continue
-        comparable.append(offer)
+    comparable = [
+        offer
+        for offer in priced
+        if _is_comparable_offer(
+            offer, query, query_sizes, query_lists_models=query_lists_models, size_excluded=size_excluded
+        )
+    ]
     outliers, cheapest_comparable = _comparable_winner(comparable)
     price_spread = None
     if len(priced) >= 2:
         low, high = priced[0].price_rub, priced[-1].price_rub
-        if low and high:
+        if low is not None and high is not None and _valid_price(low) and _valid_price(high):
             price_spread = round(high - low, 2)
 
     warnings = _mixed_regions_notes(outcomes)

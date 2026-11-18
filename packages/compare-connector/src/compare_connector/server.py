@@ -32,10 +32,10 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # START_MODULE_CONTRACT
 # PURPOSE: Compare marketplace offers and verify shortlisted source-native cards (R-COMPARE-FOREIGN-DETAIL).
 # SCOPE: Read-only sources; everyday RUB ranking; Unicode relevance with bounded bundle-prefix modifiers/suffix phrases and direct negation; identity.
-# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
+# REQUIREMENTS: R-COMPARE-SOURCE-SELECTION; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VARIANT-IDENTITY; R-COMPARE-RELEVANCE-BOUNDARIES; R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-DEEP-TRAPS; R-NO-FABRICATION; R-OZON-SEARCH-NUMERIC; R-COMPARE-PRICE-CONTEXT.
 # DEPENDS: FastMCP; mcp_core runtime/source_selection/sources (registry-driven descriptions); decide (the ranking decision); source_error (a failed source's error fields); identity; models_output; vision_policy; source servers.
 # SCHEMA: R-COMPARE-SOURCE-SELECTION.descriptions names only registry sources supporting comparison text search.
-# LINKS: R-NO-MCP-LOGGING; R-NAV-HOSTS.invariant; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
+# LINKS: R-NO-MCP-LOGGING; R-NAV-HOSTS.invariant; R-COMPARE-DEEP-TRAPS; M-COMPARE; M-COMPARE-DECIDE; M-WB; M-YANDEX; M-DETMIR; M-OZON; M-AVITO; M-TAOBAO; M-MEGAMARKET; M-LAMODA; M-DNS; M-CITILINK; M-ALIEXPRESS; M-MARKETPLACE.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _available_sources: Apply selection before defensive imports; report unavailable connectors.
@@ -59,8 +59,11 @@ import json
 import math
 import os
 import time
+from collections import OrderedDict
 from collections.abc import Iterable
+from contextvars import ContextVar
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
@@ -124,9 +127,32 @@ from compare_connector.vision_policy import client_vision_hint, resolve_image_de
 SERVER_VERSION = "2.10.0"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
+
+def _parse_source_timeout(raw: str | None, default: float = 45.0) -> float:
+    if raw is None or not raw.strip():
+        return default
+    try:
+        parsed = float(raw.strip())
+    except ValueError:
+        return default
+    return parsed if math.isfinite(parsed) and parsed > 0 else default
+
+
 # Per-source ceiling. Yandex pages are ~2 MB and WB search occasionally stalls, so
 # a slow source must not hold the whole comparison hostage.
-SOURCE_TIMEOUT_S = float(os.environ.get("COMPARE_SOURCE_TIMEOUT", "45"))
+SOURCE_TIMEOUT_S = _parse_source_timeout(os.environ.get("COMPARE_SOURCE_TIMEOUT"))
+
+_MAX_TMALL_IDS = 512
+_RECENT_TMALL_IDS: OrderedDict[str, None] = OrderedDict()
+
+
+def _is_tmall_url(raw: str) -> bool:
+    try:
+        host = (urlsplit(raw.strip()).hostname or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    return host == "detail.tmall.com" or host.endswith(".tmall.com")
+
 
 mcp = FastMCP(
     name="compare-connector",
@@ -282,26 +308,29 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
 # not cost the search results already in hand (R-COMPARE-CONDITIONAL-PRICE.ozon-card).
 OZON_CARD_MARGIN_S = 3.0
 OZON_CARD_MIN_S = 5.0
+_IN_STOCK_ONLY: ContextVar[bool] = ContextVar("compare_in_stock_only", default=False)
 
 
-async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, str]:
-    """The everyday and the card price on one Ozon card, or why they were not read."""
+async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, bool | None, str]:
+    """The everyday price, card price and availability on one Ozon card, or why they were not read."""
     if seconds < OZON_CARD_MIN_S:
-        return None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
+        return None, None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
     try:
         card = await asyncio.wait_for(server.ozon_card(sku_or_path=sku), timeout=seconds)
     except TimeoutError:
-        return None, None, f"no answer within {seconds:.0f}s"
+        return None, None, None, f"no answer within {seconds:.0f}s"
     except Exception as exc:
         error = _source_error(exc)
-        return None, None, str(error.get("error_code") or error.get("status") or "error")
+        return None, None, None, str(error.get("error_code") or error.get("status") or "error")
+    avail = getattr(card, "is_available", None)
+    card_in_stock = avail if isinstance(avail, bool) else None
     everyday = _as_price(getattr(card, "price", None))
     if everyday is None:
-        return None, None, "the card shows no everyday price"
-    return everyday, _as_price(getattr(card, "card_price", None)), ""
+        return None, None, card_in_stock, "the card shows no everyday price"
+    return everyday, _as_price(getattr(card, "card_price", None)), card_in_stock, ""
 
 
-async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
+async def _search_ozon(query: str, limit: int, *, in_stock_only: bool | None = None) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
     This adapter was previously written blind — Ozon refuses datacenter IPs — and
@@ -323,21 +352,28 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
         (item, str(item.sku or ""), _as_price(item.price)) for item in (getattr(response, "items", None) or [])[:limit]
     ]
     sku = pick_card_candidate(
-        query, ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles)
+        query,
+        ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles),
+        in_stock_only=_IN_STOCK_ONLY.get() if in_stock_only is None else in_stock_only,
     )
-    everyday, card_price, problem = None, None, ""
+    everyday, card_price, card_in_stock, problem = None, None, None, ""
     if sku is not None:
         seconds = SOURCE_TIMEOUT_S - (time.monotonic() - started) - OZON_CARD_MARGIN_S
-        everyday, card_price, problem = await _read_ozon_card(server, sku, seconds)
+        everyday, card_price, card_in_stock, problem = await _read_ozon_card(server, sku, seconds)
+    card_applied = False
     for item, tile_sku, price in tiles:
         # One card ranks one tile, even when Ozon lists the same sku twice.
-        ranked = everyday is not None and tile_sku == sku and not any(o.product_id == sku for o in batch)
+        verified_tile = tile_sku == sku and not card_applied
+        if verified_tile:
+            card_applied = True
+        ranked = everyday is not None and verified_tile
         if ranked:
             decision = decide_conditional_price(
                 "ozon", tile_sku, everyday, price if card_price is None else card_price, "card"
             )
         else:
             decision = decide_conditional_price("ozon", tile_sku, None, price, "card")
+        tile_stock = _stock_from_label(item.stock)
         batch.append(
             MarketOffer(
                 source="ozon",
@@ -351,7 +387,7 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
                 price_kind=None if ranked or price is None else "card",
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
-                in_stock=_stock_from_label(item.stock),
+                in_stock=card_in_stock if (verified_tile and card_in_stock is not None) else tile_stock,
                 url=item.url or "",
                 image_url=getattr(item, "image_url", ""),
             )
@@ -408,10 +444,19 @@ async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
 
     offers: list[MarketOffer] = []
     for item in (getattr(response, "items", None) or [])[:limit]:
+        item_id = str(item.item_id or "")
+        url = item.url or ""
+        if item_id and _is_tmall_url(url):
+            _RECENT_TMALL_IDS[item_id] = None
+            _RECENT_TMALL_IDS.move_to_end(item_id)
+            while len(_RECENT_TMALL_IDS) > _MAX_TMALL_IDS:
+                _RECENT_TMALL_IDS.popitem(last=False)
+        elif item_id in _RECENT_TMALL_IDS and url:
+            _RECENT_TMALL_IDS.pop(item_id, None)
         offers.append(
             MarketOffer(
                 source="taobao",
-                product_id=str(item.item_id or ""),
+                product_id=item_id,
                 title=item.title or "",
                 brand="",
                 seller=item.shop_name or "",
@@ -421,7 +466,7 @@ async def _search_taobao(query: str, limit: int) -> list[MarketOffer]:
                 rating=None,
                 rating_count=None,
                 in_stock=None,
-                url=item.url or "",
+                url=url,
             )
         )
     return OfferBatch(offers, response)
@@ -755,7 +800,11 @@ async def compare_prices(
 
     log_event("compare_prices.start", query=text, sources=active, limit=per_source_limit, in_stock_only=in_stock_only)
 
-    results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
+    stock_token = _IN_STOCK_ONLY.set(in_stock_only)
+    try:
+        results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
+    finally:
+        _IN_STOCK_ONLY.reset(stock_token)
 
     return build_response(
         text,
@@ -780,6 +829,13 @@ async def _call_card_tool(name: str, product_id_or_url: str, *, include_reviews:
     tool = getattr(module, _CARD_TOOL_NAMES[name], None)
     if tool is None:
         raise_tool_error(BadRequestError(f"source {name!r} has no card tool available"))
+    if name == "taobao" and (_is_tmall_url(product_id_or_url) or product_id_or_url.strip() in _RECENT_TMALL_IDS):
+        raise_tool_error(
+            BadRequestError(
+                "Tmall listings (detail.tmall.com) are not readable by taobao_card; "
+                "the compare_prices offer already carries title, price_native (CNY), seller and url"
+            )
+        )
 
     requested_numeric_id = ""
     if name == "wildberries":
@@ -864,6 +920,11 @@ async def compare_verify_offer(
     name = canonical(source)
     if expected_variant_id is not None and name != "yandex_market":
         raise_tool_error(BadRequestError("expected_variant_id is supported only for yandex_market"))
+    if expected_price_rub is not None and name in FOREIGN_CURRENCY_SOURCES:
+        currency = BY_NAME[name].currency.upper()
+        raise_tool_error(
+            BadRequestError(f"{name} quotes prices in {currency} (price_native), not RUB; omit expected_price_rub")
+        )
     payload, requested_numeric_id = await _call_card_tool(name, product_id_or_url)
     if name == "yandex_market" and expected_variant_id:
         observed_variant = str(payload.get("sku_id") or "") if isinstance(payload, dict) else ""

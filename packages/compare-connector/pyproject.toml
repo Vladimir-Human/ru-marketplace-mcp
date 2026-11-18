@@ -63,3 +63,4 @@ megamarket-connector = { workspace = true }
 lamoda-connector = { workspace = true }
 dns-connector = { workspace = true }
 citilink-connector = { workspace = true }
+aliexpress-connector = { workspace = true }

@@ -483,7 +483,9 @@ async def observe_tool(app: FastMCP, tool_name: str, monkeypatch: pytest.MonkeyP
                     product_id = next(iter(args.values()))
                     if sample.source == "wildberries":
                         product_id = args["nm_ids"][0]
-                    args = {"source": sample.source, "product_id_or_url": str(product_id), "expected_price_rub": 1.0}
+                    args = {"source": sample.source, "product_id_or_url": str(product_id)}
+                    if BY_NAME[sample.source].currency == "RUB":
+                        args["expected_price_rub"] = 1.0
                 else:
                     args = maximum_arguments(
                         tools[tool_name], Sample(sample.source, sample.tool, sample.fixture, args, sample.kind)
