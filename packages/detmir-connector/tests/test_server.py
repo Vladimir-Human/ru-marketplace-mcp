@@ -646,3 +646,97 @@ async def test_selfcheck_says_blocked_when_the_edge_refuses(monkeypatch, no_dela
     assert result.status == "inconclusive"
     notes = [note for entry in result.checks.values() for note in entry.notes]
     assert any("blocked at the edge" in note for note in notes), notes
+
+
+@pytest.mark.req("R-CACHE-VALIDATED")
+async def test_concurrent_card_misses_collapse_onto_one_upstream_fetch(monkeypatch, no_delay):
+    """Concurrent identical misses share one fetch; rejected payloads stay uncached."""
+    import asyncio
+
+    calls = 0
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_get(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return 200, json.dumps(CARD_PAYLOAD)
+
+    monkeypatch.setattr(server, "get_text_with_retries", slow_get)
+    tasks = [asyncio.create_task(server.detmir_card(product_id=6673568)) for _ in range(4)]
+    await asyncio.wait_for(started.wait(), timeout=2)
+    await asyncio.sleep(0.05)
+    release.set()
+    results = await asyncio.gather(*tasks)
+
+    assert calls == 1
+    assert all(r.product.price_rub == results[0].product.price_rub for r in results)
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_parse_product_availability_checks_warehouse_codes_stores_and_explicit_booleans() -> None:
+    empty_stock = server._parse_product(
+        {
+            "id": 1001,
+            "title": "Кукла",
+            "price": {"price": 999},
+            "available": {
+                "online": {"warehouse_codes": []},
+                "offline": {"stores": [], "region_iso_codes": []},
+            },
+        }
+    )
+    assert empty_stock.available_online is False
+    assert empty_stock.available_offline is False
+    assert empty_stock.store_count == 0
+
+    stocked = server._parse_product(
+        {
+            "id": 1002,
+            "title": "Коляска",
+            "price": {"price": 19999},
+            "available": {
+                "online": {"warehouse_codes": ["WH1"]},
+                "offline": {"stores": [{"id": 1}]},
+            },
+        }
+    )
+    assert stocked.available_online is True
+    assert stocked.available_offline is True
+    assert stocked.store_count == 1
+
+    explicit_flags = server._parse_product(
+        {
+            "id": 1003,
+            "title": "Конструктор",
+            "isAvailableOnline": False,
+            "isAvailableOffline": True,
+            "available": {
+                "online": {"warehouse_codes": ["STALE"]},
+                "offline": {"stores": []},
+            },
+        }
+    )
+    assert explicit_flags.available_online is False
+    assert explicit_flags.available_offline is True
+
+    online_only = server._parse_product(
+        {"id": 1004, "title": "Мяч", "available": {"online": {"warehouse_codes": ["WH1"]}}}
+    )
+    assert online_only.available_online is True
+    assert online_only.available_offline is None
+
+    null_warehouses = server._parse_product(
+        {"id": 1005, "title": "Пазл", "available": {"online": {"warehouse_codes": None}}}
+    )
+    assert null_warehouses.available_online is None
+    assert null_warehouses.available_offline is None
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_parse_product_coerces_rating_on_five_point_scale() -> None:
+    assert server._parse_product({"id": 1, "rating": 49}).rating is None
+    assert server._parse_product({"id": 1, "rating": "1 234"}).rating is None
+    assert server._parse_product({"id": 1, "rating": "4,8"}).rating == 4.8

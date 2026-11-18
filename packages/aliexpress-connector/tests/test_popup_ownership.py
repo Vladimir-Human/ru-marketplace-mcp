@@ -212,8 +212,7 @@ async def test_card_popup_challenge_is_json_with_the_challenge_contract(popups, 
     assert error["requires_user_action"] is True
     assert error["retryable_now"] is False
     assert error["status_code"] == 403
-    assert "aliexpress.ru" in error["user_action"]
-    assert "unblock aliexpress" not in error["user_action"]
+    assert "marketplace-mcp unblock aliexpress" in error["user_action"]
     assert "challenge" in error["message"]
     assert popups.owned.closed
 
@@ -489,6 +488,26 @@ async def test_card_popup_keeps_the_www_page_alias(popups):
     assert result["title"] == popups.owned.url
     assert popups.owned.closed
     assert popups.operator.close_calls == 0
+
+
+@pytest.mark.req("R-CHALLENGE-ACTION", "R-NAV-HOSTS.invariant")
+async def test_playwright_punish_popup_raises_challenge_and_foreign_popup_is_not_evaluated(popups, monkeypatch):
+    monkeypatch.setattr(server._pacer, "record_refusal", lambda: None)
+    popups.owned.url = "https://aliexpress.ru/punish?x5secdata=x"
+    with pytest.raises(ToolError) as excinfo:
+        await server._cdp_card(ITEM_URL, None)
+    assert json.loads(str(excinfo.value))["error"] == "challenge_required"
+    assert popups.owned.reads == 0
+    assert popups.owned.closed
+
+    foreign_owned = popups.make("https://evil.invalid/item/100501000.html", owned=True)
+    popups.pages = [popups.pages[0], popups.operator]
+    popups.pending = [foreign_owned]
+    with pytest.raises(ToolError) as excinfo2:
+        await server._cdp_card(ITEM_URL, None)
+    assert json.loads(str(excinfo2.value))["error"] == "transport_down"
+    assert foreign_owned.reads == 0
+    assert foreign_owned.closed
 
 
 # END_BLOCK_PAGE_HOST_ALIAS

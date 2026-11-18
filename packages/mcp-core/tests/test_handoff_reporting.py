@@ -70,6 +70,7 @@ def call(**kwargs):
             "operation": "search",
             "read": blocked,
             "challenge": lambda payload: payload.get("challenge"),
+            "allowed_hosts": {"shop.test"},
             **kwargs,
         }
     )

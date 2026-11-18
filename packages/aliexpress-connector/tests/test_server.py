@@ -300,3 +300,11 @@ async def test_selfcheck_drift_on_zero_tiles(monkeypatch):
 
     assert result.status == "drift_detected"
     assert result.checks["search"].state == "drift"
+
+
+@pytest.mark.req("R-NAV-HOSTS.invariant")
+def test_extract_item_id_refuses_schemeless_off_host_urls():
+    assert server._extract_item_id("1005010003103368") == "1005010003103368"
+    assert server._extract_item_id("aliexpress.ru/item/1005010003103368.html") == "1005010003103368"
+    assert server._extract_item_id("evil.example/item/1005010003103368.html") is None
+    assert server._extract_item_id("ozon.ru/product/1005010003103368/") is None

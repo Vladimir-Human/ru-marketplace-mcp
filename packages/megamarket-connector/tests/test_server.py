@@ -1286,3 +1286,41 @@ async def test_resolved_params_are_cached_per_query(monkeypatch):
 
     assert first == second
     assert len(calls) == 1, "a repeated query must not re-open the browser"
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_extract_item_id_reads_trailing_goods_id_not_model_digits_and_strips_merchant_suffix():
+    assert (
+        server._extract_item_id("https://megamarket.ru/catalog/details/kofemashina-delonghi-ecam22110b-100001274823/")
+        == "100001274823"
+    )
+    assert (
+        server._extract_item_id("https://megamarket.ru/catalog/details/intel-core-i5-13400f-100026555148_99804/?spec=1")
+        == "100026555148"
+    )
+    assert server._extract_item_id("100026555148_99804") == "100026555148"
+    assert server._extract_item_id("https://evil.example/catalog/details/x-100001274823/") is None
+
+
+@pytest.mark.req("R-OUTPUT-PAGE-URLS")
+async def test_search_and_card_normalize_output_urls_via_page_link(monkeypatch):
+    _patch_post(
+        monkeypatch,
+        {
+            "total": 2,
+            "items": [
+                {"id": 10001, "title": "Item A", "price": 1000, "webUrl": "/catalog/details/item-a-10001/"},
+                {"id": 10002, "title": "Item B", "price": 1000, "webUrl": "https://evil.example/steal-10002/"},
+            ],
+        },
+    )
+    search_res = await server.megamarket_search("item")
+    assert search_res.items[0].url == "https://megamarket.ru/catalog/details/item-a-10001/"
+    assert not search_res.items[1].url
+
+    _patch_post(
+        monkeypatch,
+        {"goods": {"id": 1234567, "title": "Card A", "price": 2000, "webUrl": "https://evil.example/steal"}},
+    )
+    card_res = await server.megamarket_card("1234567")
+    assert card_res.url == "https://megamarket.ru/product/1234567"

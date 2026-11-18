@@ -193,6 +193,22 @@ def test_doctor_writes_a_status_file(monkeypatch, capsys, tmp_path):
     assert "checked_at" in report
 
 
+@pytest.mark.req("R-DOCTOR-EXIT-CODES")
+def test_doctor_status_file_creates_missing_parent_directories(monkeypatch, capsys, tmp_path):
+    async def fake_selfcheck(name, module_path, tool_name):
+        return name, "success", "ok", {}
+
+    monkeypatch.setattr(cli, "_run_one_selfcheck", fake_selfcheck)
+    target = tmp_path / "nested" / "dir" / "status.json"
+
+    rc = cli.cmd_doctor(["wildberries", "--status-file", str(target)])
+
+    assert rc == 0
+    report = json.loads(target.read_text(encoding="utf-8"))
+    assert report["healthy"] == 1
+    assert report["sources"]["wildberries"]["status"] == "success"
+
+
 def test_install_rejects_an_unknown_client(capsys):
     """A typo must not silently print a Claude block for Cursor."""
     rc = cli.cmd_install(["cursour"])

@@ -322,6 +322,9 @@ DECOY_MARKERS: tuple[str, ...] = (
     "trade-in",
     "пункт",
     "отзыв",
+    "пошлин",
+    "тамож",
+    "доставк",
     "выгод",
     "скидк",
     "эконом",
@@ -336,6 +339,10 @@ DECOY_MARKERS: tuple[str, ...] = (
 )
 
 _DECOY_RE = re.compile("|".join(re.escape(marker) for marker in DECOY_MARKERS), re.IGNORECASE)
+_NON_FEE_CLAUSE_RE = re.compile(
+    r"беспошлин\w*|без\s+(?:пошлин|таможенн)\w*|бесплатн\w*\s+доставк\w*(?!.*\d)|доставк\w*\s+бесплатн\w*(?!.*\d)",
+    re.IGNORECASE,
+)
 
 # Magnitude shorthands make the digits a different number than they read:
 # '12万' is 120 000 CNY, '1.2K' is 1 200 and '15 тыс.' is 15 000. Returning the
@@ -368,7 +375,7 @@ def _parse_money_string(s: str) -> float | None:
     # DECOY_MARKERS is the project's ONE list of such words, shared with the DOM
     # extractor's JavaScript; "от" ("from") is NOT in it — a listing's "from"
     # price is a real price.
-    if _DECOY_RE.search(t):
+    if _DECOY_RE.search(_NON_FEE_CLAUSE_RE.sub(" ", t)):
         return None
     # Find number-like tokens: digits with optional grouping and one decimal tail.
     matches = list(re.finditer(r"\d[\d \.\,]*\d|\d", t))
@@ -381,8 +388,8 @@ def _parse_money_string(s: str) -> float | None:
     # the same promise. Covers ASCII hyphen, U+2212 minus and the dashes that
     # marketplaces use interchangeably.
     if matches:
-        before = t[: matches[0].start()].rstrip()
-        if before.endswith(("-", "\u2212", "\u2013", "\u2014")):
+        before = re.sub(r"[\s₽$€¥£￥₸₴.,]+$", "", t[: matches[0].start()])
+        if before.endswith(("+", "\uff0b", "-", "\u2212", "\u2013", "\u2014")):
             return None
     tokens = [m.group(0).strip() for m in matches]
     tokens = [tok for tok in tokens if tok]
@@ -701,7 +708,8 @@ def validate_review_block(block: dict) -> list[str]:
     # masking real drift). first_present preserves [] and 0.
     reviews = first_present(block, "reviews", "feedbacks", default=[])
     count = first_present(block, "reviews_count", "feedback_count", default=None)
-    score = coerce_rating(first_present(block, "rating_score", "valuation", default=None))
+    raw_score = first_present(block, "rating_score", "valuation", default=None)
+    score = coerce_rating(raw_score)
 
     if count and not reviews:
         warnings.append(f"reviews_empty: count={count} but zero review texts returned (list widget drift)")
@@ -714,14 +722,18 @@ def validate_review_block(block: dict) -> list[str]:
     # least REVIEW_TEXT_DRIFT_MIN_SAMPLE reviews with zero text is drift.
     if reviews and len(reviews) >= REVIEW_TEXT_DRIFT_MIN_SAMPLE:
         texts_present = sum(
-            1 for r in reviews if (r.get("text") or r.get("positive") or r.get("cons") or r.get("pros"))
+            1
+            for r in reviews
+            if (r.get("text") or r.get("positive") or r.get("negative") or r.get("cons") or r.get("pros"))
         )
         if texts_present == 0:
             warnings.append(
                 f"all_review_texts_empty: none of {len(reviews)} returned reviews has text (content key drift?)"
             )
 
-    if score is not None and not (0 <= score <= 5):
+    if raw_score is not None and not (isinstance(raw_score, str) and not raw_score.strip()) and score is None:
+        warnings.append(f"score_out_of_range: rating_score={raw_score!r} outside 0..5")
+    elif score is not None and not (0 <= score <= 5):
         warnings.append(f"score_out_of_range: rating_score={score} outside 0..5")
 
     return warnings

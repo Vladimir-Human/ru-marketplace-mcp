@@ -73,7 +73,7 @@ from mcp_core.errors import (
     raise_tool_error_from,
 )
 from mcp_core.http import parse_retry_after
-from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, polite_wait
+from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, page_link, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -106,7 +106,8 @@ TIMEOUT = _settings.timeout
 MAX_BODY_BYTES = _settings.max_body_bytes
 _min_gap = _settings.min_gap
 
-_ITEM_ID_RE = re.compile(r"(\d{5,})")
+_ITEM_ID_RE = re.compile(r"(?:^|/|-|_)(\d{5,})(?:_\d+)?/?$")
+_BARE_ITEM_ID_RE = re.compile(r"(\d+)(?:_\d+)?")
 
 # The mobile API selects its response shape by requestVersion, and pages by
 # limit/offset rather than a page number. Both values and the field names below
@@ -161,19 +162,15 @@ _cdp_lock = asyncio.Lock()
 
 
 async def _polite_wait() -> None:
-    """Space this source's requests out, and back off if it refused us.
-
-    Reads ``_min_gap`` at call time so an operator or a test can retune the
-    pace without rebuilding the pacer. The pacing itself is shared
-    (mcp_core.kit.polite_wait); this module-level name stays because the tools
-    call it and the tests patch it.
-    """
+    """Space requests out via ``_min_gap`` (kept as a module seam for tests)."""
     await polite_wait(_pacer, _min_gap)
 
 
 def _extract_item_id(raw: str) -> str | None:
-    """Pull a goods id out of a megamarket.ru URL or a bare numeric id."""
-    return host_checked_id(raw, hosts=ALLOWED_HOSTS, path_re=_ITEM_ID_RE, bare_re=re.compile(r"\d+"))
+    """Pull a goods id out of a megamarket.ru URL or a bare numeric/offer id."""
+    if match := _BARE_ITEM_ID_RE.fullmatch(raw.strip()):
+        return match.group(1)
+    return host_checked_id(raw, hosts=ALLOWED_HOSTS, path_re=_ITEM_ID_RE, bare_re=_BARE_ITEM_ID_RE)
 
 
 # START_BLOCK_BROWSER_SESSION
@@ -832,7 +829,7 @@ def _parse_items(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int | N
                 "old_price_rub": old_price,
                 "rating": R.coerce_rating(pick("rating", "ratingScore")),
                 "rating_count": R.coerce_int(pick("reviewCount", "reviewsCount", "ratingCount")),
-                "url": pick("webUrl", "url", "link"),
+                "url": page_link(pick("webUrl", "url", "link"), SITE_BASE, ALLOWED_HOSTS) or None,
                 "image_url": goods.get("titleImage") if isinstance(goods.get("titleImage"), str) else "",
                 "is_available": available if isinstance(available, bool) else None,
             }
@@ -1017,7 +1014,8 @@ async def megamarket_card(
             is_available=R.first_present(card, "isAvailable", "available", "inStock"),
             rating=R.coerce_rating(R.first_present(card, "rating", "ratingScore")),
             rating_count=R.coerce_int(R.first_present(card, "reviewCount", "reviewsCount")),
-            url=R.first_present(card, "url", "webUrl") or f"{SITE_BASE}/product/{item_id}",
+            url=page_link(R.first_present(card, "url", "webUrl"), SITE_BASE, ALLOWED_HOSTS)
+            or f"{SITE_BASE}/product/{item_id}",
             tier_used="cdp",
         )
         card_warnings: list[str] = []

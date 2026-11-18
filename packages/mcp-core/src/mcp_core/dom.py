@@ -213,7 +213,8 @@ JS_HELPERS = (
             const raw = (el.textContent || '').replace(/\s+/g, ' ').trim();
             if (!raw || raw.length > 40) continue;
             if (!/\d/.test(raw)) continue;
-            if (DECOY_RE.test(raw)) continue;
+            const nonFee = raw.replace(/беспошлин\S*|без\s+(?:пошлин|таможенн)\S*|бесплатн\S*\s+доставк\S*(?!.*\d)|доставк\S*\s+бесплатн\S*(?!.*\d)/gi, ' ');
+            if (DECOY_RE.test(nonFee)) continue;
 
             const ownGlyph = HAS_GLYPH.test(raw);
             let parentGlyph = false;

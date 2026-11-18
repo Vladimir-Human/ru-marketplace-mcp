@@ -20,11 +20,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # START_BLOCK_OUTPUT_MODELS
 class MetaOut(MetaOutBase):
-    """DNS carries the shared envelope unchanged."""
+    """Citilink carries the shared envelope unchanged."""
 
 
 class CitilinkSearchItemOut(BaseModel):
-    product_id: str | None = Field(default=None, description="DNS product id/slug tail.")
+    product_id: str | None = Field(default=None, description="Citilink product id/slug tail.")
     title: str | None = Field(default=None, description="Product title.")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
     old_price_rub: float | None = Field(
@@ -48,7 +48,7 @@ class CitilinkCardResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     status: str = Field(default="success", description="Response status: success or error.")
-    product_id: str | None = Field(default=None, description="DNS product id/slug tail.")
+    product_id: str | None = Field(default=None, description="Citilink product id/slug tail.")
     title: str | None = Field(default=None, description="Product title.")
     price_rub: float | None = Field(default=None, description="Price in rubles; None when absent — never 0.")
     old_price_rub: float | None = Field(

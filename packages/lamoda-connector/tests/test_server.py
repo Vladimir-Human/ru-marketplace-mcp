@@ -329,9 +329,13 @@ async def test_selfcheck_price_shape_drift_survives_challenge_copy(monkeypatch):
 # ------------------------------------------------------------------- helpers ----
 
 
+@pytest.mark.req("R-NAV-HOSTS.invariant")
 def test_extract_sku():
     assert server._extract_sku("MP002XM1RMM3") == "MP002XM1RMM3"
     assert server._extract_sku("https://www.lamoda.ru/p/mp002xm1rmm3/shoes/") == "MP002XM1RMM3"
+    assert server._extract_sku("www.lamoda.ru/p/mp002xm1rmm3/shoes/") == "MP002XM1RMM3"
+    assert server._extract_sku("evil.example/p/mp002xm1rmm3/") is None
+    assert server._extract_sku("ozon.ru/product/mp002xm1rmm3/") is None
     assert server._extract_sku("кроссовки") is None
 
 
@@ -723,3 +727,75 @@ async def test_card_graphql_transport_error_falls_back_to_cdp(monkeypatch):
     assert result.price_rub == 15724
     assert result.tier_used == "graphql_cdp"
     assert calls == [server._GRAPHQL_QUERY % json.dumps("MP002XM1RMM3")]
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_extract_sku_requires_at_least_one_digit():
+    assert server._extract_sku("https://www.lamoda.ru/catalogsearch/result/") is None
+    assert server._extract_sku("catalogsearch") is None
+    assert server._extract_sku("https://www.lamoda.ru/p/mp002xm1rmm3/shoes-nike/") == "MP002XM1RMM3"
+    assert server._extract_sku("RTLAEY634001") == "RTLAEY634001"
+
+
+@pytest.mark.req("R-DRIFT", "R-LAMODA-REFUSAL-HONEST")
+async def test_selfcheck_reports_graphql_parser_drift_and_refusal_page_blocked(monkeypatch):
+    from mcp_core.errors import ParserDriftError, raise_tool_error
+
+    async def drifting_card(sku, ctx):
+        raise_tool_error(ParserDriftError("Lamoda GraphQL rejected the query: bad field"))
+
+    async def refusal_search(query, ctx):
+        return {"items": [], "title": "Проверка безопасности", "body_snippet": "Запрос отклонен"}
+
+    monkeypatch.setattr(server, "_graphql_card", drifting_card)
+    monkeypatch.setattr(server, "_cdp_render_search", refusal_search)
+
+    report = await server.lamoda_selfcheck()
+    assert report.checks["card_graphql"].state == "drift"
+    assert report.checks["card_graphql"].reason == "parse_smoke_failed"
+    assert report.checks["search"].state == "inconclusive"
+    assert report.checks["search"].reason == "blocked"
+
+    async def nameless_oos_card(sku, ctx):
+        return {"is_available": False}
+
+    monkeypatch.setattr(server, "_graphql_card", nameless_oos_card)
+    report_nameless = await server.lamoda_selfcheck()
+    assert report_nameless.checks["card_graphql"].state == "drift"
+
+
+@pytest.mark.req("R-LAMODA-REFUSAL-HONEST", "R-CACHE-VALIDATED")
+async def test_search_nav_blocked_403_preserves_status_code_and_unhealthy_responses_skip_cache(monkeypatch):
+    from mcp_core.cache import TTLCache
+    from mcp_core.transport.chrome_cdp import NavBlocked
+
+    async def nav_blocked_403(query, ctx):
+        raise NavBlocked(403, "https://www.lamoda.ru/catalogsearch/result/?q=nike")
+
+    monkeypatch.setattr(server, "_cdp_render_search", nav_blocked_403)
+    with pytest.raises(ToolError) as excinfo:
+        await server.lamoda_search("nike")
+    err = json.loads(str(excinfo.value))
+    assert err["status_code"] == 403
+
+    monkeypatch.setattr(server, "_cache", TTLCache(ttl_s=300))
+
+    async def unpriced_search(query, ctx):
+        return {
+            "items": [{"sku": "MP002XM1RMM3", "title": "Кроссовки", "price_texts": {"attached": [], "other": []}}],
+            "title": "Кроссовки",
+            "body_snippet": "Кроссовки",
+        }
+
+    monkeypatch.setattr(server, "_cdp_render_search", unpriced_search)
+    s_res = await server.lamoda_search("nike")
+    assert s_res.meta.healthy is False
+    assert len(server._cache) == 0
+
+    _patch_graphql_response(
+        monkeypatch,
+        {"error": None, "result": [{"sku": "MP002XM1RMM3", "name": "Кроссовки", "is_available": True}]},
+    )
+    c_res = await server.lamoda_card("MP002XM1RMM3")
+    assert c_res.meta.healthy is False
+    assert len(server._cache) == 0
