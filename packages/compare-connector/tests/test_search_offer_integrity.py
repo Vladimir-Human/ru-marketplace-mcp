@@ -89,12 +89,21 @@ async def test_native_ozon_stock_labels_cannot_fabricate_available_winner(monkey
         "6": None,
         "7": True,
     }
-    # R-COMPARE-CONDITIONAL-PRICE.ozon-card: one card read ranks one Ozon tile, the cheapest
-    # not marked out of stock (2). Its stock is unknown, so in_stock_only leaves no winner:
-    # no label made an unknown stock available.
-    assert [item.product_id for item in result.offers if item.price_rub is not None] == ["2"]
-    assert result.cheapest is None
-    assert result.cheapest_comparable is None
+    # R-COMPARE-CONDITIONAL-PRICE.ozon-card + R-COMPARE-DEEP-TRAPS.ozon-candidate: none of the
+    # decoy labels 2..6 became in_stock=True, so in_stock_only skips them and reads only 7
+    # ("3 шт осталось"); without 7 and without card.is_available, unknown stock leaves no winner.
+    assert [item.product_id for item in result.offers if item.price_rub is not None] == ["7"]
+    assert result.cheapest is not None and result.cheapest.product_id == "7"
+    assert result.cheapest_comparable is not None and result.cheapest_comparable.product_id == "7"
+
+    async def search_unknown(query):
+        return OzonSearchResponse(items=items[:6])
+
+    monkeypatch.setattr(server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=search_unknown, ozon_card=card)})
+    no_winner = await server.compare_prices(query="Kettle", sources=["ozon"], per_source_limit=10, in_stock_only=True)
+    assert [item.product_id for item in no_winner.offers if item.price_rub is not None] == ["2"]
+    assert no_winner.cheapest is None
+    assert no_winner.cheapest_comparable is None
 
 
 @pytest.mark.parametrize("channel", ["textDS", "labelList"])

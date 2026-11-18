@@ -17,6 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from avito_connector.models_output import AvitoSearchItemOut, AvitoSearchResponse
 from citilink_connector.models_output import CitilinkSearchItemOut, CitilinkSearchResponse
 from compare_connector import server
 from compare_connector.decide import (
@@ -339,3 +340,208 @@ def test_blank_or_invalid_source_timeout_falls_back_and_pyproject_maps_aliexpres
 
 
 # END_BLOCK_PRICE_AND_VERIFY_GUARD_TESTS
+
+
+# START_BLOCK_ASTRA_REVIEW_REGRESSIONS
+@pytest.mark.req("R-COMPARE-CONDITION-ON-CARD", "R-COMPARE-DEEP-TRAPS")
+@pytest.mark.parametrize(
+    "query",
+    [
+        "iPhone 16 128gb не б/у",
+        "iPhone 16 128gb не восстановленный",
+        "iPhone 16 128gb not used",
+    ],
+)
+async def test_negated_condition_in_query_keeps_avito_out_of_cheapest_comparable(
+    monkeypatch: pytest.MonkeyPatch, query: str
+) -> None:
+    async def avito_search(**kwargs):
+        return AvitoSearchResponse(
+            items=[AvitoSearchItemOut(item_id=8609346018, title="iPhone 16, 128 ГБ", price_rub=35000.0)],
+            count=1,
+        )
+
+    async def citilink_search(**kwargs):
+        return CitilinkSearchResponse(
+            items=[CitilinkSearchItemOut(product_id="2001", title="Смартфон Apple iPhone 16 128 ГБ", price_rub=68990.0)]
+        )
+
+    monkeypatch.setattr(
+        server,
+        "SOURCES",
+        {
+            "avito": SimpleNamespace(avito_search=avito_search),
+            "citilink": SimpleNamespace(citilink_search=citilink_search),
+        },
+    )
+    result = await server.compare_prices(query, sources=["avito", "citilink"])
+
+    assert result.cheapest is not None and result.cheapest.source == "avito"
+    assert result.cheapest_comparable is not None and result.cheapest_comparable.source == "citilink"
+
+
+@pytest.mark.req("R-COMPARE-MODEL-TOKENS", "R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.lists-and-tokens")
+async def test_purpose_for_clause_in_query_does_not_disable_accessory_for_model_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_citilink(
+        monkeypatch,
+        [("acc", "Аккумулятор для Dyson V15", 8000.0), ("vac", "Вертикальный пылесос Dyson V15", 60000.0)],
+    )
+    result = await server.compare_prices("Dyson V15 для квартиры", sources=["citilink"])
+
+    assert result.cheapest is not None and result.cheapest.product_id == "acc"
+    assert result.cheapest_comparable is not None and result.cheapest_comparable.product_id == "vac"
+    assert model_mismatch("чехол для iphone 16", "Чехол для iPhone 16, прозрачный") is None
+
+
+@pytest.mark.req(
+    "R-COMPARE-SIZE-LIST", "R-COMPARE-VARIANT-IDENTITY", "R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.lists-and-tokens"
+)
+async def test_4x_hyphen_storage_ranges_and_slash_ram_rom_mismatches_never_win_cheapest_comparable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert lists_sizes("iPhone 15 128–512 ГБ") is True
+    assert lists_sizes("iPhone 15 64-256 ГБ") is True
+
+    _stub_citilink(
+        monkeypatch,
+        [
+            ("range1", "Смартфон Apple iPhone 15 128–512 ГБ", 44000.0),
+            ("range2", "Смартфон Apple iPhone 15 64-256 ГБ", 40000.0),
+            ("exact", "Смартфон Apple iPhone 15 512 ГБ", 64000.0),
+        ],
+    )
+    range_result = await server.compare_prices("iPhone 15 512 ГБ", sources=["citilink"])
+    assert range_result.cheapest_comparable is not None and range_result.cheapest_comparable.product_id == "exact"
+
+    _stub_citilink(
+        monkeypatch,
+        [
+            ("wrong_low", "Смартфон Xiaomi Redmi Note 13 6/256 ГБ", 15000.0),
+            ("wrong_high", "Смартфон Xiaomi Redmi Note 13 12/256 ГБ", 16000.0),
+            ("exact_ram", "Смартфон Xiaomi Redmi Note 13 8/256 ГБ", 18000.0),
+        ],
+    )
+    ram_result = await server.compare_prices("Redmi Note 13 8 ГБ 256 ГБ", sources=["citilink"])
+    assert ram_result.cheapest_comparable is not None and ram_result.cheapest_comparable.product_id == "exact_ram"
+
+
+@pytest.mark.req("R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.classifieds-and-conditions")
+@pytest.mark.parametrize(
+    "trap_title",
+    [
+        "Смартфон Apple iPhone 16 128GB в рассрочку, платёж в месяц",
+        "Смартфон Apple iPhone 16 128GB, платеж в месяц",
+        "Смартфон Apple iPhone 16 128GB, ежемесячный платёж",
+        "Смартфон Apple iPhone 16 128GB, ежемесячный платеж",
+        "Смартфон Apple iPhone 16 128GB, не включается",
+        "Смартфон Apple iPhone 16 128GB, донор",
+        "Смартфон Apple iPhone 16 128GB без АКБ",
+    ],
+)
+async def test_monthly_installment_and_donor_broken_markers_never_win_cheapest_comparable(
+    monkeypatch: pytest.MonkeyPatch, trap_title: str
+) -> None:
+    _stub_citilink(
+        monkeypatch,
+        [("trap", trap_title, 4500.0), ("clean", "Смартфон Apple iPhone 16 128GB", 65000.0)],
+    )
+    result = await server.compare_prices("iphone 16 128gb", sources=["citilink"])
+
+    assert result.cheapest is not None and result.cheapest.product_id == "trap"
+    assert result.cheapest_comparable is not None and result.cheapest_comparable.product_id == "clean"
+
+
+@pytest.mark.req("R-COMPARE-MODEL-TOKENS", "R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.lists-and-tokens")
+async def test_negated_copy_disclaimer_passes_while_positive_copy_is_excluded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_citilink(
+        monkeypatch,
+        [
+            ("copy", "Копия Apple iPhone 15 128GB", 12000.0),
+            ("orig_ru", "Смартфон Apple iPhone 15 128GB оригинал (не копия, не реплика)", 54000.0),
+            ("orig_en", "Apple iPhone 15 128GB original (not replica)", 55000.0),
+        ],
+    )
+    res_plain = await server.compare_prices("iphone 15 128gb", sources=["citilink"])
+    assert res_plain.cheapest_comparable is not None and res_plain.cheapest_comparable.product_id == "orig_ru"
+    assert model_mismatch("iphone 15 128gb", "Apple iPhone 15 128GB original (not replica)") is None
+
+    res_neg_query = await server.compare_prices("iphone 15 128gb не копия", sources=["citilink"])
+    assert res_neg_query.cheapest_comparable is not None and res_neg_query.cheapest_comparable.product_id == "orig_ru"
+
+
+@pytest.mark.req("R-COMPARE-MODEL-TOKENS", "R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.lists-and-tokens")
+async def test_cohesive_decimal_spec_rejects_split_numbers_while_preserving_ecam_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_citilink(
+        monkeypatch,
+        [
+            ("wrong", "Ноутбук 15.3 дюйма, 6 ядер", 35000.0),
+            ("right", "Ноутбук 15,6 дюйма, 8 ядер", 42000.0),
+        ],
+    )
+    result = await server.compare_prices("ноутбук 15.6", sources=["citilink"])
+
+    assert result.cheapest_comparable is not None and result.cheapest_comparable.product_id == "right"
+    assert (
+        model_mismatch(
+            "кофемашина delonghi magnifica s ecam22.110",
+            "Кофемашина автоматическая DeLonghi Magnifica S ECAM 22.110.SB серебристый",
+        )
+        is None
+    )
+    assert (
+        model_mismatch(
+            "кофемашина delonghi magnifica s ecam22.110",
+            "Кофемашина автоматическая Delonghi Magnifica S ECAM20.110.B черный",
+        )
+        == "missing ecam22.110"
+    )
+
+
+@pytest.mark.req("R-COMPARE-DEEP-TRAPS", "R-COMPARE-DEEP-TRAPS.ozon-candidate", "R-COMPARE-CONDITIONAL-PRICE.ozon-card")
+async def test_ozon_in_stock_only_prioritizes_confirmed_stock_and_forwards_card_availability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked_cards: list[str] = []
+
+    async def ozon_search_mixed(**kwargs):
+        return OzonSearchResponse(
+            items=[
+                OzonSearchItemOut(sku=101, title="Смартфон Apple iPhone 16 256 ГБ", price=68000.0, stock=""),
+                OzonSearchItemOut(sku=202, title="Смартфон Apple iPhone 16 256 ГБ", price=72000.0, stock="В наличии"),
+            ]
+        )
+
+    async def ozon_card_avail(sku_or_path: str) -> OzonCardResponse:
+        asked_cards.append(sku_or_path)
+        return OzonCardResponse(price=75990.0, card_price=72000.0, is_available=True)
+
+    monkeypatch.setattr(
+        server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=ozon_search_mixed, ozon_card=ozon_card_avail)}
+    )
+    mixed = await server.compare_prices("iphone 16 256gb", sources=["ozon"], in_stock_only=True)
+    assert asked_cards == ["202"]
+    assert mixed.cheapest_comparable is not None and mixed.cheapest_comparable.product_id == "202"
+
+    asked_cards.clear()
+
+    async def ozon_search_unlabeled(**kwargs):
+        return OzonSearchResponse(
+            items=[OzonSearchItemOut(sku=303, title="Смартфон Apple iPhone 16 256 ГБ", price=70000.0, stock="")]
+        )
+
+    monkeypatch.setattr(
+        server, "SOURCES", {"ozon": SimpleNamespace(ozon_search=ozon_search_unlabeled, ozon_card=ozon_card_avail)}
+    )
+    forwarded = await server.compare_prices("iphone 16 256gb", sources=["ozon"], in_stock_only=True)
+    assert asked_cards == ["303"]
+    assert forwarded.cheapest_comparable is not None and forwarded.cheapest_comparable.product_id == "303"
+    assert forwarded.cheapest_comparable.in_stock is True
+
+
+# END_BLOCK_ASTRA_REVIEW_REGRESSIONS

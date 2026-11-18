@@ -161,6 +161,11 @@ _ACCESSORY_MARKERS = (
     "офлайн активации",
     "предзаказ",
     "депозит",
+    "платёж в месяц",
+    "платеж в месяц",
+    "ежемесячный платёж",
+    "ежемесячный платеж",
+    "без акб",
     "детский игрушечный",
     "детская игрушечная",
     "детское игрушечное",
@@ -215,6 +220,8 @@ _CONDITION_MARKERS = (
     "ресейл",
     "resale",
     "после ремонта",
+    "не включается",
+    "донор",
     "неисправный",
     "неисправная",
     "неисправное",
@@ -402,10 +409,13 @@ def _condition_unstated(source: str, query: str) -> bool:
 
     Live, 2026-11-17: an Avito "iPhone 16, 128 ГБ" row was cheapest_comparable for
     "iphone 16 128gb"; its card said «Б/у». Such a row is a candidate only when the
-    query itself names a used or refurbished condition.
+    query itself positively names a used or refurbished condition.
     """
     spec = BY_NAME.get(source)
-    return bool(spec and spec.condition_on_card) and not _marker_pattern(_CONDITION_MARKERS).search(query)
+    if not (spec and spec.condition_on_card):
+        return False
+    pattern = _marker_pattern(_CONDITION_MARKERS)
+    return not pattern.search(_positive_marker_text(query, pattern, bundles=False))
 
 
 def _looks_like_an_accessory(title: str, query: str) -> bool:
@@ -628,37 +638,44 @@ def _is_comparable_offer(
     return True
 
 
-def pick_card_candidate(query: str, tiles: Iterable[tuple[str, str, float | None, bool | None]]) -> str | None:
+def pick_card_candidate(
+    query: str,
+    tiles: Iterable[tuple[str, str, float | None, bool | None]],
+    *,
+    in_stock_only: bool = False,
+) -> str | None:
     """The product id of the cheapest tile worth one card read, or None.
 
     R-COMPARE-CONDITIONAL-PRICE.ozon-card: ``tiles`` are (product id, title,
     conditional amount, in stock). Comparable tiles win first so a cheaper wrong
     model, wrong capacity or variant-list tile never steals Ozon's single card
-    read; when no tile passes full comparability (for instance, an Ozon tile
-    omitting the brand), the cheapest non-accessory, non-condition tile is read
-    so plain ``cheapest`` can still rank.
+    read; when ``in_stock_only`` is set, confirmed ``in_stock is True`` tiles win
+    ahead of unlabeled ``in_stock is None`` tiles before falling back to reading
+    an unlabeled tile's card availability.
     """
     query_sizes = extract_size_tokens(query)
     query_lists_models = lists_models(query)
-    best_comparable: tuple[float, str] | None = None
-    best_fallback: tuple[float, str] | None = None
+    best_comparable: tuple[int, float, str] | None = None
+    best_fallback: tuple[int, float, str] | None = None
     for product_id, title, amount, in_stock in tiles:
         if not _valid_price(amount) or amount is None or not product_id.isdigit() or in_stock is False:
             continue
         if _looks_like_an_accessory(title, query) or _looks_like_another_condition(title, query):
             continue
+        stock_rank = 0 if (not in_stock_only or in_stock is True) else 1
+        key = (stock_rank, amount)
         candidate = MarketOffer.model_construct(source="ozon", product_id=product_id, title=title, brand="")
         if _is_comparable_offer(candidate, query, query_sizes, query_lists_models=query_lists_models):
-            if best_comparable is None or amount < best_comparable[0]:
-                best_comparable = (amount, product_id)
+            if best_comparable is None or key < best_comparable[:2]:
+                best_comparable = (*key, product_id)
             continue
         mismatch = model_mismatch(query, title)
         if mismatch and (mismatch.startswith("for ") or mismatch == "copy"):
             continue
-        if best_fallback is None or amount < best_fallback[0]:
-            best_fallback = (amount, product_id)
+        if best_fallback is None or key < best_fallback[:2]:
+            best_fallback = (*key, product_id)
     chosen = best_comparable or best_fallback
-    return chosen[1] if chosen else None
+    return chosen[2] if chosen else None
 
 
 # END_BLOCK_PRICE_POLICY

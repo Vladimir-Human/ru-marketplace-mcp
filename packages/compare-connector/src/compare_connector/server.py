@@ -61,6 +61,7 @@ import os
 import time
 from collections import OrderedDict
 from collections.abc import Iterable
+from contextvars import ContextVar
 from typing import Annotated, Any
 from urllib.parse import urlsplit
 
@@ -307,26 +308,29 @@ async def _search_yandex(query: str, limit: int) -> list[MarketOffer]:
 # not cost the search results already in hand (R-COMPARE-CONDITIONAL-PRICE.ozon-card).
 OZON_CARD_MARGIN_S = 3.0
 OZON_CARD_MIN_S = 5.0
+_IN_STOCK_ONLY: ContextVar[bool] = ContextVar("compare_in_stock_only", default=False)
 
 
-async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, str]:
-    """The everyday and the card price on one Ozon card, or why they were not read."""
+async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, bool | None, str]:
+    """The everyday price, card price and availability on one Ozon card, or why they were not read."""
     if seconds < OZON_CARD_MIN_S:
-        return None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
+        return None, None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
     try:
         card = await asyncio.wait_for(server.ozon_card(sku_or_path=sku), timeout=seconds)
     except TimeoutError:
-        return None, None, f"no answer within {seconds:.0f}s"
+        return None, None, None, f"no answer within {seconds:.0f}s"
     except Exception as exc:
         error = _source_error(exc)
-        return None, None, str(error.get("error_code") or error.get("status") or "error")
+        return None, None, None, str(error.get("error_code") or error.get("status") or "error")
+    avail = getattr(card, "is_available", None)
+    card_in_stock = avail if isinstance(avail, bool) else None
     everyday = _as_price(getattr(card, "price", None))
     if everyday is None:
-        return None, None, "the card shows no everyday price"
-    return everyday, _as_price(getattr(card, "card_price", None)), ""
+        return None, None, card_in_stock, "the card shows no everyday price"
+    return everyday, _as_price(getattr(card, "card_price", None)), card_in_stock, ""
 
 
-async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
+async def _search_ozon(query: str, limit: int, *, in_stock_only: bool | None = None) -> list[MarketOffer]:
     """Adapt ``ozon_search`` results.
 
     This adapter was previously written blind — Ozon refuses datacenter IPs — and
@@ -348,21 +352,28 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
         (item, str(item.sku or ""), _as_price(item.price)) for item in (getattr(response, "items", None) or [])[:limit]
     ]
     sku = pick_card_candidate(
-        query, ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles)
+        query,
+        ((tile_sku, item.title or "", price, _stock_from_label(item.stock)) for item, tile_sku, price in tiles),
+        in_stock_only=_IN_STOCK_ONLY.get() if in_stock_only is None else in_stock_only,
     )
-    everyday, card_price, problem = None, None, ""
+    everyday, card_price, card_in_stock, problem = None, None, None, ""
     if sku is not None:
         seconds = SOURCE_TIMEOUT_S - (time.monotonic() - started) - OZON_CARD_MARGIN_S
-        everyday, card_price, problem = await _read_ozon_card(server, sku, seconds)
+        everyday, card_price, card_in_stock, problem = await _read_ozon_card(server, sku, seconds)
+    card_applied = False
     for item, tile_sku, price in tiles:
         # One card ranks one tile, even when Ozon lists the same sku twice.
-        ranked = everyday is not None and tile_sku == sku and not any(o.product_id == sku for o in batch)
+        verified_tile = tile_sku == sku and not card_applied
+        if verified_tile:
+            card_applied = True
+        ranked = everyday is not None and verified_tile
         if ranked:
             decision = decide_conditional_price(
                 "ozon", tile_sku, everyday, price if card_price is None else card_price, "card"
             )
         else:
             decision = decide_conditional_price("ozon", tile_sku, None, price, "card")
+        tile_stock = _stock_from_label(item.stock)
         batch.append(
             MarketOffer(
                 source="ozon",
@@ -376,7 +387,7 @@ async def _search_ozon(query: str, limit: int) -> list[MarketOffer]:
                 price_kind=None if ranked or price is None else "card",
                 rating=R.coerce_rating(item.rating),
                 rating_count=_as_count(item.rating_count),
-                in_stock=_stock_from_label(item.stock),
+                in_stock=card_in_stock if (verified_tile and card_in_stock is not None) else tile_stock,
                 url=item.url or "",
                 image_url=getattr(item, "image_url", ""),
             )
@@ -789,7 +800,11 @@ async def compare_prices(
 
     log_event("compare_prices.start", query=text, sources=active, limit=per_source_limit, in_stock_only=in_stock_only)
 
-    results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
+    stock_token = _IN_STOCK_ONLY.set(in_stock_only)
+    try:
+        results = await asyncio.gather(*(_run_source(name, text, per_source_limit) for name in active))
+    finally:
+        _IN_STOCK_ONLY.reset(stock_token)
 
     return build_response(
         text,
