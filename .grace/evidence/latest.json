@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-18T04:22:46.978552+00:00",
+  "checked_on_utc": "2026-11-18T04:49:25.311352+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -15,7 +15,7 @@
       ],
       "exit": 0,
       "name": "Ruff (lint)",
-      "seconds": 0.266,
+      "seconds": 0.265,
       "summary": "All checks passed!"
     },
     {
@@ -30,7 +30,7 @@
       "exit": 0,
       "name": "Ruff (format check)",
       "seconds": 0.219,
-      "summary": "590 files already formatted"
+      "summary": "592 files already formatted"
     },
     {
       "cmd": [
@@ -40,7 +40,7 @@
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 9.562,
+      "seconds": 15.703,
       "summary": "Success: no issues found in 123 source files"
     },
     {
@@ -53,7 +53,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform)",
-      "seconds": 0.938,
+      "seconds": 0.969,
       "summary": "Success: no issues found in 123 source files"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 8.812,
+      "seconds": 16.594,
       "summary": "Success: no issues found in 123 source files"
     },
     {
@@ -87,8 +87,8 @@
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 2.156,
-      "summary": "{\"ts\":\"2026-11-17T22:02:21\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 2.328,
+      "summary": "{\"ts\":\"2026-11-17T22:27:46\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
@@ -97,7 +97,7 @@
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 1.797,
+      "seconds": 1.844,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
@@ -124,8 +124,8 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 15.907,
-      "summary": "dns           2 tools  ~   391 tok."
+      "seconds": 17.672,
+      "summary": "dns           2 tools  ~   376 tok."
     },
     {
       "cmd": [
@@ -134,7 +134,7 @@
       ],
       "exit": 0,
       "name": "One version, everywhere",
-      "seconds": 0.125,
+      "seconds": 0.218,
       "summary": "version 2.10.0 agreed in 88 places (16 pyproject.toml, 15 __init__.py, 14 SERVER_VERSION, 18 image tag, 3 deployment release pin, 14 mcp-core pin, 1 server.json, 1 OCI image tag, 1 dsh/package.json, 5"
     },
     {
@@ -145,8 +145,8 @@
       ],
       "exit": 0,
       "name": "Generated GRACE verification index is current",
-      "seconds": 0.562,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=150 gap=10 untraced=0 mappings=1241 unmarked_tests=1870"
+      "seconds": 0.61,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=150 gap=10 untraced=0 mappings=1283 unmarked_tests=1869"
     },
     {
       "cmd": [
@@ -155,7 +155,7 @@
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.766,
+      "seconds": 0.859,
       "summary": ""
     },
     {
@@ -172,8 +172,8 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 1135.625,
-      "summary": "7993 passed, 2 skipped, 45 deselected, 17 xfailed in 1131.43s (0:18:51)"
+      "seconds": 1203.313,
+      "summary": "8069 passed, 2 skipped, 45 deselected, 17 xfailed in 1199.95s (0:19:59)"
     },
     {
       "cmd": [
@@ -188,8 +188,8 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 69.265,
-      "summary": "704 passed in 68.31s (0:01:08)"
+      "seconds": 72.937,
+      "summary": "704 passed in 71.88s (0:01:11)"
     }
   ],
   "index": {
@@ -198,6 +198,6 @@
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "f9a01121d202b31c44d201cbeacaa0e111740a3d5d23944616db078663b73649",
+  "tree_digest": "a4bc755fa80e2849be7fc7961121a7df1135cebec613e343dfba9f205a2097f9",
   "version": "2.10.0"
 }
