@@ -24,7 +24,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # PURPOSE: Expose Lamoda product discovery and SKU enrichment.
 # SCOPE: Read-only HTTPS GraphQL cards with CDP POST fallback; browser search and challenge recovery handoffs.
 # DEPENDS: FastMCP; httpx; mcp_core DOM/CDP/handoff/cache/kit; models_output; settings; shape_reference.
-# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/lamoda-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: M-LAMODA; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/lamoda-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _extract_sku: Resolve and normalize SKU handles or product URLs.
@@ -65,7 +65,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait, url_on_hosts
+from mcp_core.kit import bounded_attempt, polite_wait, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -410,7 +410,7 @@ async def _graphql_via_cdp(query: str, ctx: Context | None) -> tuple[int, str]:
         return int(result["status"]), str(result["text"])
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
     except NavBlocked as exc:
@@ -550,7 +550,7 @@ async def _cdp_render_search(query: str, ctx: Context | None) -> dict[str, Any]:
             return data
 
     try:
-        payload = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        payload = await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         raise_tool_error(TransportDownError(f"CDP timeout after {TIMEOUT}s"))
     return payload  # lamoda_search commits only after parsing and validation.

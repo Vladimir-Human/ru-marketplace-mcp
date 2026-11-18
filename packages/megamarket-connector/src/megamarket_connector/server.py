@@ -25,7 +25,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC.
 # INVARIANTS: One home load per uncached search/selfcheck; same-tab hidden-redirect fallback; preserve caps/caches.
 # INVARIANTS: Reject failures before success pacing/cache; 401/403/429 stop with cooldown; /xpvnsulc/ needs a human.
 # DEPENDS: FastMCP; mcp_core CDP/cache/pacing/kit; models_output; settings; shape_reference.
-# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/megamarket-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: M-MEGAMARKET; M-KIT; M-COMPARE; M-MARKETPLACE; R-CDP-HOST-PAUSE; R-MEGAMARKET-ONE-LOAD; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/megamarket-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _browser_session / _session_page: Lazily own one tab and source lock for dependent reads.
@@ -73,7 +73,7 @@ from mcp_core.errors import (
     raise_tool_error_from,
 )
 from mcp_core.http import parse_retry_after
-from mcp_core.kit import blocked_error, host_checked_id, on_bot_check_page, page_link, polite_wait
+from mcp_core.kit import blocked_error, bounded_attempt, host_checked_id, on_bot_check_page, page_link, polite_wait
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -310,7 +310,7 @@ async def _cdp_post_json(api_path: str, body: dict[str, Any], ctx: Context | Non
         return result["status"], result["text"]
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
 

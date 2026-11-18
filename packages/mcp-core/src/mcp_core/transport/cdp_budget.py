@@ -23,12 +23,16 @@ being misattributed. This module removes it:
 Everything is injectable (clock, sleep, limits) so the tests exercise real
 concurrency without real waiting. Nothing here knows about Playwright or CDP:
 it is a budget, and ``open_page`` is the only caller that spends it.
+
+The one thing that is not injectable is the queue wait itself: it is measured
+with the real monotonic clock, because it is wall time an attempt spent waiting
+for a permit. The injectable clock drives the breaker cooldowns, not the queue.
 """
 # START_MODULE_CONTRACT
 # PURPOSE: Bound concurrent CDP navigation and cool down repeatedly refusing hosts.
 # SCOPE: Process-wide permits and host state; page lifetime does not hold permits.
-# DEPENDS: stdlib asyncio,os,time,contextlib,dataclasses; injectable clock/sleep.
-# LINKS: M-CDP-BUDGET; M-CHROME-CDP; M-TRANSPORT.
+# DEPENDS: stdlib asyncio,os,time,contextlib,dataclasses; M-ATTEMPT-DEADLINE; injectable clock/sleep.
+# LINKS: M-CDP-BUDGET; M-ATTEMPT-DEADLINE; M-CHROME-CDP; M-TRANSPORT; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _env_int: Select valid integer configuration or a default.
@@ -36,7 +40,7 @@ it is a budget, and ``open_page`` is the only caller that spends it.
 # HostRefusingError: Report an open host breaker and remaining cooldown.
 # Slot: Settle one outcome and release its permit idempotently.
 # NavigationBudget: Manage global/per-host semaphores and refusal history.
-# NavigationBudget.acquire: Fast-fail an open breaker, take the host slot, then global, then re-check.
+# NavigationBudget.acquire: Fast-fail an open breaker, take the host slot, then global, then re-check; lend a queued attempt the seconds it waited.
 # NavigationBudget.slot: Release a permit when its context exits.
 # NavigationBudget.snapshot: Report capacity and host breaker diagnostics.
 # navigation_budget: Lazily construct the shared budget from environment knobs.
@@ -51,6 +55,8 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+
+from mcp_core.transport.attempt_deadline import current_attempt_credit
 
 __all__ = [
     "HostRefusingError",
@@ -211,7 +217,8 @@ class NavigationBudget:
             return
         now = self._clock()
         if now < state.open_until:
-            raise HostRefusingError(host, state.open_until - now, state.refusals)
+            # min(): float subtraction can exceed the cooldown by one ulp (60.00000000000006 on CI).
+            raise HostRefusingError(host, min(self.breaker_cooldown_s, state.open_until - now), state.refusals)
         # Cooldown elapsed: give the host a fresh chance, keep the open count.
         state.open_until = 0.0
         state.refusals = 0
@@ -226,13 +233,30 @@ class NavigationBudget:
         both waits the breaker is checked again: a request that queued while the
         breaker was still closed is refused exactly like a new one when its turn
         comes, and the permits it just took are given back.
+
+        R-CDP-QUEUE-CREDIT: when the caller runs this navigation inside a
+        ``bounded_attempt``, the seconds spent waiting here are lent back to
+        that attempt's deadline — at most one timeout in total, so an attempt
+        never runs longer than twice its timeout. A source that only waits for
+        a free Chrome slot is not reported as a timeout while it queues. Without
+        such an attempt (a direct tool call, a test driving the budget by
+        hand) nothing changes.
         """
         key = (host or "").lower().rstrip(".")
         self.check(key)
         host_sem = self._host_semaphore(key)
-        await host_sem.acquire()
+        credit = current_attempt_credit()
+        # The attempt's own deadline before this wait; 0.0 when no attempt runs.
+        deadline_before = float(credit.timeout.when() or 0.0) if credit is not None else 0.0
+        started = time.monotonic()
+        if credit is not None:
+            # The attempt's own deadline must not expire while it queues.
+            credit.move_deadline(deadline_before + credit.left_s)
+        host_held = False
         global_held = False
         try:
+            await host_sem.acquire()
+            host_held = True
             if self._global.locked():
                 self._waited += 1
             await self._global.acquire()
@@ -243,8 +267,19 @@ class NavigationBudget:
             # cancelled: nothing may stay held for a permit not handed out.
             if global_held:
                 self._global.release()
-            host_sem.release()
+            if host_held:
+                host_sem.release()
+            if credit is not None:
+                # The wait never happened: the attempt keeps its own deadline.
+                credit.move_deadline(deadline_before)
             raise
+        if credit is not None:
+            # The wait is over: lend it back to the attempt, once, and never
+            # more than the credit the attempt still has.
+            waited = time.monotonic() - started
+            extra = min(waited, credit.left_s)
+            credit.left_s -= extra
+            credit.move_deadline(deadline_before + extra)
         self._in_flight += 1
         self._peak_in_flight = max(self._peak_in_flight, self._in_flight)
         return Slot(host=key, _budget=self)
