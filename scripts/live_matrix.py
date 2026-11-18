@@ -66,7 +66,7 @@ def load_cases() -> dict[str, Any]:
     data = json.loads(AUDIT_CASES_PATH.read_text(encoding="utf-8"))
     from mcp_core.sources import SOURCES
 
-    expected = {spec.name for spec in SOURCES if spec.kind == "marketplace" and spec.name != "mpstats"}
+    expected = {spec.name for spec in SOURCES if spec.kind == "marketplace"}
     cases = data.get("fixed_queries") if isinstance(data, dict) else None
     if not isinstance(cases, dict) or set(cases) != expected:
         raise ValueError("invalid fixed-query registry")

@@ -17,7 +17,7 @@ import e2e_stdio_check as probe
 
 
 def source_payload():
-    skipped = {"mpstats": "auth_missing: MPSTATS_MP_AUTH not set"}
+    skipped = {}
     return {
         "mounted": sorted(probe.EXPECTED_MOUNTS),
         "mounted_count": len(probe.EXPECTED_MOUNTS),
@@ -35,7 +35,6 @@ def source_payload():
         {"mounted_count": 0},
         {"mounted": [*sorted(probe.EXPECTED_MOUNTS), "wildberries"]},
         {"skipped": {"ozon": "import failed"}},
-        {"skipped": {"mpstats": "ModuleNotFoundError: No module named 'mpstats_connector'"}},
         {"skipped_count": 2},
         {"server_version": "0.0.0"},
     ],

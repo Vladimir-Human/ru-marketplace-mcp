@@ -318,7 +318,6 @@ def test_error_reference_describes_outgoing_fields() -> None:
     reference = render_error_reference()
     assert "tool, next_step" in reference
     assert "always present" in reference and "pacing floor" in reference
-    assert "MPSTATS_MP_AUTH" in reference
     assert "detmir_category" in reference
     for code in ErrorCode:
         assert f"`{code.value}`" in reference

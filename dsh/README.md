@@ -1,7 +1,7 @@
 # ru-marketplace-mcp for DeepSeek Harness
 
 Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews
-and cross-marketplace price comparison. This bundle ships 15 Agent Skills plus
+and cross-marketplace price comparison. This bundle ships 14 Agent Skills plus
 three mutually exclusive MCP server rows that are **off by default**.
 
 ## Why off by default
@@ -15,7 +15,7 @@ from each server's `tools/list` by `scripts/gen_tools_doc.py` (the estimate
 <!-- tools-cost-dsh:start -->
 | Mode | Cost while mounted | Model-facing tools |
 |---|---|---|
-| Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |
+| Skills only (default) | 14 skill catalog entries; no MCP schemas | 0 |
 | `compare-mcp` (recommended) | ~1.8k tokens per request | 4 |
 | `decision-mcp` (shortlist inspection) | ~2.0k tokens per request | 5 |
 | `marketplace-mcp` (full) | ~13.4k tokens per request | 39 |
@@ -45,7 +45,7 @@ published over MCP.
    dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
    ```
 
-   The 15 skills appear immediately. No MCP server starts yet.
+   The 14 skills appear immediately. No MCP server starts yet.
 
 2. Clone the server and install its locked environment once:
 

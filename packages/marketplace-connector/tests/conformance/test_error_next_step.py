@@ -51,9 +51,6 @@ def _install(server: FastMCP, monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 async def error_server(monkeypatch: pytest.MonkeyPatch):
     marketplace = importlib.import_module("marketplace_connector.server")
-    mpstats = importlib.import_module("mpstats_connector.server")
-    # List optional analytics tools without configuring a key or calling them.
-    monkeypatch.setattr(mpstats, "mount_unavailable_reason", lambda: None)
     monkeypatch.delenv("MARKETPLACE_SOURCES", raising=False)
     inventory = FastMCP("complete-inventory")
     monkeypatch.setattr(marketplace, "mcp", inventory)
@@ -171,8 +168,6 @@ async def test_every_code_and_listed_tool_names_a_next_call(error_server, code: 
                 assert "user_action" in step and "user confirms" in step
             if code == ErrorCode.NOT_FOUND and source and source.name == "detsky_mir":
                 assert "`detmir_category`" in step
-            if code == ErrorCode.AUTH_MISSING and source and source.name == "mpstats":
-                assert "MPSTATS_MP_AUTH" in step and "user" in step and "agent" in step
 
 
 @pytest.mark.req("R-ERROR-NEXT-STEP.guidance", "R-ERROR-NEXT-STEP.pacing")

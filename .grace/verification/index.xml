@@ -861,16 +861,9 @@
     <test file="scripts/test_metrics_snapshot.py" name="test_every_source_failing_exits_non_zero" requirements="R-METRICS" />
     <test file="scripts/test_metrics_snapshot.py" name="test_external_authors_skip_the_owner_and_bots_and_split_issues_from_prs" requirements="R-METRICS" />
   </requirement>
-  <requirement id="R-MPSTATS-MOUNT-GATE" kind="requirement" state="tested">
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_mpstats_tools_are_mounted_with_the_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_mpstats_tools_are_not_mounted_without_the_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_skip_reason_names_the_missing_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_standalone_mpstats_server_keeps_its_tools" requirements="R-MPSTATS-MOUNT-GATE" title="The gate lives in the unified mount, never in the standalone server." />
-  </requirement>
-  <requirement id="R-MPSTATS-OFFICIAL-MCP" kind="requirement" state="tested">
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_guides_point_to_the_official_server" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: guide://mpstats/&lt;tool&gt; names the official server and the note." />
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_tool_descriptions_point_to_the_official_server_first" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the agent reads the pointer before anything else in the description." />
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_every_result_carries_the_official_server_note" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the note is an info: note naming the server; it does not touch healthy." />
+  <requirement id="R-MPSTATS-REMOVED" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/test_source_selection.py" name="test_removed_mpstats_keeps_other_sources_and_reports_official_server" requirements="R-MPSTATS-REMOVED" />
+    <test file="packages/mcp-core/tests/test_sources.py" name="test_removed_mpstats_selection_keeps_sources_and_reports_once" requirements="R-MPSTATS-REMOVED" />
   </requirement>
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested" gaps="G-NAV-HOSTS-REDIRECT-LOADS">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
@@ -1060,7 +1053,6 @@
   <requirement id="R-REPO-EOL" kind="requirement" state="gap" gaps="G-REPO-EOL-UNTESTED" />
   <requirement id="R-SCHEMA-LIMITS" kind="requirement" state="tested">
     <test file="packages/cian-connector/tests/test_input_schema.py" name="test_the_advertised_schema_states_the_room_enum" requirements="R-SCHEMA-LIMITS" title="The closed set of room counts is an enum in the schema." />
-    <test file="packages/mpstats-connector/tests/test_input_schema.py" name="test_the_advertised_schema_states_the_batch_limits" requirements="R-SCHEMA-LIMITS" title="The limits are machine-readable, not prose in the description." />
     <test file="packages/wb-connector/tests/test_batch_schema.py" name="test_the_advertised_schema_states_the_batch_limits" requirements="R-SCHEMA-LIMITS" title="The limits are machine-readable, not prose in the description." />
   </requirement>
   <requirement id="R-SEARCH-COUNT-HONEST" kind="requirement" state="tested">

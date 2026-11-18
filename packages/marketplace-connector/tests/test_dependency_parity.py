@@ -72,7 +72,7 @@ def _workspace_sources() -> dict:
 def _mounted_distributions() -> list[tuple[str, str]]:
     """(source name, distribution) pairs from the mounts table inside _mount_all.
 
-    Parsed with ast rather than imported: importing server.py mounts fourteen
+    Parsed with ast rather than imported: importing server.py mounts thirteen
     servers as a side effect, and an import-based check would measure whatever
     the current environment happens to resolve instead of what the package
     declares. The distribution name comes from the module path's top-level
@@ -121,7 +121,7 @@ def test_the_mounts_table_was_read() -> None:
     rows it already knows, including the two this file exists because of.
     """
     pairs = _mounted_distributions()
-    assert len(pairs) >= 14, f"expected the full mount table, got {pairs}"
+    assert len(pairs) >= 13, f"expected the full mount table, got {pairs}"
     for known in [
         ("wildberries", "wb-connector"),
         ("aliexpress", "aliexpress-connector"),

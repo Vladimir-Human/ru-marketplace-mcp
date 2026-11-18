@@ -22,7 +22,6 @@ members = [
     "marketplace-connector",
     "mcp-core",
     "megamarket-connector",
-    "mpstats-connector",
     "ozon-connector",
     "ru-marketplace-mcp",
     "taobao-connector",
@@ -1388,7 +1387,6 @@ dependencies = [
     { name = "lamoda-connector" },
     { name = "mcp-core" },
     { name = "megamarket-connector" },
-    { name = "mpstats-connector" },
     { name = "ozon-connector" },
     { name = "pydantic" },
     { name = "taobao-connector" },
@@ -1409,7 +1407,6 @@ requires-dist = [
     { name = "lamoda-connector", editable = "packages/lamoda-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "megamarket-connector", editable = "packages/megamarket-connector" },
-    { name = "mpstats-connector", editable = "packages/mpstats-connector" },
     { name = "ozon-connector", editable = "packages/ozon-connector" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "taobao-connector", editable = "packages/taobao-connector" },
@@ -1515,27 +1512,6 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=4.1.4,<5" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "playwright", specifier = ">=1.47" },
-    { name = "pydantic", specifier = ">=2.12" },
-    { name = "pydantic-settings", specifier = ">=2.2" },
-]
-
-[[package]]
-name = "mpstats-connector"
-version = "2.10.0"
-source = { editable = "packages/mpstats-connector" }
-dependencies = [
-    { name = "fastmcp" },
-    { name = "httpx" },
-    { name = "mcp-core" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastmcp", specifier = ">=4.1.4,<5" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pydantic-settings", specifier = ">=2.2" },
 ]
@@ -2250,7 +2226,6 @@ dependencies = [
     { name = "marketplace-connector" },
     { name = "mcp-core" },
     { name = "megamarket-connector" },
-    { name = "mpstats-connector" },
     { name = "ozon-connector" },
     { name = "taobao-connector" },
     { name = "wb-connector" },
@@ -2283,7 +2258,6 @@ requires-dist = [
     { name = "marketplace-connector", editable = "packages/marketplace-connector" },
     { name = "mcp-core", editable = "packages/mcp-core" },
     { name = "megamarket-connector", editable = "packages/megamarket-connector" },
-    { name = "mpstats-connector", editable = "packages/mpstats-connector" },
     { name = "ozon-connector", editable = "packages/ozon-connector" },
     { name = "taobao-connector", editable = "packages/taobao-connector" },
     { name = "wb-connector", editable = "packages/wb-connector" },

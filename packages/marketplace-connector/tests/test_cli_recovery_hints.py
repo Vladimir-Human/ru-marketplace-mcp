@@ -80,12 +80,6 @@ def _hints(mode: str) -> list[str]:
             cdp_reachable=True,
             install_mode=mode,
         ),
-        cli.next_step(
-            "mpstats",
-            "inconclusive",
-            {"auth": {"state": "inconclusive", "reason": "auth_missing"}},
-            install_mode=mode,
-        ),
         cli.next_step("avito", "error", {}, install_mode=mode),
     ]
     assert all(steps), "every situation must produce a next step"

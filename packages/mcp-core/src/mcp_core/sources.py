@@ -52,7 +52,6 @@ shipping.
 # MARKETPLACE_PRICE_WORDING: One qualification for marketplace old-price and discount descriptions.
 # CARD_TOOL_NAMES: Source -> card tool compare uses to inspect one offer.
 # FOREIGN_CURRENCY_SOURCES: Compare sources that do not quote roubles.
-# MOUNT_GATED_SOURCES: Sources the unified server mounts only when configured.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -76,7 +75,6 @@ __all__ = [
     "MARKETPLACE_PRICE_WORDING",
     "MOUNTABLE",
     "MOUNTS",
-    "MOUNT_GATED_SOURCES",
     "SELFCHECKS",
     "SOURCES",
     "UNBLOCK_PAGES",
@@ -145,8 +143,6 @@ class SourceSpec:
     unblock_page: str | None = None
     login_wall: bool = False
     drift_probe: bool = False
-    # Mounted only when its own credential is configured (R-MPSTATS-MOUNT-GATE).
-    mount_gated: bool = False
     # Classifieds: a search row never states new or used, only the card does (R-COMPARE-CONDITION-ON-CARD).
     condition_on_card: bool = False
     note: str = ""
@@ -489,24 +485,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         tools=4,
         note="fans out across all of the above",
     ),
-    SourceSpec(
-        name="mpstats",
-        hosts=("plugin.mpstats.io",),
-        auth_setting="MPSTATS_MP_AUTH",
-        package="mpstats-connector",
-        module="mpstats_connector.server",
-        console_script="mpstats-mcp",
-        tool_prefix="mpstats_",
-        mount="mpstats",
-        config_key="mpstats",
-        selfcheck="mpstats_selfcheck",
-        tools=2,
-        access="api_token",
-        currency="rub",
-        text_search=False,
-        mount_gated=True,
-        note="optional paid analytics — requires MPSTATS_MP_AUTH in the server environment",
-    ),
     # The project's own faces: no marketplace of their own, not selectable by
     # MARKETPLACE_SOURCES, but they are shipped servers with console scripts and
     # skills, so the registry has to know them (a package without a record is
@@ -672,9 +650,6 @@ COMPARE_SOURCES: tuple[str, ...] = tuple(spec.name for spec in _comparable())
 CARD_TOOL_NAMES: dict[str, str] = _card_tools()
 
 FOREIGN_CURRENCY_SOURCES: tuple[str, ...] = tuple(spec.name for spec in _comparable() if spec.currency != "rub")
-
-MOUNT_GATED_SOURCES: frozenset[str] = frozenset(spec.name for spec in _mounted() if spec.mount_gated)
-
 
 # START_BLOCK_SCHEMA_DESCRIPTIONS
 # Card-only sources remain available for verification, but compare_prices cannot

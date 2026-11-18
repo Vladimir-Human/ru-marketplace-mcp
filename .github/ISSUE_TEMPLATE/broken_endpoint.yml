@@ -39,7 +39,6 @@ body:
         - Citilink
         - AliExpress
         - Cian
-        - MPStats
         - Compare
     validations:
       required: true
@@ -87,7 +86,7 @@ body:
       description: >
         Paste the verbatim output of `marketplace-mcp doctor <source>` for the failing source
         (e.g. `marketplace-mcp doctor ozon`; sources: wildberries, ozon, yandex_market,
-        detsky_mir, avito, taobao, megamarket, lamoda, dns, citilink, aliexpress, cian, mpstats).
+        detsky_mir, avito, taobao, megamarket, lamoda, dns, citilink, aliexpress, cian).
         With `uvx`: `uvx ru-marketplace-mcp doctor <source>`. Do not paraphrase.
       render: text
     validations:
