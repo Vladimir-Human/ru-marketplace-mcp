@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # parse.py: item pages, seller blocks/profiles and search envelopes (pure parsing, moved out of this file).
@@ -101,7 +101,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import blocked_error, polite_wait, sync_curl_get, url_on_hosts
+from mcp_core.kit import blocked_error, bounded_attempt, polite_wait, sync_curl_get, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -293,7 +293,7 @@ async def _cdp_fetch(url: str, ctx: Context | None) -> tuple[int, str]:
         return result["status"], result["text"]
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
 
@@ -369,7 +369,7 @@ async def _fetch_item_page(url: str, ctx: Context | None) -> tuple[int, str, str
             return body
 
     try:
-        body = await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        body = await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
         return 200, body, "cdp"
     except NavBlocked as exc:
         return exc.status or 0, str(exc), "cdp"

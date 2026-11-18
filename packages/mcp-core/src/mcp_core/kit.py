@@ -26,8 +26,8 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # START_MODULE_CONTRACT
 # PURPOSE: Provide the shared connector assembly — pacing, refusal errors, capped reads and paced CDP extraction.
 # SCOPE: Mechanism only; per-source state stays in each connector, curl_cffi arrives as an argument and chrome_cdp imports lazily.
-# DEPENDS: mcp_core.pacing,errors; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
-# LINKS: M-KIT; M-PACING; M-ERRORS; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs; R-OUTPUT-PAGE-URLS.
+# DEPENDS: mcp_core.pacing,errors; M-ATTEMPT-DEADLINE; stdlib asyncio,json,re,urllib.parse; the caller's curl_cffi get; M-CHROME-CDP inside render_json.
+# LINKS: M-KIT; M-PACING; M-ERRORS; M-ATTEMPT-DEADLINE; M-CHROME-CDP; R-TRANSPORT; R-INPUT-TRUST; R-CDP-NAV-TIMEOUT.dom-parsed; R-CDP-QUEUE-CREDIT; R-NAV-HOSTS.invariant; R-NAV-HOSTS.kept-inputs; R-OUTPUT-PAGE-URLS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # polite_wait: Enforce this source's pacing gap, reading the connector's live min_gap.
@@ -38,6 +38,7 @@ a connector test that patches its module's ``cffi.get`` on the seam it knows.
 # on_bot_check_page: Tell whether a page URL is the shared anti-bot check (/xpvnsulc/).
 # sync_curl_get: Tier-1 GET whose streamed body is capped and decoded.
 # render_json: Open a page over CDP under the connector's lock, run an extractor, parse its JSON.
+# bounded_attempt: Re-export of the transport attempt deadline: a browser attempt whose navigation wait is not charged to its timeout.
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -51,9 +52,11 @@ from typing import Any
 
 from mcp_core.errors import ParserDriftError, TransportDownError, raise_tool_error
 from mcp_core.pacing import Pacer
+from mcp_core.transport.attempt_deadline import bounded_attempt
 
 __all__ = [
     "blocked_error",
+    "bounded_attempt",
     "host_checked_id",
     "page_link",
     "polite_wait",

@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -74,7 +74,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import polite_wait, sync_curl_get, url_on_hosts
+from mcp_core.kit import bounded_attempt, polite_wait, sync_curl_get, url_on_hosts
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -430,7 +430,7 @@ async def _cdp_fetch_json(api_url: str, ctx: Context | None) -> tuple[int, str]:
         return result["status"], result["text"]
 
     try:
-        return await asyncio.wait_for(_attempt(), timeout=max(0.01, float(TIMEOUT)))
+        return await bounded_attempt(_attempt(), timeout_s=max(0.01, float(TIMEOUT)))
     except TimeoutError:
         return 0, f"CDP timeout after {TIMEOUT}s"
 
