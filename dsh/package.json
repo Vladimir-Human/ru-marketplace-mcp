@@ -1,7 +1,7 @@
 {
   "name": "ru-marketplace-mcp-dsh",
   "version": "2.10.0",
-  "description": "12 Russian and Chinese marketplaces and classifieds (Wildberries, Ozon, Yandex Market, Avito, Cian, AliExpress, Taobao, Detsky Mir, Megamarket, Lamoda, DNS, Citilink) as MCP servers and 14 Agent Skills for DeepSeek Harness",
+  "description": "Read-only MCP servers and cross-marketplace price comparison for 12 Russian and Chinese marketplaces (Wildberries, Ozon, Yandex Market, Avito, Cian, AliExpress, Taobao, Detsky Mir, Megamarket, Lamoda, DNS, Citilink) plus 14 Agent Skills for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/Vladimir-Human/ru-marketplace-mcp/tree/main/dsh#readme",
@@ -24,9 +24,15 @@
     "avito",
     "aliexpress",
     "taobao",
+    "dns",
+    "citilink",
+    "lamoda",
+    "megamarket",
+    "detsky-mir",
     "cian",
     "russia",
     "ecommerce",
+    "real-estate",
     "price-comparison"
   ],
   "files": [

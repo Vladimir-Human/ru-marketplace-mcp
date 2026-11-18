@@ -1,8 +1,12 @@
 # ru-marketplace-mcp for DeepSeek Harness
 
-Read-only MCP servers for Russian marketplaces: prices, stock, ratings, reviews
-and cross-marketplace price comparison. This bundle ships 14 Agent Skills plus
-three mutually exclusive MCP server rows that are **off by default**.
+Read-only MCP servers for 12 Russian and Chinese marketplaces and classifieds:
+prices, stock, ratings, reviews, Cian real estate, and cross-marketplace price
+comparison. This bundle ships 14 Agent Skills plus three mutually exclusive MCP
+server rows that are **off by default**. (Using Claude, Cursor, VS Code,
+Windsurf, Antigravity, Gemini CLI, or Codex instead? Run `uvx ru-marketplace-mcp setup`
+or `marketplace-mcp install <client>` — see [docs/QUICKSTART.md](../docs/QUICKSTART.md)
+and [llms-install.md](../llms-install.md).)
 
 ## Why off by default
 
@@ -21,9 +25,9 @@ from each server's `tools/list` by `scripts/gen_tools_doc.py` (the estimate
 | `marketplace-mcp` (full) | ~13.4k tokens per request | 39 |
 <!-- tools-cost-dsh:end -->
 
-The 11 `*_selfcheck` tools that previously inflated the full server to 45 tools
-are now CLI-only (`marketplace-mcp doctor`); only model-facing tools are
-published over MCP.
+The per-source `*_selfcheck` probes are CLI-only (`marketplace-mcp doctor`);
+only model-facing tools are published over MCP. You can also print the raw
+`cordis.patch.yml` snippet directly with `uv run marketplace-mcp install dsh`.
 
 ## Requirements
 
@@ -132,11 +136,20 @@ published GHCR image instead of a local clone:
       - --rm
       - -i
       - ghcr.io/vladimir-human/ru-marketplace-mcp:2.10.0
+      - compare-mcp
     failOnStartupError: false
 ```
 
-The image defaults to the unified server. Its tool set matches that release tag;
+Omit `compare-mcp` to run the default 39-tool unified server (`marketplace-mcp`),
+or pass `decision-mcp` (5 tools). Its tool set matches that release tag;
 unreleased tools in this source checkout are not present in older images.
+
+## Health check & browser unblock
+
+Before debugging empty or blocked results, run
+`uv run --directory "$RU_MARKETPLACE_MCP_DIR" marketplace-mcp doctor` (and
+`browser start` / `unblock <source>` for Chrome-backed marketplaces). See
+[docs/QUICKSTART.md](../docs/QUICKSTART.md).
 
 ## Source
 

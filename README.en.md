@@ -1,6 +1,6 @@
-# ru-marketplace-mcp
+# ru-marketplace-mcp — MCP Servers for Russian & Chinese Marketplaces
 
-[Русский](README.md) · **English**
+[Русский](README.md) · **English** · [AI Agent Install Guide](llms-install.md) · [llms.txt](llms.txt)
 
 [![CI](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladimir-Human/ru-marketplace-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ru-marketplace-mcp.svg)](https://pypi.org/project/ru-marketplace-mcp/)
@@ -10,13 +10,18 @@
 [![Glama MCP](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Vladimir-Human/ru-marketplace-mcp)
 [![npm](https://img.shields.io/npm/v/ru-marketplace-mcp-dsh.svg?label=npm%20%28dsh%29)](https://www.npmjs.com/package/ru-marketplace-mcp-dsh)
 
-**MCP servers for Russian and Chinese marketplaces.** Read prices, stock, ratings,
-reviews and seller identity from Wildberries, Ozon, Yandex Market, Detsky Mir, Avito,
-AliExpress, Taobao, Megamarket, Lamoda, DNS and Citilink, then compare product prices
-in one call. Cian adds real-estate search and listing cards separately.
+Live prices, stock, ratings, reviews, and seller legal identity across 12 Russian
+and Chinese platforms: **Wildberries**, **Ozon**, **Yandex Market**, **Avito**,
+**AliExpress**, **Taobao**, **DNS**, **Citilink**, **Megamarket**, **Lamoda**,
+**Detsky Mir**, plus **Cian** real estate.
 
-Read-only. No credentials, no API keys, no account required — the marketplaces with
-hard anti-bot are read through your own Chrome.
+`compare_prices` ranks product prices across marketplaces in one call, separates
+accessories and flash drives from the actual product (`cheapest_comparable`), and
+keeps conditional wallet/card discounts (`WB Wallet`, `Yandex Pay`, AliExpress
+coupons) out of regular-price rankings. Read-only, with no API keys or seller
+accounts: open endpoints use anonymous HTTP, and anti-bot-gated sites run through
+your own dedicated Chrome (Taobao and Megamarket need a shopper login in that
+browser).
 
 <p align="center">
   <img src="docs/assets/demo-compare.svg" width="760"
@@ -25,16 +30,146 @@ hard anti-bot are read through your own Chrome.
 
 <sub>Example call from the [cross-marketplace section](#cross-marketplace--compare_); product names are as the marketplaces list them.</sub>
 
+## Quickstart
+
+Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/). Without a
+checkout, one command installs from PyPI, detects your MCP clients, and wires the
+connection (`--dry-run` shows the plan and writes nothing):
+
 ```console
 uvx ru-marketplace-mcp setup
 ```
 
-Installs from PyPI and wires the detected client (`--dry-run` shows the plan and writes nothing). Or in one click: [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=marketplace&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22ru-marketplace-mcp%22%2C%22compare-mcp%22%5D%7D) [![Install in Cursor](https://img.shields.io/badge/Cursor-Install_MCP-000000?logo=cursor&logoColor=white)](https://cursor.com/en/install-mcp?name=marketplace&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJydS1tYXJrZXRwbGFjZS1tY3AiLCJjb21wYXJlLW1jcCJdfQ==) · details in [Quickstart](#quickstart).
+Or in one click:
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=marketplace&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22ru-marketplace-mcp%22%2C%22compare-mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_MCP-000000?logo=cursor&logoColor=white)](https://cursor.com/en/install-mcp?name=marketplace&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJydS1tYXJrZXRwbGFjZS1tY3AiLCJjb21wYXJlLW1jcCJdfQ==)
+· for **Claude Desktop** without a terminal, open `ru-marketplace-mcp-compare-<version>.mcpb` from [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) (checked on Windows, not on macOS).
 
-[First successful query](docs/QUICKSTART.md) walks through installation, choosing
-a server, targeted health checks, and verifying an offer before recommending it.
+### Choose a profile
 
-**2.7.0 verification:** on 30 October, from one address, Wildberries fell back to its rendered search page after the API refused (HTTP 403) and returned 40 results, all priced. The other sources' code is unchanged since v2.6.0; they were checked in the [v2.6.0 run](docs/releases/RELEASE_NOTES_v2.6.0.md) the same day (12 of 13 sources; MPStats had no token). [v2.7.0 details](docs/releases/RELEASE_NOTES_v2.7.0.md).
+Every mounted MCP tool schema is paid on each model request, so `setup` and
+`install` default to the compact `compare` profile:
+
+| Profile (`--profile`) | Server command | Tools | Context cost / request | Best for |
+| --- | --- | ---: | ---: | --- |
+| **`compare`** *(default)* | `compare-mcp` | 4 | ≈1.8k tokens | Cross-marketplace price comparison (`compare_prices`) and offer card verification (`compare_verify_offer`) |
+| **`decision`** | `decision-mcp` | 5 | ≈2.0k tokens | Everything in `compare` plus shortlist card & review inspection (`decision_inspect`) |
+| **`full`** | `marketplace-mcp` | 39 | ≈13.4k tokens | Every per-marketplace search, card, review, seller-identity, catalog tool, and Cian real estate (filterable via `MARKETPLACE_SOURCES`) |
+| Single marketplace (`--per-source`) | `wb-mcp`, `ozon-mcp`, `cian-mcp`, … | 2–8 | minimal | Only one marketplace or Cian real estate |
+
+> **Security and limits:** Do not run these servers in one agent session with tools that read private data and can send it out without your approval, and use a separate scraping Chrome profile without email or banking ([SECURITY.md](SECURITY.md#security)).
+
+[First successful query](docs/QUICKSTART.md) · [Tool reference](docs/TOOLS.md) ·
+[Architecture](docs/ARCHITECTURE.md) · [Anti-bot notes](docs/ANTI_BOT.md)
+
+### Connecting an MCP client (all 9 targets)
+
+`marketplace-mcp setup` auto-detects **Claude Desktop**, **Cursor**, **Claude Code**,
+**VS Code**, **Windsurf**, **Antigravity**, **Gemini CLI**, and **Codex CLI**,
+writes (or prints) the `compare` profile by default, starts the scraping Chrome,
+runs `doctor`, and offers `unblock` (`--dry-run`, `--no-browser`, `--no-doctor`).
+
+To configure one target directly:
+
+```console
+uvx ru-marketplace-mcp install <client> --write --profile compare
+```
+
+| `<client>` | Client | Config target & behavior |
+| --- | --- | --- |
+| `claude` | Claude Desktop | Merges `mcpServers.marketplace` into `%APPDATA%\Claude\claude_desktop_config.json` (Win), `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `~/.config/Claude/claude_desktop_config.json` (Linux) with `.bak-<timestamp>` backup. |
+| `cursor` | Cursor | Merges `mcpServers.marketplace` into `~/.cursor/mcp.json` with `.bak-<timestamp>` backup. |
+| `vscode` | VS Code | Merges **`servers.marketplace`** (with `"type": "stdio"`, **not** `mcpServers`) into `Code/User/mcp.json` with `.bak-<timestamp>` backup. |
+| `windsurf` | Windsurf | Merges `mcpServers.marketplace` into `~/.codeium/windsurf/mcp_config.json` with `.bak-<timestamp>` backup. |
+| `antigravity` | Antigravity | Merges `mcpServers.marketplace` into `~/.gemini/config/mcp_config.json` with `.bak-<timestamp>` backup. |
+| `gemini` | Gemini CLI | Merges `mcpServers.marketplace` into `~/.gemini/settings.json` with `.bak-<timestamp>` backup. |
+| `claude-code` | Claude Code | Prints the exact `claude mcp add marketplace --scope user -- ...` command (run it in your shell, or `/plugin install ru-marketplace-mcp --marketplace Vladimir-Human/ru-marketplace-mcp`). |
+| `codex` | Codex CLI | Prints the exact `codex mcp add marketplace -- ...` command (run it in your shell). |
+| `dsh` | DeepSeek Harness | Prints `cordis.patch.yml` rows (plugin bundle install below and in [dsh/README.md](dsh/README.md)). |
+
+`--write --dry-run` previews changes without writing; `--force` replaces an
+existing conflicting `marketplace` entry; `--per-source` emits per-source
+entries across all 15 console scripts (`wb-mcp`, `ozon-mcp`, `yandex-mcp`,
+`detmir-mcp`, `avito-mcp`, `taobao-mcp`, `megamarket-mcp`, `lamoda-mcp`,
+`dns-mcp`, `citilink-mcp`, `aliexpress-mcp`, `cian-mcp`, `compare-mcp`,
+`decision-mcp`, `marketplace-mcp`).
+
+If you prefer to paste JSON manually (replace with `"servers"` and `"type": "stdio"` in VS Code):
+
+```json
+{
+  "mcpServers": {
+    "marketplace": {
+      "command": "uvx",
+      "args": ["--from", "ru-marketplace-mcp", "compare-mcp"]
+    }
+  }
+}
+```
+
+Browser and health verbs:
+- `marketplace-mcp browser start` — launch the scraping Chrome on-screen (`--hidden` for off-screen);
+- `marketplace-mcp browser status` — check CDP reachability, Chrome version, tabs, and window position;
+- `marketplace-mcp browser show` — bring an off-screen Windows scraping Chrome window on-screen;
+- `marketplace-mcp unblock <source>` — open the site's login/check page in a new tab, wait while you pass it yourself, and re-check only that source;
+- `marketplace-mcp doctor` — exits `0` healthy, `1` parser drift (alarm), `2` blocked/inconclusive (`budget_refused` never counts as healthy), `3` status-file write failure, `4` checker/usage failure (alarm).
+
+**DeepSeek Harness (dsh)** installs as a plugin bundle from [`dsh/`](dsh/README.md) (`pnpm` must be on PATH):
+
+```console
+dsh plugin --profile web add ru-marketplace-mcp-dsh
+# or directly from GitHub:
+dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
+```
+
+That gives you 14 skills immediately and **no** MCP tools: all three MCP rows stay
+disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
+<!-- tools-cost:start -->
+A mounted server is paid on every request — ≈1.8k tokens for the
+recommended price-comparison profile, ≈2.0k for the decision profile and
+≈13.4k for the full set (estimated from `tools/list`; details in
+[docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
+<!-- tools-cost:end -->
+[dsh/README.md](dsh/README.md) covers enabling it and the full mode.
+
+---
+
+## Supported marketplaces (12 sources)
+
+| Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
+| ----------------- | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Wildberries**   | 8     | anonymous HTTP (falls back to your Chrome on 403)                             | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
+| **Yandex Market** | 2     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
+| **Detsky Mir**    | 3     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
+| **Ozon**          | 3     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
+| **Avito**         | 3     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
+| **Taobao**        | 2     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
+| **Megamarket**    | 2     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
+| **Lamoda**        | 2     | cards: HTTP GraphQL → Chrome on refusal; search via Chrome                    | Search, cards with sizes                                                                           |
+| **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
+| **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                                                                     |
+| **Cian**          | 2     | your Chrome (WAF by IP)                                                       | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
+| **Compare**       | 4     | queries the goods marketplaces above                                          | "Where is this cheapest?", card verification, source list, browser handoff snapshot                |
+
+Anonymous, no browser: Wildberries, Yandex Market and Detsky Mir (when WB's API
+returns 403, `wb_search` and `wb_card` re-read through your Chrome automatically).
+Lamoda cards try HTTP GraphQL first and need your Chrome (CDP) only for the
+fallback tier. The rest need your Chrome (CDP), and Taobao and Megamarket
+additionally need you signed into a shopper account in that browser — without it
+Taobao hits a login wall and Megamarket returns an empty result. Avito blocks
+datacenter IPs, while a Russian residential IP works when requests are spaced
+apart. Connectors hold a deliberate gap between CDP calls so back-to-back bursts
+do not drop sessions. Run `marketplace-mcp doctor` from your own environment for
+the current state.
+
+MPStats analytics moved to the official MPStats MCP server (`https://mcp.mpstats.io/mcp?token=<your MPStats token>`) and are not part of `ru-marketplace-mcp`.
+
+37 tools across 13 stdio MCP servers sharing one runtime (`mcp-core`), plus
+`decision-mcp` (5 tools) and the unified `marketplace-mcp` that mounts them all
+under one client entry and adds `marketplace_sources` and `marketplace_health`
+(39 tools total). stdio is the default; HTTP transport is opt-in for remote
+deployment — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### A real answer
 
@@ -88,162 +223,6 @@ a server, targeted health checks, and verifying an offer before recommending it.
 ```
 
 The raw cheapest listing is a USB stick whose title contains "128", so the answer names `cheapest_comparable`, the phone itself, and warns about the price outlier. The Wildberries price that needs WB Wallet is shown but not ranked. Citilink refused this call, and the answer says it is incomplete.
-
-## What you get
-
-| Server            | Tools | What it takes to read                                                         | Notes                                                                                              |
-| ----------------- | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **Wildberries**   | 8     | anonymous HTTP                                                                | Search, cards, reviews, buyer questions, seller legal identity, catalog tree and category listings |
-| **Yandex Market** | 2     | anonymous HTTP                                                                | Multi-seller prices, star distribution, reviews                                                    |
-| **Detsky Mir**    | 3     | anonymous HTTP                                                                | Kids' goods, offline store stock, category listings                                                |
-| **Ozon**          | 3     | your Chrome; often no browser from a residential IP                           | Search, cards, reviews                                                                             |
-| **Avito**         | 3     | your Chrome + a Russian residential IP and spaced requests — else an IP block | Classified search, cards, seller reputation                                                        |
-| **Taobao**        | 2     | your Chrome with an active Taobao login                                       | Search and cards, prices in yuan                                                                   |
-| **Megamarket**    | 2     | your Chrome with an active login — an anonymous session reads empty           | Search and cards via the mobile API                                                                |
-| **Lamoda**        | 2     | cards: HTTP GraphQL → Chrome on refusal; search via Chrome                             | Search, cards with sizes                                                                           |
-| **DNS**           | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
-| **Citilink**      | 2     | your Chrome (Qrator)                                                          | Electronics search and cards                                                                       |
-| **AliExpress**    | 2     | your Chrome (x5sec)                                                           | Search and cards, ruble prices                            |
-| **Cian**          | 2     | your Chrome (WAF by IP)                                                      | Real estate: filter search (sale, long-term rent, daily) and one offer's card                      |
-| **Compare**       | 4     | aggregates the above                                                          | "Where is this cheapest?" in one call                                                              |
-
-Anonymous, no browser: Wildberries, Yandex Market and Detsky Mir. Lamoda cards
-try HTTP GraphQL first and need your Chrome (CDP) only for the fallback tier.
-The rest need your logged-in Chrome (CDP). Taobao and Megamarket additionally need
-you signed into the marketplace itself — without it Taobao hits a login wall and
-Megamarket returns an empty result. Avito also blocks by IP: from a datacenter
-address it is a flat refusal, from a Russian residential one it works as long as
-you do not burst requests. Requests to the CDP sources are paced apart — a run of
-back-to-back calls degrades them (DNS and Taobao both dropped that way in testing),
-so the connectors hold a gap between calls themselves. Run `marketplace-mcp doctor`
-from your own session for the current state.
-
-MPStats analytics now come from the official MPStats MCP server, `https://mcp.mpstats.io/mcp?token=<your MPStats token>`; ru-marketplace-mcp 2.10.x is the last version with the `mpstats_*` tools.
-
-37 tools across 13 stdio MCP servers, sharing one runtime (`mcp-core`), plus the
-unified `marketplace-mcp` that mounts them all under one client entry. It adds two
-tools of its own — `marketplace_sources` (which connectors mounted, and which dropped
-out and why) and `marketplace_health` (is Chrome up, which hosts are cooling down,
-which page unblocks a source) — so it exposes 39 tools: the 37 mounted tools plus those two. stdio is the default;
-HTTP transport is opt-in for remote deployment — see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
-## Quickstart
-
-### Security and limits
-- Do not run it in one agent session with tools that read private data and can send it out without your approval.
-- Use a separate scraping Chrome profile, without email or banking. [Details](SECURITY.md#security).
-
-Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
-
-Without a checkout, install from PyPI and wire the detected client in one step
-(`--dry-run` shows the plan and writes nothing):
-
-```console
-uvx ru-marketplace-mcp setup
-```
-
-Publishing to PyPI (maintainer): [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer).
-
-From source, for development:
-
-```bash
-git clone https://github.com/Vladimir-Human/ru-marketplace-mcp.git
-cd ru-marketplace-mcp
-uv sync --all-packages
-uv run pytest -q -m "not live and not cdp"    # offline tests, no network needed
-```
-
-Client configuration mirrors the [Russian section](README.md#подключение-к-mcp-клиенту). The shortest path is the
-guided setup:
-
-```console
-marketplace-mcp setup
-```
-
-It detects Claude Desktop, Cursor and Claude Code, writes the config with the
-compare profile by default, starts the scraping Chrome, runs doctor's checks and
-offers `unblock` for a walled source. `--dry-run` prints the steps and files
-without writing, starting or requesting anything.
-
-For Claude Desktop without a terminal, download the one-click bundle `ru-marketplace-mcp-compare-<version>.mcpb` from [GitHub Releases](https://github.com/Vladimir-Human/ru-marketplace-mcp/releases) and open it in Claude Desktop (installs the `compare` profile via `uv`; checked on Windows, not on macOS).
-
-To write one named client's config instead, let the CLI write the file:
-
-```console
-marketplace-mcp install claude --write
-```
-
-It adds one `marketplace` entry to the client's own config (Claude Desktop:
-`%APPDATA%\Claude\claude_desktop_config.json` on Windows,
-`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
-`~/.config/Claude/claude_desktop_config.json` on Linux; Cursor: `~/.cursor/mcp.json`).
-By default that entry runs `compare-mcp` — the `compare` profile: 4 price-comparison
-tools, the cheapest per request. `--profile decision` adds shortlist card
-inspection (5 tools); `--profile full` runs `marketplace-mcp` with every per-source
-tool, several times the cost (measured per profile in [docs/TOOLS.md](docs/TOOLS.md)).
-The entry name stays `marketplace`. `uv` and your checkout
-path are filled in as absolute paths, other servers and settings in the file stay
-untouched, and the old file is kept as `<file>.bak-<timestamp>`. Restart the client
-afterwards; `--dry-run` shows the result without writing, and `--per-source` writes
-one entry per source instead (it cannot be combined with `--profile`). Each server is
-also a console script (`wb-mcp`, `ozon-mcp`, `yandex-mcp`, `detmir-mcp`, `aliexpress-mcp`,
-`cian-mcp`, `compare-mcp`) launched through `uv run --directory /path/to/repo <script>`.
-`marketplace-mcp install [claude|claude-code|cursor|dsh]` prints the selected profile's
-`marketplace` entry with your checkout's real path filled in — no placeholder to
-hand-edit — or the console-script path on PATH when installed as a wheel; an unknown
-client name or profile is rejected. The `dsh` target prints a `cordis.patch.yml` row
-instead of `mcpServers` JSON — see [dsh/README.md](dsh/README.md).
-
-If you prefer to paste the config yourself, start with this one entry (replace the
-path with your clone from above):
-
-```json
-{
-  "mcpServers": {
-    "marketplace": {
-      "command": "uv",
-      "args": ["run", "--frozen", "--directory", "C:/projects/ru-marketplace-mcp", "compare-mcp"]
-    }
-  }
-}
-```
-
-The browser tier has more verbs: `marketplace-mcp browser start` (launch the
-scraping Chrome; on-screen by default, `--hidden` for off-screen),
-`marketplace-mcp browser status` (is the CDP endpoint reachable, which Chrome
-answers, how many page targets it holds and where its window is) and
-`marketplace-mcp browser show` (bring the scraping Chrome window on-screen — the
-connector's autostart parks it off-screen on Windows, and without that you can
-neither log in by hand nor pass a site's check). When `doctor` reports a wall,
-`marketplace-mcp unblock <source>` opens that page in a new tab, waits while you
-pass the check or log in, and re-checks only that source. None of these sends a
-request to a website on its own and none solves the check for you.
-
-**DeepSeek Harness (dsh)** installs as a plugin bundle rather than an `mcpServers`
-entry, from the [`dsh/`](dsh/README.md) subdirectory (`pnpm` must be on PATH):
-
-```console
-dsh plugin --profile web add ru-marketplace-mcp-dsh
-# or directly from GitHub:
-dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
-```
-
-That gives you 14 skills immediately and **no** MCP tools: all three MCP rows stay
-disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
-<!-- tools-cost:start -->
-A mounted server is paid on every request — ≈1.8k tokens for the
-recommended price-comparison profile, ≈2.0k for the decision profile and
-≈13.4k for the full set (estimated from `tools/list`; details in
-[docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
-<!-- tools-cost:end -->
-[dsh/README.md](dsh/README.md) covers enabling it and the full mode.
-
-After connecting, run `marketplace-mcp doctor`. Its exits are `0` all selected
-checks healthy, `1` parser drift, `2` acknowledged block or unverified source,
-`3` status-file write failure, and `4` checker or doctor setup/usage failure
-(including an unknown source). Alarm on `1` and `4`, not on `2`. A budget
-refusal carries `budget_refused` and never counts as a healthy check.
 
 ## The tools
 
@@ -452,16 +431,19 @@ only need it for the fallback. Your everyday Chrome can stay open: the launcher
 starts a second Chrome with its own `--user-data-dir`, on-screen. If the window
 did go off-screen (the connector's autostart on Windows), bring it back (to log
 in by hand or pass a site's check) with `marketplace-mcp browser show`. Nine
-sources run through CDP in total: these plus
-Taobao, AliExpress, Cian, Ozon and Avito; for Ozon and Avito, Chrome is also only the
-fallback tier when the anonymous one is challenged.
+sources are browser-backed in total (these four plus Taobao, AliExpress, Cian,
+Ozon and Avito; for Ozon and Avito, Chrome is only the fallback tier when tier 1
+is challenged), and Wildberries also falls back to Chrome over CDP by default
+when its API returns 403 (`WB_DOM_FALLBACK=1`).
 
 ### Cross-marketplace — `compare_*`
 
-| Tool                                               | What it does                              |
-| -------------------------------------------------- | ----------------------------------------- |
-| `compare_prices(query, per_source_limit, sources)` | Every marketplace at once, ranked         |
-| `compare_sources()`                                | Which marketplaces this install can query |
+| Tool                                                                                                          | What it does                                                |
+| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `compare_prices(query, per_source_limit, sources, in_stock_only)`                                             | Every searchable marketplace at once, ranked                |
+| `compare_verify_offer(source, product_id_or_url, expected_price_rub, expected_identity, expected_variant_id)` | Verify one winning offer against its live card tool         |
+| `compare_sources()`                                                                                           | Which marketplaces this install can query                   |
+| `compare_browser_snapshot(handoff_id)`                                                                        | Return a retained challenge viewport as an MCP image        |
 
 ```
 compare_prices("кроссовки мужские")
@@ -545,10 +527,10 @@ Every setting is an environment variable with a per-connector prefix. All option
 
 | Prefix               | Common knobs                                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `WB_`                | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY`                                |
+| `WB_`                | `TIMEOUT`, `MIN_GAP`, `DEFAULT_DEST`, `NET_RETRIES`, `MAX_BODY_BYTES`, `CACHE_TTL`, `PROXY`, `TRANSPORT`, `DOM_FALLBACK`   |
 | `YANDEX_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
 | `DETMIR_`            | `REGION` (`RU-MOW`, `RU-SPE`, and others), `CACHE_TTL`, `PROXY`                                                            |
-| `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`                                                                  |
+| `OZON_`              | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `CHROME_COMPAT`                                                 |
 | `AVITO_`             | `TIMEOUT`, `MIN_GAP`, `IMPERSONATE`, `CACHE_TTL`, `PROXY`, `LOCATION_ID`                                                   |
 | `TAOBAO_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `ALI_`               | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
@@ -556,7 +538,7 @@ Every setting is an environment variable with a per-connector prefix. All option
 | `LAMODA_`            | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `PROXY`                                                                                 |
 | `DNS_` / `CITILINK_` | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`                                                                                          |
 | `CIAN_`              | `TIMEOUT`, `MIN_GAP`, `CACHE_TTL`, `MAX_BODY_BYTES`, `REGION`                                                              |
-| `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`                                                |
+| `CHROME_`            | `CDP_HOST`, `CDP_PORT`, `SCRAPING_PROFILE`, `BINARY`, `HEADLESS`, `STEALTH`, `NAV_TIMEOUT_MS`, `CHALLENGE_HANDOFF_S`       |
 | `COMPARE_`           | `SOURCE_TIMEOUT`                                                                                                           |
 | `MCP_`               | `TRANSPORT` (`stdio` default, or `http`), `HTTP_HOST`, `HTTP_PORT`                                                         |
 
@@ -602,8 +584,10 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy                                   # the tree lives in [tool.mypy] files
 uv run mypy --platform win32                  # catches Windows-only type errors
 uv run python scripts/check_no_print.py       # a print() breaks JSON-RPC
-uv run python scripts/check_versions.py       # one version across all 93 places
+uv run python scripts/check_versions.py       # one version across all tracked files
 ```
+
+Publishing to PyPI (maintainer): [DEPLOYMENT.md — PyPI](docs/DEPLOYMENT.md#pypi-maintainer). Adding a marketplace: [docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md).
 
 Some tests execute a connector's **real extractor JavaScript** against captured
 markup and check the output against the prices the page was showing when it was
@@ -622,8 +606,6 @@ depends on it.
 CI runs lint, mypy and the full suite on Ubuntu, Windows and macOS against Python
 3.12 and 3.13; 3.14 (all three OSes) and 3.15 (Ubuntu, Windows) run too, without blocking a merge. Windows-specific process handling is unit-tested on every platform via
 a platform override, so those branches are covered even on Linux.
-
-Adding a marketplace: [docs/ADDING_A_SOURCE.md](docs/ADDING_A_SOURCE.md).
 
 ## Reliability
 
