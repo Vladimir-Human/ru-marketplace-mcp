@@ -35,19 +35,29 @@ async def test_a_recorded_query_picks_labelled_winners(stem: str) -> None:
     case = await score._case(stem, score.recording(stem), "recorded")
 
     assert case["cheapest"]["verdict"] == "exact", case
-    assert case["cheapest_comparable"]["verdict"] == "exact", case
+    assert case["cheapest_comparable"]["verdict"] == score.expected(score.LABELS[stem]["cheapest_comparable"]), case
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-SCORE")
 @pytest.mark.parametrize("trap", score.TRAPS, ids=lambda trap: f"{trap['recording']}-{trap['class']}")
 async def test_a_constructed_trap_never_wins_cheapest_comparable(trap: dict[str, str]) -> None:
     case = await score._case(
-        trap["recording"], score.apply_trap(score.recording(trap["recording"]), trap), trap["class"]
+        trap["recording"], score.apply_trap(score.recording(trap["recording"]), trap), trap["class"], trap
     )
 
     assert case["cheapest_comparable"]["winner"] != [trap["source"], trap["product_id"]]
-    assert case["cheapest_comparable"]["verdict"] == "exact", case
+    assert case["cheapest_comparable"]["verdict"] == case["cheapest_comparable"]["expected"], case
     assert case["cheapest"]["verdict"] == "exact", case
+
+
+@pytest.mark.req("R-COMPARE-BENCHMARK-SCORE")
+def test_an_empty_label_set_expects_no_winner_and_a_trap_may_name_its_own_set() -> None:
+    assert score.expected([]) == "abstain"
+    assert score.expected([["dns", "a"]]) == "exact"
+    overriding = [trap for trap in score.TRAPS if "cheapest_comparable" in trap]
+    assert overriding, "a trap that retitles a labelled winner names the set that then stands"
+    for trap in overriding:
+        assert [trap["source"], trap["product_id"]] not in trap["cheapest_comparable"]
 
 
 @pytest.mark.req("R-COMPARE-BENCHMARK-SCORE")

@@ -1,0 +1,881 @@
+{
+  "query": "электрическая зубная щетка oral-b io 9",
+  "captured_at": "2026-11-17T19:19:49.698759Z",
+  "sources": {
+    "aliexpress": {
+      "response": {
+        "items": [
+          {
+            "item_id": "1005004225453149",
+            "title": "Электрическая зубная щетка Oral B Vitality 3D White для взрослых",
+            "price_rub": 2309.0,
+            "rating": 4.7,
+            "url": "https://aliexpress.ru/item/1005004225453149.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S6ac95832b2ea4054b70ead2783a71051n.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010328348307",
+            "title": "Oral-B Io7 Deep Clean + Protect Электрическая зубная щетка",
+            "price_rub": 16940.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005010328348307.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sdeff6d8d1cf648309bacb91e82ddf7b8A.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012532566125",
+            "title": "Электрическая зубная щетка Dr Yadent роторная 3 режима SOFT 45 дней",
+            "price_rub": 1979.0,
+            "rating": 3.7,
+            "url": "https://aliexpress.ru/item/1005012532566125.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Se198b87605704aaf8e9c93a5ad48e2842.png_480x480.png"
+          },
+          {
+            "item_id": "1005008062720521",
+            "title": "Oral B iO9 Электрическая зубная щетка",
+            "price_rub": 23709.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008062720521.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S81c53b9e9df94959a86f63538894f2ddX.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006995529028",
+            "title": "Электрическая зубная щетка Oral B IO3 серии IO с 3 режимами чистки для ухода за зубами, сменные насадки для зубной щетки",
+            "price_rub": 8972.0,
+            "rating": 4.9,
+            "url": "https://aliexpress.ru/item/1005006995529028.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sb55b6f19ce2c4cbeab120b547f8f42fcd.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005013128577560",
+            "title": "Насадки для электрической зубной щетки Oral IO CW72-i-wh",
+            "price_rub": 2071.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013128577560.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/A10482330ced9409593648e885ec74af1h.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008738372699",
+            "title": "Электрическая зубная щетка Oral B Pro4 / Pro2 Smart Sensor с 3D-соническим вращательным механизмом",
+            "price_rub": 6189.0,
+            "rating": 4.3,
+            "url": "https://aliexpress.ru/item/1005008738372699.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S4578e34048a247b6a6037053b6467a2ex.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005005743427897",
+            "title": "Oral B Pro 4 Ultra электрическая зубная щетка",
+            "price_rub": 6329.0,
+            "rating": 4.8,
+            "url": "https://aliexpress.ru/item/1005005743427897.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S38f0888e28a34a20b5b0df7239a6a6afd.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005005551691992",
+            "title": "Насадки для электрической зубной щетки Oral-B Basic B 20 штук",
+            "price_rub": 469.0,
+            "rating": 4.8,
+            "url": "https://aliexpress.ru/item/1005005551691992.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S5df980b9a7474bb59ef411e5b4efd7d3g.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005006239304442",
+            "title": "Oral-B iO7 Электрическая зубная щетка",
+            "price_rub": 17549.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005006239304442.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S84cd0a553900476f97cc8e84c7623a63H.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008770069003",
+            "title": "Oral-B iO Series 9 электрическая зубная щетка",
+            "price_rub": 24229.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005008770069003.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sf879d3cb60ea4600ae6230620d99965eO.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012206035068",
+            "title": "Электрическая зубная щетка Oral B Io9 с вращающейся насадкой для взрослых",
+            "price_rub": 26389.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005012206035068.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sb7d8cc3facbf4149857a610c56434dc6g.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010165620420",
+            "title": "Электрическая зубная щетка Oral B iO серия IO для взрослых 220V",
+            "price_rub": 11322.0,
+            "rating": 4.8,
+            "url": "https://aliexpress.ru/item/1005010165620420.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S91ab396dcfad40b6a0f4858a5688745fo.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012028416619",
+            "title": "Электрическая зубная щетка Oral B Pro 2000 2 режима Gentle & Premium",
+            "price_rub": 6941.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005012028416619.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S6cfab35267094719bd357eedf2ecde0cL.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008543302775",
+            "title": "Oral B io-9 Plus электрическая зубная щетка",
+            "price_rub": 31860.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008543302775.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S9743f68702bd4896b3c04f50e33779a3X.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005013181842928",
+            "title": "Oral-B iO9 электрическая зубная щетка с микровибрацией",
+            "price_rub": 24359.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005013181842928.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S42928b26fb3d43919ed846928992c85bL.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005012690985193",
+            "title": "Электрическая зубная щетка Oral B iO Series 9 Smart",
+            "price_rub": 25779.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005012690985193.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Saa7895570e034ef4a18390ea7031f4f57.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008393076978",
+            "title": "Oral-B IO-9 Электрическая зубная щетка Sonic Rechargeable Smart Bluetooth 7 режимов 3D отслеживания зубов Ultimate Clean Magnetic Oral Care",
+            "price_rub": 28017.72,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008393076978.html",
+            "image_url": "https://st.aestatic.net/items-img/R/L/P/5/Ae94fa2c194014fed8888980c135cdd23y.jpeg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008392610608",
+            "title": "Oral-B iO-9 Электрическая зубная щетка",
+            "price_rub": 28017.72,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008392610608.html",
+            "image_url": "https://st.aestatic.net/items-img/R/E/C/K/Add2377c02284410d98683f772d2ae257E.jpeg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008696734227",
+            "title": "Oral-B IO-9 Электрическая зубная щетка Sonic Rechargeable Smart Bluetooth 7 режимов 3D отслеживания зубов Ultimate Clean Magnetic Oral Care",
+            "price_rub": 27686.71,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008696734227.html",
+            "image_url": "https://st.aestatic.net/items-img/R/K/H/2/Sacaa813bb58b49d49fd92c0f329fbe4fX.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005008696745230",
+            "title": "Oral-B iO-9 Электрическая зубная щетка",
+            "price_rub": 27686.71,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005008696745230.html",
+            "image_url": "https://st.aestatic.net/items-img/R/F/4/M/S1689c1bea0354f50954acb99c20dd0cf3.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005010661330568",
+            "title": "Электрическая Зубная Щетка Oral-B IO Серий 7, 8",
+            "price_rub": 602.0,
+            "rating": null,
+            "url": "https://aliexpress.ru/item/1005010661330568.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/Sff7f26829e584fbc8d0b25d4076748b01.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005007902078293",
+            "title": "Oral B электрическая зубная щетка iO",
+            "price_rub": 9971.0,
+            "rating": 4.3,
+            "url": "https://aliexpress.ru/item/1005007902078293.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S17f514dd588d4fe6bec48001d38469465.jpg_480x480.jpg"
+          },
+          {
+            "item_id": "1005009802492360",
+            "title": "Зарядная база Oral-B iO 7/8/9",
+            "price_rub": 799.0,
+            "rating": 5.0,
+            "url": "https://aliexpress.ru/item/1005009802492360.html",
+            "image_url": "https://ae-pic-a1.aliexpress-media.com/kf/S8d7077fcf5f946379c958e953375ff741.jpg_480x480.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "3 tile(s) advertise a coupon price; price_rub carries the regular price and the coupon value is not part of the response — treat 'cheapest' ranking with care"
+          ]
+        },
+        "observed_at": "2026-11-17T19:19:45.223514Z"
+      }
+    },
+    "citilink": {
+      "error": {
+        "code": "rate_limited",
+        "message": "citilink rate-limited"
+      }
+    },
+    "dns": {
+      "response": {
+        "items": [
+          {
+            "product_id": "7e44c2bad7f4d763",
+            "title": "Электрическая зубная щетка Braun Oral-B iO Series 9/iOM9.1B2.2AD черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/7e44c2bad7f4d763/elektriceskaa-zubnaa-setka-braun-oral-b-io-series-9iom91b22ad-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st4/fit/200/200/40d05edc45f1af6bf89d76584513f8b1/f88aceb67e762fccb0ca6e8051192153442a73cb0f0e9bb5bba6db400a7c3922.jpg"
+          },
+          {
+            "product_id": "bc33a9a6aa2cd9cb",
+            "title": "Электрическая зубная щетка Braun Oral-B iO Series 9/iOM9 белый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/bc33a9a6aa2cd9cb/elektriceskaa-zubnaa-setka-braun-oral-b-io-series-9iom9-belyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/9dd2d925070355fd9c2c2ff86d5c96a6/84e4256d90faae58f1d136ebb568b96d51b5806cd9abc8ce17a25f956ff9fcbe.jpg"
+          },
+          {
+            "product_id": "64a86cf7a002d9cb",
+            "title": "Электрическая зубная щетка Braun Oral-B iO Series 9N/iOM9 Rose Quartz белый, розовый",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/64a86cf7a002d9cb/elektriceskaa-zubnaa-setka-braun-oral-b-io-series-9niom9-rose-quartz-belyj-rozovyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/03d844183b0dbd3e3d3e289f3c137e99/94f09a57da3c597e4db49cd4a610689e0f5d618d274e4401be6cd353b5abd081.jpg"
+          },
+          {
+            "product_id": "ce648f9c7691d9cb",
+            "title": "Электрическая зубная щетка ORAL-B iO Series 9 синий",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/ce648f9c7691d9cb/elektriceskaa-zubnaa-setka-oral-b-io-series-9-sinij/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/187272ab9925f7cf94dcb0587cfea03b/6f0bb8e4cc996fcbd854dbe164fd4f5b5ff9dda4480f6f3c3a8dcef6b4e072b5.jpg"
+          },
+          {
+            "product_id": "fcf997130018b13e",
+            "title": "Электрическая зубная щетка Braun Oral-B iO Series 9/iOM9 черный",
+            "price_rub": null,
+            "url": "https://www.dns-shop.ru/product/fcf997130018b13e/elektriceskaa-zubnaa-setka-braun-oral-b-io-series-9iom9-cernyj/",
+            "image_url": "https://c.dns-shop.ru/thumb/st1/fit/200/200/07688cc2180b42b2b11f44251b7b5da3/a24ab2cb2e8d26a6af389c04750047d02e5f733efde812c4aec54b70087528c1.jpg"
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "no_prices_on_page"
+          ]
+        },
+        "observed_at": "2026-11-17T19:19:44.814123Z"
+      }
+    },
+    "wildberries": {
+      "response": {
+        "items": [
+          {
+            "nm_id": 1421848450,
+            "name": "Электрическая зубная щётка взрослая",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4887.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4887.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 453319704,
+            "name": "Зубная щетка электрическая взрослая набор 5 шт",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 11635.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 11635.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1421848442,
+            "name": "Электрическая зубная щётка взрослая",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4887.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4887.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1335435661,
+            "name": "Электрическая зубная щетка взрослая с 4 насадками",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 5156.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 5156.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 453319700,
+            "name": "Зубная щетка электрическая взрослая набор 5 шт",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 11635.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 11635.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1421848390,
+            "name": "Электрическая зубная щётка взрослая",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4887.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4887.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 453251452,
+            "name": "Зубная щетка электрическая взрослая голубая 1 шт",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 6346.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 6346.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1335435690,
+            "name": "Электрическая зубная щетка Braun и мужская бритва Gillette",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 3646.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 3646.0,
+            "review_rating": 4.8,
+            "feedbacks": 29064,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 453249790,
+            "name": "Зубная щетка электрическая взрослая розовая 1 шт",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 6346.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 6346.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1335435666,
+            "name": "Электрическая зубная щетка и женская бритва Venus",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4110.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4110.0,
+            "review_rating": 4.8,
+            "feedbacks": 29064,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 276355537,
+            "name": "Электрическая зубная щетка iOM9 1B2 2AD, черный",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 23066.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23066.0,
+            "review_rating": 5.0,
+            "feedbacks": 10,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1335441539,
+            "name": "Электрическая зубная щетка с пастой и нитью, набор",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 23796.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23796.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 2095136594,
+            "name": "Электрическая зубная щётка iO Series 3, розовая",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 5817.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 5817.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1995525763,
+            "name": "Электрическая зубная щётка + 4 насадки, черный цвет",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 6346.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 6346.0,
+            "review_rating": 4.8,
+            "feedbacks": 925,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 231360518,
+            "name": "Электрическая зубная щетка iO9 Plus c датчиком давления",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 22172.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22172.0,
+            "review_rating": 5.0,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 728649083,
+            "name": "Электрическая зубная щетка iO 9 Plus",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 20065.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1267522469,
+            "name": "Электрическая зубная щетка iO9 Black, 10500 оборотов",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 22176.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22176.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1292006673,
+            "name": "Электрическая зубная щетка iO 9",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 16344.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 16344.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 261130123,
+            "name": "Электрическая зубная щетка iO Series 7",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 12426.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 12426.0,
+            "review_rating": 5.0,
+            "feedbacks": 8,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 386505005,
+            "name": "Электрическая зубная щетка iOM9 1B2 2AD, черная",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 22176.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22176.0,
+            "review_rating": 4.7,
+            "feedbacks": 220,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 760606204,
+            "name": "Электрическая зубная щетка iOS2.1C9.0 Dark Green",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4834.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4834.0,
+            "review_rating": 4.8,
+            "feedbacks": 6,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 450965901,
+            "name": "Электрическая зубная щетка iO S9 черная 7 режимов",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 45547.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 45547.0,
+            "review_rating": 5.0,
+            "feedbacks": 61,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 387410663,
+            "name": "Электрическая зубная щетка iOM6 1B6 2D, черная",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 13391.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 13391.0,
+            "review_rating": 4.7,
+            "feedbacks": 220,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 276259207,
+            "name": "Электрическая зубная щетка iOM6 1B6 2D, черный",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 14170.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 14170.0,
+            "review_rating": 4.6,
+            "feedbacks": 9,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 206314551,
+            "name": "Электрическая зубная щетка iO 6 Black Lava",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 13810.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 13810.0,
+            "review_rating": 4.8,
+            "feedbacks": 65,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 760606203,
+            "name": "Электрическая зубная щетка iOS2.1C9.0 Light Pink",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4834.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4834.0,
+            "review_rating": 2.3,
+            "feedbacks": 3,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1195053160,
+            "name": "Электрическая зубная щетка iOS2 DK GN зеленая тип 3770",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 9634.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 9634.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1946520055,
+            "name": "Электрическая зубная щетка iO7 White Alabaster",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 18784.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 18784.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 163706874,
+            "name": "Электрическая зубная щетка взрослая iO 10 Cosmic Black",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 27806.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 27806.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1704809912,
+            "name": "Электрическая зубная щетка iO 9 черная Black Onyx",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 19322.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 19322.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1446282792,
+            "name": "Зубная щетка iOM10.1B4.2AD",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 28676.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 28676.0,
+            "review_rating": 2.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 205659789,
+            "name": "Электрическая зубная щетка iO2 Calm Pink",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 4709.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 4709.0,
+            "review_rating": 5.0,
+            "feedbacks": 2,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1421677701,
+            "name": "Электрическая зубная щетка iO Series 9N Black Onyx + футляр",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 36818.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1446282797,
+            "name": "Зубная щетка iOM9.1B2.2AD",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 22176.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 22176.0,
+            "review_rating": 2.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 634041711,
+            "name": "Электрическая зубная щетка iO9 Black, 10500 оборотов",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 21697.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1421677743,
+            "name": "Электрическая щетка iO Series 8N Black Onyx с футляром",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 25165.0,
+            "price_kind": "regular",
+            "wallet_price_rub": null,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1195073849,
+            "name": "Электрическая зубная щетка ORAL-B iOS2 LT PK розовая тип 377…",
+            "brand": "",
+            "supplier": "",
+            "price_rub": 9634.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 9634.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1195030463,
+            "name": "Электрическая зубная щетка iOS2 BK черная тип 3770",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 9634.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 9634.0,
+            "review_rating": 5.0,
+            "feedbacks": 1,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1292038116,
+            "name": "Электрическая зубная щетка iOS2.1C9.0 Light Pink",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 5621.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 5621.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          },
+          {
+            "nm_id": 1948101948,
+            "name": "Электрическая зубная щетка iO8 Black Onyx",
+            "brand": "Oral-B",
+            "supplier": "",
+            "price_rub": 23321.0,
+            "price_kind": "wallet",
+            "wallet_price_rub": 23321.0,
+            "review_rating": null,
+            "feedbacks": null,
+            "in_stock": true,
+            "total_quantity": null
+          }
+        ],
+        "meta": {
+          "healthy": false,
+          "warnings": [
+            "dom_fallback: WB API refused this address (HTTP 403); read through the scraping Chrome, in the WB region set in that browser rather than dest",
+            "wb_dom_search: price_rub is the WB Wallet price on search tiles (the regular card price is equal or a few % higher and shows only on the product page — verify leaders with wb_card)"
+          ]
+        },
+        "observed_at": "2026-11-17T19:19:49.589081Z"
+      }
+    },
+    "yandex_market": {
+      "response": {
+        "items": [
+          {
+            "product_id": "4398566096",
+            "sku_id": "101485577763",
+            "title": "Зубная щетка Oral-B iO Series 9 / IOM9.1A1.1AD White Alabaster (Белый Алебастр)",
+            "brand": "",
+            "seller": "",
+            "price_rub": 22058.0,
+            "price_with_plus": 21617.0,
+            "rating": null,
+            "rating_count": null,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zubnaya-shchetka-braun-oral-b-io-series-9--iom91a11ad-white-alabaster-belyy-alebastr/4398566096",
+            "image": "https://avatars.mds.yandex.net/get-mpic/16413949/2a000001970df9d75076ed773ef16c33a3c1/orig"
+          },
+          {
+            "product_id": "4975912128",
+            "sku_id": "5871365769",
+            "title": "Электрическая зубная щетка Oral-B iO 9, черный",
+            "brand": "",
+            "seller": "В.е.г.а.5",
+            "price_rub": 20015.0,
+            "price_with_plus": 19615.0,
+            "rating": 5.0,
+            "rating_count": 22,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/elektricheskaya-zubnaya-shchetka-oral-b-io-9-chernyy/4975912128",
+            "image": "https://avatars.mds.yandex.net/get-mpic/16447976/2a00000198e67db5ebc599f2a2924c2fcdba/orig"
+          },
+          {
+            "product_id": "5194189668",
+            "sku_id": "5194189668",
+            "title": "Зубная щетка Oral-B iO Series 9 / IOM9.1B2.2AD Black Onyx",
+            "brand": "",
+            "seller": "",
+            "price_rub": 20955.0,
+            "price_with_plus": 20536.0,
+            "rating": null,
+            "rating_count": null,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/zubnaya-shchetka-io-series-9--iom91b22ad-black-onyx/5194189668",
+            "image": "https://avatars.mds.yandex.net/get-mpic/15072245/2a0000019c93828b66055369e7280e47c01a/orig"
+          },
+          {
+            "product_id": "5248247764",
+            "sku_id": "1663452225",
+            "title": "Электрическая зубная щетка Oral-B iO 9 DUO Black Onyx, Rose Quartz оригинал !",
+            "brand": "",
+            "seller": "DVOR-BT",
+            "price_rub": 40886.0,
+            "price_with_plus": 40068.0,
+            "rating": 5.0,
+            "rating_count": 1,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/elektricheskaya-zubnaya-shchetka-oral-b-io-9-duo-black-onyx-rose-quartz/5248247764",
+            "image": "https://avatars.mds.yandex.net/get-mpic/20043823/2a0000019cd8a8928c20cdace329b251acb5/orig"
+          },
+          {
+            "product_id": "5007193108",
+            "sku_id": "5007193108",
+            "title": "Электрическая зубная щетка Oral-B iO Series 9N Black Onyx с футляром, 2 насадки",
+            "brand": "",
+            "seller": "ДентМарт",
+            "price_rub": 21689.0,
+            "price_with_plus": 21255.0,
+            "rating": 5.0,
+            "rating_count": 12,
+            "in_stock": true,
+            "url": "https://market.yandex.ru/card/elektricheskaya-zubnaya-shchetka-oral-b-io-series-9n-black-onyx-s-futlyarom-2-nasadki/5007193108",
+            "image": "https://avatars.mds.yandex.net/get-mpic/16096063/2a0000019bc07f7b1884386189598bfde28f/orig"
+          }
+        ],
+        "meta": {
+          "healthy": true,
+          "warnings": []
+        },
+        "observed_at": "2026-11-17T19:19:32.531203Z"
+      }
+    }
+  },
+  "schema": 1
+}

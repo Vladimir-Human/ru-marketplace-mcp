@@ -1,5 +1,5 @@
 {
-  "_about": "A7 constructed traps (2026-11-17): per recorded query, two copies of the replay in which one real recorded offer priced below the labelled cheapest_comparable winner (the highest-priced such offer) gets a new title: the winner's product with one dimension changed (condition, accessory for the device, another model, memory or size). The edited offer is not the asked product by construction, so the query's cheapest_comparable label set stands.",
+  "_about": "A7 constructed traps (2026-11-17): per recorded query, two copies of the replay in which one real recorded offer priced below the labelled cheapest_comparable winner (the highest-priced such offer) gets a new title: the winner's product with one dimension changed (condition, accessory for the device, another model, memory or size). The edited offer is not the asked product by construction, so the query's cheapest_comparable label set stands. Where no offer is cheaper than the winner, the trap retitles the winner itself and names the set that then stands in its own cheapest_comparable; where the set is empty, a retitled offer must not fill it.",
   "traps": [
     {
       "recording": "c1-dyson-v15-detect",
@@ -128,6 +128,158 @@
       "product_id": "1914825689",
       "recorded_title": "990EVO PLUS 1TB Внутренний SSD 990PRO без кеша 1 ТБ",
       "title": "1000 ГБ M.2 NVMe накопитель Samsung 990 EVO Plus [MZ-V9S1T0BW]"
+    },
+    {
+      "recording": "c2-samsung-galaxy-s25-256gb",
+      "class": "memory",
+      "source": "aliexpress",
+      "product_id": "1005008325742488",
+      "recorded_title": "SUPCASE For Samsung Galaxy S25 Ultra Case 6.9 Inch UB Pro военный защитный чехол для",
+      "title": "Смартфон Samsung Galaxy S25 128 ГБ"
+    },
+    {
+      "recording": "c2-samsung-galaxy-s25-256gb",
+      "class": "model",
+      "source": "aliexpress",
+      "product_id": "1005008325742488",
+      "recorded_title": "SUPCASE For Samsung Galaxy S25 Ultra Case 6.9 Inch UB Pro военный защитный чехол для",
+      "title": "Смартфон Samsung Galaxy S25 Ultra 256 ГБ"
+    },
+    {
+      "recording": "c2-airpods-pro-2",
+      "class": "accessory",
+      "source": "yandex_market",
+      "product_id": "6044877739",
+      "recorded_title": "Apple Наушники беспроводные с микрофоном Apple AirPods Pro 2",
+      "title": "Чехол для наушников Apple AirPods Pro 2"
+    },
+    {
+      "recording": "c2-airpods-pro-2",
+      "class": "condition",
+      "source": "yandex_market",
+      "product_id": "6044877739",
+      "recorded_title": "Apple Наушники беспроводные с микрофоном Apple AirPods Pro 2",
+      "title": "Наушники Apple AirPods Pro 2, б/у"
+    },
+    {
+      "recording": "c2-delonghi-ecam22110",
+      "class": "condition",
+      "source": "aliexpress",
+      "product_id": "1005006291062255",
+      "recorded_title": "Кофемашина De'Longhi Magnifica Smart+ ECAM 250.33.TB",
+      "title": "Кофемашина DeLonghi Magnifica S ECAM22.110.B, восстановленная"
+    },
+    {
+      "recording": "c2-delonghi-ecam22110",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005006291062255",
+      "recorded_title": "Кофемашина De'Longhi Magnifica Smart+ ECAM 250.33.TB",
+      "title": "Капучинатор для кофемашины DeLonghi Magnifica S ECAM22.110"
+    },
+    {
+      "recording": "c2-switch-oled",
+      "class": "model",
+      "source": "wildberries",
+      "product_id": "634461808",
+      "recorded_title": "Switch OLED 64 ГБ Игровая приставка",
+      "title": "Игровая приставка Nintendo Switch Lite 32 ГБ",
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "760424918"
+        ]
+      ]
+    },
+    {
+      "recording": "c2-switch-oled",
+      "class": "condition",
+      "source": "wildberries",
+      "product_id": "634461808",
+      "recorded_title": "Switch OLED 64 ГБ Игровая приставка",
+      "title": "Игровая приставка Nintendo Switch OLED 64 ГБ, б/у",
+      "cheapest_comparable": [
+        [
+          "wildberries",
+          "760424918"
+        ]
+      ]
+    },
+    {
+      "recording": "c2-adidas-samba-og",
+      "class": "accessory",
+      "source": "yandex_market",
+      "product_id": "4802522713",
+      "recorded_title": "Кеды Samba OG",
+      "title": "Шнурки для кроссовок adidas Samba OG"
+    },
+    {
+      "recording": "c2-adidas-samba-og",
+      "class": "condition",
+      "source": "yandex_market",
+      "product_id": "4802522713",
+      "recorded_title": "Кеды Samba OG",
+      "title": "Кроссовки adidas Samba OG, б/у"
+    },
+    {
+      "recording": "c2-cybex-sirona",
+      "class": "accessory",
+      "source": "yandex_market",
+      "product_id": "4850289621",
+      "recorded_title": "Cybex Sirona G i-Size, автокресло с рождения до 3-4 лет гр.0-1 (0-18 кг), цвет",
+      "title": "Летний чехол для автокресла Cybex Sirona G i-Size",
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "102590620664"
+        ]
+      ]
+    },
+    {
+      "recording": "c2-cybex-sirona",
+      "class": "condition",
+      "source": "yandex_market",
+      "product_id": "4850289621",
+      "recorded_title": "Cybex Sirona G i-Size, автокресло с рождения до 3-4 лет гр.0-1 (0-18 кг), цвет",
+      "title": "Автокресло Cybex Sirona G i-Size, б/у",
+      "cheapest_comparable": [
+        [
+          "yandex_market",
+          "102590620664"
+        ]
+      ]
+    },
+    {
+      "recording": "c2-michelin-xice-north4-205-55-r16",
+      "class": "size",
+      "source": "yandex_market",
+      "product_id": "102299338604",
+      "recorded_title": "Зимняя шипованная шина Sailun Ice Blazer WST3 205/55 R16 94T шип XL",
+      "title": "Зимняя шина Michelin X-Ice North 4 215/55 R16 98T шип"
+    },
+    {
+      "recording": "c2-michelin-xice-north4-205-55-r16",
+      "class": "model",
+      "source": "yandex_market",
+      "product_id": "102299338604",
+      "recorded_title": "Зимняя шипованная шина Sailun Ice Blazer WST3 205/55 R16 94T шип XL",
+      "title": "Зимняя шина Michelin X-Ice North 3 205/55 R16 94T шип"
+    },
+    {
+      "recording": "c2-oral-b-io9",
+      "class": "accessory",
+      "source": "aliexpress",
+      "product_id": "1005010328348307",
+      "recorded_title": "Oral-B Io7 Deep Clean + Protect Электрическая зубная щетка",
+      "title": "Насадки для зубной щетки Oral-B iO 9, 4 шт"
+    },
+    {
+      "recording": "c2-oral-b-io9",
+      "class": "condition",
+      "source": "aliexpress",
+      "product_id": "1005010328348307",
+      "recorded_title": "Oral-B Io7 Deep Clean + Protect Электрическая зубная щетка",
+      "title": "Электрическая зубная щетка Oral-B iO 9, восстановленная"
     }
   ]
 }
