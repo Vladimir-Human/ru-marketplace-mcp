@@ -253,7 +253,15 @@ _CARD_EXTRACT_TEMPLATE = """
     // data-meta-price; without an anchor there is nothing to read, so report no
     // price rather than a neighbour's (verified: such a page read 60 630 from
     // a recommendation).
-    const buyBlock = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]');
+    const railSel = 'aside, [class*="recommend"], [class*="Recommend"], [data-meta-name*="Snippet"]';
+    const inRail = (el) => {
+        for (let n = el; n; n = n.parentElement) {
+            if (n.matches && n.matches(railSel)) return true;
+        }
+        return false;
+    };
+    const rawBuyBlock = document.querySelector('[data-meta-name="ProductHeader"], [data-meta-name="PriceBlock"], [class*="product-price"], [class*="price-block"], [itemprop="offers"]');
+    const buyBlock = rawBuyBlock && !inRail(rawBuyBlock) ? rawBuyBlock : null;
     const metaPriceEl = buyBlock ? buyBlock.querySelector('[data-meta-price]') : null;
     const metaPrice = metaPriceEl ? metaPriceEl.getAttribute('data-meta-price') : null;
     const priceEl = buyBlock
@@ -264,14 +272,17 @@ _CARD_EXTRACT_TEMPLATE = """
         : null;
     const priceTexts = priceTextsIn(buyBlock);
 
-    const basketBtn = document.querySelector('[data-meta-name="BasketDesktopButton"]:not([disabled]):not([data-meta-disabled="true"]), [data-checkout-button="true"] button:not([disabled])');
+    const rawBasket = buyBlock
+        ? (buyBlock.querySelector('[data-meta-name="BasketDesktopButton"]:not([disabled]):not([data-meta-disabled="true"]), [data-checkout-button="true"] button:not([disabled])')
+            || document.querySelector('[data-meta-name="BasketDesktopButton"]:not([disabled]):not([data-meta-disabled="true"]), [data-checkout-button="true"] button:not([disabled])'))
+        : null;
+    const basketBtn = rawBasket && !inRail(rawBasket) ? rawBasket : null;
     const buyText = cleanText(buyBlock);
-    const bodyText = (document.body ? (document.body.textContent || '') : '');
+    const bodyText = document.body ? (cleanTextWithout(document.body, ['script', 'style', railSel]) || (document.body.textContent ? '' : '')) : '';
     let available = null;
     if (buyBlock && /Нет в наличии|Под заказ|Закончился/i.test(buyText)) available = false;
-    else if (basketBtn || (buyBlock && (metaPrice || cleanText(priceEl) || /В наличии|В корзину|Купить/i.test(buyText)))) available = true;
+    else if (buyBlock && (basketBtn || metaPrice || cleanText(priceEl) || /В наличии|В корзину|Купить/i.test(buyText))) available = true;
     else if (/Нет в наличии|Под заказ|Закончился/i.test(bodyText)) available = false;
-    else if (/В наличии|В корзину|Купить/i.test(bodyText)) available = true;
 
     return JSON.stringify({
         title: title,

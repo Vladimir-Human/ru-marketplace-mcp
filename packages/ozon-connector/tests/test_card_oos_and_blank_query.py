@@ -27,6 +27,31 @@ def test_oos_webprice_records_unavailable_and_blocks_websale_fallback() -> None:
     assert parsed.get("price") is None
 
 
+@pytest.mark.req("R-NO-FABRICATION")
+def test_websale_before_webprice_clears_oos_fallback_and_yields_to_webprice() -> None:
+    oos_sale_first = {
+        "widgetStates": {
+            "webSale-1": json.dumps({"cellTrackingInfo": {"product": {"finalPrice": 900, "price": 1000}}}),
+            "webPrice-1": json.dumps({"isAvailable": False, "price": None, "cardPrice": None}),
+        }
+    }
+    parsed_oos = server._parse_widgets(oos_sale_first)
+    assert parsed_oos.get("is_available") is False
+    assert parsed_oos.get("price") is None
+    assert parsed_oos.get("price_original") is None
+
+    instock_sale_first = {
+        "widgetStates": {
+            "webSale-1": json.dumps({"cellTrackingInfo": {"product": {"finalPrice": 900, "price": 1000}}}),
+            "webPrice-1": json.dumps({"isAvailable": True, "price": "1 150 ₽", "cardPrice": "1 050 ₽"}),
+        }
+    }
+    parsed_in = server._parse_widgets(instock_sale_first)
+    assert parsed_in.get("is_available") is True
+    assert parsed_in.get("price") == 1150.0
+    assert parsed_in.get("card_price") == 1050.0
+
+
 @pytest.mark.req("R-OZON-SEARCH-NUMERIC")
 async def test_ozon_card_drops_equal_original_price_and_flags_instock_no_price(
     monkeypatch: pytest.MonkeyPatch,

@@ -57,6 +57,29 @@ def test_card_in_stock_buyblock_beats_body_oos_text(tmp_path: Path) -> None:
     assert payload["price_meta"] == "89990"
 
 
+@pytest.mark.req("R-NO-FABRICATION")
+def test_card_without_buyblock_ignores_recommendation_basket_button(tmp_path: Path) -> None:
+    html = """<!doctype html><html><head><title>Citilink</title></head><body>
+      <h1>Ноутбук без блока покупки</h1>
+      <aside class="recommendations">
+        <button data-meta-name="BasketDesktopButton" type="button">В корзину</button>
+      </aside>
+    </body></html>"""
+    card_file = tmp_path / "no_buyblock_rec_button.html"
+    card_file.write_text(html, encoding="utf-8")
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            card_file,
+            page_url="https://www.citilink.ru/product/noutbuk-lenovo-2169270/",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    assert payload["price_meta"] is None
+    assert payload["is_available"] is None
+
+
 @pytest.mark.req("R-MARKETPLACE-PRICE-WORDING")
 def test_models_output_descriptions_name_citilink_not_dns() -> None:
     assert "DNS" not in (models_output.MetaOut.__doc__ or "")

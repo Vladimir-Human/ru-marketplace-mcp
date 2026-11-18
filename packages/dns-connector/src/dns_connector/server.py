@@ -283,17 +283,32 @@ _CARD_EXTRACT_TEMPLATE = """
         || document.querySelector('[class*="product-card-top__title"]');
     const title = cleanText(titleEl) || null;
 
-    // Scope price and primary stock reads to .product-card-top when present so
-    // out-of-stock cards never steal accessory or recommendation rail prices.
+    // Scope price and primary stock reads to .product-card-top when present (and
+    // exclude accessory/recommendation rails otherwise) so out-of-stock or
+    // half-rendered cards never steal neighbour prices or stock.
+    const railSel = 'aside, [class*="recommend"], [class*="accessor"], [class*="analog"], [class*="similar"], [class*="carousel"], [class*="slider"]';
     const top = document.querySelector('.product-card-top');
     const scope = top || document;
-    const priceEl = scope.querySelector('.product-buy__price')
-        || scope.querySelector('[class*="product-buy__price"]');
+    const pickScoped = (sel) => {
+        for (const el of scope.querySelectorAll(sel)) {
+            if (!top) {
+                let inRail = false;
+                for (let n = el; n; n = n.parentElement) {
+                    if (n.matches && n.matches(railSel)) { inRail = true; break; }
+                }
+                if (inRail) continue;
+            }
+            return el;
+        }
+        return null;
+    };
+    const priceEl = pickScoped('.product-buy__price')
+        || pickScoped('[class*="product-buy__price"]');
     const priceText = cleanTextWithout(priceEl, ['.product-buy__prev', '.product-buy__sub', '.product-buy__hint']);
-    const oldPriceText = cleanText(scope.querySelector('.product-buy__prev'));
+    const oldPriceText = cleanText(pickScoped('.product-buy__prev'));
 
-    const availEl = scope.querySelector('.order-avail-wrap .available')
-        || scope.querySelector('.available');
+    const availEl = pickScoped('.order-avail-wrap .available')
+        || pickScoped('.available');
     const availText = cleanText(availEl);
     const negAvail = /Нет в наличии|Под заказ|Закончился|распродан|недоступен|снят с продаж/i;
     // Only decide availability from an explicit signal. A page whose stock block
@@ -307,10 +322,10 @@ _CARD_EXTRACT_TEMPLATE = """
         if (negAvail.test(topText)) available = false;
         else if (/В наличии/i.test(topText)) available = true;
     } else if (document.body) {
-        // Fallback scan of body text. textContent, not innerText: innerText
+        // Fallback scan of non-rail body text. textContent, not innerText: innerText
         // depends on layout visibility, is unavailable in jsdom, and this
         // fallback exists so the DOM fixture can assert on it.
-        const body = (document.body.textContent || '').replace(/\\s+/g, ' ');
+        const body = cleanTextWithout(document.body, ['script', 'style', railSel]) || (document.body.textContent ? '' : '');
         if (negAvail.test(body)) available = false;
         else if (/В наличии/i.test(body)) available = true;
     }

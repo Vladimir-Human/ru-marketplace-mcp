@@ -436,43 +436,36 @@ async def _cdp_fetch_json(api_url: str, ctx: Context | None) -> tuple[int, str]:
 
 
 def _price_str_to_float(s: Any) -> float | None:
-    """Parse an Ozon price string like '3\u2009983\u2009₽' (thin-space grouped) to
-    float rubles, via the shared tolerant parser (single source of truth).
-
-    Audit 2026-06-01 (CONFIRMED on the LIVE ozon_card path): the old inline
-    digit-only regex returned 0.0 for a dead '0 ₽' listing (ranks falsely as
-    cheapest) and 19992999.0 for a '1 999 ₽ 2 999 ₽' range. R.coerce_price
-    returns None for <=0 / ambiguous multi-number and the real value for a
-    single decimal price, so the connector fails loud instead of emitting a
-    corrupting number.
-    """
+    """Parse an Ozon price string via shared R.coerce_price (returns None for <=0 or ambiguous ranges)."""
     return R.coerce_price(s)
 
 
 def _parse_widgets(payload: dict) -> dict[str, Any]:
     widgets = payload.get("widgetStates") or {}
     out: dict[str, Any] = {}
+    websale_price = False
 
     for key, val in widgets.items():
         try:
             data = json.loads(val) if isinstance(val, str) else val
         except (json.JSONDecodeError, TypeError):
             continue
-        # A widget value that decodes to null/list/scalar (not a dict) must not
-        # crash the tool (audit 2026-06-01 CONFIRMED: webPrice=null raised
-        # AttributeError before attach_meta). Skip non-dict widget bodies.
         if not isinstance(data, dict):
             continue
 
         if "webPrice" in key:
             if isinstance(data.get("isAvailable"), bool):
                 out["is_available"] = data["isAvailable"]
-            if "price" not in out and (data.get("price") or data.get("cardPrice")):
+                if data["isAvailable"] is False and websale_price:
+                    out.pop("price", None)
+                    out.pop("price_original", None)
+                    websale_price = False
+            if ("price" not in out or websale_price) and (data.get("price") or data.get("cardPrice")):
                 p = _price_str_to_float(data.get("price"))
                 orig = _price_str_to_float(data.get("originalPrice"))
-                out["price"] = p
-                out["card_price"] = _price_str_to_float(data.get("cardPrice"))
+                out["price"], out["card_price"] = p, _price_str_to_float(data.get("cardPrice"))
                 out["price_original"] = orig if (p is None or orig is None or orig > p) else None
+                websale_price = False
 
         elif "webSale" in key:
             cti = data.get("cellTrackingInfo")
@@ -484,6 +477,7 @@ def _parse_widgets(payload: dict) -> dict[str, Any]:
                     p, orig = R.coerce_price(cur), R.coerce_price(base)
                     out["price"] = p
                     out["price_original"] = orig if (p is None or orig is None or orig > p) else None
+                    websale_price = True
                     offer = data.get("offer")
                     if "is_available" not in out:
                         out["is_available"] = offer.get("isAvailable") if isinstance(offer, dict) else None

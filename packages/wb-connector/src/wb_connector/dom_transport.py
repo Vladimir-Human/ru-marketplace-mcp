@@ -245,7 +245,7 @@ def prices_in(text: str) -> list[float]:
         return []
     out: list[float] = []
     for match in _PRICE_RE.finditer(text or ""):
-        if text[: match.start()].rstrip(" \u00a0\u2009\u202f").endswith(("-", "−", "–")):
+        if text[: match.start()].rstrip(" \u00a0\u2009\u202f").endswith(("+", "\uff0b", "-", "−", "–", "—")):
             continue
         amount = re.sub(_SP, "", match.group(1)).replace(",", ".")
         value = float(amount)

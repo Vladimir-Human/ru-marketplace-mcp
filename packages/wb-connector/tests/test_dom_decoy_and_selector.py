@@ -70,6 +70,12 @@ def test_dom_search_and_card_ignore_decoy_price_lines() -> None:
     assert crossed == 9338.0
 
 
+@pytest.mark.req("R-NO-FABRICATION")
+@pytest.mark.parametrize("line", ["+ 299 ₽", "＋ 299 ₽", "— 299 ₽"])
+def test_dom_prices_in_rejects_plus_and_emdash_surcharges(line: str) -> None:
+    assert dom_transport.prices_in(line) == []
+
+
 @pytest.mark.req("R-WB-DOM-NAVIGATION-RETRY")
 async def test_dom_render_rechecks_cache_inside_lock(monkeypatch: pytest.MonkeyPatch) -> None:
     from mcp_core.transport import chrome_cdp

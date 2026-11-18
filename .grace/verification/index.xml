@@ -991,8 +991,12 @@
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_a_percent_that_is_not_a_number_is_computed_from_the_prices" requirements="R-NO-FABRICATION" />
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_a_product_offer_at_the_struck_price_takes_the_sale_price" requirements="R-NO-FABRICATION" title="A schema.org offer may carry the listing price; the card state says what the buyer pays." />
     <test file="packages/avito-connector/tests/test_sale_price.py" name="test_the_sale_of_another_item_is_not_read" requirements="R-NO-FABRICATION" />
+    <test file="packages/citilink-connector/tests/test_url_buyblock_and_models.py" name="test_card_without_buyblock_ignores_recommendation_basket_button" requirements="R-NO-FABRICATION" />
     <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_wb_wallet_only_price_is_not_certified" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE.verify, R-NO-FABRICATION: a DOM card whose price_rub" />
     <test file="packages/compare-connector/tests/test_conditional_prices.py" name="test_wallet_only_price_cannot_win" requirements="R-NO-FABRICATION" title="R-COMPARE-CONDITIONAL-PRICE: old code crowns the 900-RUB Wallet row, not the 950-RUB rival." />
+    <test file="packages/dns-connector/tests/test_analog_and_card_truth.py" name="test_card_without_product_card_top_ignores_aside_recommendation_price_and_stock" requirements="R-NO-FABRICATION" />
+    <test file="packages/ozon-connector/tests/test_card_oos_and_blank_query.py" name="test_websale_before_webprice_clears_oos_fallback_and_yields_to_webprice" requirements="R-NO-FABRICATION" />
+    <test file="packages/wb-connector/tests/test_dom_decoy_and_selector.py" name="test_dom_prices_in_rejects_plus_and_emdash_surcharges" requirements="R-NO-FABRICATION" />
   </requirement>
   <requirement id="R-NO-MCP-LOGGING" kind="requirement" state="tested">
     <test file="packages/avito-connector/tests/test_server.py" name="test_fetch_debug_never_leaks_tier1_exception_secrets" requirements="R-NO-MCP-LOGGING.diagnostics" />

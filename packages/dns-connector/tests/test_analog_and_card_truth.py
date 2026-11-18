@@ -105,6 +105,30 @@ def test_card_extractor_scopes_to_product_card_top_and_marks_sold_out(tmp_path: 
     assert payload["is_available"] is False
 
 
+@pytest.mark.req("R-NO-FABRICATION")
+def test_card_without_product_card_top_ignores_aside_recommendation_price_and_stock(tmp_path: Path) -> None:
+    html = """<!doctype html><html><head><title>Ноутбук — DNS</title></head><body>
+      <h1>Ноутбук ASUS VivoBook 15</h1>
+      <aside class="recommend-rail">
+        <span class="product-buy__price">1 290 ₽</span>
+        <span class="available">В наличии</span>
+      </aside>
+    </body></html>"""
+    card_file = tmp_path / "half_rendered_card.html"
+    card_file.write_text(html, encoding="utf-8")
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            card_file,
+            page_url="https://www.dns-shop.ru/product/05ebcc7973baed20/noutbuk/",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    assert payload["price_text"] is None
+    assert payload["is_available"] is None
+
+
 @pytest.mark.req("R-ERROR-NEXT-STEP")
 async def test_card_not_found_page_raises_not_found_error(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_render(url: str, extract_js: str, wait_ms: int, ctx: object) -> dict:
