@@ -244,9 +244,11 @@
   </requirement>
   <requirement id="R-CDP-SIM-S4" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-SIM-S4" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_raw_page_close_confirms_and_retries_when_chrome_keeps_the_tab" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: _RawCdpPage.close() re-checks Target.getTargets and closes again if Chrome kept the tab." />
     <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_403_response_waits_for_commit_and_antibot_recheck" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_shielded_cleanup_completes_target_close_when_caller_cancels" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_stalled_429_fails_fast_before_commit_and_confirms_target_close" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_raw_owned_popup.py" name="test_owned_popup_cleanup_retries_close_when_chrome_keeps_the_popup" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: cleanup() confirms Target.getTargets dropped the popup and retries closeTarget." />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_chrome_ignored_is_sent_again_until_the_tab_is_gone" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_that_works_is_checked_once" requirements="R-CDP-SIM-S4" />
     <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_failing_command_ends_the_close_without_raising" requirements="R-CDP-SIM-S4" />
@@ -556,6 +558,11 @@
   <requirement id="R-COMPARE-VERIFY-BEFORE-QUOTE" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_verify_before_quote.py" name="test_the_served_guide_says_verify_the_winner_before_quoting_it" requirements="R-COMPARE-VERIFY-BEFORE-QUOTE" />
   </requirement>
+  <requirement id="R-COMPARE-VERIFY-OFFER-URL" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_offer_url_from_compare_dispatches_its_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Audit cycle 2, 2026-11-17: every Yandex verify through the offer's own URL was bad_request." />
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_ssr_and_slug_product_urls_dispatch_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Deep-compare C2: SSR search fixtures emit /product/&lt;id&gt;?hid=... and Market also serves /product--&lt;slug&gt;/&lt;id&gt;." />
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_verify_never_takes_digits_from_another_url" requirements="R-COMPARE-VERIFY-OFFER-URL" />
+  </requirement>
   <requirement id="R-CONNECTOR-KIT" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_kit.py" name="test_blocked_error_appends_the_rotation_hint_and_bounds_the_detail" requirements="R-CONNECTOR-KIT" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_host_checked_id_accepts_bare_ids_and_our_own_hosts" requirements="R-CONNECTOR-KIT" />
@@ -670,6 +677,8 @@
   </requirement>
   <requirement id="R-FIRST-RUN-PROBE" kind="requirement" state="tested">
     <test file="scripts/test_first_run_probe.py" name="test_a_work_folder_inside_a_checkout_is_refused" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_chrome_is_closed_and_work_removed_when_a_step_raises" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_cleanup_waits_for_port_and_retries_transient_permission_error" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_doctor_rows_list_each_source_state_and_next_step" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_dry_run_prints_the_plan_runs_nothing_and_removes_its_folder" requirements="R-FIRST-RUN-PROBE" />
     <test file="scripts/test_first_run_probe.py" name="test_each_step_records_its_exit_seconds_and_output_tail_and_a_timeout_does_not_stop_the_rest" requirements="R-FIRST-RUN-PROBE" />
@@ -898,6 +907,7 @@
     <test file="scripts/test_build_mcpb.py" name="test_the_bundle_pins_the_published_package_at_this_version" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_entry_point_starts_the_compare_profile_server" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_manifest_has_the_mcpb_0_4_required_fields_for_a_uv_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_unpacked_bundle_declares_non_package_uv_and_starts_cleanly_offline" requirements="R-MCPB-BUNDLE" />
     <test file="scripts/test_build_mcpb.py" name="test_the_zip_is_deterministic_and_holds_no_environment" requirements="R-MCPB-BUNDLE" />
   </requirement>
   <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">

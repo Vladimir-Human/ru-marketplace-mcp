@@ -1,7 +1,0 @@
-### Fixed
-- DNS: в новом профиле браузера первая страница поиска показывала товары ещё без цен, и `doctor` сообщал о поломке разбора. Теперь такая страница загружается ещё один раз, и только в этом случае (#NNN).
-- `doctor`: если одна из проверок источника наткнулась на защиту сайта, следующий шаг называет `unblock`, даже когда другую проверку отклонил лимит запросов. Источнику, который читается через браузер, если страница не загрузилась, а Chrome отвечает, `doctor` теперь советует `unblock <источник>` вместо общей ссылки на `docs/ANTI_BOT.md` (#NNN).
-- AliExpress: у товаров с длинным названием (больше 140 знаков) заголовком становилась строка карточки вроде «до 10 дней, бесплатно» или «20 купили». Теперь заголовок — само название, а такие строки им не становятся (#NNN).
-- DNS: on a new browser profile the first search page showed products before their prices, and `doctor` reported a parser drift. Such a page is now loaded once more, and only then (#NNN).
-- `doctor`: when one check of a source met the site's protection, the next step names `unblock` even if the live budget refused another check. A browser-read source whose page did not load while Chrome answered now gets `unblock <source>` instead of the bare link to `docs/ANTI_BOT.md` (#NNN).
-- AliExpress: a product with a long name (over 140 characters) got a tile line such as "до 10 дней, бесплатно" or "20 купили" as its title. The title is now the name itself, and such lines never become one (#NNN).
