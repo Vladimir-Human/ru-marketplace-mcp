@@ -28,6 +28,8 @@ captured page and replacing the fingerprint.
 from __future__ import annotations
 
 SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
+    "empty_notice:bool",
+    "item_links:int",
     "items[].item_id:str",
     "items[].orders:str",
     "items[].price_texts.attached[]:str",
@@ -37,8 +39,11 @@ SEARCH_SHAPE_REFERENCE: tuple[str, ...] = (
     "items[].sku_id:str",
     "items[].title:str",
     "items[].url:str",
+    "links:int",
+    "other_item_links:int",
     "page_title:str",
     "punish:bool",
+    "text_len:int",
 )
 
 CARD_SHAPE_REFERENCE: tuple[str, ...] = (

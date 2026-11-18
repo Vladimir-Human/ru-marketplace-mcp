@@ -6,6 +6,12 @@
     <test file="packages/aliexpress-connector/tests/test_tile_and_card_truth.py" name="test_search_extractor_skips_coupon_leaf_title_and_bare_integer_rating" requirements="R-ALIEXPRESS-LONG-TITLE" />
     <test file="packages/aliexpress-connector/tests/test_tile_and_card_truth.py" name="test_tile_and_card_prices_ignore_delivery_and_plus_delta_leaves" requirements="R-ALIEXPRESS-LONG-TITLE" />
   </requirement>
+  <requirement id="R-ALIEXPRESS-SEARCH-RENDERED" kind="requirement" state="tested">
+    <test file="packages/aliexpress-connector/tests/test_search_render_ready.py" name="test_a_challenge_is_neither_polled_nor_reopened" requirements="R-ALIEXPRESS-SEARCH-RENDERED" title="x5sec is the operator's to pass: the page is read once and left alone." />
+    <test file="packages/aliexpress-connector/tests/test_search_render_ready.py" name="test_an_empty_grid_is_opened_once_more_and_then_drifted" requirements="R-ALIEXPRESS-SEARCH-RENDERED" title="A grid that stays empty is read from one more page, then answers drift." />
+    <test file="packages/aliexpress-connector/tests/test_search_render_ready.py" name="test_the_drift_message_names_an_empty_result_notice" requirements="R-ALIEXPRESS-SEARCH-RENDERED" title="A page that says «nothing found» is a different case than an empty grid." />
+    <test file="packages/aliexpress-connector/tests/test_search_render_ready.py" name="test_the_grid_is_read_once_the_item_links_appear" requirements="R-ALIEXPRESS-SEARCH-RENDERED" title="The grid rendered after the fixed wait: the tool answers with its tiles." />
+  </requirement>
   <requirement id="R-ARCH-GATE" kind="requirement" state="tested">
     <test file="scripts/test_check_arch.py" name="test_baseline_file_uses_its_cap_instead_of_default" requirements="R-ARCH-GATE,R-ARCH-GATE.size" />
     <test file="scripts/test_check_arch.py" name="test_clean_tree_passes_and_only_production_sources_are_checked" requirements="R-ARCH-GATE,R-ARCH-GATE.boundary,R-ARCH-GATE.purity,R-ARCH-GATE.size" />
@@ -1436,6 +1442,15 @@
   <requirement id="R-WB-DOM-NAVIGATION-RETRY" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_dom_decoy_and_selector.py" name="test_dom_render_rechecks_cache_inside_lock" requirements="R-WB-DOM-NAVIGATION-RETRY" />
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_reopens_once_after_navigation_destroys_evaluation" requirements="R-WB-DOM-NAVIGATION-RETRY" />
+  </requirement>
+  <requirement id="R-WB-DOM-SEARCH-PRICED" kind="requirement" state="tested">
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_a_browser_check_is_not_polled_and_not_reopened" requirements="R-WB-DOM-SEARCH-PRICED" title="WB's automatic check is waited out once, never reopened." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_a_captcha_is_not_polled_and_not_reopened" requirements="R-WB-DOM-SEARCH-PRICED" title="A captcha is the operator's to clear: the connector waits for neither." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_a_search_page_without_tiles_is_opened_once_more" requirements="R-WB-DOM-SEARCH-PRICED" title="A page that had not rendered yet is opened again, paced like any navigation." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_empty_notice_text_beside_tiles_still_waits_for_prices" requirements="R-WB-DOM-SEARCH-PRICED" title="The notice regex reads the whole page; with tiles on it the read still waits for their prices." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_search_is_read_after_the_tiles_show_prices" requirements="R-WB-DOM-SEARCH-PRICED" title="The prices arrive with the tiles: the extract must not run before them." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_the_empty_result_notice_stops_the_read_without_a_second_open" requirements="R-WB-DOM-SEARCH-PRICED" title="WB's own «ничего не нашлось» is an answer, not a page that has to render." />
+    <test file="packages/wb-connector/tests/test_dom_search_ready.py" name="test_tiles_that_stay_unpriced_are_taken_after_the_unpriced_window" requirements="R-WB-DOM-SEARCH-PRICED" title="A page of sold-out items shows no price: it is read after a bounded wait." />
   </requirement>
   <requirement id="R-WB-ORIGINAL-PRICE-ROLE" kind="requirement" state="tested">
     <test file="packages/wb-connector/tests/test_capture_mutation.py" name="test_missing_original_price_stays_unknown" requirements="R-WB-ORIGINAL-PRICE-ROLE" />
