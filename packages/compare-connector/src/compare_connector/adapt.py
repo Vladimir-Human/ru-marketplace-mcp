@@ -7,7 +7,7 @@ Moved verbatim out of server.py (move-only); server.py re-imports every name, so
 # PURPOSE: Pure helpers for the compare adapters (no network): prices, counts, stock labels, OfferBatch, card ids.
 # SCOPE: Coercion of native fields into MarketOffer values; bounded source warnings; source-native card id checks.
 # DEPENDS: mcp_core resilience/errors/sources; models_output.
-# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-WARNING-BUDGET; R-NAV-HOSTS.invariant.
+# LINKS: M-COMPARE; R-COMPARE-CONDITIONAL-PRICE; R-COMPARE-VERIFY-OFFER-URL; R-WARNING-BUDGET; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # OfferBatch: Carry normalized offers plus source warnings and health evidence.
@@ -140,6 +140,9 @@ def _numeric_card_id(source: str, value: str) -> int:
         path = {
             "wildberries": r"/catalog/([0-9]+)/detail\.aspx/?",
             "detsky_mir": r"/product/index/id/([0-9]+)/?",
+            # Yandex search offers carry /card/<slug>/<id> (zone) or /product/<id>?hid=... (SSR),
+            # and Market also serves /product--<slug>/<id>.
+            "yandex_market": r"/(?:card/[^/]+|product(?:--[^/]+)?)/([0-9]+)/?",
         }[source]
         try:
             parsed = urlsplit(candidate)

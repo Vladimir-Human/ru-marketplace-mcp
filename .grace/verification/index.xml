@@ -537,6 +537,11 @@
   <requirement id="R-COMPARE-VERIFY-BEFORE-QUOTE" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_verify_before_quote.py" name="test_the_served_guide_says_verify_the_winner_before_quoting_it" requirements="R-COMPARE-VERIFY-BEFORE-QUOTE" />
   </requirement>
+  <requirement id="R-COMPARE-VERIFY-OFFER-URL" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_offer_url_from_compare_dispatches_its_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Audit cycle 2, 2026-11-17: every Yandex verify through the offer's own URL was bad_request." />
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_ssr_and_slug_product_urls_dispatch_numeric_id" requirements="R-COMPARE-VERIFY-OFFER-URL" title="Deep-compare C2: SSR search fixtures emit /product/&lt;id&gt;?hid=... and Market also serves /product--&lt;slug&gt;/&lt;id&gt;." />
+    <test file="packages/compare-connector/tests/test_card_verification_records.py" name="test_yandex_verify_never_takes_digits_from_another_url" requirements="R-COMPARE-VERIFY-OFFER-URL" />
+  </requirement>
   <requirement id="R-CONNECTOR-KIT" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_kit.py" name="test_blocked_error_appends_the_rotation_hint_and_bounds_the_detail" requirements="R-CONNECTOR-KIT" />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_host_checked_id_accepts_bare_ids_and_our_own_hosts" requirements="R-CONNECTOR-KIT" />

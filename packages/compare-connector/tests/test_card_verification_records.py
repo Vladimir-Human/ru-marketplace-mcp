@@ -265,3 +265,70 @@ async def test_ambiguous_or_wrong_record_never_verifies_price(monkeypatch, sourc
     result = await server.compare_verify_offer(source, "123", 100, ProductIdentity())
     assert result["price_verification"]["matches"] is None
     assert result["identity_verification"]["match"]["status"] == "unknown"
+
+
+@pytest.mark.req("R-COMPARE-VERIFY-OFFER-URL")
+async def test_yandex_offer_url_from_compare_dispatches_its_numeric_id(monkeypatch):
+    """Audit cycle 2, 2026-11-17: every Yandex verify through the offer's own URL was bad_request."""
+    seen = []
+
+    async def card(*, product_id, include_reviews):
+        seen.append(product_id)
+        return {"product_id": product_id, "sku_id": "6044877739", "price_rub": 4227}
+
+    monkeypatch.setattr(server, "SOURCES", {"yandex_market": SimpleNamespace(yandex_card=card)})
+    url = yandex_ssr.card_url("6044877739", "apple-naushniki-besprovodnyye-s-mikrofonom-apple-airpods-pro-2")
+    result = await server.compare_verify_offer(
+        "yandex_market", url, expected_price_rub=4227, expected_variant_id="6044877739"
+    )
+    assert seen == ["6044877739"]
+    assert result["price_verification"]["matches"] is True
+
+
+@pytest.mark.req("R-COMPARE-VERIFY-OFFER-URL")
+async def test_yandex_ssr_and_slug_product_urls_dispatch_numeric_id(monkeypatch):
+    """Deep-compare C2: SSR search fixtures emit /product/<id>?hid=... and Market also serves /product--<slug>/<id>."""
+    seen: list[str] = []
+
+    async def card(*, product_id, include_reviews):
+        seen.append(product_id)
+        return {"product_id": product_id, "price_rub": 1990}
+
+    monkeypatch.setattr(server, "SOURCES", {"yandex_market": SimpleNamespace(yandex_card=card)})
+    fixtures = Path(__file__).parents[2] / "yandex-connector/tests/fixtures"
+    cases: list[tuple[str, str]] = []
+    for name in ("search_iphone.html", "search_kettle.html", "search_washer.html", "search_telefon_zone.html"):
+        for item in yandex_ssr.parse_search((fixtures / name).read_text(encoding="utf-8"))["items"]:
+            cases.append((item["product_id"], item["url"]))
+    cases.append(("1912483624", "https://market.yandex.ru/product--smartfon-apple-iphone-16/1912483624?sku=1035001"))
+
+    for expected_id, url in cases:
+        seen.clear()
+        result = await server.compare_verify_offer("yandex_market", url, expected_price_rub=1990)
+        assert seen == [expected_id], f"url={url!r}"
+        assert result["price_verification"]["matches"] is True
+
+
+@pytest.mark.req("R-COMPARE-VERIFY-OFFER-URL")
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://market.yandex.ru.evil.invalid/card/slug/123",
+        "https://market.yandex.ru/search?text=123",
+        "https://market.yandex.ru/card/slug/123abc",
+        "https://market.yandex.ru/card//123",
+        "https://market.yandex.ru/product--/123",
+        "https://market.yandex.ru/product/0?hid=91491",
+        "https://market.yandex.ru/product/123/reviews",
+        "https://market.yandex.ru/catalog--smartfony/12345/list?hid=91491",
+        "https://user@market.yandex.ru/card/slug/123",
+        "item-123",
+    ],
+)
+async def test_yandex_verify_never_takes_digits_from_another_url(monkeypatch, value):
+    async def card(*, product_id, include_reviews):
+        raise AssertionError(f"yandex_card must not be called for {value!r}")
+
+    monkeypatch.setattr(server, "SOURCES", {"yandex_market": SimpleNamespace(yandex_card=card)})
+    with pytest.raises(ToolError, match="positive numeric id"):
+        await server.compare_verify_offer("yandex_market", value)
