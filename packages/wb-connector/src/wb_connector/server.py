@@ -2017,7 +2017,7 @@ async def wb_category_products(
     query: Annotated[
         str,
         Field(
-            max_length=200,
+            max_length=1000,
             description="WB catalog selector from wb_categories, e.g. 'cat=9845' or 'subject=1234'.",
         ),
     ],

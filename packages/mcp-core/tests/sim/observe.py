@@ -123,10 +123,20 @@ async def owned_tab(chrome, browser, url):
                 async with asyncio.timeout(5):
                     while True:
                         snapshot = await target_info(browser, target_id)
-                        ready = await page.send(
-                            "Runtime.evaluate", {"expression": "document.readyState", "returnByValue": True}
+                        state = await page.send(
+                            "Runtime.evaluate",
+                            {
+                                "expression": "({ready: document.readyState, title: document.title})",
+                                "returnByValue": True,
+                            },
                         )
-                        if snapshot["url"] == url and ready["result"].get("value") == "complete":
+                        val = state["result"].get("value") or {}
+                        doc_title = val.get("title") or ""
+                        if (
+                            snapshot["url"] == url
+                            and val.get("ready") == "complete"
+                            and (not doc_title or snapshot["title"] == doc_title)
+                        ):
                             break
                         await asyncio.sleep(0.05)
                 yield target_id, page, snapshot

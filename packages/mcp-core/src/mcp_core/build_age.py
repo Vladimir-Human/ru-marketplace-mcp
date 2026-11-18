@@ -27,13 +27,17 @@ class OldBuildInfo(TypedDict):
     upgrade: str
 
 
+def _utc_today() -> dt.date:
+    return dt.datetime.now(dt.UTC).date()
+
+
 def old_build_info(today: dt.date | None = None) -> OldBuildInfo | None:
     """Return informational advice only when the release is older than 30 days."""
     try:
         released = dt.date.fromisoformat(mcp_core.__release_date__)
     except ValueError:
         return None
-    age_days = ((today if today is not None else dt.date.today()) - released).days
+    age_days = ((today if today is not None else _utc_today()) - released).days
     if age_days <= 30:
         return None
     return {

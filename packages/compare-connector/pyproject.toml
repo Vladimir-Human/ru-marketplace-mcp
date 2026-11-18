@@ -14,7 +14,7 @@ dependencies = [
     "wb-connector",
     "detmir-connector",
     "yandex-connector",
-    "fastmcp>=4.1.4,<5",
+    "fastmcp>=4.2.1,<5",
     "pydantic>=2.12",
     "pydantic-settings>=2.2",
 ]
