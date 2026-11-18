@@ -13,7 +13,7 @@ profiles, and window stealth resolve per platform (Windows / macOS / Linux).
 # PURPOSE: Drive owned tabs in the operator's authenticated Chrome over CDP.
 # SCOPE: Dedicated-profile autostart, Playwright/raw fallback, host policy, snapshots and opt-in Ozon OS identity.
 # DEPENDS: Playwright; optional websockets; mcp_core.errors; mcp_core.transport.cdp_budget,raw_targets; stdlib.
-# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-RAW-TARGETS; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant; R-CDP-SIM-S4.
+# LINKS: M-CHROME-CDP; M-CDP-BUDGET; M-RAW-TARGETS; M-NAV-GUARD; M-BROWSER-HANDOFF; M-TRANSPORT; M-ERRORS; R-CDP-AUTOSTART-NEGATIVE-CACHE; R-CDP-HOST-PAUSE; R-CDP-NAV-TIMEOUT; R-CDP-REDIRECT-GUARD; R-OZON-CHROME-COMPAT; R-NAV-HOSTS.invariant; R-CDP-SIM-S4.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # PageLike: Specify the evaluate/url surface shared by both page implementations.
@@ -83,6 +83,7 @@ from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
 from mcp_core.errors import ConnectorError, ErrorCode, TransportDownError, raise_tool_error
 from mcp_core.redact import redact_error_text
+from mcp_core.transport import nav_guard
 from mcp_core.transport.cdp_budget import HostRefusingError, Slot, navigation_budget
 from mcp_core.transport.raw_targets import close_target
 
@@ -891,6 +892,7 @@ class _RawCdpPage:
         self._target_id = target_id
         self._next_id = 0
         self._url = "about:blank"
+        self._nav_guard: Any = None
         # Set by a caller that enabled Network events and knows the main frame:
         # the main document's last HTTP status is then noted from the events
         # any command reads while it waits (open_owned_popup).
@@ -924,6 +926,12 @@ class _RawCdpPage:
             if "error" in msg:
                 raise RuntimeError(f"CDP {method}: {msg['error']}")
             return msg.get("result") or {}
+
+    async def _send_nowait(self, method: str, params: dict | None = None) -> None:
+        """Write one CDP command without waiting for its answer."""
+        self._next_id += 1
+        payload = json.dumps({"id": self._next_id, "method": method, "params": params or {}})
+        await asyncio.wait_for(self._ws.send(payload), timeout=_RAW_CONNECT_TIMEOUT_S)
 
     def _note_event(self, msg: dict) -> None:
         method = msg.get("method")
@@ -992,6 +1000,8 @@ class _RawCdpPage:
                 nav_failed = nav_failed or "error" in msg or bool((msg.get("result") or {}).get("errorText"))
             method = msg.get("method", "")
             params = msg.get("params", {})
+            if self._nav_guard is not None and await self._nav_guard.handle_message(method, params):
+                break
             if method == "Network.responseReceived" and params.get("type") == "Document":
                 # iframes report Document responses too. Only the main frame's
                 # decides the verdict and the URL: a 200 iframe on a 403 block page
@@ -1575,6 +1585,7 @@ async def _raw_cdp_page(
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
     wait_for_dom_parsed: bool = False,
+    allowed_hosts: Collection[str] | None = None,
 ) -> AsyncIterator[_RawCdpPage]:
     """Open a tab over raw CDP, mirroring open_page's guarantees."""
     if ozon_windows_compat:
@@ -1636,7 +1647,8 @@ async def _raw_cdp_page(
                         timeout=_RAW_CONNECT_TIMEOUT_S,
                     )
                 nav_options = {"wait_for_dom_parsed": True} if wait_for_dom_parsed else {}
-                status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms, **nav_options)
+                async with nav_guard.raw_guard(page, allowed_hosts=allowed_hosts):
+                    status = await page.goto_and_status(url, navigation_timeout_ms=timeout_ms, **nav_options)
                 if status in _NAV_FAIL_STATUSES:
                     raise NavBlocked(status, page.url)
                 if wait_ms > 0:
@@ -2083,6 +2095,7 @@ async def _playwright_page(
     navigation_timeout_ms: float | None = None,
     ozon_windows_compat: bool = False,
     wait_for_dom_parsed: bool = False,
+    allowed_hosts: Collection[str] | None = None,
 ) -> AsyncIterator[Page]:
     if ozon_windows_compat:
         _validate_ozon_compat_url(url)
@@ -2104,22 +2117,23 @@ async def _playwright_page(
                 )
             wait_until: Literal["commit", "domcontentloaded"] = "commit" if wait_for_dom_parsed else "domcontentloaded"
             deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
-            resp = await _goto_playwright(
-                page, url, wait_until=wait_until, timeout_ms=timeout_ms, wait_for_dom_parsed=wait_for_dom_parsed
-            )
-            status = resp.status if resp is not None else None
-            if status in _ANTIBOT_RECHECK_STATUSES:
-                deadline = max(deadline, asyncio.get_running_loop().time() + _ANTIBOT_RECHECK_S)
-                try:
-                    async with page.expect_navigation(
-                        wait_until=wait_until, timeout=_ANTIBOT_RECHECK_S * 1000
-                    ) as navigation:
+            async with nav_guard.playwright_guard(ctx, page, allowed_hosts=allowed_hosts):
+                resp = await _goto_playwright(
+                    page, url, wait_until=wait_until, timeout_ms=timeout_ms, wait_for_dom_parsed=wait_for_dom_parsed
+                )
+                status = resp.status if resp is not None else None
+                if status in _ANTIBOT_RECHECK_STATUSES:
+                    deadline = max(deadline, asyncio.get_running_loop().time() + _ANTIBOT_RECHECK_S)
+                    try:
+                        async with page.expect_navigation(
+                            wait_until=wait_until, timeout=_ANTIBOT_RECHECK_S * 1000
+                        ) as navigation:
+                            pass
+                        reloaded = await navigation.value
+                        if reloaded is not None:
+                            status = reloaded.status
+                    except _PlaywrightTimeoutError:
                         pass
-                    reloaded = await navigation.value
-                    if reloaded is not None:
-                        status = reloaded.status
-                except _PlaywrightTimeoutError:
-                    pass
             if status in _NAV_FAIL_STATUSES:
                 final = ""
                 try:
@@ -2202,7 +2216,7 @@ async def open_page(
     permit = await _acquire_navigation_permit(initial_host or "")
     stack = AsyncExitStack()
     page: PageLike
-    page_options: dict[str, Any] = {"navigation_timeout_ms": timeout_ms}
+    page_options: dict[str, Any] = {"navigation_timeout_ms": timeout_ms, "allowed_hosts": host_policy}
     if ozon_windows_compat:
         page_options["ozon_windows_compat"] = True
     if wait_for_dom_parsed:

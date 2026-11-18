@@ -227,6 +227,17 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_shielded_cleanup_completes_target_close_when_caller_cancels" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_s4_playwright.py" name="test_playwright_stalled_429_fails_fast_before_commit_and_confirms_target_close" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
   </requirement>
+  <requirement id="R-CDP-REDIRECT-GUARD" kind="requirement" state="tested" gaps="G-NAV-HOSTS-REDIRECT-LOADS">
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_playwright_cleanup_that_hangs_does_not_hold_the_call" requirements="R-CDP-REDIRECT-GUARD" title="Real Chrome (sim S9): after a timed-out navigation Fetch.disable and detach may not answer; exit stays bounded." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_playwright_continues_an_allowed_hop_and_a_foreign_sub_frame" requirements="R-CDP-REDIRECT-GUARD" title="Allowed hosts and sub-frame documents pass untouched." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_playwright_disables_the_interception_after_the_main_document" requirements="R-CDP-REDIRECT-GUARD" title="The interception is off once the main document answered." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_playwright_fails_a_foreign_redirect_hop_before_chrome_sends_it" requirements="R-CDP-REDIRECT-GUARD" title="A 302 to a foreign host is failed with BlockedByClient, never continued." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_playwright_navigates_when_the_interception_cannot_be_switched_on" requirements="R-CDP-REDIRECT-GUARD" title="A refused Fetch.enable keeps today's behaviour and says so." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_raw_continues_an_allowed_hop_and_a_foreign_sub_frame" requirements="R-CDP-REDIRECT-GUARD" title="Allowed hosts and sub-frame documents pass untouched on the raw path." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_raw_disables_the_interception_after_the_main_document" requirements="R-CDP-REDIRECT-GUARD" title="The interception is off once the main document answered." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_raw_fails_a_foreign_redirect_hop_before_chrome_sends_it" requirements="R-CDP-REDIRECT-GUARD" title="The raw fallback refuses the foreign hop the same way the Playwright path does." />
+    <test file="packages/mcp-core/tests/test_nav_guard.py" name="test_raw_navigates_when_the_interception_cannot_be_switched_on" requirements="R-CDP-REDIRECT-GUARD" title="A refused Fetch.enable keeps today's behaviour and says so." />
+  </requirement>
   <requirement id="R-CDP-SIM-INFRA" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_extra_flags_default" requirements="R-CDP-SIM-INFRA.flags" />
     <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_fixture_routes" requirements="R-CDP-SIM-INFRA.fixtures" />
