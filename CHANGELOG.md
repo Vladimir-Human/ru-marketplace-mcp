@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+## [2.11.1] - 2026-11-18
+
+### Fixed
+- Ozon: у товаров из-за рубежа карточка показывает под ценой доплату за таможенный платёж, которая в цену не входит. Теперь `ozon_card` возвращает её в поле `customs_duty_rub` (это оценка Ozon) и предупреждает, что она не входит в цену, а `compare_prices` не ставит такое предложение в один ряд с ценами, в которые пошлина уже включена, и называет примерную сумму с доплатой (#337).
+- Ozon: a cross-border product's card shows a customs payment under the price that the price leaves out. `ozon_card` now returns it as `customs_duty_rub` (Ozon's estimate) with a warning that it is not in the price, and `compare_prices` no longer ranks such an offer against prices that already include duty and names the estimated total (#337).
+
+- Wildberries: строки в сравнении цен больше не приходят без цен, когда страница поиска ещё загружалась. Поиск ждёт, пока карточки покажут цены, а пустая страница открывается ещё один раз. Если цены на странице нет совсем (все товары распроданы), ответ прежний.
+- AliExpress: поиск больше не падает с ошибкой «zero product tiles», когда страница грузилась медленно. Поиск ждёт появления ссылок на товары и открывает страницу ещё один раз, а если товаров так и нет — сообщает об ошибке, сколько ссылок и текста было на странице.
+- Wildberries: rows in a price comparison no longer come back without prices when the page was still loading. The search waits until the tiles show prices and opens an empty page once more; a page with no prices at all (everything sold out) answers as before.
+- AliExpress: search no longer fails with "zero product tiles" when the page was slow. It waits for the item links and opens the page once more; when the page still holds no tiles, the error says how many links and how much text the page had.
+
+- Ozon, Avito и другие площадки, читающие через Chrome, больше не падают с «CDP timeout» во время полного сравнения цен, пока ждут свободный слот для навигации: секунды ожидания разрешения возвращаются в таймаут попытки, поэтому попытка успевает прочитать страницу, а не истекает в очереди (#339).
+- Ozon, Avito and the other browser sources no longer fail with "CDP timeout" during a full price comparison while they wait for a free Chrome slot: the seconds spent waiting for a navigation permit are added back to the attempt's timeout, so the attempt reads the page instead of expiring in the queue (#339).
+
+### Security
+- Переходы между доменами: если страница магазина отвечает перенаправлением на чужой домен, браузер больше не запрашивает этот сайт — такой запрос отклоняется до отправки, и вызов завершается ошибкой без данных страницы. Раньше чужой сайт успевал загрузиться (с файлами cookie рабочего профиля) до того, как вызов отклонялся. Так же проверяется каждое звено цепочки перенаправлений (#340).
+- Cross-domain redirects: when a store page answers with a redirect to a foreign domain, the browser no longer requests that site — the request is refused before it is sent, and the call ends with an error and no page data. The foreign site used to load (with the working profile's cookies) before the call was refused. Every hop of a redirect chain is checked the same way (#340).
+
 ## [2.11.0] - 2026-11-18
 
 ### Added

@@ -130,7 +130,7 @@ from wb_connector.shape_reference import SEARCH_REQUIRED_FAMILIES
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.11.0"
+SERVER_VERSION = "2.11.1"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 mcp = FastMCP(

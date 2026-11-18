@@ -110,7 +110,7 @@ VS Code (`mcp.json` requires `"servers"` and `"type": "stdio"`):
 
 ### Docker alternative (stdio)
 
-The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0`) is built from `Dockerfile.stdio` (`MCP_TRANSPORT=stdio`, default entry point `marketplace-mcp`). Pass `compare-mcp` as the command argument for the compact 4-tool profile. Note that the root `Dockerfile` is HTTP-first (`wb-mcp` on port 8000); for local stdio builds use `docker build -f Dockerfile.stdio .` or pass `-e MCP_TRANSPORT=stdio`.
+The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.1`) is built from `Dockerfile.stdio` (`MCP_TRANSPORT=stdio`, default entry point `marketplace-mcp`). Pass `compare-mcp` as the command argument for the compact 4-tool profile. Note that the root `Dockerfile` is HTTP-first (`wb-mcp` on port 8000); for local stdio builds use `docker build -f Dockerfile.stdio .` or pass `-e MCP_TRANSPORT=stdio`.
 
 ```json
 {
@@ -123,7 +123,7 @@ The published GHCR image (`ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0`) is
         "-i",
         "-e",
         "MCP_TRANSPORT=stdio",
-        "ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.0",
+        "ghcr.io/vladimir-human/ru-marketplace-mcp:2.11.1",
         "compare-mcp"
       ]
     }

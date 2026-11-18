@@ -1,6 +1,6 @@
 {
   "name": "ru-marketplace-mcp-dsh",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "description": "Read-only MCP servers and cross-marketplace price comparison for 12 Russian and Chinese marketplaces (Wildberries, Ozon, Yandex Market, Avito, Cian, AliExpress, Taobao, Detsky Mir, Megamarket, Lamoda, DNS, Citilink) plus 14 Agent Skills for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
