@@ -279,12 +279,16 @@ async def test_public_raw_fallback_still_navigates_and_closes_only_its_target(mo
         assert page.url == "https://example.com/prepub"
         assert not any(command["method"] == "Target.closeTarget" for _, command in commands)
 
+    # The redirect guard brackets the navigation: Fetch.enable before it and
+    # Fetch.disable once the main document answered (R-CDP-REDIRECT-GUARD).
     assert [command["method"] for _, command in commands] == [
         "Target.createTarget",
         "Page.enable",
         "Network.enable",
         "Runtime.enable",
+        "Fetch.enable",
         "Page.navigate",
+        "Fetch.disable",
         "Target.closeTarget",
         "Target.getTargets",
     ]
