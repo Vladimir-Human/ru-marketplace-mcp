@@ -65,8 +65,6 @@ CALLS = {
     "marketplace_sources": {},
     "megamarket_card": {"item_id_or_url": "1234567"},
     "megamarket_search": {"query": "laptop"},
-    "mpstats_item": {"skus": [1234], "place": "ozon"},
-    "mpstats_warehouses": {"skus": [1234], "place": "ozon"},
     "ozon_card": {"sku_or_path": "1234"},
     "ozon_reviews": {"sku_or_path": "1234", "limit": 2},
     "ozon_search": {"query": "laptop"},
@@ -312,25 +310,6 @@ def _prepare(monkeypatch, tool_name, mode="normal"):
                 "cdp",
             ),
         )
-    elif prefix == "mpstats":
-        payload = {
-            "code": 200,
-            "days": 2,
-            "items": {
-                "1234": {
-                    "Sku": 1234,
-                    "Count": 2,
-                    "Totals": {"orders": 1, "sum": 1234},
-                    "pricesGraph": [0, 1234],
-                    "countGraph": [0, 2],
-                    "ordersGraph": [0, 1],
-                    "rubricsGraph": [0, 1],
-                }
-            },
-        }
-        if tool_name.endswith("warehouses"):
-            payload = {"code": 200, "days": 2, "data": {"1234": {"stocks": {"fbs": 2, "fbo": []}}}}
-        _stub(monkeypatch, module, "_call", payload)
     elif prefix == "megamarket":
 
         async def same_url(url, ctx=None):

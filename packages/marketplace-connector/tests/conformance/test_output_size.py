@@ -41,14 +41,10 @@ from .test_selfcheck_gates_price import ADAPTERS, fixture_path
 def build_full_server(monkeypatch: pytest.MonkeyPatch) -> FastMCP:
     """Use the shipped mount path on a fresh server, not an environment subset.
 
-    As in test_error_next_step, bypass only MPStats' *listing* credential gate;
-    its tools remain real and are never called without a captured fixture.
     No key or token is configured, and all global assembly state is restored.
     """
     monkeypatch.delenv("MARKETPLACE_SOURCES", raising=False)
     marketplace = importlib.import_module("marketplace_connector.server")
-    mpstats = importlib.import_module(BY_NAME["mpstats"].module)
-    monkeypatch.setattr(mpstats, "mount_unavailable_reason", lambda: None)
     app = FastMCP("interface-guards-full")
     monkeypatch.setattr(marketplace, "mcp", app)
     for attr, value in (("_MOUNTED", []), ("_SKIPPED", {}), ("_MOUNTED_MODULES", {})):
@@ -298,8 +294,6 @@ BUDGETS: dict[str, Budget] = {
         "item_page_dom_7931870037.html",
         "Only sources with captured native cards are measured; Ozon/Lamoda/Megamarket cards lack fixtures.",
     ),
-    "mpstats_item": Budget(None, "", "No committed analytics item fixture; no credential is entered."),
-    "mpstats_warehouses": Budget(None, "", "No committed warehouse-list fixture; no credential is entered."),
     "wb_root_info": Budget(None, "", "No committed basket info fixture."),
     "wb_reviews": Budget(None, "", "No committed reviews fixture at limit=100 or any smaller page."),
     "wb_questions": Budget(None, "", "No committed questions fixture at limit=100 or any smaller page."),

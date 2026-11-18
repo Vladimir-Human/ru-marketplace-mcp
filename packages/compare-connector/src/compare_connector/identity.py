@@ -211,6 +211,41 @@ def lists_sizes(title: Any) -> bool:
 # END_BLOCK_SIZE_LIST
 
 
+# START_BLOCK_MODEL_LIST
+# A title naming several models of one family ("Dyson V11/V15", "iPhone 15 / iPhone 16",
+# "Galaxy S24 / S25") sells or fits several products under one price (R-COMPARE-MODEL-LIST).
+# A family is the same word before two different numbers, or the same one-to-four-letter
+# prefix glued to two different numbers. IP ratings and USB, DDR and Wi-Fi versions are
+# specs, not models; a number followed by a unit is a size, which the size-list rule judges.
+_MODEL_GAP = r"\s*(?:/|\||,|\bили\b|\bor\b)\s*"
+_SAME_WORD_MODELS = re.compile(
+    r"(?<![\w-])([a-zа-яё]{2,})\s*(\d{1,4}[a-zа-яё]{0,2})\b" + _MODEL_GAP + r"\1\s*(\d{1,4}[a-zа-яё]{0,2})\b",
+    re.IGNORECASE,
+)
+_SAME_PREFIX_MODELS = re.compile(r"(?<![\w-])([a-z]{1,4})(\d{1,5})\b" + _MODEL_GAP + r"\1(\d{1,5})\b", re.IGNORECASE)
+_SPEC_PREFIXES = frozenset({"ip", "usb", "ddr", "lpddr", "wifi"})
+_UNIT_AFTER = re.compile(
+    r"\s*(?:gb|гб|tb|тб|mb|мб|мм|mm|см|cm|кг|kg|г|g|л|l|мл|ml|w|вт|mah|мач|гц|hz|шт|%)(?!\w)", re.IGNORECASE
+)
+
+
+def lists_models(title: Any) -> bool:
+    """Whether a title names several models of one family, so its price names no one product."""
+    text = _text(title)
+    for pattern in (_SAME_WORD_MODELS, _SAME_PREFIX_MODELS):
+        for match in pattern.finditer(text):
+            family, first, second = match[1], match[2], match[3]
+            if family.lower() in _SPEC_PREFIXES or first.lower() == second.lower():
+                continue
+            if _UNIT_AFTER.match(text, match.end()):
+                continue
+            return True
+    return False
+
+
+# END_BLOCK_MODEL_LIST
+
+
 def format_size_tokens(sizes: Iterable[str]) -> str:
     """Canonical sizes in capacity order, e.g. ``"64GB/256GB/1TB"``."""
     return "/".join(sorted(sizes, key=lambda token: (_size_in_gb(token), token)))

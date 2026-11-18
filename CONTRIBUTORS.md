@@ -14,7 +14,6 @@ from chat history.
 | Contributor | Merged PRs | Contribution |
 |---|---|---|
 | [@Vladimir-Human](https://github.com/Vladimir-Human) | maintainer | Project architecture, releases, reviews, and core maintenance. |
-| [@Xpos587](https://github.com/Xpos587) | [#5](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/5) | MPStats connector: plugin API analysis, parser structure, and the first working version. |
 | [@avxone](https://github.com/avxone) | [#37](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/37) | Avito selfcheck fix for the `catalog.items[]` response envelope. |
 | [@Khalmatov](https://github.com/Khalmatov) | [#38](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/38) | Ozon review provenance: mark the SKU the review is about. |
 | [@fosteev](https://github.com/fosteev) | [#42](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/42), [#47](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/47), [#106](https://github.com/Vladimir-Human/ru-marketplace-mcp/pull/106) | macOS CDP stealth portability, the Cian real-estate connector, and Cian regional redirects with card photo URLs. |

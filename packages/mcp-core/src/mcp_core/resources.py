@@ -336,8 +336,9 @@ offers keeps excluded/unpriced offers at the end; in_stock_only requires
 confirmed stock for ranking but does not discard unconfirmed offers.
 cheapest is the raw lowest eligible price; cheapest_comparable additionally
 excludes accessories, goods made for the device, copies, other conditions,
-explicit size mismatches, titles listing several sizes and titles that miss a
-Latin model word or number of the query or add Pro, Max and the like after it.
+explicit size mismatches, titles listing several sizes or models ("V11/V15")
+and titles that miss a Latin model word or number of the query or add Pro, Max
+and the like after it.
 Avito rows never say new or used, so they qualify only when the query asks for
 a used item. Neither proves exact manufacturer identity. price_spread_rub needs
 two ranked prices.
@@ -520,7 +521,7 @@ nothing about whether a marketplace will answer.""",
 
 MarketplaceSourcesResponse; serialized fields and aliases are generated below. ``skipped`` maps source name to the
 reason it is unavailable: an import error (usually a missing optional
-dependency), a missing credential its tools need, or an explicit
+dependency), or an explicit
 ``MARKETPLACE_SOURCES`` deselection. ``needs_cdp`` is the sorted subset of
 ``mounted`` whose reads can go through the operator's Chrome — for those, a
 down browser is a reason to run ``marketplace_health`` before spending a call.
@@ -546,48 +547,6 @@ MegamarketSearchResponse; serialized fields and aliases are generated below. pri
 
 ToolError: TransportDownError on ServicePipe refusals (with the fix inline);
 ParserDriftError when a reached-200 body no longer parses.""",
-    "mpstats_item": """Deprecated: MPStats runs its own MCP server,
-https://mcp.mpstats.io/mcp?token=<your MPStats token>; use it first. This tool
-goes in v2.11.0, and every result carries info:deprecated_use_official_mpstats_mcp.
-
-## Return Format
-
-MpStatsItemResponse; serialized fields and aliases are generated below. The *_graph series are per-day data, oldest-first.
-price_avg_rub is rubles; totals.sum and totals.sum_prev are sales amounts. Missing
-values are None, never 0; a zero graph cell means "no data for that day".
-
-## Error Format
-
-ToolError: BadRequestError on malformed skus or place; AuthMissingError
-when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-429; TransportDownError on network failures, non-200 responses and HTML
-blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-when no requested SKU has analytics.
-
-Args:
-    skus: 1..100 positive SKU integers.
-    place: 'ozon' or 'wildberries'.
-    oz_fbs: Ozon FBS mode flag (default true).""",
-    "mpstats_warehouses": """Deprecated: MPStats runs its own MCP server,
-https://mcp.mpstats.io/mcp?token=<your MPStats token>; use it first. This tool
-goes in v2.11.0, and every result carries info:deprecated_use_official_mpstats_mcp.
-
-## Return Format
-
-MpStatsWarehousesResponse; serialized fields and aliases are generated below. Each item carries its native stocks block. Missing
-stock counts are None, never 0.
-
-## Error Format
-
-ToolError: BadRequestError on malformed skus or place; AuthMissingError
-when MPSTATS_MP_AUTH is missing or rejected; RateLimitedError on HTTP
-429; TransportDownError on network failures, non-200 responses and HTML
-blocks; ParserDriftError on a non-JSON or mis-shaped body; NotFoundError
-when no requested SKU has stock data.
-
-Args:
-    skus: 1..100 positive SKU integers.
-    place: 'ozon' or 'wildberries'.""",
     "ozon_card": """## Return Format
 
 OzonCardResponse; serialized fields and aliases are generated below on success.
@@ -1042,7 +1001,7 @@ def render_error_reference() -> str:
         "`not_found` names the source's registry listing tool (`detmir_category` where there is no search).",
         "`bad_request` names a schema parameter its message names in full (or the one of which it names two",
         "parts) and otherwise names none; `auth_missing` names the configured setting",
-        "where one is required (MPStats: `MPSTATS_MP_AUTH`); only the user sets keys.",
+        "where one is required; only the user sets keys.",
         "`challenge_required` keeps its existing `user_action`; follow it before calling the named tool again.",
         "Optional `old_build` is informational (`info:old_build`): `version`, `released`, `age_days`, `upgrade`.",
         "Only `parser_drift`, `transport_down`, `challenge_required` and `rate_limited` add it for a build",

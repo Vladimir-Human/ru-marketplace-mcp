@@ -11,8 +11,7 @@ background: `CONTRIBUTING.md` ("What this codebase cares about") and `SECURITY.m
   unavailable price becomes the cheapest offer; the price kind or a conditional price is lost
   (R-NO-FABRICATION). Missing is `None`; use `coerce_price` / `coerce_int`.
 - **A write or a stored credential.** Anything that orders, reviews or changes a marketplace
-  account, or a new stored marketplace credential (R-READ-ONLY, R-CREDENTIALS; the optional
-  `MPSTATS_MP_AUTH` token is the one documented exception).
+  account, or a new stored marketplace credential (R-READ-ONLY, R-CREDENTIALS).
 - **A weaker CDP tier.** The browser runs in the operator's logged-in profile: an input that
   reaches a URL path or filter without strict shape validation, a looser host allowlist, scheme
   guard or origin/redirect guard, or automatic captcha solving (R-INPUT-TRUST, SECURITY.md).

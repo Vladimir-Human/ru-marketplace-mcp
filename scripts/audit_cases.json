@@ -213,6 +213,16 @@
       "xiaomi redmi note 14 256gb",
       "ssd samsung 990 pro 1tb",
       "lego 42151"
+    ],
+    "2": [
+      "samsung galaxy s25 256gb",
+      "apple airpods pro 2",
+      "кофемашина delonghi magnifica s ecam22.110",
+      "nintendo switch oled",
+      "кроссовки adidas samba og",
+      "автокресло cybex sirona",
+      "шины michelin x-ice north 4 205/55 r16",
+      "электрическая зубная щетка oral-b io 9"
     ]
   },
   "personal_data_fields": ["user", "author", "reviewer_name", "phone", "email"],

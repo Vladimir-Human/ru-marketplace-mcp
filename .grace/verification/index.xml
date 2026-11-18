@@ -51,7 +51,7 @@
     <test file="packages/mcp-core/tests/test_cache.py" name="test_get_or_fetch_stores_only_what_cache_if_accepts" requirements="R-CACHE-VALIDATED" />
     <test file="packages/wb-connector/tests/test_helpers.py" name="test_cache_serves_a_repeated_validated_read" requirements="R-CACHE-VALIDATED" title="An agent walks the same SKU repeatedly; the second look must not re-hit WB." />
   </requirement>
-  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE,G-CAPTURE-MUTATION-STUFFED-TITLES">
+  <requirement id="R-CAPTURE-MUTATION" kind="requirement" state="tested" gaps="G-CAPTURE-MUTATION-ADJACENT-PRICE">
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_equivalent" requirements="R-CAPTURE-MUTATION.equivalent" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation.py" name="test_capture_no_invented_price" requirements="R-CAPTURE-MUTATION.no-invented-price" />
     <test file="packages/aliexpress-connector/tests/test_capture_mutation_m5_m6.py" name="test_adjacent_price_minimal_violation" requirements="R-CAPTURE-MUTATION.conditional-price,R-CAPTURE-MUTATION.split-payment" />
@@ -69,7 +69,6 @@
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_ambiguous_title_oracle_rejects_a_planted_comparable_winner" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_compare_regular_price_and_winner_ignore_cheaper_conditional_price" requirements="R-CAPTURE-MUTATION.conditional-price" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_permutation_oracle_rejects_planted_order_or_winner" requirements="R-CAPTURE-MUTATION.permutation" />
-    <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_ambiguous_title_minimal_violation" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_keyword_stuffed_and_accessory_titles_never_win" requirements="R-CAPTURE-MUTATION.ambiguous-title" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_permutations_keep_winners_and_offer_order" requirements="R-CAPTURE-MUTATION.permutation" />
     <test file="packages/compare-connector/tests/benchmark/test_capture_mutation.py" name="test_recording_seller_instructions_keep_prices_ids_identity_and_winners" requirements="R-CAPTURE-MUTATION.seller-text" />
@@ -193,6 +192,8 @@
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_429_returns_rate_limited_with_retry_delay" requirements="R-CDP-NAV-TIMEOUT.qrator-429" />
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_citilink_tools_opt_in_without_changing_settle_delay" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/citilink-connector/tests/test_navigation_mode.py" name="test_public_citilink_never_waits_for_missing_domcontentloaded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed,R-CDP-NAV-TIMEOUT.qrator-429" title="Real connector/kit/open_page; only browser I/O is replaced." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s2_401_self_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="S2: DNS's 401 main document self-reloads to 200; the waiting public call succeeds." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-NAV-TIMEOUT.qrator-429" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_goto_and_status_waits_out_an_antibot_reload" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: a self-clearing main-frame check returns the real page." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_429_is_not_rechecked" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: refuse a 429 without waiting for a navigation." />
     <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_playwright_antibot_recovers_when_the_main_frame_reloads_to_200" requirements="R-CDP-NAV-TIMEOUT.antibot-recheck" title="R-CDP-NAV-TIMEOUT.antibot-recheck: the new document lands before the final host check." />
@@ -207,6 +208,53 @@
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_parsed_dom_without_load_events_yields_owned_page" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_is_bounded_and_never_yielded" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_dom_parsed.py" name="test_unparsed_dom_timeout_says_the_page_was_still_parsing" requirements="R-CDP-NAV-TIMEOUT.dom-parsed" />
+  </requirement>
+  <requirement id="R-CDP-SIM-INFRA" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_extra_flags_default" requirements="R-CDP-SIM-INFRA.flags" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_fixture_routes" requirements="R-CDP-SIM-INFRA.fixtures" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_marker_and_ci_configuration" requirements="R-CDP-SIM-INFRA.ci" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_missing_launch_guard" requirements="R-CDP-SIM-INFRA.flags,R-CDP-SIM-INFRA.isolation" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_reply_sequence" requirements="R-CDP-SIM-INFRA.fixtures" />
+    <test file="packages/mcp-core/tests/sim/test_safety.py" name="test_signal_reply" requirements="R-CDP-SIM-INFRA.fixtures" title="A held reply serves exact committed bytes only after signalling, or cancels on reset." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s1_search" requirements="R-CDP-SIM-INFRA.isolation" title="S1: Native MCP search succeeds through the real browser and committed source fixture." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S1" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s1_search" requirements="R-CDP-SIM-S1" title="S1: Native MCP search succeeds through the real browser and committed source fixture." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S10" kind="requirement" state="tested" gaps="G-CDP-SIM-RETAINED-TARGET">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s10_closed_target_between_calls" requirements="R-CDP-SIM-S10.closed-target" title="S10: Externally close a successfully read owned target; the next real public search never hangs." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S2" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s2_401_self_reload" requirements="R-CDP-SIM-S2" title="S2: DNS's 401 main document self-reloads to 200; the waiting public call succeeds." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S3" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s3_403_self_reload" requirements="R-CDP-SIM-S3" title="S3: A 403 document reloads to 200 within one public MCP call, in both paths." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S4" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s4_429_fail_fast" requirements="R-CDP-SIM-S4" title="S4: A 429 whose body never finishes is refused before parsing/settling, within 12 seconds, and its tab closes." />
+    <test file="packages/mcp-core/tests/test_chrome_cdp.py" name="test_raw_page_close_confirms_and_retries_when_chrome_keeps_the_tab" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: _RawCdpPage.close() re-checks Target.getTargets and closes again if Chrome kept the tab." />
+    <test file="packages/mcp-core/tests/test_raw_owned_popup.py" name="test_owned_popup_cleanup_retries_close_when_chrome_keeps_the_popup" requirements="R-CDP-SIM-S4" title="R-CDP-SIM-S4: cleanup() confirms Target.getTargets dropped the popup and retries closeTarget." />
+    <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_chrome_ignored_is_sent_again_until_the_tab_is_gone" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_close_that_works_is_checked_once" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_failing_command_ends_the_close_without_raising" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_a_tab_that_never_goes_stops_after_the_attempts" requirements="R-CDP-SIM-S4" />
+    <test file="packages/mcp-core/tests/test_raw_targets.py" name="test_an_answer_without_a_target_list_is_not_taken_as_closed" requirements="R-CDP-SIM-S4" />
+  </requirement>
+  <requirement id="R-CDP-SIM-S5" kind="requirement" state="tested" gaps="G-CDP-SIM-HANDOFF-WAITING">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s5_signal_held_challenge" requirements="R-CDP-SIM-S5.waiting" title="S5: Signal the origin only while a committed refusal still holds the waiting call." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S6" kind="requirement" state="tested" gaps="G-NAV-HOSTS-REDIRECT-LOADS">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s6_cross_host_redirect" requirements="R-CDP-SIM-S6.redirect" title="S6: A foreign redirect is refused before its otherwise valid DNS tiles can become results." />
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s6_foreign_url_opens_no_tab" requirements="R-CDP-SIM-S6.input" title="S6: A valid-looking card path on a foreign host fails before even transient tab creation." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S7" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s7_ten_refusals_open_breaker" requirements="R-CDP-SIM-S7" title="S7: Ten real main-document refusals open the real shared cooldown and stop further HTTP traffic." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S8" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios_more.py" name="test_s8_foreign_tab_untouched" requirements="R-CDP-SIM-S8" title="S8: An external tab, even on the same host, keeps identity/title/URL and emits no navigation or close." />
+  </requirement>
+  <requirement id="R-CDP-SIM-S9" kind="requirement" state="tested">
+    <test file="packages/mcp-core/tests/sim/test_scenarios.py" name="test_s9_hang_timeout" requirements="R-CDP-SIM-S9" title="S9: A real never-responding HTTPS origin hits the navigation budget, not the outer watchdog." />
   </requirement>
   <requirement id="R-CHALLENGE-ACTION" kind="requirement" state="tested" gaps="G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_challenge_is_json_with_the_challenge_contract" requirements="R-CHALLENGE-ACTION" title="The x5sec verdict must reach the agent through the public card tool as the" />
@@ -373,11 +421,17 @@
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_recorded_query_picks_labelled_winners" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_recording_still_replays_through_the_recording_stub" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_a_trap_retitles_exactly_its_offer" requirements="R-COMPARE-BENCHMARK-SCORE" />
+    <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_an_empty_label_set_expects_no_winner_and_a_trap_may_name_its_own_set" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_every_live_recording_has_labels_and_two_traps" requirements="R-COMPARE-BENCHMARK-SCORE" />
     <test file="packages/compare-connector/tests/benchmark/test_score.py" name="test_the_judge_names_each_outcome" requirements="R-COMPARE-BENCHMARK-SCORE" />
   </requirement>
   <requirement id="R-COMPARE-BUNDLE-NOUN-PHRASES" kind="requirement" state="tested" gaps="G-COMPARE-BUNDLE-NOUN-PHRASES-LIVE">
     <test file="packages/compare-connector/tests/test_bundle_noun_phrases.py" name="test_compare_mcp_bundle_noun_phrases" requirements="R-COMPARE-BUNDLE-NOUN-PHRASES" title="R-COMPARE-BUNDLE-NOUN-PHRASES; R-COMPARE-RELEVANCE-BOUNDARIES." />
+  </requirement>
+  <requirement id="R-COMPARE-COMPARABLE-OUTLIER" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_a_cheap_true_match_or_a_thin_set_is_kept" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_compare_prices_names_the_skipped_outlier_which_stays_cheapest" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_leading_offers_under_a_quarter_of_the_median_are_split_off" requirements="R-COMPARE-COMPARABLE-OUTLIER" />
   </requirement>
   <requirement id="R-COMPARE-CONDITION-ON-CARD" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_condition_on_card.py" name="test_an_avito_row_is_never_cheapest_comparable_for_an_unqualified_query" requirements="R-COMPARE-CONDITION-ON-CARD" />
@@ -421,11 +475,21 @@
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_unsupported_source_image_stays_empty" requirements="R-COMPARE-IMAGE-URL" />
     <test file="packages/compare-connector/tests/test_image_url.py" name="test_url_policy_on_a_captured_tile" requirements="R-COMPARE-IMAGE-URL" />
   </requirement>
+  <requirement id="R-COMPARE-MODEL-LIST" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_query_that_lists_models_itself_keeps_such_titles_comparable" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_a_title_naming_several_models_of_one_family_names_no_one_product" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_compare_prices_skips_a_model_list_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-LIST" />
+    <test file="packages/compare-connector/tests/test_model_list.py" name="test_one_model_a_spec_list_or_a_size_is_no_model_list" requirements="R-COMPARE-MODEL-LIST" />
+  </requirement>
   <requirement id="R-COMPARE-MODEL-TOKENS" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_is_not_the_queried_model_says_why" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_a_title_that_names_the_queried_model_passes" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_compare_prices_skips_another_model_for_cheapest_comparable_but_keeps_it_cheapest" requirements="R-COMPARE-MODEL-TOKENS" />
     <test file="packages/compare-connector/tests/test_model_tokens.py" name="test_the_offer_brand_field_names_the_brand_a_title_leaves_out" requirements="R-COMPARE-MODEL-TOKENS" title="Wildberries keeps the brand out of the product name (recorded: &quot;Смартфон iPhone 14 128 ГБ&quot;, brand Apple)." />
+  </requirement>
+  <requirement id="R-COMPARE-OWN-CHARGING-CASE" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_a_charging_case_the_listing_sells_stays_an_accessory" requirements="R-COMPARE-OWN-CHARGING-CASE" />
+    <test file="packages/compare-connector/tests/test_comparable_outlier.py" name="test_an_earbuds_own_charging_case_is_no_accessory" requirements="R-COMPARE-OWN-CHARGING-CASE" />
   </requirement>
   <requirement id="R-COMPARE-PRICE-CONTEXT" kind="requirement" state="tested">
     <test file="packages/compare-connector/tests/test_price_context.py" name="test_avito_fixture_location_reaches_outcome" requirements="R-COMPARE-PRICE-CONTEXT" />
@@ -573,6 +637,16 @@
     <test file="packages/avito-connector/tests/test_item_closed.py" name="test_closed_state_reads_service_data_only" requirements="R-ERRORS" />
     <test file="packages/avito-connector/tests/test_item_state.py" name="test_a_missing_or_removed_ad_stays_not_found" requirements="R-ERRORS" title="The contract of main: a missing or removed ad is not_found, never a healthy card." />
     <test file="packages/mcp-core/tests/test_kit.py" name="test_render_json_refusals_are_json_errors" requirements="R-ERRORS" title="Every render_json refusal must carry the shared error JSON the agent reads" />
+  </requirement>
+  <requirement id="R-FIRST-RUN-PROBE" kind="requirement" state="tested">
+    <test file="scripts/test_first_run_probe.py" name="test_a_work_folder_inside_a_checkout_is_refused" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_chrome_is_closed_and_work_removed_when_a_step_raises" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_cleanup_waits_for_port_and_retries_transient_permission_error" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_doctor_rows_list_each_source_state_and_next_step" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_dry_run_prints_the_plan_runs_nothing_and_removes_its_folder" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_each_step_records_its_exit_seconds_and_output_tail_and_a_timeout_does_not_stop_the_rest" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_the_settings_keep_every_step_off_the_owner_chrome_profile_and_config" requirements="R-FIRST-RUN-PROBE" />
+    <test file="scripts/test_first_run_probe.py" name="test_the_steps_run_setup_install_doctor_and_matrix_in_order" requirements="R-FIRST-RUN-PROBE" />
   </requirement>
   <requirement id="R-FIXTURE-PERSONAL-DATA" kind="requirement" state="tested">
     <test file="scripts/test_scrub_fixtures.py" name="test_a_company_avito_seller_is_kept" requirements="R-FIXTURE-PERSONAL-DATA" title="A company seller's name stays: the marketplace says so." />
@@ -762,6 +836,15 @@
     <test file="scripts/test_live_matrix.py" name="test_whole_run_refused_by_ledger_exits_three_without_calls" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.guard" />
     <test file="scripts/test_live_matrix.py" name="test_yandex_delta_requires_same_product_and_known_same_offer_sku" requirements="R-LIVE-MATRIX,R-LIVE-MATRIX.delta" />
   </requirement>
+  <requirement id="R-LIVE-PAUSE" kind="requirement" state="tested">
+    <test file="scripts/test_live_audit.py" name="test_a_site_pause_seen_in_the_audit_is_kept_for_later_runs" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_a_marketplace_pause_refuses_requests_there_until_it_ends" requirements="R-LIVE-PAUSE" title="A rerun 17 minutes after a 1200 s retry_after went out anyway (2026-11-17); the budget now says no." />
+    <test file="scripts/test_live_budget.py" name="test_a_noted_pause_outlives_reset_and_binds_the_next_run" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_budget.py" name="test_retry_after_reads_only_a_positive_finite_pause" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_check.py" name="test_a_tool_error_with_retry_after_pauses_the_marketplaces_the_call_used" requirements="R-LIVE-PAUSE" />
+    <test file="scripts/test_live_matrix.py" name="test_a_marketplace_still_paused_is_skipped_without_a_call" requirements="R-LIVE-PAUSE" title="The 2026-11-17 rerun went to Megamarket 17 minutes into its 1200 s pause; the matrix now skips it." />
+    <test file="scripts/test_live_matrix.py" name="test_a_skipped_probe_never_becomes_the_measured_cost" requirements="R-LIVE-PAUSE" />
+  </requirement>
   <requirement id="R-LIVE-PREFLIGHT" kind="requirement" state="tested">
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_after_both_fixes_stops_before_budget" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: nothing left to try → both commands printed, ledger untouched." />
     <test file="scripts/test_live_check.py" name="test_cdp_artifact_failure_moves_temp_into_the_repo_first" requirements="R-LIVE-PREFLIGHT.cdp" title="R-LIVE-PREFLIGHT.cdp: a writable-for-Python %TEMP% that node may not use" />
@@ -781,6 +864,13 @@
     <test file="packages/marketplace-connector/tests/conformance/test_schema_descriptions.py" name="test_every_marketplace_discount_field_states_its_provenance" requirements="R-MARKETPLACE-PRICE-WORDING.shared" title="R-MARKETPLACE-PRICE-WORDING: every source's shown discounts are not verified history." />
   </requirement>
   <requirement id="R-MARKETPLACES" kind="requirement" state="gap" gaps="G-MARKETPLACES-UNTESTED" />
+  <requirement id="R-MCPB-BUNDLE" kind="requirement" state="tested">
+    <test file="scripts/test_build_mcpb.py" name="test_the_bundle_pins_the_published_package_at_this_version" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_entry_point_starts_the_compare_profile_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_manifest_has_the_mcpb_0_4_required_fields_for_a_uv_server" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_unpacked_bundle_declares_non_package_uv_and_starts_cleanly_offline" requirements="R-MCPB-BUNDLE" />
+    <test file="scripts/test_build_mcpb.py" name="test_the_zip_is_deterministic_and_holds_no_environment" requirements="R-MCPB-BUNDLE" />
+  </requirement>
   <requirement id="R-MEGAMARKET-ONE-LOAD" kind="requirement" state="tested">
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_code_seven_body_on_an_http_refusal_keeps_its_servicepipe_verdict" requirements="R-MEGAMARKET-ONE-LOAD" />
     <test file="packages/megamarket-connector/tests/test_one_load.py" name="test_failed_home_load_is_not_reopened_or_deadlocked" requirements="R-MEGAMARKET-ONE-LOAD" />
@@ -803,18 +893,11 @@
     <test file="scripts/test_metrics_snapshot.py" name="test_every_source_failing_exits_non_zero" requirements="R-METRICS" />
     <test file="scripts/test_metrics_snapshot.py" name="test_external_authors_skip_the_owner_and_bots_and_split_issues_from_prs" requirements="R-METRICS" />
   </requirement>
-  <requirement id="R-MPSTATS-MOUNT-GATE" kind="requirement" state="tested">
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_mpstats_tools_are_mounted_with_the_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_mpstats_tools_are_not_mounted_without_the_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_skip_reason_names_the_missing_token" requirements="R-MPSTATS-MOUNT-GATE" />
-    <test file="packages/marketplace-connector/tests/test_mpstats_mount_gate.py" name="test_the_standalone_mpstats_server_keeps_its_tools" requirements="R-MPSTATS-MOUNT-GATE" title="The gate lives in the unified mount, never in the standalone server." />
+  <requirement id="R-MPSTATS-REMOVED" kind="requirement" state="tested">
+    <test file="packages/marketplace-connector/tests/test_source_selection.py" name="test_removed_mpstats_keeps_other_sources_and_reports_official_server" requirements="R-MPSTATS-REMOVED" />
+    <test file="packages/mcp-core/tests/test_sources.py" name="test_removed_mpstats_selection_keeps_sources_and_reports_once" requirements="R-MPSTATS-REMOVED" />
   </requirement>
-  <requirement id="R-MPSTATS-OFFICIAL-MCP" kind="requirement" state="tested">
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_guides_point_to_the_official_server" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: guide://mpstats/&lt;tool&gt; names the official server and the note." />
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_both_tool_descriptions_point_to_the_official_server_first" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the agent reads the pointer before anything else in the description." />
-    <test file="packages/mpstats-connector/tests/test_official_mcp_pointer.py" name="test_every_result_carries_the_official_server_note" requirements="R-MPSTATS-OFFICIAL-MCP" title="R-MPSTATS-OFFICIAL-MCP: the note is an info: note naming the server; it does not touch healthy." />
-  </requirement>
-  <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
+  <requirement id="R-NAV-HOSTS" kind="requirement" state="tested" gaps="G-NAV-HOSTS-REDIRECT-LOADS">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
     <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_foreign_links_have_no_id" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_offer_links_keep_the_id" requirements="R-NAV-HOSTS.kept-inputs" />
@@ -934,6 +1017,10 @@
     <test file="packages/mcp-core/tests/test_output_schema.py" name="test_wrapped_outputs_survive_compaction_through_mcp" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: compaction preserves SDK serialization and decoding." />
     <test file="packages/wb-connector/tests/test_output_schema.py" name="test_wb_search_mcp_answers_match_advertised_schema" requirements="R-OUTPUT-SCHEMA-WRAPPING" title="R-OUTPUT-SCHEMA-WRAPPING: no phantom result field; errors stay MCP errors." />
   </requirement>
+  <requirement id="R-OZON-CDP-FAILURE-HINT" kind="requirement" state="tested">
+    <test file="packages/ozon-connector/tests/test_cdp_failure_hint.py" name="test_a_timeout_inside_a_reachable_chrome_does_not_say_start_chrome" requirements="R-OZON-CDP-FAILURE-HINT" />
+    <test file="packages/ozon-connector/tests/test_cdp_failure_hint.py" name="test_an_unreachable_browser_still_says_start_chrome" requirements="R-OZON-CDP-FAILURE-HINT" />
+  </requirement>
   <requirement id="R-OZON-CHROME-COMPAT" kind="requirement" state="tested">
     <test file="packages/mcp-core/tests/test_chrome_cdp_ozon_compat.py" name="test_compat_rechecks_final_origin_in_both_transports" requirements="R-OZON-CHROME-COMPAT" />
     <test file="packages/mcp-core/tests/test_chrome_cdp_ozon_compat.py" name="test_playwright_applies_override_before_goto_and_keeps_session_until_closed" requirements="R-OZON-CHROME-COMPAT" />
@@ -1002,7 +1089,6 @@
   <requirement id="R-REPO-EOL" kind="requirement" state="gap" gaps="G-REPO-EOL-UNTESTED" />
   <requirement id="R-SCHEMA-LIMITS" kind="requirement" state="tested">
     <test file="packages/cian-connector/tests/test_input_schema.py" name="test_the_advertised_schema_states_the_room_enum" requirements="R-SCHEMA-LIMITS" title="The closed set of room counts is an enum in the schema." />
-    <test file="packages/mpstats-connector/tests/test_input_schema.py" name="test_the_advertised_schema_states_the_batch_limits" requirements="R-SCHEMA-LIMITS" title="The limits are machine-readable, not prose in the description." />
     <test file="packages/wb-connector/tests/test_batch_schema.py" name="test_the_advertised_schema_states_the_batch_limits" requirements="R-SCHEMA-LIMITS" title="The limits are machine-readable, not prose in the description." />
   </requirement>
   <requirement id="R-SEARCH-COUNT-HONEST" kind="requirement" state="tested">

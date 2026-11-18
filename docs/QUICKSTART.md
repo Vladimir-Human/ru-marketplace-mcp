@@ -98,8 +98,7 @@ uv run marketplace-mcp install claude --per-source
 
 The command prints the per-source block for manual insertion. Copy only the
 sources you want; without `--per-source` it prints the single `marketplace`
-entry for the selected profile described above. MPStats is optional and needs a
-paid token; ordinary marketplace queries do not need it. `install cursor`,
+entry for the selected profile described above. `install cursor`,
 `install claude-code`, and `install dsh` are also supported.
 
 ## 3. Check two sources before adding a browser

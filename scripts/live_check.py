@@ -39,7 +39,7 @@ START_MODULE_CONTRACT
 PURPOSE: Run marketplace checks under the shared live budget without masking checker/doctor failure as a blocked source.
 SCOPE: Temp/driver/bare-CDP preflight before call/matrix/doctor budget install, shared tool call, dispatch, doctor verdicts (0/1/2/3/4), result and ledger output.
 DEPENDS: scripts/live_matrix.py; scripts/live_budget.py; mcp_core.transport.chrome_cdp endpoint; Playwright; stdlib contextlib,io,logging,tempfile,shutil,dataclasses; marketplace CLI and connector modules after preflight.
-LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-MATRIX, R-LIVE-AUDIT, R-DOCTOR-EXIT-CODES.
+LINKS: M-LIVE-CHECK, R-LIVE-PREFLIGHT, R-LIVE-BUDGET, R-LIVE-PAUSE, R-LIVE-MATRIX, R-LIVE-AUDIT, R-DOCTOR-EXIT-CODES.
 START_MODULE_MAP
   _check_temp          verify writable temp space, repairing TEMP/TMP inside the repo
   _check_driver        start/stop Playwright, retrying with system node on failure
@@ -47,7 +47,7 @@ START_MODULE_MAP
   _preflight           print one result per check and stop before budget/connector imports
   _dump                JSON-shaped result for a model, structured content or plain value
   _quiet_diagnostics   suppress raw prints and prebound logs for matrix; restore logging afterward
-  _call_tool           one shared connector invocation for call and matrix
+  _call_tool           one shared connector invocation for call and matrix; records a marketplace's own pause
   matrix               dispatch guarded fixed-query probes with whitelisted local output
   _reset               archive the ledger under a timestamped name to start a new run
   _doctor              run the CLI's doctor round under the budget and report the ledger
@@ -280,9 +280,34 @@ def _quiet_diagnostics() -> Iterator[None]:
 
 
 async def _call_tool(module_path: str, tool_name: str, kwargs: dict[str, Any]) -> Any:
-    """One invocation/serialization path shared by call and the matrix."""
+    """One invocation/serialization path shared by call and the matrix.
+
+    An error that names its own pause (``retry_after_s``) pauses every
+    marketplace this call sent a request to, so the next request there waits.
+    """
     tool = getattr(__import__(module_path, fromlist=[tool_name]), tool_name)
-    return _dump(await tool(**kwargs))
+    budget = live_budget.installed_budget()
+    booked = len(budget.ledger.load()) if budget is not None else 0
+    try:
+        result = _dump(await tool(**kwargs))
+    except Exception as exc:
+        try:
+            payload = json.loads(str(exc))
+        except (ValueError, TypeError):
+            payload = None
+        _note_pauses(budget, booked, payload)
+        raise
+    _note_pauses(budget, booked, result)
+    return result
+
+
+def _note_pauses(budget: live_budget.Budget | None, booked: int, payload: Any) -> None:
+    pause = live_budget.retry_after(payload)
+    if budget is None or pause is None:
+        return
+    code, seconds = pause
+    for group in sorted({str(entry.get("group")) for entry in budget.ledger.load()[booked:]}):
+        budget.note_pause(group, seconds, code)
 
 
 def _ledger_report(budget: live_budget.Budget) -> int:
@@ -302,6 +327,12 @@ def _ledger_report(budget: live_budget.Budget) -> int:
             f"refused before sending (over a cap): {listed}; the checks that needed them read "
             "transport_down or inconclusive, which says nothing about the site"
         )
+    for group in sorted(budget.ledger.load_pauses()):
+        pause = budget.pause(group)
+        if pause is not None:
+            print(
+                f"paused by the marketplace: {group} answered {pause.get('code')}; no request before {pause.get('until_utc')} UTC"
+            )
     return 0
 
 

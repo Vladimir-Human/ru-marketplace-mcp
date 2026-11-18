@@ -4,7 +4,7 @@ START_MODULE_CONTRACT
 PURPOSE: Prove wrapped-child accounting, plans, audit checks, captures, timing, private output and the compare recorder.
 SCOPE: Real child wrapper and MCP protocol with fake server targets; fake CDP only; no sockets to sites.
 DEPENDS: live_audit, audit_server, live_budget, live_check, compare_recording; pytest; httpx; MCP; registry; stdlib.
-LINKS: M-LIVE-AUDIT, M-COMPARE-RECORDING, R-LIVE-AUDIT, R-COMPARE-BENCHMARK-REPLAY.
+LINKS: M-LIVE-AUDIT, M-COMPARE-RECORDING, R-LIVE-AUDIT, R-COMPARE-BENCHMARK-REPLAY, R-LIVE-PAUSE.
 START_MODULE_MAP
   audit: Import the new implementation inside each test, retaining individual pre-implementation failures.
   recorder: The recorder module, imported inside each test the same way.
@@ -924,6 +924,29 @@ async def test_compare_records_wall_latency_sources_and_visibility(
     assert rows[0]["latency_s"] == 61
     assert rows[0]["source_latencies_ms"] == {"ozon": 61000}
     assert rows[0]["window_hidden"] is True
+
+
+@pytest.mark.req("R-LIVE-PAUSE")
+def test_a_site_pause_seen_in_the_audit_is_kept_for_later_runs(audit: Any) -> None:
+    budget = live_budget.Budget(40, 8, 3.0, live_budget.Ledger())
+    cases = audit.load_cases()
+    row = {
+        "source": "compare",
+        "result": {
+            "source_outcomes": [
+                {"source": "megamarket", "error": "rate_limited", "retry_after_s": 1200.0},
+                {"source": "dns", "error": None},
+            ]
+        },
+    }
+    audit._note_site_pauses(row, budget, cases)
+    audit._note_site_pauses(
+        {"source": "lamoda", "budget_refused": True, "result": {"retry_after_s": 60}}, budget, cases
+    )
+    pause = budget.pause("megamarket")
+    assert pause is not None and pause["code"] == "rate_limited"
+    assert budget.pause("dns") is None
+    assert budget.pause("lamoda") is None  # our own budget said no; the site asked for nothing
 
 
 # END_BLOCK_RUNNER

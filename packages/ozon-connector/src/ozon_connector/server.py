@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -39,6 +39,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 #              shape-drift warning fires when a required key family vanishes.
 # ozon_selfcheck: Report operator transport/parser health; not an MCP tool.
 # _cacheable_composer: Keep rejected responses out of the cache (R-CACHE-VALIDATED).
+# _all_tiers_failed_error: Say "start Chrome" only when Chrome was not reached (R-OZON-CDP-FAILURE-HINT).
 # END_MODULE_MAP
 
 from __future__ import annotations
@@ -612,6 +613,22 @@ def _ozon_blocked_error(tier: str, detail: str = "") -> TransportDownError:
     return TransportDownError(message, status_code=403)
 
 
+def _all_tiers_failed_error(tier: str, body: str, limit: int) -> TransportDownError:
+    """R-OZON-CDP-FAILURE-HINT: tier "cdp" means Chrome answered and the request in the Ozon tab failed or timed
+    out (audit cycle 2: a parallel comparison, Chrome running, was told to start Chrome); others: no browser."""
+    if tier == "cdp":
+        return TransportDownError(
+            "Tier-1 (curl_cffi) blocked, and the request inside the Chrome Ozon tab failed or timed out "
+            "(Chrome is running; do not restart it). Retry once, alone if this ran beside other "
+            f"marketplaces. Last error: {body[:limit]}"
+        )
+    return TransportDownError(
+        "Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
+        f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
+        f"Last error: {body[:limit]}"
+    )
+
+
 def _canonical_product_path_from_input(raw_input: str) -> tuple[str | None, dict[str, Any] | None]:
     raw = raw_input.strip()
     if raw.isdigit():
@@ -708,13 +725,7 @@ async def ozon_card(
         status_code, body, tier = await _fetch_composer(target_path, ctx)
 
         if status_code == 0:
-            raise_tool_error(
-                TransportDownError(
-                    "Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                    f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                    f"Last error: {body[:200]}"
-                )
-            )
+            raise_tool_error(_all_tiers_failed_error(tier, body, 200))
         if status_code == 403:
             raise_tool_error(_ozon_blocked_error(tier, body))
         if status_code != 200:
@@ -983,13 +994,7 @@ async def _ozon_reviews_impl(
         tier_used = tier
         if status_code == 0:
             if not collected:
-                raise_tool_error(
-                    TransportDownError(
-                        f"Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                        f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                        f"Last error: {body[:300]}"
-                    )
-                )
+                raise_tool_error(_all_tiers_failed_error(tier, body, 300))
             partial = True
             stop_reason = "all_tiers_failed"
             last_error = {"type": "all_tiers_failed", "message": _redact(body[:300])}
@@ -1465,13 +1470,7 @@ async def _ozon_search_impl(
     status_code, body, tier = await _fetch_composer(search_path, ctx)
 
     if status_code == 0:
-        raise_tool_error(
-            TransportDownError(
-                f"Tier-1 (curl_cffi) blocked AND Tier-2 (CDP) unreachable. "
-                f"Start Chrome ({cdp_setup_hint()}) and ensure the CDP port is open. "
-                f"Last error: {body[:300]}"
-            )
-        )
+        raise_tool_error(_all_tiers_failed_error(tier, body, 300))
     if status_code == 403:
         raise_tool_error(_ozon_blocked_error(tier, body))
     if status_code != 200:

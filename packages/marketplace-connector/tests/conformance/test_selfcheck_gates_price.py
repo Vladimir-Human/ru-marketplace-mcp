@@ -527,12 +527,8 @@ ADAPTERS: tuple[Adapter, ...] = (
     ),
 )
 
-# Sources with a selfcheck and no listing fixture to strip: the plan's declared
-# gap. MPStats answers a paid analytics API (a seller/position report), not a
-# marketplace listing, so there is no captured listing to make priceless.
-EXEMPTIONS: dict[str, str] = {
-    "mpstats": "no listing fixture",
-}
+# Every remaining source with a selfcheck has a captured listing.
+EXEMPTIONS: dict[str, str] = {}
 
 
 # END_BLOCK_ADAPTERS

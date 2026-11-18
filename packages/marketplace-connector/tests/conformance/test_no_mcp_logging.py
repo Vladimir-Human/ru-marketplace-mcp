@@ -122,9 +122,9 @@ def test_no_production_context_logging_calls() -> None:
             ):
                 violations.append(f"{path.relative_to(ROOT)}:{node.lineno}: ctx.{node.func.attr}")
     assert not violations, "deprecated MCP logging calls remain:\n" + "\n".join(violations)
-    # MPStats has no listing/search fixture or search tool; Detmir uses category.
+    # Detmir uses category.
     assert {adapter.source for adapter in ADAPTERS} == {
-        source.name for source in SOURCES if source.kind == "marketplace" and source.name != "mpstats"
+        source.name for source in SOURCES if source.kind == "marketplace"
     }
 
 

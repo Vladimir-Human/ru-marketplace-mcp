@@ -342,7 +342,7 @@ def render_dsh_cost_block(measurements: tuple[Measurement, ...]) -> str:
         "<!-- tools-cost-dsh:start -->",
         "| Mode | Cost while mounted | Model-facing tools |",
         "|---|---|---|",
-        "| Skills only (default) | 15 skill catalog entries; no MCP schemas | 0 |",
+        "| Skills only (default) | 14 skill catalog entries; no MCP schemas | 0 |",
     ]
     for measurement in measurements:
         label = DSH_MODE_LABELS[measurement.profile.name]
