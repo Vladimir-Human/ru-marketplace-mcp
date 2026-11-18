@@ -1,5 +1,5 @@
 {
-  "checked_on_utc": "2026-11-18T07:42:45.968923+00:00",
+  "checked_on_utc": "2026-11-18T10:46:50.509160+00:00",
   "digest_excludes": [
     ".grace/evidence/",
     "changes/"
@@ -15,7 +15,7 @@
       ],
       "exit": 0,
       "name": "Ruff (lint)",
-      "seconds": 0.125,
+      "seconds": 0.297,
       "summary": "All checks passed!"
     },
     {
@@ -29,8 +29,8 @@
       ],
       "exit": 0,
       "name": "Ruff (format check)",
-      "seconds": 0.14,
-      "summary": "586 files already formatted"
+      "seconds": 0.188,
+      "summary": "590 files already formatted"
     },
     {
       "cmd": [
@@ -40,8 +40,8 @@
       ],
       "exit": 0,
       "name": "mypy (host platform)",
-      "seconds": 0.875,
-      "summary": "Success: no issues found in 123 source files"
+      "seconds": 9.187,
+      "summary": "Success: no issues found in 124 source files"
     },
     {
       "cmd": [
@@ -53,8 +53,8 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform)",
-      "seconds": 0.844,
-      "summary": "Success: no issues found in 123 source files"
+      "seconds": 1.11,
+      "summary": "Success: no issues found in 124 source files"
     },
     {
       "cmd": [
@@ -66,8 +66,8 @@
       ],
       "exit": 0,
       "name": "mypy (cross-platform): darwin",
-      "seconds": 8.516,
-      "summary": "Success: no issues found in 123 source files"
+      "seconds": 15.25,
+      "summary": "Success: no issues found in 124 source files"
     },
     {
       "cmd": [
@@ -76,8 +76,8 @@
       ],
       "exit": 0,
       "name": "No stdout writes in connector code",
-      "seconds": 0.406,
-      "summary": "checked 108 file(s): no stdout writes"
+      "seconds": 0.5,
+      "summary": "checked 109 file(s): no stdout writes"
     },
     {
       "cmd": [
@@ -87,8 +87,8 @@
       ],
       "exit": 0,
       "name": "Generated tool reference is current",
-      "seconds": 2.281,
-      "summary": "{\"ts\":\"2026-11-18T01:22:46\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
+      "seconds": 3.14,
+      "summary": "{\"ts\":\"2026-11-18T04:22:17\",\"level\":\"INFO\",\"logger\":\"mcp_connector\",\"msg\":{\"event\": \"marketplace.mounted\", \"sources\": [\"wildberries\", \"ozon\", \"yandex\", \"detmir\", \"avito\", \"taobao\", \"megamarket\", \"lamo"
     },
     {
       "cmd": [
@@ -97,7 +97,7 @@
       ],
       "exit": 0,
       "name": "Fixture pins describe their fixtures",
-      "seconds": 0.469,
+      "seconds": 0.532,
       "summary": "excepted: 13 completeness gap(s), each with a dated reason"
     },
     {
@@ -107,7 +107,7 @@
       ],
       "exit": 0,
       "name": "uv.lock revision is not downgraded",
-      "seconds": 0.094,
+      "seconds": 0.109,
       "summary": "uv.lock revision 5 is at or above the floor 5"
     },
     {
@@ -124,7 +124,7 @@
       ],
       "exit": 0,
       "name": "MCP wire-cost baseline",
-      "seconds": 8.578,
+      "seconds": 11.781,
       "summary": "dns           2 tools  ~   376 tok."
     },
     {
@@ -134,7 +134,7 @@
       ],
       "exit": 0,
       "name": "One version, everywhere",
-      "seconds": 0.125,
+      "seconds": 0.235,
       "summary": "version 2.11.0 agreed in 91 places (16 pyproject.toml, 15 __init__.py, 14 SERVER_VERSION, 20 image tag, 3 deployment release pin, 14 mcp-core pin, 1 server.json, 1 MCP registry PyPI version, 1 OCI ima"
     },
     {
@@ -145,8 +145,8 @@
       ],
       "exit": 0,
       "name": "Generated GRACE verification index is current",
-      "seconds": 0.578,
-      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=151 gap=10 untraced=0 mappings=1341 unmarked_tests=1869"
+      "seconds": 0.781,
+      "summary": "[M-GRACE-INDEX][BLOCK_CLI] tested=152 gap=10 untraced=0 mappings=1347 unmarked_tests=1869"
     },
     {
       "cmd": [
@@ -155,7 +155,7 @@
       ],
       "exit": 0,
       "name": "Architecture structure gate",
-      "seconds": 0.797,
+      "seconds": 0.937,
       "summary": ""
     },
     {
@@ -172,8 +172,8 @@
       ],
       "exit": 0,
       "name": "Run offline test suite",
-      "seconds": 1118.515,
-      "summary": "8159 passed, 2 skipped, 45 deselected, 17 xfailed in 1116.06s (0:18:36)"
+      "seconds": 1353.563,
+      "summary": "8166 passed, 2 skipped, 45 deselected, 17 xfailed in 1349.90s (0:22:29)"
     },
     {
       "cmd": [
@@ -188,16 +188,16 @@
       ],
       "exit": 0,
       "name": "Operational gate regression tests",
-      "seconds": 69.032,
-      "summary": "713 passed in 68.13s (0:01:08)"
+      "seconds": 103.062,
+      "summary": "713 passed in 100.76s (0:01:40)"
     }
   ],
   "index": {
     "gap": 10,
-    "tested": 151,
+    "tested": 152,
     "untraced": 0
   },
   "schema": 2,
-  "tree_digest": "6be60cc127dc4ddd87441a8fa2c6baec0f9f5cfef5c29f503a074a65d76373ec",
+  "tree_digest": "1b10c37840606e5bad11cbe0c1f332ec176febe09795befac79ad581c3c84e12",
   "version": "2.11.0"
 }

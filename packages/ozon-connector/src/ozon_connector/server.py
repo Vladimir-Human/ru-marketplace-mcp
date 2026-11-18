@@ -18,7 +18,7 @@ NEVER use print() in stdio MCP — corrupts JSON-RPC. Use log_event (stderr).
 # SCOPE: Read-only tools; allowlisted paths; bounded impersonated HTTP/CDP fallback; opt-in Ozon-owned Windows identity.
 # INVARIANTS: Require a dict widgetStates before any success; keep later-page drift partial; preserve valid empty containers.
 # DEPENDS: FastMCP; httpx; curl_cffi; mcp_core process/CDP/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-OZON; M-KIT; M-COMPARE; M-MARKETPLACE; R-OZON-SEARCH-NUMERIC; R-OZON-CDP-FAILURE-HINT; R-OZON-CUSTOMS-DUTY; R-OZON-CHROME-COMPAT; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/ozon-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # _sync_call_in_process: Bound synchronous work in a scrubbed, terminable child.
@@ -90,6 +90,7 @@ from mcp_core.transport import proxy_from_env
 from mcp_core.transport.chrome_cdp import NavBlocked, cdp_setup_hint, open_page
 from pydantic import Field
 
+from ozon_connector.customs import customs_duty, customs_warning
 from ozon_connector.models_output import (
     OzonCardResponse,
     OzonReviewsResponse,
@@ -730,10 +731,12 @@ async def ozon_card(
             raise_tool_error(ParserDriftError("expected object payload with widgetStates object"))
 
         parsed = _parse_widgets(payload)
+        duty_shown, parsed["customs_duty_rub"] = customs_duty(payload["widgetStates"])
         parsed["status"] = "success"
         parsed["url"] = f"https://www.ozon.ru{target_path}"
         parsed["tier_used"] = tier
         warnings = R.validate_offer({**parsed, "in_stock": parsed.get("is_available")}, require_title=False)
+        warnings += [customs_warning(parsed["customs_duty_rub"])] if duty_shown else []
         result = R.attach_meta(parsed, warnings, source="ozon_card")
         log_event("ozon_card.done", tier=tier, status="success")
         return OzonCardResponse(**result)

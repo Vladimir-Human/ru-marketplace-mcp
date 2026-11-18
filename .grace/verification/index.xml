@@ -172,6 +172,7 @@
     <test file="packages/mcp-core/tests/test_cdp_budget.py" name="test_a_request_queued_before_the_breaker_opened_is_refused_too" requirements="R-CDP-BUDGET-SCHEDULING" title="The turn that comes after the breaker opens is not a permission." />
     <test file="packages/mcp-core/tests/test_cdp_budget.py" name="test_a_request_waiting_for_its_host_does_not_hold_the_global_slot" requirements="R-CDP-BUDGET-SCHEDULING" title="A busy host must not spend global capacity while its request queues." />
     <test file="packages/mcp-core/tests/test_cdp_budget.py" name="test_cancelling_a_queued_request_gives_back_the_host_slot_it_holds" requirements="R-CDP-BUDGET-SCHEDULING" title="A cancelled waiter must not take its host's slot to the grave." />
+    <test file="packages/mcp-core/tests/test_cdp_budget.py" name="test_retry_after_never_exceeds_the_cooldown" requirements="R-CDP-BUDGET-SCHEDULING" title="At this clock reading (t + 60) - t is 60.000000000000014: the pause must still be at most the cooldown." />
   </requirement>
   <requirement id="R-CDP-CAPABILITY-TRUTH" kind="requirement" state="tested">
     <test file="packages/marketplace-connector/tests/test_health.py" name="test_needs_cdp_follows_the_mounted_set" requirements="R-CDP-CAPABILITY-TRUTH" title="Derived from what mounted, not a copy of the capability table." />
@@ -1168,6 +1169,14 @@
     <test file="packages/ozon-connector/tests/test_chrome_compat.py" name="test_chrome_compat_rejects_unknown_mode" requirements="R-OZON-CHROME-COMPAT" />
     <test file="packages/ozon-connector/tests/test_chrome_compat.py" name="test_ozon_only_passes_explicit_compat_to_its_owned_cdp_tab" requirements="R-OZON-CHROME-COMPAT" />
     <test file="packages/ozon-connector/tests/test_chrome_compat.py" name="test_ozon_windows_compat_does_not_turn_a_navigation_403_into_success" requirements="R-OZON-CHROME-COMPAT" />
+  </requirement>
+  <requirement id="R-OZON-CUSTOMS-DUTY" kind="requirement" state="tested">
+    <test file="packages/compare-connector/tests/test_ozon_customs_duty.py" name="test_a_domestic_card_still_ranks_by_its_everyday_price" requirements="R-OZON-CUSTOMS-DUTY" />
+    <test file="packages/compare-connector/tests/test_ozon_customs_duty.py" name="test_a_duty_of_unknown_amount_also_leaves_the_offer_unranked" requirements="R-OZON-CUSTOMS-DUTY" />
+    <test file="packages/compare-connector/tests/test_ozon_customs_duty.py" name="test_an_offer_with_a_customs_duty_is_not_ranked_and_says_the_total" requirements="R-OZON-CUSTOMS-DUTY" />
+    <test file="packages/ozon-connector/tests/test_customs_duty.py" name="test_an_unreadable_amount_still_warns" requirements="R-OZON-CUSTOMS-DUTY" />
+    <test file="packages/ozon-connector/tests/test_customs_duty.py" name="test_no_customs_widget_changes_nothing" requirements="R-OZON-CUSTOMS-DUTY" />
+    <test file="packages/ozon-connector/tests/test_customs_duty.py" name="test_the_customs_widget_gives_the_duty_and_a_warning" requirements="R-OZON-CUSTOMS-DUTY" />
   </requirement>
   <requirement id="R-OZON-REVIEW-ITEM-ID" kind="requirement" state="tested">
     <test file="packages/ozon-connector/tests/test_server.py" name="test_parse_review_item_normalizes_int_and_decimal_string_item_ids_and_rejects_malformed" requirements="R-OZON-REVIEW-ITEM-ID" title="R-OZON-REVIEW-ITEM-ID (#214): integer and decimal-string itemId values" />
