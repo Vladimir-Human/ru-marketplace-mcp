@@ -108,6 +108,7 @@ from compare_connector.decide import (  # noqa: F401
     _relevance_warnings,
     _size_mismatch_warning,
     build_response,
+    customs_duty_note,
     decide_conditional_price,
     pick_card_candidate,
 )
@@ -312,7 +313,11 @@ _IN_STOCK_ONLY: ContextVar[bool] = ContextVar("compare_in_stock_only", default=F
 
 
 async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float | None, float | None, bool | None, str]:
-    """The everyday price, card price and availability on one Ozon card, or why they were not read."""
+    """The everyday price, card price and availability on one Ozon card, or why they were not read.
+
+    R-OZON-CUSTOMS-DUTY: a card whose price leaves out a customs payment gives no rankable everyday price;
+    the reason starts with "customs_duty:" and names the payment and the estimated total.
+    """
     if seconds < OZON_CARD_MIN_S:
         return None, None, None, f"the {SOURCE_TIMEOUT_S:.0f}s source timeout is nearly spent"
     try:
@@ -327,6 +332,9 @@ async def _read_ozon_card(server: Any, sku: str, seconds: float) -> tuple[float 
     everyday = _as_price(getattr(card, "price", None))
     if everyday is None:
         return None, None, card_in_stock, "the card shows no everyday price"
+    duty = _as_price(getattr(card, "customs_duty_rub", None))
+    if duty is not None or any(str(w).startswith("customs_duty:") for w in getattr(card.meta, "warnings", None) or []):
+        return None, None, card_in_stock, customs_duty_note(sku, everyday, duty)
     return everyday, _as_price(getattr(card, "card_price", None)), card_in_stock, ""
 
 
@@ -396,7 +404,9 @@ async def _search_ozon(query: str, limit: int, *, in_stock_only: bool | None = N
             batch.warnings.append(decision.note)
     if problem:
         batch.warnings.append(
-            f"ozon_card_unread: ozon/{sku}: {problem}; Ozon tiles quote the Ozon Card price, so none is ranked"
+            problem
+            if problem.startswith("customs_duty:")
+            else f"ozon_card_unread: ozon/{sku}: {problem}; Ozon tiles quote the Ozon Card price, so none is ranked"
         )
     return batch
 
