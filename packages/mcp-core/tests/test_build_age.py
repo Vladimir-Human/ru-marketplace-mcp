@@ -63,7 +63,10 @@ def test_an_unparseable_release_date_has_no_age_info(monkeypatch, released: str)
 @pytest.mark.parametrize("age_days", [10, 30, 40])
 @pytest.mark.parametrize("code", list(ErrorCode))
 def test_tool_error_adds_only_optional_old_build_and_preserves_all_other_fields(monkeypatch, age_days, code) -> None:
-    released = (dt.date.today() - dt.timedelta(days=age_days)).isoformat()
+    build_age = importlib.import_module("mcp_core.build_age")
+    fixed_today = dt.datetime.now(dt.UTC).date()
+    released = (fixed_today - dt.timedelta(days=age_days)).isoformat()
+    monkeypatch.setattr(build_age, "_utc_today", lambda: fixed_today)
     monkeypatch.setattr(mcp_core, "__release_date__", released, raising=False)
     err = (
         ChallengeRequiredError("human check", provider="fixture", handoff_id="opaque-id")

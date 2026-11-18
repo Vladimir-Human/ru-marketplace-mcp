@@ -52,7 +52,7 @@ def _client_configs_never_reach_the_real_ones(tmp_path, monkeypatch):
     real_which = cli.shutil.which
 
     def which_without_claude(name, *args, **kwargs):
-        return None if name == "claude" else real_which(name, *args, **kwargs)
+        return None if name in ("claude", "codex") else real_which(name, *args, **kwargs)
 
     monkeypatch.setattr(cli.shutil, "which", which_without_claude)
 

@@ -196,6 +196,10 @@ CARD_EXTRACT_JS = r"""
 
 _SP = "[ \u00a0\u2009\u202f]"
 _PRICE_RE = re.compile(rf"(?<![\d.,])((?:\d{{1,3}}(?:{_SP}\d{{3}})+|\d+)(?:[.,]\d{{1,2}})?){_SP}*₽(?!{_SP}*/{_SP}*мес)")
+_DECOY_LINE_RE = re.compile(
+    r"мес|за\s+отзыв|частями|долями|сплит|кешбэк|кэшбэк|бонус|выгод|пошлин|тамож|доставк|кредит|рассрочк",
+    re.IGNORECASE,
+)
 _MONTHS = "января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря"
 _DELIVERY_RE = re.compile(
     rf"^(сегодня|завтра|послезавтра|\d{{1,2}}(?:{_SP}*[–-]{_SP}*\d{{1,2}})?{_SP}+(?:{_MONTHS}))(?:{_SP}*,{_SP}*(.*))?$",
@@ -231,8 +235,14 @@ _CARD_LABELS = (
 )
 
 
+def _is_price_line(text: str) -> bool:
+    return not _DECOY_LINE_RE.search(text or "")
+
+
 def prices_in(text: str) -> list[float]:
-    """Positive ruble amounts, including fractions; discounts and instalments excluded."""
+    """Positive ruble amounts, including fractions; discounts, decoys and instalments excluded."""
+    if not _is_price_line(text):
+        return []
     out: list[float] = []
     for match in _PRICE_RE.finditer(text or ""):
         if text[: match.start()].rstrip(" \u00a0\u2009\u202f").endswith(("-", "−", "–")):
@@ -287,8 +297,11 @@ def assign_prices(
     )
     regular: float | None = None
     if wallet is None:
-        if len(below) >= 2:
+        if len(below) == 2:
             wallet, regular = below[0], below[1]
+        elif len(below) >= 3:
+            if wallet_label:
+                wallet = below[0]
         elif below:
             if wallet_label:
                 wallet = below[0]
@@ -815,6 +828,9 @@ async def render(url: str, extract_js: str, want: str) -> dict[str, Any]:
             TransportDownError(f"WB_TRANSPORT=dom needs the CDP transport (playwright): {exc}", provider="wb")
         )
     async with _dom_lock:
+        cached = _dom_cache.get(url)
+        if cached is not None:
+            return cached
         for attempt in range(2):
             await _gap()
             try:

@@ -60,7 +60,7 @@ from mcp_core.errors import (
     raise_tool_error,
     raise_tool_error_from,
 )
-from mcp_core.kit import host_checked_id, polite_wait, render_json
+from mcp_core.kit import host_checked_id, page_link, polite_wait, render_json
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
 from mcp_core.pacing import Pacer
@@ -264,9 +264,13 @@ _CARD_EXTRACT_TEMPLATE = """
         : null;
     const priceTexts = priceTextsIn(buyBlock);
 
+    const basketBtn = document.querySelector('[data-meta-name="BasketDesktopButton"]:not([disabled]):not([data-meta-disabled="true"]), [data-checkout-button="true"] button:not([disabled])');
+    const buyText = cleanText(buyBlock);
     const bodyText = (document.body ? (document.body.textContent || '') : '');
     let available = null;
-    if (/Нет в наличии|Под заказ|Закончился/i.test(bodyText)) available = false;
+    if (buyBlock && /Нет в наличии|Под заказ|Закончился/i.test(buyText)) available = false;
+    else if (basketBtn || (buyBlock && (metaPrice || cleanText(priceEl) || /В наличии|В корзину|Купить/i.test(buyText)))) available = true;
+    else if (/Нет в наличии|Под заказ|Закончился/i.test(bodyText)) available = false;
     else if (/В наличии|В корзину|Купить/i.test(bodyText)) available = true;
 
     return JSON.stringify({
@@ -296,12 +300,18 @@ def _search_item_from_tile(tile: dict[str, Any]) -> CitilinkSearchItemOut:
     is identical either way, and ``price_rub`` stays float-or-None, never 0.
     """
     price, old_price = prices_from_tile(tile)
+    raw_url = tile.get("url")
+    norm_url = (
+        page_link(raw_url, SITE_BASE, ALLOWED_HOSTS)
+        if isinstance(raw_url, str) and raw_url.strip()
+        else ("" if raw_url == "" else None)
+    )
     return CitilinkSearchItemOut(
         product_id=tile.get("product_id"),
         title=title_from_tile(tile),
         price_rub=price,
         old_price_rub=old_price,
-        url=tile.get("url"),
+        url=norm_url,
     )
 
 

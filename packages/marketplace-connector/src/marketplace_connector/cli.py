@@ -66,6 +66,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import math
 import os
 import pathlib
 import shutil
@@ -86,10 +87,8 @@ from marketplace_connector import __version__
 from marketplace_connector.capabilities import CAPABILITIES, browser_backed
 from marketplace_connector.unblock import UNBLOCK_PAGES
 
-# Clients whose config format this block is known to fit. A typo like
-# "cursour" should say so rather than silently printing a Claude block.
-# dsh has its own emitter below: the harness patch format is not mcpServers JSON.
-KNOWN_CLIENTS = {"claude", "claude-code", "cursor", "dsh"}
+# Clients whose config format this CLI emits or writes.
+KNOWN_CLIENTS = {"antigravity", "claude", "claude-code", "codex", "cursor", "dsh", "gemini", "vscode", "windsurf"}
 
 # Gate variable for the emitted dsh rows. It doubles as the checkout path used
 # by `uv run --directory`, so one user action both enables and locates a server.
@@ -117,11 +116,27 @@ PROFILE_DETAILS: dict[str, str] = {
 }
 
 # Clients `setup` can wire. dsh has its own bundle format and is not one of them.
-SETUP_CLIENTS: tuple[str, ...] = ("claude", "cursor", "claude-code")
+_FILE_CLIENTS: tuple[str, ...] = ("claude", "cursor", "vscode", "windsurf", "antigravity", "gemini")
+_CLI_ADD_CLIENTS: tuple[str, ...] = ("claude-code", "codex")
+SETUP_CLIENTS: tuple[str, ...] = (
+    "claude",
+    "cursor",
+    "claude-code",
+    "vscode",
+    "windsurf",
+    "antigravity",
+    "gemini",
+    "codex",
+)
 CLIENT_LABELS: dict[str, str] = {
     "claude": "Claude Desktop",
     "cursor": "Cursor",
     "claude-code": "Claude Code",
+    "vscode": "VS Code",
+    "windsurf": "Windsurf",
+    "antigravity": "Antigravity",
+    "gemini": "Gemini CLI",
+    "codex": "Codex CLI",
 }
 
 # (config key, console script, human note) come from the source registry: the
@@ -238,9 +253,18 @@ _LOGIN_UNBLOCK_SOURCES = LOGIN_UNBLOCK_SOURCES
 UNBLOCK_WAIT_DEFAULT_S = 180.0
 
 
+def _wb_dom_mode() -> bool:
+    return os.environ.get("WB_TRANSPORT", "").strip().lower() == "dom"
+
+
 def _browser_source_names() -> list[str]:
     """Doctor sources whose connector can use the operator's Chrome."""
-    return [name for name, _, _ in _SELFCHECKS if browser_backed(CAPABILITIES.get(name))]
+    wb_dom = _wb_dom_mode()
+    return [
+        name
+        for name, _, _ in _SELFCHECKS
+        if browser_backed(CAPABILITIES.get(name)) or (name == "wildberries" and wb_dom)
+    ]
 
 
 def _workspace_root() -> pathlib.Path | None:
@@ -575,50 +599,52 @@ def _entry_profile(entry: Mapping[str, Any]) -> str | None:
     return next(profile for profile, known in PROFILE_SCRIPTS.items() if known == script)
 
 
-def _configured_profile(client: str) -> str | None:
-    """The profile the client's existing ``marketplace`` entry runs, if any.
+def _servers_key(client: str) -> str:
+    return "servers" if client == "vscode" else "mcpServers"
 
-    The compare default is for new installs only (owner decision, 2026-10-30):
-    re-running install or setup without ``--profile`` keeps what an operator
-    already chose. Read-only; a missing or unreadable file is "no profile",
-    and the write path reports such a file on its own.
-    """
-    if client not in ("claude", "cursor"):
+
+def _client_entries(client: str, entries: Mapping[str, Any]) -> dict[str, Any]:
+    if client == "vscode":
+        return {name: {"type": "stdio", **dict(entry)} for name, entry in entries.items()}
+    return dict(entries)
+
+
+def _configured_profile(client: str) -> str | None:
+    """The profile the client's existing ``marketplace`` entry runs, if any."""
+    if client not in _FILE_CLIENTS:
         return None
     path = _config_path(client)
     try:
         document = _parse_strict_json(_read_config_text(path))
     except (OSError, ValueError):
         return None
-    servers = document.get("mcpServers") if isinstance(document, dict) else None
+    servers = document.get(_servers_key(client)) if isinstance(document, dict) else None
     entry = servers.get(UNIFIED_ENTRY) if isinstance(servers, dict) else None
     return _entry_profile(entry) if isinstance(entry, dict) else None
 
 
 def _config_path(client: str) -> pathlib.Path:
-    """Where the client's mcpServers file lives on this platform.
-
-    Claude Desktop: ``%APPDATA%/Claude`` (Windows), ``~/Library/Application
-    Support/Claude`` (macOS), ``~/.config/Claude`` (Linux). Cursor:
-    ``~/.cursor/mcp.json``.
-
-    ``MARKETPLACE_MCP_CLAUDE_CONFIG`` / ``MARKETPLACE_MCP_CURSOR_CONFIG``
-    override the location, so an operator with an unusual install — and the
-    offline tests — can point the writer at a real file.
-    """
-    override = os.environ.get(f"MARKETPLACE_MCP_{client.upper()}_CONFIG")
+    """Where the client's MCP config file lives on this platform."""
+    override = os.environ.get(f"MARKETPLACE_MCP_{client.upper().replace('-', '_')}_CONFIG")
     if override:
         return pathlib.Path(override).expanduser()
     home = pathlib.Path.home()
-    if client == "cursor":
-        return home / ".cursor" / "mcp.json"
+    rel_paths = {
+        "cursor": (".cursor", "mcp.json"),
+        "windsurf": (".codeium", "windsurf", "mcp_config.json"),
+        "antigravity": (".gemini", "config", "mcp_config.json"),
+        "gemini": (".gemini", "settings.json"),
+    }
+    if client in rel_paths:
+        return home.joinpath(*rel_paths[client])
+    app_sub = ("Code", "User", "mcp.json") if client == "vscode" else ("Claude", "claude_desktop_config.json")
     if sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         base = pathlib.Path(appdata) if appdata else home / "AppData" / "Roaming"
-        return base / "Claude" / "claude_desktop_config.json"
+        return base.joinpath(*app_sub)
     if sys.platform == "darwin":
-        return home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-    return home / ".config" / "Claude" / "claude_desktop_config.json"
+        return home.joinpath("Library", "Application Support", *app_sub)
+    return home.joinpath(".config", *app_sub)
 
 
 def _config_target(path: pathlib.Path) -> pathlib.Path:
@@ -682,7 +708,7 @@ def _atomic_write_json(path: pathlib.Path, document: Any) -> None:
             json.dump(document, fh, indent=2, ensure_ascii=False)
             fh.write("\n")
             tmp_name = fh.name
-        os.replace(tmp_name, path)
+        pathlib.Path(tmp_name).replace(path)
     except BaseException:
         if tmp_name:
             pathlib.Path(tmp_name).unlink(missing_ok=True)
@@ -690,24 +716,27 @@ def _atomic_write_json(path: pathlib.Path, document: Any) -> None:
 
 
 def _quote(part: str) -> str:
-    """Quote a command fragment that carries spaces or quotes."""
+    """Quote a command fragment that carries spaces or shell metacharacters."""
     if not part:
         return '""'
-    if any(character.isspace() for character in part) or '"' in part:
+    if any(ch.isspace() or ch in "\"()&;'$`|<>" for ch in part):
         return '"' + part.replace('"', '\\"') + '"'
     return part
 
 
-def _claude_mcp_add_line(name: str, entry: Mapping[str, Any]) -> str:
-    """The exact ``claude mcp add`` command line for one entry.
-
-    Claude Code keeps user-scoped servers in its own store; an mcpServers
-    block is a project .mcp.json alternative, not a user config. The write
-    for this client is therefore a command the operator runs.
-    """
-    parts = ["claude", "mcp", "add", name, "--scope", "user", "--", str(entry.get("command", ""))]
-    parts.extend(str(arg) for arg in entry.get("args", []) or [])
+def _cli_mcp_add_line(client: str, name: str, entry: Mapping[str, Any]) -> str:
+    prefix = (
+        ["codex", "mcp", "add", name, "--"]
+        if client == "codex"
+        else ["claude", "mcp", "add", name, "--scope", "user", "--"]
+    )
+    parts = [*prefix, str(entry.get("command", "")), *(str(arg) for arg in entry.get("args", []) or [])]
     return " ".join(_quote(part) for part in parts)
+
+
+def _claude_mcp_add_line(name: str, entry: Mapping[str, Any]) -> str:
+    """The exact ``claude mcp add`` command line for one entry."""
+    return _cli_mcp_add_line("claude-code", name, entry)
 
 
 def _write_client_config(
@@ -719,26 +748,15 @@ def _write_client_config(
     profile: str | None = None,
     conflict_hint: str | None = None,
 ) -> int:
-    """Merge the entries into the client's own mcpServers file.
-
-    The file belongs to the operator: other servers and other settings stay
-    untouched, a malformed file is never rewritten, and every change is backed
-    up before it happens. When ``profile`` is given, a conflict names the
-    profile the existing entry runs and the one that was asked for. A dry run
-    prints only the entries it would write and the names of what it keeps:
-    other servers' ``env`` blocks may hold keys, and the output of an
-    agent-run install lands in that agent's context. A symlinked config is
-    read, backed up and replaced at its resolved target, leaving the link intact.
-    """
+    """Merge the entries into the client's own MCP configuration file."""
     path = _config_target(_config_path(client))
+    root_key = _servers_key(client)
+    formatted = _client_entries(client, entries)
     document: dict[str, Any] = {}
     if path.exists():
         try:
             parsed = _parse_strict_json(_read_config_text(path))
         except UnicodeDecodeError:
-            # Another encoding (UTF-16, for example), not broken syntax:
-            # saying "not valid JSON" sends the operator to delete a config
-            # that is valid.
             print(f"{path} is not UTF-8 text; save it as UTF-8 and re-run", file=sys.stderr)
             return 2
         except ValueError as exc:
@@ -752,14 +770,14 @@ def _write_client_config(
             return 2
         document = parsed
 
-    servers = document.get("mcpServers")
+    servers = document.get(root_key)
     if servers is None:
         servers = {}
     if not isinstance(servers, dict):
-        print(f"{path} has a non-object 'mcpServers'; refusing to change it", file=sys.stderr)
+        print(f"{path} has a non-object {root_key!r}; refusing to change it", file=sys.stderr)
         return 2
 
-    conflicts = sorted(name for name, entry in entries.items() if name in servers and servers[name] != entry)
+    conflicts = sorted(name for name, entry in formatted.items() if name in servers and servers[name] != entry)
     if conflicts and not force:
         if profile is None:
             print(
@@ -785,23 +803,21 @@ def _write_client_config(
         return 2
 
     merged = dict(document)
-    merged["mcpServers"] = {**servers, **entries}
+    merged[root_key] = {**servers, **formatted}
     if dry_run:
-        # Show what would be written, whether or not it would change anything,
-        # and only name the rest: never echo other servers' settings.
-        print(json.dumps({"mcpServers": entries}, indent=2, ensure_ascii=False))
-        replaced = sorted(name for name in entries if name in servers and servers[name] != entries[name])
+        print(json.dumps({root_key: formatted}, indent=2, ensure_ascii=False))
+        replaced = sorted(name for name in formatted if name in servers and servers[name] != formatted[name])
         if replaced:
             print(f"replaces: {', '.join(replaced)}")
-        kept = sorted(name for name in servers if name not in entries)
+        kept = sorted(name for name in servers if name not in formatted)
         if kept:
             print(f"kept unchanged: {', '.join(kept)}")
-        other_settings = sorted(key for key in document if key != "mcpServers")
+        other_settings = sorted(key for key in document if key != root_key)
         if other_settings:
             print(f"other settings kept: {', '.join(other_settings)}")
         print(f"target: {path}")
         return 0
-    if all(servers.get(name) == entry for name, entry in entries.items()):
+    if all(servers.get(name) == entry for name, entry in formatted.items()):
         print(f"already configured in {path}; nothing to write")
         return 0
 
@@ -1053,12 +1069,16 @@ def cmd_install(argv: list[str]) -> int:
     if not per_source:
         print(_profile_note(chosen_profile))
 
-    if client == "claude-code":
+    if client in _CLI_ADD_CLIENTS:
         for name, entry in entries.items():
-            print(_claude_mcp_add_line(name, entry))
+            print(_cli_mcp_add_line(client, name, entry))
         if write:
             return 0
-        print("# Or add this to a project's .mcp.json (mcpServers):")
+        print(
+            "# Or add this to a project's .mcp.json (mcpServers):"
+            if client == "claude-code"
+            else "# Equivalent server JSON:"
+        )
     elif write:
         return _write_client_config(
             client,
@@ -1068,8 +1088,9 @@ def cmd_install(argv: list[str]) -> int:
             profile=None if per_source else chosen_profile,
         )
     else:
-        print(f"# Add to your mcpServers block ({client}).")
-    print(json.dumps(entries, indent=2, ensure_ascii=False))
+        print(f"# Add to your {_servers_key(client)} block ({client}).")
+    shown = {"servers": _client_entries(client, entries)} if client == "vscode" else entries
+    print(json.dumps(shown, indent=2, ensure_ascii=False))
     print()
     print("# Notes:")
     if per_source:
@@ -1250,38 +1271,28 @@ def next_step(
     reasons = {str(_attr(entry, "reason", "") or "") for entry in entries}
     states = {str(_attr(entry, "state", "") or "") for entry in entries}
     capability = CAPABILITIES.get(source, {})
-    # WB in DOM mode reads pages through the scraping Chrome even though its
-    # static tier is anonymous HTTP.
-    uses_browser = browser_backed(capability) or (source == "wildberries" and wb_transport == "dom")
+    wb_mode = wb_transport.strip().lower()
+    uses_browser = browser_backed(capability) or (source == "wildberries" and wb_mode == "dom")
 
     if status == "drift_detected" or "drift" in states:
         return _hint_drift(mode, source, probeable=source in DIAGNOSE_DRIFT_SOURCES)
-    if source == "wildberries" and wb_transport != "dom" and _wb_api_check_failed(checks):
-        # With the fallback on, the tools already read WB through the DOM path;
-        # only an explicit opt-out needs the old "switch transport" instruction.
+    if source == "wildberries" and wb_mode != "dom" and _wb_api_check_failed(checks):
         if wb_dom_fallback.strip().lower() in {"0", "false", "no", "off"}:
             return NEXT_STEP_WB_TRANSPORT
         return NEXT_STEP_WB_DOM_FALLBACK
-    # A rate limit is the site's own answer about this address, so the
-    # browser is not what failed: it comes before the CDP and wall cases,
-    # and the fix is to wait.
     if "rate_limited" in reasons:
         return _hint_rate_limited(mode, source)
-    if uses_browser and cdp_reachable is False:
-        return _hint_cdp_down(mode)
     if uses_browser and reasons & WALL_REASONS:
-        return _hint_browser_wall(mode, source)
-    # First-run probe, 2026-11-17 (fresh profile): Lamoda and Citilink pages did not load while Chrome answered, and
-    # the step was a bare doc link. Opening the page shows the human what the site shows, and unblock re-checks.
-    if uses_browser and cdp_reachable is True and "transport_down" in reasons and source in UNBLOCK_PAGES:
-        return _hint_browser_page(mode, source)
-    # A budget refusal says nothing about the site, so any real evidence above names the step first (the probe's
-    # Ozon card answered 403 while its reviews check was refused, and the 403 was hidden behind this note).
+        return _hint_cdp_down(mode) if cdp_reachable is False else _hint_browser_wall(mode, source)
     if "budget_refused" in reasons:
         return (
             "The live budget refused this check; this says nothing about the source. "
             "Start a new bounded run with `python scripts/live_check.py reset`."
         )
+    if uses_browser and cdp_reachable is False:
+        return _hint_cdp_down(mode)
+    if uses_browser and cdp_reachable is True and "transport_down" in reasons and source in UNBLOCK_PAGES:
+        return _hint_browser_page(mode, source)
     return _hint_antibot(mode)
 
 
@@ -1598,6 +1609,9 @@ def cmd_unblock(argv: list[str]) -> int:
             except ValueError:
                 print(f"--wait needs a number of seconds, got {raw!r}", file=sys.stderr)
                 return 2
+            if not math.isfinite(wait_s):
+                print(f"--wait needs a finite number of seconds, got {raw!r}", file=sys.stderr)
+                return 2
             if wait_s < 0:
                 print("--wait cannot be negative", file=sys.stderr)
                 return 2
@@ -1647,7 +1661,7 @@ def cmd_unblock(argv: list[str]) -> int:
             print("No browser source reports a wall right now; nothing to unblock.")
             return 0
 
-    pages = [(name, UNBLOCK_PAGES[name]) for name in sources]
+    pages = [(name, UNBLOCK_PAGES.get(name, "https://www.wildberries.ru/")) for name in sources]
     print(f"Opens {len(pages)} page(s), one per source; the re-check makes the same requests as doctor.")
     if dry_run:
         for name, url in pages:
@@ -1712,14 +1726,14 @@ def _join_labels(clients: list[str]) -> str:
 
 
 def _detected_clients() -> list[str]:
-    """Clients that look installed: config folders for desktop clients, PATH for Claude Code."""
-    found: list[str] = []
-    if _config_path("claude").parent.is_dir():
-        found.append("claude")
-    if _config_path("cursor").parent.is_dir():
-        found.append("cursor")
+    """Clients that look installed: config folders/files for GUI/CLI clients, PATH for CLI add tools."""
+    found = [c for c in ("claude", "cursor", "vscode", "windsurf", "antigravity") if _config_path(c).parent.is_dir()]
+    if _config_path("gemini").is_file():
+        found.append("gemini")
     if shutil.which("claude") is not None:
         found.append("claude-code")
+    if shutil.which("codex") is not None:
+        found.append("codex")
     return found
 
 
@@ -1815,9 +1829,9 @@ def cmd_setup(argv: list[str]) -> int:
             entries = {UNIFIED_ENTRY: entry}
             how = "already configured, kept" if kept else "selected"
             print(f"   {label}: profile {client_profile} ({how}): {PROFILE_DETAILS[client_profile]}")
-            if client == "claude-code":
+            if client in _CLI_ADD_CLIENTS:
                 print("     run this line once (setup does not run it):")
-                print(f"     {_claude_mcp_add_line(UNIFIED_ENTRY, entry)}")
+                print(f"     {_cli_mcp_add_line(client, UNIFIED_ENTRY, entry)}")
                 configured += 1
                 continue
             print(f"     {_config_path(client)}")
@@ -1872,7 +1886,8 @@ def cmd_setup(argv: list[str]) -> int:
         print(f"\n  {cdp_note}")
 
     print("5. Unblock:")
-    blocked = _blocked_sources(results) if results else []
+    browser_set = set(_browser_source_names())
+    blocked = [s for s in _blocked_sources(results) if s in browser_set] if results else []
     if dry_run:
         print("   would offer unblock for any source whose checks report a wall; nothing was opened.")
     elif not results:
@@ -1899,6 +1914,13 @@ def cmd_setup(argv: list[str]) -> int:
     print()
     if targets == ["claude-code"]:
         print(f"Run the claude mcp add line above, then restart Claude Code and ask: {ask}")
+    elif targets == ["codex"]:
+        print(f"Run the codex mcp add line above, then restart Codex CLI and ask: {ask}")
+    elif any(c in _CLI_ADD_CLIENTS for c in targets):
+        cmds = " and ".join(
+            f"{'claude' if c == 'claude-code' else 'codex'} mcp add" for c in _CLI_ADD_CLIENTS if c in targets
+        )
+        print(f"Run the {cmds} line(s) above, then restart {_join_labels(targets)} and ask: {ask}")
     elif targets:
         print(f"Restart {_join_labels(targets)}, then ask: {ask}")
     else:

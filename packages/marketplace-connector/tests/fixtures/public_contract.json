@@ -1232,7 +1232,7 @@
           "type": "integer"
         },
         "query": {
-          "maxLength": 200,
+          "maxLength": 1000,
           "type": "string"
         },
         "shard": {

@@ -112,8 +112,10 @@ from mcp_core.errors import (
     NotFoundError,
     ParserDriftError,
     RateLimitedError,
+    ToolError,
     TransportDownError,
     raise_tool_error,
+    raise_tool_error_from,
 )
 from mcp_core.logging import log_event
 from mcp_core.output_schema import apply_compact_output_schemas
@@ -214,6 +216,10 @@ async def _fetch_html(url: str, label: str, ctx: Context | None) -> str:
             )
         if not html.strip():
             raise_tool_error(TransportDownError(f"{label}: empty response body", provider="yandex"))
+        if status != 200 and not ssr.looks_like_captcha(html):
+            raise_tool_error(
+                TransportDownError(f"{label}: upstream HTTP {status}", provider="yandex", status_code=status)
+            )
         return html
 
     return await _cache.get_or_fetch(url, fetch, cache_if=lambda html: _cacheable_html(html, url, label))
@@ -440,109 +446,85 @@ async def yandex_search(
         raise_tool_error(BadRequestError("query must be at least 2 characters"))
 
     log_event("yandex_search.start", query=text, page=page, limit=limit)
+    try:
+        params = {"text": text}
+        if page > 1:
+            params["page"] = str(page)
+        url = f"{SITE_BASE}/search?{urllib.parse.urlencode(params)}"
 
-    params = {"text": text}
-    if page > 1:
-        params["page"] = str(page)
-    url = f"{SITE_BASE}/search?{urllib.parse.urlencode(params)}"
+        parsed = await _fetch_parsed(url, "yandex_search", ctx, ssr.parse_search)
+        _guard_parse_status(parsed["status"], "yandex_search")
 
-    parsed = await _fetch_parsed(url, "yandex_search", ctx, ssr.parse_search)
-    _guard_parse_status(parsed["status"], "yandex_search")
+        # Dedupe repeated sellable variants BEFORE applying limit, preserving Yandex's ranking.
+        items: list[YandexProduct] = []
+        raw_items: list[dict[str, Any]] = []
+        duplicates_dropped = 0
+        seen_variants: set[tuple[str, str]] = set()
+        for raw in parsed["items"]:
+            if len(items) >= limit:
+                break
+            product = _to_product(raw)
+            if product.product_id:
+                key = (product.product_id, product.sku_id)
+                if key in seen_variants:
+                    duplicates_dropped += 1
+                    continue
+                seen_variants.add(key)
+            items.append(product)
+            raw_items.append(raw)
 
-    # Dedupe repeated sellable variants BEFORE applying the limit. A product
-    # family can legitimately appear with different sku_id values and prices;
-    # collapsing by product_id alone would silently discard those variants.
-    # With no reported SKU, repeated product IDs retain the legacy behavior.
-    # Slicing first would let repeats consume the caller's result budget.
-    #
-    # Order is preserved: Yandex's ranking is the product of the search, and
-    # re-sorting it would discard information the caller asked for.
-    items: list[YandexProduct] = []
-    raw_items: list[dict[str, Any]] = []
-    duplicates_dropped = 0
-    seen_variants: set[tuple[str, str]] = set()
-    for raw in parsed["items"]:
-        if len(items) >= limit:
-            break
-        product = _to_product(raw)
-        # A blank product_id means the parser could not resolve one. Those cannot
-        # be compared for identity, so they pass through rather than collapsing
-        # into a single "" bucket that would drop unrelated products.
-        if product.product_id:
-            key = (product.product_id, product.sku_id)
-            if key in seen_variants:
-                duplicates_dropped += 1
-                continue
-            seen_variants.add(key)
-        items.append(product)
-        raw_items.append(raw)
+        warnings: list[str] = []
+        extraction = "ssr"
+        warnings.extend(R.validate_items([p.model_dump() for p in items], require_title=True))
+        warnings.extend(_refused_price_warnings(raw_items))
+        warnings.extend(_discount_missing_warnings(raw_items))
 
-    warnings: list[str] = []
-    extraction = "ssr"
-    # Per-offer invariants (an unparseable price, a rating off its scale) are the
-    # shared drift alarm; without this the connector's own all-None guards below
-    # were the only value check, and a fabricated price passed as a plain field.
-    warnings.extend(R.validate_items([p.model_dump() for p in items], require_title=True))
-    # Money the parser refused: the price is null, and the reason is named
-    # instead of the null travelling alone.
-    warnings.extend(_refused_price_warnings(raw_items))
-    warnings.extend(_discount_missing_warnings(raw_items))
+        if items and all(p.price_rub is None for p in items):
+            warnings.append(
+                "no_prices_on_page: every product lacks an everyday price — likely SSR drift, verify before quoting"
+            )
+        if items and all(not p.title for p in items):
+            warnings.append("no_titles_on_page: every product lacks a title — likely SSR drift")
 
-    # Drift guard: a page where every product lost both its price and its title
-    # is the SSR shape quietly moving under the parser, not a catalog full of
-    # priceless unnamed goods. Warn loudly rather than passing the blanks off as
-    # results — this is the same "confident empty answer" failure the WB search
-    # fix addressed.
-    if items and all(p.price_rub is None for p in items):
-        warnings.append(
-            "no_prices_on_page: every product lacks an everyday price — likely SSR drift, verify before quoting"
+        if parsed["status"] == ssr.ParseStatus.OK_ZONE:
+            extraction = "zone"
+        if parsed["status"] == ssr.ParseStatus.OK_LDJSON_ONLY:
+            extraction = "ld+json"
+            warnings.append(
+                "degraded: widget state unavailable, fell back to schema.org markup "
+                "(no seller/brand, price is the subscription price)"
+            )
+        if parsed["status"] == ssr.ParseStatus.EMPTY:
+            warnings.append(f"info:no_results: Yandex Market found nothing for {text!r}")
+
+        log_event(
+            "yandex_search.done",
+            query=text,
+            returned=len(items),
+            total=parsed.get("total"),
+            status=parsed["status"],
+            duplicates_dropped=duplicates_dropped,
         )
-    if items and all(not p.title for p in items):
-        warnings.append("no_titles_on_page: every product lacks a title — likely SSR drift")
-
-    if parsed["status"] == ssr.ParseStatus.OK_ZONE:
-        # No collection bundle, but the first screen of snippets carried its
-        # data-zone-data payloads: both prices, title, sku, rating, seller
-        # (when shipped). Brand is unresolvable (vendorId only) and the page
-        # is one screen deep — a first-class path, not a degraded one, so it
-        # stays healthy; the extraction tag tells callers what they got.
-        extraction = "zone"
-    if parsed["status"] == ssr.ParseStatus.OK_LDJSON_ONLY:
-        # The widget state was unreadable but schema.org markup carried the first
-        # screen — usable, with fewer fields and only the subscriber price.
-        extraction = "ld+json"
-        warnings.append(
-            "degraded: widget state unavailable, fell back to schema.org markup "
-            "(no seller/brand, price is the subscription price)"
+        return YandexSearchResponse(
+            query=parsed.get("query") or text,
+            page=parsed.get("page") or page,
+            page_count=parsed.get("page_count"),
+            total_available=parsed.get("total"),
+            has_next_page=bool(parsed.get("has_next_page")),
+            returned=len(items),
+            items=items,
+            meta=MetaOut(
+                source="yandex_search",
+                healthy=not R.health_warnings(warnings),
+                warnings=warnings,
+                extraction=extraction,
+            ),
         )
-    if parsed["status"] == ssr.ParseStatus.EMPTY:
-        # An explicit "nothing found" banner is the marketplace's own answer,
-        # not a doubt about the data: the note is informational and the empty
-        # result stays healthy. A page that is NEITHER products nor a banner is
-        # a different case — it raises parser_drift above and never reaches
-        # this line.
-        warnings.append(f"info:no_results: Yandex Market found nothing for {text!r}")
-
-    log_event(
-        "yandex_search.done",
-        query=text,
-        returned=len(items),
-        total=parsed.get("total"),
-        status=parsed["status"],
-        duplicates_dropped=duplicates_dropped,
-    )
-    return YandexSearchResponse(
-        query=parsed.get("query") or text,
-        page=parsed.get("page") or page,
-        page_count=parsed.get("page_count"),
-        total_available=parsed.get("total"),
-        has_next_page=bool(parsed.get("has_next_page")),
-        returned=len(items),
-        items=items,
-        meta=MetaOut(
-            source="yandex_search", healthy=not R.health_warnings(warnings), warnings=warnings, extraction=extraction
-        ),
-    )
+    except ToolError:
+        raise
+    except Exception as exc:
+        log_event("yandex_search.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
+        raise_tool_error_from(exc, _redact(f"yandex_search failed: {exc}"), provider="yandex")
 
 
 @mcp.tool(
@@ -594,99 +576,86 @@ async def yandex_card(
         )
 
     log_event("yandex_card.start", product_id=pid, include_reviews=include_reviews)
-
-    url = ssr.card_url(pid)
-    parsed = await _fetch_parsed(url, "yandex_card", ctx, ssr.parse_card)
-    if parsed["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL:
-        # Tri-state doctrine (precedent: taobao's login-wall handling): the page
-        # arrived but carries no product at all — the known field families did
-        # not change shape, they are absent. Live-verified 2026-09-13: the
-        # product was the first hit of its own search while its card answered as
-        # a hollow frame (pageId market:product, zero product state) over
-        # anonymous HTTP and as SmartCaptcha in a real browser. That is degraded
-        # serving or a delisted product — inconclusive and retryable, never
-        # parser_drift, which would page a maintainer about parsers that are
-        # fine. not_found stays reserved for what Yandex itself reports as gone
-        # (HTTP 404 above); a 200 frame with no not-found marker proves nothing.
-        raise_tool_error(
-            TransportDownError(
-                f"yandex_card: empty_product_shell for id={pid} — Yandex served the product "
-                "page frame (pageId market:product) with zero product state, no schema.org "
-                "Product and no captcha/not-found markers: degraded serving or a delisted "
-                "product; the parsers are not implicated",
-                provider="yandex",
-                status_code=200,
+    try:
+        url = ssr.card_url(pid)
+        parsed = await _fetch_parsed(url, "yandex_card", ctx, ssr.parse_card)
+        if parsed["status"] == ssr.ParseStatus.EMPTY_PRODUCT_SHELL:
+            raise_tool_error(
+                TransportDownError(
+                    f"yandex_card: empty_product_shell for id={pid} — Yandex served the product "
+                    "page frame (pageId market:product) with zero product state, no schema.org "
+                    "Product and no captcha/not-found markers: degraded serving or a delisted "
+                    "product; the parsers are not implicated",
+                    provider="yandex",
+                    status_code=200,
+                )
             )
-        )
-    _guard_parse_status(parsed["status"], "yandex_card")
+        _guard_parse_status(parsed["status"], "yandex_card")
 
-    if not parsed.get("title"):
-        raise_tool_error(
-            ParserDriftError(
-                f"yandex_card: no product title found for id={pid} — the page may not be a product page",
-                provider="yandex",
+        if not parsed.get("title"):
+            raise_tool_error(
+                ParserDriftError(
+                    f"yandex_card: no product title found for id={pid} — the page may not be a product page",
+                    provider="yandex",
+                )
             )
-        )
 
-    warnings: list[str] = []
-    if parsed.get("rating") is None:
-        # Real and common: a card defaulting to a resale/clearance offer carries no
-        # rating at all. Say so instead of implying the product is unrated.
-        warnings.append(
-            "no_rating: this card's default offer has no ratings "
-            "(common for resale/clearance offers) — search results usually carry one"
-        )
-    # A refused everyday price is explained by price_unparseable below; the card
-    # did carry one, so "only a Plus price" or "no price" would be wrong.
-    if parsed.get("price_rub") is None and not parsed.get("price_text"):
-        if parsed.get("price_with_plus") is not None:
-            # The card carried only the subscriber price. The everyday price is
-            # unknown, and saying so is the point: a comparison must not certify
-            # the Plus amount as the price anyone pays.
+        warnings: list[str] = []
+        if parsed.get("rating") is None:
             warnings.append(
-                "no_everyday_price: this card carries only Yandex's conditional (Pay/Plus) price — the "
-                "everyday price is unknown (price_rub is null, not the conditional amount)"
+                "no_rating: this card's default offer has no ratings "
+                "(common for resale/clearance offers) — search results usually carry one"
             )
-        else:
-            warnings.append("no_price: no usable price on the page (item may be unavailable)")
-    # Money the parser refused: the price is null, and the reason is named.
-    warnings.extend(_refused_price_warnings([parsed]))
+        if parsed.get("price_rub") is None and not parsed.get("price_text"):
+            if parsed.get("price_with_plus") is not None:
+                warnings.append(
+                    "no_everyday_price: this card carries only Yandex's conditional (Pay/Plus) price — the "
+                    "everyday price is unknown (price_rub is null, not the conditional amount)"
+                )
+            else:
+                warnings.append("no_price: no usable price on the page (item may be unavailable)")
+        warnings.extend(_refused_price_warnings([parsed]))
 
-    reviews = [YandexReview(**review) for review in parsed.get("reviews", [])] if include_reviews else []
+        reviews = [YandexReview(**review) for review in parsed.get("reviews", [])] if include_reviews else []
 
-    warnings.extend(R.validate_offer(parsed))
+        warnings.extend(R.validate_offer(parsed))
 
-    log_event(
-        "yandex_card.done",
-        product_id=pid,
-        price=parsed.get("price_rub"),
-        reviews=len(reviews),
-        warnings=len(warnings),
-    )
-    return YandexCardResponse(
-        product_id=parsed.get("product_id") or pid,
-        sku_id=parsed.get("sku_id", ""),
-        title=parsed.get("title", ""),
-        brand=parsed.get("brand", ""),
-        seller=parsed.get("seller", ""),
-        description=parsed.get("description", ""),
-        image=parsed.get("image", ""),
-        price_rub=parsed.get("price_rub"),
-        price_with_plus=parsed.get("price_with_plus"),
-        price_before_discount_rub=parsed.get("price_before_discount_rub"),
-        discount_percent=parsed.get("discount_percent"),
-        currency=parsed.get("currency", "RUR"),
-        offers_count=parsed.get("offers_count"),
-        rating=parsed.get("rating"),
-        rating_count=parsed.get("rating_count"),
-        review_count=parsed.get("review_count"),
-        rating_stars=parsed.get("rating_stars", {}),
-        reviews=reviews,
-        url=url,
-        meta=MetaOut(
-            source="yandex_card", healthy=not R.health_warnings(warnings), warnings=warnings, extraction="ssr"
-        ),
-    )
+        log_event(
+            "yandex_card.done",
+            product_id=pid,
+            price=parsed.get("price_rub"),
+            reviews=len(reviews),
+            warnings=len(warnings),
+        )
+        return YandexCardResponse(
+            product_id=parsed.get("product_id") or pid,
+            sku_id=parsed.get("sku_id", ""),
+            title=parsed.get("title", ""),
+            brand=parsed.get("brand", ""),
+            seller=parsed.get("seller", ""),
+            description=parsed.get("description", ""),
+            image=parsed.get("image", ""),
+            price_rub=parsed.get("price_rub"),
+            price_with_plus=parsed.get("price_with_plus"),
+            price_before_discount_rub=parsed.get("price_before_discount_rub"),
+            discount_percent=parsed.get("discount_percent"),
+            currency=parsed.get("currency", "RUR"),
+            offers_count=parsed.get("offers_count"),
+            rating=parsed.get("rating"),
+            rating_count=parsed.get("rating_count"),
+            review_count=parsed.get("review_count"),
+            rating_stars=parsed.get("rating_stars", {}),
+            reviews=reviews,
+            url=url,
+            meta=MetaOut(
+                source="yandex_card", healthy=not R.health_warnings(warnings), warnings=warnings, extraction="ssr"
+            ),
+        )
+    except ToolError:
+        raise
+    except Exception as exc:
+        log_event("yandex_card.error", error=_redact(str(exc)), exc_type=type(exc).__name__)
+        raise_tool_error_from(exc, _redact(f"yandex_card failed: {exc}"), provider="yandex")
 
 
 # CLI-only drift canary: ``marketplace-mcp doctor`` imports and calls yandex_selfcheck()

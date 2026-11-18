@@ -237,10 +237,13 @@ def _chrome_candidates() -> list[str]:
         found += [
             rf"{program_files}\Google\Chrome\Application\chrome.exe",
             rf"{program_files_x86}\Google\Chrome\Application\chrome.exe",
-            rf"{program_files}\Microsoft\Edge\Application\msedge.exe",
         ]
         if local_app_data:
             found.append(rf"{local_app_data}\Google\Chrome\Application\chrome.exe")
+        found += [
+            rf"{program_files}\Microsoft\Edge\Application\msedge.exe",
+            rf"{program_files_x86}\Microsoft\Edge\Application\msedge.exe",
+        ]
     elif sys.platform == "darwin":
         found += [
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",

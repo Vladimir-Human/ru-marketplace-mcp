@@ -465,34 +465,28 @@ def _parse_widgets(payload: dict) -> dict[str, Any]:
             continue
 
         if "webPrice" in key:
-            # Nov 2026: webPrice carries clean display strings + availability.
-            #   cardPrice = price with Ozon card (lowest), price = regular,
-            #   originalPrice = strikethrough. isAvailable = sellable now.
+            if isinstance(data.get("isAvailable"), bool):
+                out["is_available"] = data["isAvailable"]
             if "price" not in out and (data.get("price") or data.get("cardPrice")):
-                out["price"] = _price_str_to_float(data.get("price"))
+                p = _price_str_to_float(data.get("price"))
+                orig = _price_str_to_float(data.get("originalPrice"))
+                out["price"] = p
                 out["card_price"] = _price_str_to_float(data.get("cardPrice"))
-                out["price_original"] = _price_str_to_float(data.get("originalPrice"))
-                out["is_available"] = data.get("isAvailable")
+                out["price_original"] = orig if (p is None or orig is None or orig > p) else None
 
         elif "webSale" in key:
-            # Fallback price source only if webPrice was absent. Normalize to
-            # float for a consistent type contract with the webPrice path.
             cti = data.get("cellTrackingInfo")
-            tracking = cti.get("product") if isinstance(cti, dict) else None
-            if not isinstance(tracking, dict):
-                tracking = {}  # cellTrackingInfo/product drift to list/scalar must not crash
-            if tracking and "price" not in out:
-                final = tracking.get("finalPrice")
-                base = tracking.get("price")
+            tracking = cti.get("product") if isinstance(cti, dict) else {}
+            if isinstance(tracking, dict) and tracking and "price" not in out and out.get("is_available") is not False:
+                final, base = tracking.get("finalPrice"), tracking.get("price")
                 cur = final if final is not None else base
                 if cur is not None:
-                    # coerce_price handles str AND numeric (and None/<=0/junk),
-                    # so a drifted money-object (finalPrice={...}) no longer
-                    # crashes float() (audit wave-2 DRIFT, reproduced).
-                    out["price"] = R.coerce_price(cur)
-                    out["price_original"] = R.coerce_price(base)
+                    p, orig = R.coerce_price(cur), R.coerce_price(base)
+                    out["price"] = p
+                    out["price_original"] = orig if (p is None or orig is None or orig > p) else None
                     offer = data.get("offer")
-                    out["is_available"] = offer.get("isAvailable") if isinstance(offer, dict) else None
+                    if "is_available" not in out:
+                        out["is_available"] = offer.get("isAvailable") if isinstance(offer, dict) else None
 
         elif "webReviewProductScore" in key:
             out["rating_score"] = data.get("totalScore")
@@ -747,7 +741,8 @@ async def ozon_card(
         parsed["status"] = "success"
         parsed["url"] = f"https://www.ozon.ru{target_path}"
         parsed["tier_used"] = tier
-        result = R.attach_meta(parsed, R.validate_offer(parsed, require_title=False), source="ozon_card")
+        warnings = R.validate_offer({**parsed, "in_stock": parsed.get("is_available")}, require_title=False)
+        result = R.attach_meta(parsed, warnings, source="ozon_card")
         log_event("ozon_card.done", tier=tier, status="success")
         return OzonCardResponse(**result)
     except ToolError:
@@ -1333,7 +1328,8 @@ def _parse_search_tile(item: Any) -> dict[str, Any]:
     if validation_warnings:
         out["_validation_warnings"] = validation_warnings
     out["price"] = R.coerce_price(price_text)
-    out["price_original"] = R.coerce_price(price_original_text)
+    orig = R.coerce_price(price_original_text)
+    out["price_original"] = orig if (out["price"] is None or orig is None or orig > out["price"]) else None
     out["rating"] = R.coerce_rating(rating)
     return out
 
@@ -1460,6 +1456,8 @@ async def _ozon_search_impl(
     """ozon_search implementation — kept separate so the public tool can wrap
     it in a catch-all that converts unexpected exceptions to a typed ToolError.
     """
+    if not (query or "").strip():
+        raise_tool_error(BadRequestError("query must not be empty"))
     if page < 1 or page > 10:
         raise_tool_error(BadRequestError("page must be an integer from 1 to 10"))
 
@@ -1469,6 +1467,8 @@ async def _ozon_search_impl(
 
     status_code, body, tier = await _fetch_composer(search_path, ctx)
 
+    if tier == "invalid_path":
+        raise_tool_error(BadRequestError(body))
     if status_code == 0:
         raise_tool_error(_all_tiers_failed_error(tier, body, 300))
     if status_code == 403:
@@ -1675,7 +1675,7 @@ async def _ozon_selfcheck_impl(ctx: Context | None) -> OzonSelfcheckResponse:
 
     def _smoke_card(payload: dict) -> dict:
         p = _parse_widgets(payload)
-        w = R.validate_offer(p, require_title=False)
+        w = R.validate_offer({**p, "in_stock": p.get("is_available")}, require_title=False)
         return {
             "ok": bool(p.get("price") and p.get("rating_score")) and not w,
             "warnings": w,
