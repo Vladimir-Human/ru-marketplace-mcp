@@ -429,11 +429,11 @@ def _is_rur(node: dict[str, Any]) -> bool:
 def _price_of(offer: dict[str, Any]) -> float | None:
     """RUB price from ``bargainTerms`` (``priceRur``, RUR ``price``, or foreign ``prices.rur``) or ``priceTotalRur``."""
     terms, rur = _d(offer.get("bargainTerms")), _is_rur(_d(offer.get("bargainTerms")))
-    total = R.coerce_price(offer.get("priceTotalRur") or (offer.get("priceTotal") if rur else None))
+    total = R.coerce_price(offer.get("priceTotalRur")) or (R.coerce_price(offer.get("priceTotal")) if rur else None)
     if _s(terms.get("priceType")) == "squareMeter" and total is not None:
         return total
-    term_rur = terms.get("priceRur") or (terms.get("price") if rur else _d(terms.get("prices")).get("rur"))
-    return R.coerce_price(term_rur) or total
+    fallback = terms.get("price") if rur else _d(terms.get("prices")).get("rur")
+    return R.coerce_price(terms.get("priceRur")) or R.coerce_price(fallback) or total
 
 
 def _clean_url(value: Any) -> str | None:
@@ -554,7 +554,8 @@ def _offer_row(offer: dict[str, Any]) -> dict[str, Any]:
         ),
         "price_period": _s(terms.get("paymentPeriod")),
         "lease_term": _s(terms.get("leaseTermType")),
-        "deposit_rub": R.coerce_price(terms.get("deposit") if rur else _d(terms.get("depositPrices")).get("rur")),
+        "deposit_rub": R.coerce_price(terms.get("depositRur"))
+        or R.coerce_price(terms.get("deposit") if rur else _d(terms.get("depositPrices")).get("rur")),
         "rooms": rooms,
         "flat_type": flat_type,
         "is_apartments": _b(offer.get("isApartments")),

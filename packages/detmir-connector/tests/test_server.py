@@ -722,6 +722,18 @@ def test_parse_product_availability_checks_warehouse_codes_stores_and_explicit_b
     assert explicit_flags.available_online is False
     assert explicit_flags.available_offline is True
 
+    online_only = server._parse_product(
+        {"id": 1004, "title": "Мяч", "available": {"online": {"warehouse_codes": ["WH1"]}}}
+    )
+    assert online_only.available_online is True
+    assert online_only.available_offline is None
+
+    null_warehouses = server._parse_product(
+        {"id": 1005, "title": "Пазл", "available": {"online": {"warehouse_codes": None}}}
+    )
+    assert null_warehouses.available_online is None
+    assert null_warehouses.available_offline is None
+
 
 @pytest.mark.req("R-NO-FABRICATION")
 def test_parse_product_coerces_rating_on_five_point_scale() -> None:

@@ -215,12 +215,14 @@
   </requirement>
   <requirement id="R-CHALLENGE-ACTION" kind="requirement" state="tested" gaps="G-REVIEW-FOLLOWUP-EXECUTION">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_challenge_is_json_with_the_challenge_contract" requirements="R-CHALLENGE-ACTION" title="The x5sec verdict must reach the agent through the public card tool as the" />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_playwright_punish_popup_raises_challenge_and_foreign_popup_is_not_evaluated" requirements="R-CHALLENGE-ACTION" />
     <test file="packages/compare-connector/tests/test_server.py" name="test_recovery_fields_reach_the_source_outcome" requirements="R-CHALLENGE-ACTION" title="R-CDP-HOST-PAUSE, R-CHALLENGE-ACTION: an open host breaker's remaining" />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_accepts_a_source_specific_user_action" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: a source the CLI cannot unblock states its own step." />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_required_says_a_plain_retry_will_not_help" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retryable in principle, never self-retryable now." />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_with_retention_points_at_the_kept_open_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: a retained page is completed in place, not re-opened." />
     <test file="packages/mcp-core/tests/test_errors.py" name="test_challenge_without_retention_names_the_unblock_command" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: with no retained page the action is the real CLI command." />
     <test file="packages/taobao-connector/tests/test_server.py" name="test_baxia_slider_copy_and_punish_url_trigger_challenge_required" requirements="R-CHALLENGE-ACTION" />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_ergonomic_drone_and_verified_product_copy_never_fake_card_challenge" requirements="R-CHALLENGE-ACTION" />
     <test file="packages/taobao-connector/tests/test_server.py" name="test_search_challenge_message_does_not_promise_a_visible_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retention is off, so no message may claim a visible page." />
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_captcha_action_does_not_promise_a_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retention is off, so no field may claim a visible page." />
   </requirement>
@@ -531,6 +533,7 @@
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_all_healthy_is_success" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_drift_dominates" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_selfcheck_result_inconclusive_beats_all_healthy" requirements="R-DRIFT" />
+    <test file="packages/mcp-core/tests/test_resilience.py" name="test_validate_review_block_flags_out_of_range_rating_score_and_ignores_blank" requirements="R-DRIFT" />
     <test file="packages/mcp-core/tests/test_shape_signature.py" name="test_a_retyped_field_shows_up_even_when_the_name_survives" requirements="R-DRIFT" title="price arriving as &quot;52 999 ₽&quot; instead of a number is exactly how a" />
     <test file="packages/mcp-core/tests/test_shape_signature.py" name="test_the_same_shape_with_different_values_fingerprints_identically" requirements="R-DRIFT" />
     <test file="packages/ozon-connector/tests/test_server.py" name="test_ozon_tools_preserve_empty_widget_states_success" requirements="R-DRIFT" />
@@ -835,6 +838,7 @@
   </requirement>
   <requirement id="R-NAV-HOSTS" kind="requirement" state="tested">
     <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_card_popup_keeps_the_www_page_alias" requirements="R-NAV-HOSTS.kept-inputs" title="The leading-dot registry entry must work in the post-read redirect guard." />
+    <test file="packages/aliexpress-connector/tests/test_popup_ownership.py" name="test_playwright_punish_popup_raises_challenge_and_foreign_popup_is_not_evaluated" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/aliexpress-connector/tests/test_server.py" name="test_extract_item_id_refuses_schemeless_off_host_urls" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_schemeless_foreign_and_personal_urls_before_transport" requirements="R-NAV-HOSTS.invariant" />
     <test file="packages/cian-connector/tests/test_page_hosts.py" name="test_schemeless_foreign_links_have_no_id" requirements="R-NAV-HOSTS.invariant" />
@@ -915,9 +919,11 @@
     <test file="packages/detmir-connector/tests/test_server.py" name="test_parse_product_coerces_rating_on_five_point_scale" requirements="R-NO-FABRICATION" />
     <test file="packages/lamoda-connector/tests/test_server.py" name="test_extract_sku_requires_at_least_one_digit" requirements="R-NO-FABRICATION" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_coerce_price_rejects_customs_delivery_and_leading_plus_deltas" requirements="R-NO-FABRICATION" />
+    <test file="packages/mcp-core/tests/test_resilience.py" name="test_free_shipping_and_duty_free_labels_keep_price_while_thresholds_and_currency_deltas_fail" requirements="R-NO-FABRICATION" />
     <test file="packages/mcp-core/tests/test_resilience.py" name="test_validate_review_block_counts_negative_only_reviews_as_text" requirements="R-NO-FABRICATION" />
     <test file="packages/megamarket-connector/tests/test_server.py" name="test_extract_item_id_reads_trailing_goods_id_not_model_digits_and_strips_merchant_suffix" requirements="R-NO-FABRICATION" />
     <test file="packages/taobao-connector/tests/test_server.py" name="test_card_extractor_preserves_range_separator_in_highlight_price" requirements="R-NO-FABRICATION" />
+    <test file="packages/taobao-connector/tests/test_server.py" name="test_card_extractor_rejects_zhi_and_dual_glyph_tilde_ranges" requirements="R-NO-FABRICATION" />
     <test file="packages/taobao-connector/tests/test_server.py" name="test_login_wall_markers_ignore_link_poor_search_pages_that_have_items" requirements="R-NO-FABRICATION" />
   </requirement>
   <requirement id="R-NO-MCP-LOGGING" kind="requirement" state="tested">

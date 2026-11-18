@@ -923,11 +923,30 @@ async def test_search_and_card_nullify_non_unit_postfix_and_disabled_prices(monk
                 "title": "Договорная цена",
                 "priceDetailed": {"enabled": True, "hasValue": False, "postfix": "", "value": 100},
             },
+            {
+                "id": 4612345616,
+                "title": "Прокат велосипеда",
+                "priceDetailed": {"enabled": True, "hasValue": True, "postfix": "в день", "value": 1500},
+            },
+            {
+                "id": 4612345617,
+                "title": "Скрытая скидка",
+                "priceDetailed": {"enabled": True, "hasValue": True, "value": 2000},
+                "iva": {
+                    "PriceStep": [
+                        {
+                            "componentData": {"component": "price"},
+                            "payload": {"priceDetailed": {"value": 1000, "hasValue": False, "enabled": False}},
+                        },
+                        {"componentData": {"component": "discount"}, "payload": {"old_string": "2000", "percent": 50}},
+                    ]
+                },
+            },
         ],
     }
     _patch_fetch(monkeypatch, _ok(payload))
     search_res = await server.avito_search("ps5")
-    assert [it.price_rub for it in search_res.items] == [None, None, None, None, None]
+    assert [it.price_rub for it in search_res.items] == [None, None, None, None, None, None, 2000.0]
 
     hydration = json.dumps(
         json.dumps(

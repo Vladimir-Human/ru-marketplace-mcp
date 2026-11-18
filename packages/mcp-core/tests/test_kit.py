@@ -459,6 +459,8 @@ def test_on_bot_check_page_reads_only_the_path(url, expected):
         ("https://www.example.ru/p/1/", "https://www.example.ru/p/1/"),
         ("https://example.ru/p/1/", "https://example.ru/p/1/"),
         ("https://sister.example/p/1/", ""),
+        ("https://www.example.ru:notaport/p/1/", ""),
+        ("https://[/p/1/", ""),
         ("http://www.example.ru/p/1/", ""),
         ("//sister.example/p/1/", ""),
         ("catalog/obuv", ""),

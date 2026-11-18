@@ -159,7 +159,10 @@ def _extract_item_id(raw: str) -> str | None:
         return None
     if _BARE_ID_RE.fullmatch(raw):
         return raw
-    parts = urllib.parse.urlsplit(raw)
+    try:
+        parts = urllib.parse.urlsplit(raw)
+    except ValueError:
+        return None
     if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
         path = parts.path
     elif url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
@@ -573,12 +576,19 @@ async def _cdp_card(url: str, ctx: Context | None) -> dict[str, Any]:
                         if candidate not in owned:
                             continue
                         candidate_url = candidate.url or ""
-                        if wants.search(urllib.parse.urlsplit(candidate_url).path) and "punish" not in candidate_url:
+                        if (
+                            url_on_hosts(candidate_url, _CARD_HOSTS)
+                            and wants.search(urllib.parse.urlsplit(candidate_url).path)
+                            and "punish" not in candidate_url
+                        ):
                             target = candidate
                             break
                     if target is not None:
                         break
                 if target is None:
+                    if any("punish" in (c.url or "") for c in owned):
+                        _pacer.record_refusal()
+                        raise_tool_error(_challenge_error("the item tab opened onto an x5sec challenge"))
                     # No delivered item is a transport outcome, not a proven refusal.
                     raise_tool_error(
                         TransportDownError(

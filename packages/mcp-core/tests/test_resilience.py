@@ -580,3 +580,27 @@ def test_validate_review_block_counts_negative_only_reviews_as_text() -> None:
         REVIEW_TEXT_DRIFT_MIN_SAMPLE
     )
     assert validate_review_block({"returned": len(reviews), "reviews": reviews}) == []
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+def test_free_shipping_and_duty_free_labels_keep_price_while_thresholds_and_currency_deltas_fail() -> None:
+    from mcp_core.dom import prices_from_tile
+
+    assert coerce_price("1 999 ₽ — доставка бесплатно") == pytest.approx(1999.0)
+    assert coerce_price("1 999 ₽ — беспошлинный товар") == pytest.approx(1999.0)
+    assert coerce_price("Доставка бесплатно от 2 500 ₽") is None
+    assert prices_from_tile(
+        {"price_texts": {"attached": ["1 999 ₽ — доставка бесплатно", "2 999 ₽"], "other": []}}
+    ) == (
+        1999.0,
+        2999.0,
+    )
+    for delta in ("＋₽500", "−₽500", "+$10"):
+        assert coerce_price(delta) is None
+
+
+@pytest.mark.req("R-DRIFT")
+def test_validate_review_block_flags_out_of_range_rating_score_and_ignores_blank() -> None:
+    warnings = validate_review_block({"rating_score": 6, "reviews": []})
+    assert any(w.startswith("score_out_of_range:") for w in warnings)
+    assert validate_review_block({"valuation": "", "reviews": []}) == []

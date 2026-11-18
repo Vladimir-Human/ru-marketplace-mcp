@@ -756,6 +756,13 @@ async def test_selfcheck_reports_graphql_parser_drift_and_refusal_page_blocked(m
     assert report.checks["search"].state == "inconclusive"
     assert report.checks["search"].reason == "blocked"
 
+    async def nameless_oos_card(sku, ctx):
+        return {"is_available": False}
+
+    monkeypatch.setattr(server, "_graphql_card", nameless_oos_card)
+    report_nameless = await server.lamoda_selfcheck()
+    assert report_nameless.checks["card_graphql"].state == "drift"
+
 
 @pytest.mark.req("R-LAMODA-REFUSAL-HONEST", "R-CACHE-VALIDATED")
 async def test_search_nav_blocked_403_preserves_status_code_and_unhealthy_responses_skip_cache(monkeypatch):

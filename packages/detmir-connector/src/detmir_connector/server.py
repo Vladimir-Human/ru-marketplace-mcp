@@ -330,22 +330,24 @@ def _parse_product(raw: Any) -> DetmirProduct:
 
     raw_online = raw.get("isAvailableOnline")
     raw_offline = raw.get("isAvailableOffline")
+    warehouses = online.get("warehouse_codes")
+    region_codes = offline.get("region_iso_codes")
     avail_online = (
         raw_online
         if isinstance(raw_online, bool)
         else (
-            bool(_as_list(online.get("warehouse_codes")))
-            if "warehouse_codes" in online
-            else (bool(online) if available else None)
+            bool(warehouses)
+            if isinstance(warehouses, list)
+            else (bool(online) if online and "warehouse_codes" not in online else None)
         )
     )
     avail_offline = (
         raw_offline
         if isinstance(raw_offline, bool)
         else (
-            bool(stores or _as_list(offline.get("region_iso_codes")))
-            if ("stores" in offline or "region_iso_codes" in offline)
-            else (bool(offline) if available else None)
+            bool(stores or _as_list(region_codes))
+            if isinstance(offline.get("stores"), list) or isinstance(region_codes, list)
+            else (bool(offline) if offline and not ("stores" in offline or "region_iso_codes" in offline) else None)
         )
     )
 

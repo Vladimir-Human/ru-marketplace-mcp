@@ -396,13 +396,9 @@ _CARD_EXTRACT_TEMPLATE = """
     const priceRoot = document.querySelector('[class*="priceWrap"], [class*="PriceWrap"]') || document.body;
     let priceTexts = priceTextsIn(priceRoot);
     const assembled = [];
+    let hasHighlight = false;
     for (const blockSel of ['[class*="highlightPrice"]', '[class*="subPrice"]']) {
         for (const block of priceRoot.querySelectorAll(blockSel)) {
-            // The blocks render their parts as sibling spans, and the yuan
-            // sign rides in a symbol-- span OR a bare text-- span depending
-            // on the block (live capture: highlightPrice uses symbol--,
-            // subPrice uses a second text-- span). Concatenate every part in
-            // DOM order and keep results that carry digits.
             const spans = Array.from(block.querySelectorAll('[class*="symbol"], [class*="text"]'));
             if (!spans.length) continue;
             const parts = [];
@@ -411,7 +407,7 @@ _CARD_EXTRACT_TEMPLATE = """
                     let sib = spans[i - 1].nextSibling;
                     while (sib && sib !== spans[i] && !sib.contains(spans[i])) {
                         const mid = (sib.textContent || '').trim();
-                        if (/^[-~～–—]+$/.test(mid)) parts.push(mid);
+                        if (/^(?:[-~～–—]+|至)$/.test(mid)) parts.push(mid);
                         sib = sib.nextSibling;
                     }
                 }
@@ -419,11 +415,17 @@ _CARD_EXTRACT_TEMPLATE = """
                 if (t) parts.push(t);
             }
             const joined = parts.join('');
-            if (joined && /\\d/.test(joined)) assembled.push(joined);
+            if (joined && /\\d/.test(joined)) {
+                if (blockSel.includes('highlightPrice')) hasHighlight = true;
+                assembled.push(joined);
+            }
         }
     }
     if (assembled.length) {
-        priceTexts = {attached: assembled.concat(priceTexts.attached), other: priceTexts.other};
+        priceTexts = {
+            attached: hasHighlight ? assembled : assembled.concat(priceTexts.attached),
+            other: hasHighlight ? [] : priceTexts.other
+        };
     }
 
     let shop = null, sales = null;
@@ -713,7 +715,7 @@ def _grid_still_loading(data: dict[str, Any]) -> bool:
 # older payloads fall back to body_snippet. Both snippets exclude scripts/styles.
 # 验证 also covers 验证码, so the old alternation's extra branch is not needed.
 _CHALLENGE_TEXT_RE = re.compile(
-    r"验证|人机|滑动一下|拖动.{0,6}滑块|punish|captcha|are you human|access denied",
+    r"人机验证|滑动验证|安全验证|智能验证|完成.{0,4}验证|验证码|请按住滑块|滑动一下|拖动.{0,6}滑块|punish|captcha|are you human|access denied",
     re.IGNORECASE,
 )
 

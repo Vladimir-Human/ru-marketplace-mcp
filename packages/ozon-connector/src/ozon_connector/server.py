@@ -596,12 +596,7 @@ async def _fetch_composer(api_path: str, ctx: Context | None) -> tuple[int, str,
 
 
 def _ozon_blocked_error(tier: str, detail: str = "") -> TransportDownError:
-    """Build the actionable 403-blocked error for the current tier.
-
-    Cloudflare __cf_bm / Ozon WAF blocks are transport-layer access failures
-    (not validation, not parser drift), so they surface as TransportDownError
-    with status_code=403 and the operator's solve-the-challenge guidance inline.
-    """
+    """Build the actionable 403-blocked TransportDownError for the current tier."""
     message = (
         f"Ozon returned HTTP 403 via {tier}. "
         "CDP may be reachable, but the browser session is blocked by Ozon/Cloudflare. "
@@ -616,13 +611,16 @@ def _canonical_product_path_from_input(raw_input: str) -> tuple[str | None, dict
     raw = raw_input.strip()
     if raw.isdigit():
         return f"/product/{raw}/", None
-    parts = urllib.parse.urlsplit(raw)
+    try:
+        parts = urllib.parse.urlsplit(raw)
+    except ValueError:
+        return None, {"status": "error", "type": "invalid_arguments", "message": "Invalid Ozon URL"}
     if parts.scheme or parts.netloc:
         if parts.scheme != "https" or not url_on_hosts(raw, ALLOWED_HOSTS):
             return None, {"status": "error", "type": "invalid_arguments", "message": "URL must be on ozon.ru"}
         raw = parts.path
     else:
-        raw = urllib.parse.urlsplit(raw).path
+        raw = parts.path
     if not raw.startswith("/product/"):
         return None, {
             "status": "error",

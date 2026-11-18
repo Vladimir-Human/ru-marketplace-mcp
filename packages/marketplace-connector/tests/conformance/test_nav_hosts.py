@@ -122,6 +122,8 @@ async def test_foreign_url_arguments_never_reach_transport(case, transport_spies
         "http://127.0.0.1:9222/json/version",
         f"https://{host}@example.com/",
         f"https://{host}.example.com/",
+        f"https://{host}:notaport",
+        "https://[",
         "https://[::1]/x",
         "file:///c:/x",
         "file:///product/123456789/",

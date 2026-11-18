@@ -925,6 +925,24 @@ def test_foreign_currency_offer_reads_rur_prices_never_raw_usd_or_eur():
     assert row_no_rur["price_rub"] is None
     assert row_no_rur["deposit_rub"] is None
 
+    placeholder_price_rur = {
+        "id": 900000109,
+        "title": "Апартаменты",
+        "dealType": "rent",
+        "category": "flatRent",
+        "bargainTerms": {
+            "currency": "usd",
+            "price": 1000,
+            "priceRur": "—",
+            "prices": {"rur": 90000},
+            "depositRur": "—",
+            "depositPrices": {"rur": 45000},
+        },
+    }
+    row_placeholder = server._offer_row(placeholder_price_rur)
+    assert row_placeholder["price_rub"] == 90000.0
+    assert row_placeholder["deposit_rub"] == 45000.0
+
 
 @pytest.mark.req("R-NO-FABRICATION")
 def test_square_meter_price_type_uses_total_rur_or_explicit_m2_unit():

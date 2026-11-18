@@ -943,3 +943,54 @@ async def test_unhealthy_search_and_card_responses_are_not_cached(monkeypatch):
     c_unpriced = await server.taobao_card("123456789012")
     assert c_unpriced.price_cny is None
     assert len(server._cache) == 0
+
+
+@pytest.mark.req("R-CHALLENGE-ACTION")
+@pytest.mark.parametrize(
+    "title",
+    [
+        "罗技 ERGO K860 人机工程学键盘",
+        "大疆 DJI Mini 4 Pro 无人机航拍器",
+        "官方旗舰店 正品验证 假一赔四 蓝牙耳机",
+    ],
+)
+def test_ergonomic_drone_and_verified_product_copy_never_fake_card_challenge(title: str) -> None:
+    payload = {
+        "title": title,
+        "page_title": f"{title}-淘宝网",
+        "challenge_snippet": f"{title} ¥ 699.00 立即购买 加入购物车",
+    }
+    assert server._anti_bot_challenge(payload) is False
+
+
+@pytest.mark.req("R-NO-FABRICATION")
+@pytest.mark.parametrize(
+    "price_html",
+    [
+        '<span class="symbol--s">¥</span><span class="text--t">100</span>至<span class="text--t">200</span>',
+        '<span class="text--t">¥100</span><span class="sep">~</span><span class="text--t">¥200</span>',
+    ],
+)
+def test_card_extractor_rejects_zhi_and_dual_glyph_tilde_ranges(tmp_path, price_html: str) -> None:
+    from mcp_core.dom import prices_from_tile
+    from mcp_core.domtest import JsdomUnavailable, run_extractor
+
+    page = tmp_path / "range_variants.html"
+    page.write_text(
+        f"""<!doctype html><html><head><meta charset="utf-8"><title>壳-淘宝网</title></head><body>
+        <span class="mainTitle--R75fTcZL">手机壳防摔</span>
+        <div class="priceWrap--R3TrPIS6">
+          <div class="highlightPrice--LlVWiXXs">{price_html}</div>
+        </div></body></html>""",
+        encoding="utf-8",
+    )
+    try:
+        payload = run_extractor(
+            server._CARD_EXTRACT_JS,
+            page,
+            page_url="https://item.taobao.com/item.htm?id=123456789012",
+        )
+    except JsdomUnavailable as exc:
+        pytest.skip(str(exc))
+
+    assert prices_from_tile(payload) == (None, None)

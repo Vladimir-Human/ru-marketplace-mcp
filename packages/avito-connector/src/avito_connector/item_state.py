@@ -673,7 +673,7 @@ def _blank(value: Any) -> bool:
 
 
 _NON_UNIT_POSTFIX_RE = re.compile(
-    r"\b(?:час\w*|сут\w*|мес\w*|недел\w*|смен\w*|услуг\w*|соток|сотку|га|км|год\w*)\b|м²|м2|кв\.?\s*м",
+    r"\b(?:час\w*|сут\w*|день|дня|дней|мес\w*|недел\w*|смен\w*|услуг\w*|соток|сотку|га|км|год\w*)\b|м²|м2|кв\.?\s*м",
     re.IGNORECASE,
 )
 
@@ -735,7 +735,10 @@ def search_sale_price(item: dict[str, Any]) -> tuple[SalePrice | None, str | Non
         if isinstance(name, str) and name not in steps:
             steps[name] = _dict(step, "payload")
     base = _rub(_dict(item, "priceDetailed").get("value"))
-    now = _rub(_dict(steps.get("price"), "priceDetailed").get("value"))
+    step_pd = _dict(steps.get("price"), "priceDetailed")
+    if is_non_unit_price_detailed(step_pd):
+        return None, None
+    now = _rub(step_pd.get("value"))
     discount = steps.get("discount")
     if discount is None or (_blank(discount.get("old_string")) and _blank(discount.get("percent"))):
         if now is not None and base is not None and now != base:

@@ -172,7 +172,10 @@ def _extract_sku(raw: str) -> str | None:
         return None
     if _SKU_RE.fullmatch(raw):
         return raw.upper()
-    parts = urllib.parse.urlsplit(raw)
+    try:
+        parts = urllib.parse.urlsplit(raw)
+    except ValueError:
+        return None
     if raw.startswith("/") and not raw.startswith("//") and "\\" not in raw:
         path = parts.path
     elif url_on_hosts(raw, ALLOWED_HOSTS, allow_schemeless=True):
@@ -728,7 +731,11 @@ async def _lamoda_selfcheck_impl(ctx: Context | None) -> LamodaSelfcheckResponse
     try:
         async with asyncio.timeout(60):
             card_product = await _graphql_card("MP002XM1RMM3", ctx)
-        if R.coerce_price(card_product.get("price_amount")) is None and card_product.get("is_available") is not False:
+        if not str(card_product.get("name") or "").strip():
+            checks["card_graphql"] = R.selfcheck_entry(
+                "drift", baseline="graphql-products-v2", reason="parse_smoke_failed", notes=["card returned no name"]
+            )
+        elif R.coerce_price(card_product.get("price_amount")) is None and card_product.get("is_available") is not False:
             checks["card_graphql"] = R.selfcheck_entry(
                 "drift", baseline="graphql-products-v2", reason="no_prices", notes=["card returned without a price"]
             )
