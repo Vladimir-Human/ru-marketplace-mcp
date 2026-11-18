@@ -50,13 +50,16 @@ jobs:
           print(f"[R-NPM-PUBLISH] ok: ru-marketplace-mcp-dsh@{expected} matches {tag} and skills parity holds")
           PY
 
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
       - name: Publish ru-marketplace-mcp-dsh to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
             printf '//registry.npmjs.org/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$HOME/.npmrc"
-          else
-            npm install -g npm@latest
           fi
           npm publish ./dsh --access public --provenance

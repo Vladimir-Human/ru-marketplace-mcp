@@ -32,6 +32,7 @@ END_MODULE_CONTRACT
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -45,9 +46,13 @@ PYPROJECT_VERSION = re.compile(r'^version[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 DUNDER_VERSION = re.compile(r'^__version__[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
 RELEASE_DATE = re.compile(r'^__release_date__[ \t]*=[ \t]*"([^"]*)"', re.MULTILINE)
 SERVER_VERSION = re.compile(r'^SERVER_VERSION[ \t]*=[ \t]*"([^"]+)"', re.MULTILINE)
-IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)")
+IMAGE_TAG = re.compile(r"ru-marketplace-mcp:(\d[^\s\"'`)]*)")
 # The OCI identifier is a JSON string; the version runs to its closing quote.
 OCI_IDENTIFIER = re.compile(r"ru-marketplace-mcp:(\d[^\s\"']*)(?=\")")
+PYPI_REGISTRY_VERSION = re.compile(r'"version"[ \t]*:[ \t]*"([^"]+)"')
+_JSON_TOKEN = re.compile(r'"(?:\\.|[^"\\])*"|[{\[\]}]')
+_PYPI_TYPE_FIELD = re.compile(r'"registryType"\s*:\s*"pypi"')
+_PYPI_ID_FIELD = re.compile(r'"identifier"\s*:\s*"ru-marketplace-mcp"')
 # A top-level JSON key. The indentation is captured so a nested "version"
 # (for example in a dependency object) is not mistaken for the manifest's own.
 JSON_TOP_LEVEL_VERSION = re.compile(r'^(?P<indent>[ \t]*)"version"[ \t]*:[ \t]*"([^"]+)"', re.MULTILINE)
@@ -86,6 +91,8 @@ class Site:
     required: bool = True
     value_group: int = 1
     top_level_indent: bool = False
+    root_object_only: bool = False
+    pypi_package_object: bool = False
     description: str = ""
     kind: Literal["version", "release_date"] = "version"
 
@@ -121,7 +128,7 @@ def root_version(root: Path) -> str:
     return match.group(1)
 
 
-def _sorted(paths: list[Path]) -> tuple[Path, ...]:
+def _sorted(paths: Iterable[Path]) -> tuple[Path, ...]:
     return tuple(sorted(paths))
 
 
@@ -131,7 +138,7 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     core_init = packages / "mcp-core" / "src" / "mcp_core" / "__init__.py"
     manifests = _sorted([root / "pyproject.toml", *packages.glob("*/pyproject.toml")])
     deployment_doc = root / "docs" / "DEPLOYMENT.md"
-    image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md"]
+    image_files = [root / "docker-compose.yml", deployment_doc, root / "dsh" / "README.md", root / "llms-install.md"]
     server_manifest = root / "server.json"
     dsh_manifest = root / "dsh" / "package.json"
     all_plugin_manifests = (
@@ -189,7 +196,17 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             (server_manifest,) if server_manifest.exists() else (),
             value_group=2,
             top_level_indent=True,
+            root_object_only=True,
             description="the MCP registry manifest version",
+        ),
+        Site(
+            "MCP registry PyPI version",
+            PYPI_REGISTRY_VERSION,
+            (server_manifest,) if server_manifest.exists() else (),
+            required=server_manifest.exists() and bool(_PYPI_TYPE_FIELD.search(read_raw(server_manifest))),
+            value_group=1,
+            pypi_package_object=True,
+            description="the MCP registry PyPI package version",
         ),
         Site(
             "OCI image tag",
@@ -204,6 +221,7 @@ def build_sites(root: Path) -> tuple[Site, ...]:
             (dsh_manifest,) if dsh_manifest.exists() else (),
             value_group=2,
             top_level_indent=True,
+            root_object_only=True,
             description="the dsh bundle version",
         ),
         Site(
@@ -217,13 +235,57 @@ def build_sites(root: Path) -> tuple[Site, ...]:
     )
 
 
+def _json_structure(text: str) -> tuple[list[tuple[int, int, int]], list[tuple[int, int]]]:
+    stack: list[tuple[str, int]] = []
+    objects: list[tuple[int, int, int]] = []
+    deltas: list[tuple[int, int]] = []
+    for tok in _JSON_TOKEN.finditer(text):
+        ch = tok.group(0)
+        if ch in "{[":
+            stack.append((ch, tok.start()))
+            deltas.append((tok.start(), 1))
+        elif ch in "}]" and stack:
+            open_ch, start = stack.pop()
+            deltas.append((tok.start(), -1))
+            if open_ch == "{" and ch == "}":
+                objects.append((start, tok.end(), len(stack) + 1))
+    return objects, deltas
+
+
+def _json_depth_at(deltas: list[tuple[int, int]], pos: int) -> int:
+    return sum(delta for tok_pos, delta in deltas if tok_pos < pos)
+
+
 def _matches(site: Site, text: str) -> list[re.Match[str]]:
-    """Matches of one site in one file, honoring the top-level JSON rule."""
+    """Matches of one site in one file, honoring JSON structure rules."""
     found = list(site.pattern.finditer(text))
-    if site.top_level_indent and found:
+    if not found:
+        return found
+    if site.pypi_package_object:
+        objects, deltas = _json_structure(text)
+        pypi_spans: list[tuple[int, int, int]] = []
+        for obj_start, obj_end, obj_depth in objects:
+            chars = list(text[obj_start:obj_end])
+            for child_start, child_end, child_depth in objects:
+                if child_depth > obj_depth and obj_start < child_start and child_end < obj_end:
+                    chars[child_start - obj_start : child_end - obj_start] = [" "] * (child_end - child_start)
+            direct = "".join(chars)
+            if _PYPI_TYPE_FIELD.search(direct) and _PYPI_ID_FIELD.search(direct):
+                pypi_spans.append((obj_start, obj_end, obj_depth))
+        return [
+            m
+            for m in found
+            if any(
+                start < m.start() < end and _json_depth_at(deltas, m.start()) == depth
+                for start, end, depth in pypi_spans
+            )
+        ]
+    if site.root_object_only:
+        _, deltas = _json_structure(text)
+        return [m for m in found if _json_depth_at(deltas, m.start()) == 1]
+    if site.top_level_indent:
         # A pretty-printed JSON object's own keys share the smallest indent;
-        # anything deeper is a nested object's field. Minified JSON has no
-        # indentation, so its single hit is the top-level one.
+        # anything deeper is a nested object's field.
         smallest = min(len(match.group("indent")) for match in found)
         found = [match for match in found if len(match.group("indent")) == smallest]
     return found
