@@ -32,6 +32,7 @@ END_MODULE_CONTRACT
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -124,7 +125,7 @@ def root_version(root: Path) -> str:
     return match.group(1)
 
 
-def _sorted(paths: list[Path]) -> tuple[Path, ...]:
+def _sorted(paths: Iterable[Path]) -> tuple[Path, ...]:
     return tuple(sorted(paths))
 
 
