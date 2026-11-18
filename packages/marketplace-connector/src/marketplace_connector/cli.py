@@ -1280,23 +1280,20 @@ def next_step(
         if wb_dom_fallback.strip().lower() in {"0", "false", "no", "off"}:
             return NEXT_STEP_WB_TRANSPORT
         return NEXT_STEP_WB_DOM_FALLBACK
-    real_reasons = reasons - {"", "budget_refused"}
     budget_note = (
         "The live budget refused this check; this says nothing about the source. "
         "Start a new bounded run with `python scripts/live_check.py reset`."
     )
     if "rate_limited" in reasons:
         return _hint_rate_limited(mode, source)
-    if "budget_refused" in reasons and not real_reasons:
-        return budget_note
-    if uses_browser and cdp_reachable is False:
-        return _hint_cdp_down(mode)
     if uses_browser and reasons & WALL_REASONS:
-        return _hint_browser_wall(mode, source)
+        return _hint_cdp_down(mode) if cdp_reachable is False else _hint_browser_wall(mode, source)
     if uses_browser and cdp_reachable is True and "transport_down" in reasons and source in UNBLOCK_PAGES:
         return _hint_browser_page(mode, source)
     if "budget_refused" in reasons:
         return budget_note
+    if uses_browser and cdp_reachable is False:
+        return _hint_cdp_down(mode)
     return _hint_antibot(mode)
 
 
