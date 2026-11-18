@@ -9,7 +9,7 @@ END_MODULE_CONTRACT
 START_MODULE_MAP
   test_s3_403_self_reload: One public search survives a real 403 Refresh and returns captured products.
   test_s5_signal_held_challenge: The waiting call survives a committed refusal until the origin's success is signalled.
-  test_s6_cross_host_redirect: Reject a foreign redirect even when the destination serves valid product fixtures.
+  test_s6_cross_host_redirect: Refuse a foreign redirect before the foreign host is requested.
   test_s6_foreign_url_opens_no_tab: Reject a foreign URL with a valid product path before creating any target.
   test_s7_ten_refusals_open_breaker: Ten actual refused navigations open the shared breaker; later calls send no request.
   test_s8_foreign_tab_untouched: An independently owned tab never navigates/closes or changes identity, URL or title.
@@ -138,7 +138,7 @@ async def test_s6_cross_host_redirect(cdp_sim, connector):
     foreign = [
         entry for entry in cdp_sim.server.requests if entry.host == "foreign.invalid" and entry.path == "/search/"
     ]
-    assert len(foreign) == 1 and foreign[0].status == 200
+    assert foreign == [], "the foreign host must receive no request at all (R-CDP-REDIRECT-GUARD)"
     state = cdp_budget.navigation_budget().snapshot()["hosts"].get(HOST)
     assert state is None or (state["refusals"] == 0 and not state["open"]), (
         "our host-policy refusal must not blame the source"

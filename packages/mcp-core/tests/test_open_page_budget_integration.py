@@ -28,7 +28,7 @@ def fake_browser(monkeypatch):
     """A page object just real enough for open_page: it reads only ``.url``."""
     opened: list[str] = []
 
-    def factory(url, wait_ms, *, navigation_timeout_ms):
+    def factory(url, wait_ms, *, navigation_timeout_ms, allowed_hosts=None):
         @asynccontextmanager
         async def cm():
             opened.append(url)
