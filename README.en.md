@@ -189,9 +189,9 @@ dsh plugin --profile web add github:Vladimir-Human/ru-marketplace-mcp#path:/dsh
 That gives you 15 skills immediately and **no** MCP tools: all three MCP rows stay
 disabled until `RU_MARKETPLACE_MCP_DIR` points at a clone.
 <!-- tools-cost:start -->
-A mounted server is paid on every request — ≈1.8k tokens for the
+A mounted server is paid on every request — ≈1.7k tokens for the
 recommended price-comparison profile, ≈2.0k for the decision profile and
-≈13.4k for the full set (estimated from `tools/list`; details in
+≈13.1k for the full set (estimated from `tools/list`; details in
 [docs/TOOLS.md](docs/TOOLS.md)) — so opting in is left to you.
 <!-- tools-cost:end -->
 [dsh/README.md](dsh/README.md) covers enabling it and the full mode.
