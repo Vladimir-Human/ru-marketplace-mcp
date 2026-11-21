@@ -125,7 +125,7 @@ from compare_connector.models_output import (
 from compare_connector.source_error import _source_error
 from compare_connector.vision_policy import client_vision_hint, resolve_image_delivery
 
-SERVER_VERSION = "2.11.1"
+SERVER_VERSION = "2.11.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 

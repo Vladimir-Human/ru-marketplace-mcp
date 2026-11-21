@@ -95,7 +95,7 @@ from lamoda_connector.shape_reference import (
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.11.1"
+SERVER_VERSION = "2.11.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 ALLOWED_HOSTS = BY_NAME["lamoda"].page_hosts

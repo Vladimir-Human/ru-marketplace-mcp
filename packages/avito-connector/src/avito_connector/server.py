@@ -142,7 +142,7 @@ from avito_connector.shape_reference import SEARCH_REQUIRED_FAMILIES, missing_re
 
 _settings = get_settings()
 
-SERVER_VERSION = "2.11.1"
+SERVER_VERSION = "2.11.2"
 SERVER_STARTED_AT = datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
 
 ITEMS_API = f"{SITE_BASE}/web/1/js/items"
