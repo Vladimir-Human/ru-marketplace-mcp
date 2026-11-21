@@ -261,14 +261,19 @@ async def test_parsed_dom_preserves_antibot_recheck(navigation, status, reload):
 @pytest.mark.parametrize("commits", [False, True])
 async def test_unparsed_dom_is_bounded_and_never_yielded(navigation, commits):
     navigation.ready, navigation.commits = ["loading"], commits
+    # The raw path's tab close waits raw_targets.RECHECK_S (0.25 s) to confirm the tab is gone
+    # (R-CDP-SIM-S4), so a 50 ms budget ends in ~0.3 s; a 0.5 s bound flaked on a slow macOS runner.
+    # Half the watchdog still tells the two apart: had the watchdog fired, the call took 5 s.
+    watchdog_s = 5.0
     start = asyncio.get_running_loop().time()
     with pytest.raises((TimeoutError, chrome_cdp.TransportDownError, chrome_cdp._PlaywrightTimeoutError)):
-        async with asyncio.timeout(1):
+        async with asyncio.timeout(watchdog_s):
             async with chrome_cdp.open_page(
                 URL, 0, navigation_timeout_ms=50, wait_for_dom_parsed=True, allowed_hosts={"www.citilink.ru"}
             ):
                 pytest.fail("loading DOM yielded")
-    assert asyncio.get_running_loop().time() - start < 0.5, "the navigation budget, not the outer watchdog, must fire"
+    elapsed = asyncio.get_running_loop().time() - start
+    assert elapsed < watchdog_s / 2, "the navigation budget, not the outer watchdog, must fire"
     assert navigation.closed
     assert "ok" not in navigation.permit
 
