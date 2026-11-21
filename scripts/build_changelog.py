@@ -14,6 +14,7 @@ START_MODULE_MAP
   _markdown_lines  identify real headings/bullets without interpreting fenced code examples
   parse_fragment   validate headings and bullets with filename/line diagnostics
   check_pr         pure decision from PR metadata, paths and optional fragment text
+  _released_in     find a released version that already names a fragment's PR
   build_release    plan a section and updated changelog without touching files
   main             read CLI inputs, print a dry-run or apply the validated release
 END_MODULE_MAP
@@ -163,6 +164,16 @@ def _hand_sections(text: str) -> tuple[str, dict[str, str]]:
     return preamble.strip("\n"), {section: "\n\n".join(chunks) for section, chunks in grouped.items()}
 
 
+def _released_in(changelog: str, headings: list[tuple[int, int, int, str]], start: int, pr: str) -> str | None:
+    """The first released version heading whose section names ``(#<pr>)``, else None."""
+    released = [head for head in headings if head[0] >= start]
+    for index, head in enumerate(released):
+        stop = released[index + 1][0] if index + 1 < len(released) else len(changelog)
+        if re.search(rf"\(#{pr}\)", changelog[head[1] : stop]):
+            return head[3].split()[0]
+    return None
+
+
 def build_release(changelog: str, fragments: Sequence[tuple[str, str]], version: str, date: str) -> tuple[str, str]:
     """Plan the printed section and complete file; fragments must be in numeric PR order.
 
@@ -187,6 +198,11 @@ def build_release(changelog: str, fragments: Sequence[tuple[str, str]], version:
     end = next((head[0] for head in headings if head[0] >= unreleased[1]), len(changelog))
     preamble, hand = _hand_sections(changelog[unreleased[1] : end])
     grouped: dict[str, list[str]] = {section: [content] for section, content in hand.items()}
+    for filename, _ in fragments:
+        # A fragment a past release forgot to delete would list its PR twice.
+        shipped = _released_in(changelog, headings, end, Path(filename).stem)
+        if shipped is not None:
+            raise ValueError(f"{filename}: PR #{Path(filename).stem} already shipped in {shipped}; delete the fragment")
     for filename, text in fragments:
         for section, content in parse_fragment(text, filename).items():
             grouped.setdefault(section, []).append(content)
