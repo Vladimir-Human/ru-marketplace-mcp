@@ -51,7 +51,7 @@ NEVER write to stdout in a stdio MCP server — it corrupts JSON-RPC. Use
 # PURPOSE: Expose Avito listing search, item cards and seller reputation.
 # SCOPE: Read-only HTTP/CDP search with API-error/schema guards; paced allowlisted CDP pages; Product-first cards with identity-checked DOM fallback; nullable data; chained canary.
 # DEPENDS: FastMCP; curl_cffi; stdlib HTMLParser; mcp_core CDP/cache/pacing/errors/kit; models_output; settings; shape_reference.
-# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT.
+# LINKS: R-NO-PERSONAL-DATA; R-NO-MCP-LOGGING; M-AVITO; M-KIT; M-COMPARE; M-MARKETPLACE; R-CACHE-VALIDATED; R-SELFCHECK-GATES-PRICE; packages/avito-connector/tests; M-SOURCES; R-NAV-HOSTS.invariant; R-CDP-QUEUE-CREDIT; R-AVITO-MAX-PHOTOS.
 # END_MODULE_CONTRACT
 # START_MODULE_MAP
 # parse.py: item pages, seller blocks/profiles and search envelopes (pure parsing, moved out of this file).
@@ -652,7 +652,7 @@ def _apply_details(item: dict[str, Any], details: dict[str, Any]) -> None:
             setattr(seller, key, value)
 
 
-_MAX_PHOTOS = 3
+_MAX_PHOTOS = _settings.max_photos  # AVITO_MAX_PHOTOS, 0-10, default 3 (R-AVITO-MAX-PHOTOS)
 _PHOTO_MAX_BYTES = 2 * 1024 * 1024
 _PHOTO_TIMEOUT_S = 20.0
 _PHOTO_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
@@ -767,7 +767,7 @@ async def avito_card(
         int,
         Field(
             ge=0,
-            le=3,
+            le=_MAX_PHOTOS,
             description=(
                 "Opt-in, costly in tokens: attach up to N listing photos (active ads only). Photos belong to the "
                 "seller; do not describe faces, documents or plates in them. 0 = off. Details: guide://avito/avito_card"

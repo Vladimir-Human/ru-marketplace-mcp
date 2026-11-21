@@ -8,6 +8,7 @@ Env vars (all optional):
   AVITO_CACHE_TTL       - seconds to cache upstream reads, 0 disables, default 120
   AVITO_PROXY           - proxy URL for the tier-1 fetch, default unset (honours HTTPS_PROXY)
   AVITO_LOCATION_ID     - default Avito location id for search, default 637640 (Moscow)
+  AVITO_MAX_PHOTOS      - most listing photos avito_card(photos=N) may attach, 0 to 10, default 3
 
 Settings are read once at import; tests patch the module-level constants in
 server.py. This module is the single source of truth for env-driven defaults.
@@ -53,6 +54,15 @@ class AvitoSettings(BaseSettings):
         default="637640",
         min_length=1,
         description="Default Avito location id (637640 = Moscow). Overridden per call by the location_id argument.",
+    )
+    max_photos: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description=(
+            "Most listing photos avito_card(photos=N) may attach: both the advertised maximum of the photos "
+            "argument and the cap the fetch loop applies. Photos are costly in tokens; the default keeps 3."
+        ),
     )
 
 

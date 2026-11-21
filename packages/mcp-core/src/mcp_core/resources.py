@@ -191,7 +191,7 @@ ad; signals that contradict each other, or no signal, give unknown, which is
 not a verdict. Closed or sold ads are not classified (a closed ad is
 not_found, below); closure flags against item.isActive=true, or Avito's
 closure banner on a page that says it is open, give unknown with both sides.
-photos=N (0-3, default 0) is opt-in and costly in tokens. For an active ad
+photos=N (default 0; at most 3, or AVITO_MAX_PHOTOS up to 10) is opt-in and costly in tokens. For an active ad
 only, it fetches up to N listing photos (640x480) from the page's own gallery,
 https on *.img.avito.st only, each fetch through the source's own pacer (its
 gap and its back-off after a refusal), at most 2 MB each, JPEG/PNG/WebP

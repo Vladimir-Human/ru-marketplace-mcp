@@ -53,6 +53,12 @@
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_refuses_separator_escapes_before_transport" requirements="R-AVITO-ITEM-PATH" title="R-AVITO-ITEM-PATH: an item path is a plain ASCII slug, so a backslash or" />
     <test file="packages/avito-connector/tests/test_server.py" name="test_card_still_opens_a_plain_city_category_slug_path" requirements="R-AVITO-ITEM-PATH" title="The same guard must not touch ordinary slugs: plain ASCII item paths keep" />
   </requirement>
+  <requirement id="R-AVITO-MAX-PHOTOS" kind="requirement" state="tested">
+    <test file="packages/avito-connector/tests/test_max_photos_setting.py" name="test_a_cap_outside_zero_to_ten_is_refused" requirements="R-AVITO-MAX-PHOTOS.wired" />
+    <test file="packages/avito-connector/tests/test_max_photos_setting.py" name="test_the_default_is_the_cap_the_tool_had_before" requirements="R-AVITO-MAX-PHOTOS.wired" />
+    <test file="packages/avito-connector/tests/test_max_photos_setting.py" name="test_the_setting_is_the_advertised_maximum_and_the_loop_cap" requirements="R-AVITO-MAX-PHOTOS.wired" />
+    <test file="packages/avito-connector/tests/test_max_photos_setting.py" name="test_unset_keeps_three_in_the_schema_and_the_loop" requirements="R-AVITO-MAX-PHOTOS.wired" />
+  </requirement>
   <requirement id="R-AVITO-SELLER-ROUNDTRIP" kind="requirement" state="tested">
     <test file="packages/avito-connector/tests/test_seller_roundtrip.py" name="test_a_prefixed_handle_stays_strict" requirements="R-AVITO-SELLER-ROUNDTRIP" />
     <test file="packages/avito-connector/tests/test_seller_roundtrip.py" name="test_avito_seller_opens_the_brand_page_for_a_cards_brand_handle" requirements="R-AVITO-SELLER-ROUNDTRIP" />
