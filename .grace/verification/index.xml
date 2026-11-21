@@ -326,6 +326,7 @@
     <test file="packages/wb-connector/tests/test_dom_transport.py" name="test_render_captcha_action_does_not_promise_a_tab" requirements="R-CHALLENGE-ACTION" title="R-CHALLENGE-ACTION: retention is off, so no field may claim a visible page." />
   </requirement>
   <requirement id="R-CHANGELOG-FRAGMENTS" kind="requirement" state="tested" gaps="G-CHANGELOG-FRAGMENTS-LIVE">
+    <test file="scripts/test_build_changelog.py" name="test_a_fragment_whose_pr_already_shipped_is_refused_without_writing" requirements="R-CHANGELOG-FRAGMENTS.validation" />
     <test file="scripts/test_build_changelog.py" name="test_all_keep_a_changelog_sections_use_the_standard_order" requirements="R-CHANGELOG-FRAGMENTS.fold" />
     <test file="scripts/test_build_changelog.py" name="test_an_existing_version_is_refused_without_writing" requirements="R-CHANGELOG-FRAGMENTS.validation" />
     <test file="scripts/test_build_changelog.py" name="test_bad_fragment_names_the_file_and_line_without_writing" requirements="R-CHANGELOG-FRAGMENTS.validation" />
@@ -342,6 +343,7 @@
     <test file="scripts/test_build_changelog.py" name="test_no_fragments_builds_an_empty_section" requirements="R-CHANGELOG-FRAGMENTS.dry-run" />
     <test file="scripts/test_build_changelog.py" name="test_non_pr_fragment_names_are_refused" requirements="R-CHANGELOG-FRAGMENTS.validation" />
     <test file="scripts/test_build_changelog.py" name="test_odd_bullet_counts_and_continuations_are_kept" requirements="R-CHANGELOG-FRAGMENTS.fold,R-CHANGELOG-FRAGMENTS.validation" />
+    <test file="scripts/test_build_changelog.py" name="test_only_the_same_pr_number_in_a_released_section_blocks_a_fragment" requirements="R-CHANGELOG-FRAGMENTS.fold" />
     <test file="scripts/test_build_changelog.py" name="test_pure_pr_decision_branches" requirements="R-CHANGELOG-FRAGMENTS.pr" />
     <test file="scripts/test_build_changelog.py" name="test_real_cli_uses_its_copied_tree" requirements="R-CHANGELOG-FRAGMENTS.dry-run" />
     <test file="scripts/test_build_changelog.py" name="test_top_level_bullet_indentation_uses_markdown_rules" requirements="R-CHANGELOG-FRAGMENTS.validation" title="R-CHANGELOG-FRAGMENTS.validation: up to three spaces is still a top-level list." />

@@ -162,6 +162,38 @@ def test_an_existing_version_is_refused_without_writing(
     assert _snapshot(root) == before
 
 
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.validation")
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_a_fragment_whose_pr_already_shipped_is_refused_without_writing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], dry_run: bool
+) -> None:
+    # A release that forgot to delete changes/12.md would list #12 a second time.
+    root = _tree(tmp_path)
+    changelog = root / "CHANGELOG.md"
+    changelog.write_text(HEADER + OLD_RELEASE.replace("- Old.", "- Old (#12)."), encoding="utf-8", newline="\n")
+    _fragment(root)
+    before = _snapshot(root)
+
+    assert builder.main([*RELEASE_ARGS, *(["--dry-run"] if dry_run else [])], root=root) == 1
+    err = capsys.readouterr().err
+    assert "changes/12.md" in err and "[2.9.3]" in err
+    assert _snapshot(root) == before
+
+
+@pytest.mark.req("R-CHANGELOG-FRAGMENTS.fold")
+def test_only_the_same_pr_number_in_a_released_section_blocks_a_fragment(tmp_path: Path) -> None:
+    # #120 shipped and #12 is named in hand-written Unreleased text: neither is fragment 12's PR shipping.
+    root = _tree(tmp_path, hand="### Fixed\n- Вручную (#12).\n- By hand (#12).\n\n")
+    changelog = root / "CHANGELOG.md"
+    changelog.write_text(
+        changelog.read_text(encoding="utf-8").replace("- Old.", "- Old (#120)."), encoding="utf-8", newline="\n"
+    )
+    _fragment(root)
+
+    assert builder.main(RELEASE_ARGS, root=root) == 0
+    assert not (root / "changes" / "12.md").exists()
+
+
 @pytest.mark.req("R-CHANGELOG-FRAGMENTS.dry-run")
 def test_no_fragments_builds_an_empty_section(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     root = _tree(tmp_path)
